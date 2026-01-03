@@ -9,8 +9,8 @@
         <thead>
             <tr>
                 <th>District</th>
-                <th>Candidate</th>
-                <th>Status</th>
+                <th>{% if category == 'empty_districts' %}Towns{% else %}Candidate{% endif %}</th>
+                <th>{% if category == 'empty_districts' %}Seats{% else %}Status{% endif %}</th>
                 <th class="d-none d-md-table-cell">Action</th>
             </tr>
         </thead>
@@ -21,8 +21,59 @@
                     {% set confirmed_count = info.cand2026|selectattr("status","equalto","Confirmed")|list|length %}
                     {% set empty_seats = info.seat_count - confirmed_count %}
                     
-                    {# Show existing candidates #}
-                    {% if active_2026 %}
+                    {% if category == 'confirmed' %}
+                        {# Only show confirmed candidates #}
+                        {% for cand in active_2026 if cand.status|upper == 'CONFIRMED' %}
+                        <tr>
+                            <td>{{ fdc }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-success">
+                                    {{ cand.name|title }}
+                                </a>
+                            </td>
+                            <td><span class="badge badge-success">Confirmed</span></td>
+                            <td class="d-none d-md-table-cell">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    
+                    {% elif category == 'potentials' %}
+                        {# Only show considering/potential candidates #}
+                        {% for cand in active_2026 if cand.status|upper in ['CONSIDERING', 'POTENTIAL'] %}
+                        <tr>
+                            <td>{{ fdc }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-warning">
+                                    {{ cand.name|title }}
+                                </a>
+                            </td>
+                            <td><span class="badge badge-warning">{{ cand.status }}</span></td>
+                            <td class="d-none d-md-table-cell">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    
+                    {% elif category == 'empty_districts' %}
+                        {# Show district with towns #}
+                        <tr class="table-danger">
+                            <td>{{ fdc }}</td>
+                            <td>{{ info.towns|join(', ') }}</td>
+                            <td><span class="badge badge-danger">{{ info.seat_count }} seat{{ 's' if info.seat_count != 1 else '' }}</span></td>
+                            <td class="d-none d-md-table-cell">
+                                <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </td>
+                        </tr>
+                    
+                    {% elif category == 'empty_seats' %}
+                        {# Show existing candidates #}
                         {% for cand in active_2026 %}
                         <tr>
                             <td>{{ fdc }}</td>
@@ -51,10 +102,7 @@
                             </td>
                         </tr>
                         {% endfor %}
-                    {% endif %}
-                    
-                    {# Show empty seat rows #}
-                    {% if empty_seats > 0 %}
+                        {# Show empty seat rows #}
                         {% for i in range(empty_seats) %}
                         <tr class="table-warning">
                             <td>{% if not active_2026 and loop.first %}{{ fdc }}{% endif %}</td>
@@ -64,6 +112,73 @@
                                 <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    
+                    {% elif category == 'incumbents_running' %}
+                        {% for cand in active_2026 if cand.incumbent %}
+                        <tr>
+                            <td>{{ fdc }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-success">
+                                    {{ cand.name|title }} <i class="fas fa-star text-warning"></i>
+                                </a>
+                            </td>
+                            <td><span class="badge badge-success">{{ cand.status }}</span></td>
+                            <td class="d-none d-md-table-cell">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    
+                    {% elif category == 'incumbents_not_running' %}
+                        {% for cand in info.cand2026 if cand.incumbent and cand.status|upper == 'DECLINED' %}
+                        <tr>
+                            <td>{{ fdc }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-secondary">
+                                    {{ cand.name|title }} <i class="fas fa-star text-warning"></i>
+                                </a>
+                            </td>
+                            <td><span class="badge badge-secondary">Declined</span></td>
+                            <td class="d-none d-md-table-cell">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    
+                    {% else %}
+                        {# Default: show all candidates #}
+                        {% for cand in active_2026 %}
+                        <tr>
+                            <td>{{ fdc }}</td>
+                            <td>
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="
+                                    {% if cand.status|upper == 'CONFIRMED' %}text-success
+                                    {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
+                                    {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
+                                    {% else %}text-secondary{% endif %}">
+                                    {{ cand.name|title }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if cand.status|upper == 'CONFIRMED' %}badge-success
+                                    {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}badge-warning
+                                    {% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary
+                                    {% else %}badge-secondary{% endif %}">
+                                    {{ cand.status }}
+                                </span>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}
