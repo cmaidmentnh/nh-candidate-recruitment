@@ -2,95 +2,110 @@
 {% block content %}
 <h1 class="mb-3">Candidate Tracker</h1>
 
-<!-- Dashboard Cards - First Row -->
-<div class="dashboard-row">
-    <div class="dash-card dash-card-size">
-        <div class="card-header dash-gradient-green text-white">Confirmed</div>
-        <div class="card-body">
-            <h4>{{ dashboard.confirmed.total }}</h4>
-            <a href="{{ url_for('filter_view', category='confirmed') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header dash-gradient-orange text-white">Empty Seats</div>
-        <div class="card-body">
-            <h4>{{ dashboard.empty_seats.total }}</h4>
-            <a href="{{ url_for('filter_view', category='empty_seats') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header dash-gradient-red text-white">Empty Districts</div>
-        <div class="card-body">
-            <h4>{{ dashboard.empty_districts.total }}</h4>
-            <a href="{{ url_for('filter_view', category='empty_districts') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header dash-gradient-teal text-white">Potentials</div>
-        <div class="card-body">
-            <h4>{{ dashboard.potentials.total }}</h4>
-            <a href="{{ url_for('filter_view', category='potentials') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header dash-gradient-purple text-white">Incumbents Running</div>
-        <div class="card-body">
-            <h4>{{ dashboard.incumbents_running.total }}</h4>
-            <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header dash-gradient-gray text-white">Incumbents Not Running</div>
-        <div class="card-body">
-            <h4>{{ dashboard.incumbents_not_running.total }}</h4>
-            <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header dash-gradient-dark text-white">Primaries</div>
-        <div class="card-body">
-            <h4>{{ dashboard.primaries.total }}</h4>
-            <a href="{{ url_for('filter_view', category='primaries') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header bg-warning text-dark">Unmatched Voters</div>
-        <div class="card-body">
-            <h4>{{ dashboard.unmatched_voters.total }}</h4>
-            <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="btn btn-light btn-sm mt-2">Details</a>
-        </div>
-    </div>
-</div>
-
-<!-- Dashboard Cards - Second Row -->
-<div class="dashboard-row mb-4">
-    <div class="dash-card dash-card-size">
-        <div class="card-header bg-light text-dark">Total Seats</div>
-        <div class="card-body">
-            <h4>{{ dashboard.TOTAL_SEATS }}</h4>
-        </div>
-    </div>
-    <div class="dash-card dash-card-size">
-        <div class="card-header bg-light text-dark">Total Districts</div>
-        <div class="card-body">
-            <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
-        </div>
-    </div>
-    <div class="dash-card" style="flex: 2; min-width: 300px;">
-        <div class="card-header bg-primary text-white"><i class="fas fa-chart-bar"></i> County Progress</div>
-        <div class="card-body" style="max-height: 200px; overflow-y: auto;">
-            {% for county_name, stats in county_stats.items()|sort %}
-            {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
-            <div class="d-flex align-items-center mb-1" style="font-size: 0.85rem;">
-                <span style="width: 90px;">{{ county_name }}</span>
-                <div class="progress flex-grow-1 mx-2" style="height: 14px;">
-                    <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
-                        style="width: {{ pct }}%;">
-                    </div>
+<!-- Dashboard Layout -->
+<div class="row mb-4">
+    <!-- Left Column - Dashboard Cards -->
+    <div class="col-lg-8">
+        <!-- Dashboard Cards - First Row -->
+        <div class="dashboard-row">
+            <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-green text-white">Confirmed</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.confirmed.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='confirmed') }}" class="btn btn-light btn-sm mt-2">Details</a>
                 </div>
-                <span style="width: 45px; text-align: right;">{{ stats.c2026_confirmed }}/{{ stats.total_seats }}</span>
             </div>
-            {% endfor %}
+            <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-orange text-white">Empty Seats</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.empty_seats.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='empty_seats') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-red text-white">Empty Districts</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.empty_districts.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='empty_districts') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-teal text-white">Potentials</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.potentials.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='potentials') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-purple text-white">Incumbents Running</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.incumbents_running.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-gray text-white">Incumbents Not Running</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.incumbents_not_running.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-dark text-white">Primaries</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.primaries.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='primaries') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header bg-warning text-dark">Unmatched Voters</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.unmatched_voters.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header bg-light text-dark">Total Seats</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.TOTAL_SEATS }}</h4>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
+                <div class="card-header bg-light text-dark">Total Districts</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column - County Progress -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white" style="cursor: pointer;" 
+                 data-toggle="collapse" data-target="#countyProgressCollapse">
+                <i class="fas fa-chart-bar"></i> County Progress
+                <i class="fas fa-chevron-down float-right mt-1"></i>
+            </div>
+            <div id="countyProgressCollapse" class="collapse show">
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    {% for county_name, stats in county_stats.items()|sort %}
+                    {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
+                            <strong>{{ county_name }}</strong>
+                            <span>{{ stats.c2026_confirmed }}/{{ stats.total_seats }}</span>
+                        </div>
+                        <div class="progress" style="height: 16px;">
+                            <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
+                                style="width: {{ pct }}%;">
+                                {{ pct }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
 </div>
