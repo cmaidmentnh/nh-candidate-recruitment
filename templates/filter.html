@@ -9,9 +9,17 @@
         <thead>
             <tr>
                 <th>District</th>
-                <th>{% if category == 'empty_districts' %}Towns{% else %}Candidate{% endif %}</th>
-                <th>{% if category == 'empty_districts' %}Seats{% else %}Status{% endif %}</th>
-                <th class="d-none d-md-table-cell">Action</th>
+                {% if category == 'empty_districts' %}
+                <th>Towns</th>
+                <th>Seats</th>
+                {% elif category == 'empty_seats' %}
+                <th>Seats</th>
+                <th>Action</th>
+                {% else %}
+                <th>Candidate</th>
+                <th>Status</th>
+                {% endif %}
+                <th class="d-none d-md-table-cell">{% if category == 'empty_seats' %}Towns{% else %}Action{% endif %}</th>
             </tr>
         </thead>
         <tbody>
@@ -59,16 +67,21 @@
                         </tr>
                         {% endfor %}
                     
-                    {% elif category == 'empty_districts' %}
-                        {# Show district with towns #}
-                        <tr class="table-danger">
+                    {% elif category == 'empty_seats' %}
+                        <tr class="table-warning">
                             <td>{{ fdc }}</td>
-                            <td>{{ info.towns|join(', ') }}</td>
-                            <td><span class="badge badge-danger">{{ info.seat_count }} seat{{ 's' if info.seat_count != 1 else '' }}</span></td>
-                            <td class="d-none d-md-table-cell">
+                            <td>
+                                <span class="text-danger font-weight-bold">{{ empty_seats }}</span> unfilled / 
+                                <span class="text-success">{{ confirmed_count }}</span> filled
+                                <small class="text-muted">({{ info.seat_count }} total)</small>
+                            </td>
+                            <td>
                                 <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
-                                    <i class="fas fa-plus"></i> Add
+                                    <i class="fas fa-plus"></i> Add Candidate
                                 </button>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-muted">{{ info.towns|join(', ') }}</small>
                             </td>
                         </tr>
                     
