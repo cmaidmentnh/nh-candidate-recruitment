@@ -1,73 +1,253 @@
-body {
-    background-color: #f8f9fa;
+/* Base Styles */
+* {
+    box-sizing: border-box;
 }
 
-/* Container with subtle shadow */
+body {
+    background-color: #f4f6f9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+/* Container */
 .container {
     background: #fff;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    max-width: 1400px;
 }
 
-/* Dashboard Card Base */
+/* Dashboard Cards */
+.dashboard-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
 .dash-card {
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dash-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
 }
 
 .dash-card .card-header {
-    font-weight: bold;
+    font-weight: 600;
+    font-size: 11px;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
     border-bottom: none;
-    min-height: 100px;
+    padding: 12px 8px;
+    text-align: center;
 }
 
-/* Force a uniform size for the 7 main boxes */
+.dash-card .card-body {
+    padding: 15px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+}
+
+.dash-card .card-body h4 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+}
+
 .dash-card-size {
-    width: 140px;
-    height: 240px;
+    width: 130px;
+    min-height: 140px;
 }
 
-/* Hover effect: scale up the entire card */
-.hover-scale:hover {
-    transform: scale(1.03);
-}
-
-/* Brighter gradient backgrounds */
+/* Gradient Backgrounds */
 .dash-gradient-green {
-    background: linear-gradient(135deg, #63e77b 0%, #28a745 100%);
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
 }
 
 .dash-gradient-orange {
-    background: linear-gradient(135deg, #ffa500 0%, #ff7f0f 100%);
+    background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
 }
 
 .dash-gradient-red {
-    background: linear-gradient(135deg, #ff6347 0%, #dc3545 100%);
+    background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
 }
 
 .dash-gradient-teal {
-    background: linear-gradient(135deg, #20b2aa 0%, #138496 100%);
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
 }
 
 .dash-gradient-purple {
-    background: linear-gradient(135deg, #8a2be2 0%, #6f42c1 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .dash-gradient-gray {
-    background: linear-gradient(135deg, #7f7f7f 0%, #5f5f5f 100%);
+    background: linear-gradient(135deg, #606c88 0%, #3f4c6b 100%);
 }
 
 .dash-gradient-dark {
-    background: linear-gradient(135deg, #343a40 0%, #23272b 100%);
+    background: linear-gradient(135deg, #232526 0%, #414345 100%);
 }
 
-/* Candidate link styling */
+/* County Navigation */
+.county-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.county-pill {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #495057;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.county-pill:hover {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+/* Search Box */
+.search-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    max-width: 500px;
+}
+
+.search-box input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 15px;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.search-box button {
+    padding: 10px 20px;
+    white-space: nowrap;
+}
+
+/* County Accordion */
+.county-card {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.county-card > .card-header {
+    background: #495057;
+    color: #fff;
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.county-card > .card-header:hover {
+    background: #5a6268;
+}
+
+.county-card > .card-header h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.county-card > .card-header small {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* District Cards */
+.district-card {
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.district-card > .card-header {
+    background: #e9ecef;
+    color: #495057;
+    padding: 12px 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.district-card > .card-header:hover {
+    background: #dee2e6;
+}
+
+.district-card > .card-header h5 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+/* Tables */
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 10px;
+}
+
+.table td {
+    padding: 12px 10px;
+    vertical-align: middle;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f8f9fa;
+}
+
+/* Candidate Links */
 .candidate-link {
     text-decoration: none;
     font-weight: 600;
@@ -77,24 +257,23 @@ body {
     text-decoration: underline;
 }
 
-/* County pill buttons for "Jump to County" */
-.county-pill {
+/* Buttons */
+.btn {
     font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
-    text-transform: capitalize;
+    border-radius: 5px;
+    transition: all 0.2s ease;
 }
 
-.county-pill:hover {
-    background-color: #0069d9;
-    color: #fff !important;
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 13px;
 }
 
-/* Make the card headers look clickable for collapse sections */
-.card-header {
-    user-select: none;
-    border-radius: 0;
+.btn-outline-primary {
+    border-width: 1.5px;
 }
 
+/* Popover */
 .custom-popover {
     max-width: 400px !important;
     max-height: 500px !important;
@@ -122,123 +301,236 @@ pre {
     word-wrap: break-word;
 }
 
-.ml-2 {
-    margin-left: 0.5rem;
+/* Alerts */
+.alert {
+    border-radius: 6px;
+    border: none;
+}
+
+/* Forms */
+.form-control {
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+    padding: 10px 12px;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 768px) {
-    .container {
-        padding: 10px;
-        margin: 5px;
-        max-width: 100%;
-        border-radius: 0;
-    }
-
+@media (max-width: 992px) {
     .dash-card-size {
-        width: 100%;
-        height: auto;
-        min-height: 100px;
-        margin-bottom: 10px;
+        width: 110px;
+        min-height: 130px;
     }
-
+    
     .dash-card .card-header {
-        min-height: auto;
-        padding: 10px;
+        font-size: 10px;
+        padding: 10px 5px;
     }
-
-    .card-body {
-        padding: 10px;
+    
+    .dash-card .card-body h4 {
+        font-size: 24px;
     }
+}
 
-    .table-responsive {
+@media (max-width: 768px) {
+    body {
         font-size: 14px;
     }
-
+    
+    .container {
+        padding: 12px;
+        margin: 0;
+        border-radius: 0;
+        max-width: 100%;
+    }
+    
+    h1 {
+        font-size: 22px;
+        margin-bottom: 15px;
+    }
+    
+    /* Dashboard cards - 4 per row on tablet */
+    .dashboard-row {
+        gap: 8px;
+    }
+    
+    .dash-card-size {
+        width: calc(25% - 8px);
+        min-width: 80px;
+        min-height: 110px;
+    }
+    
+    .dash-card .card-header {
+        font-size: 9px;
+        padding: 8px 4px;
+    }
+    
+    .dash-card .card-body {
+        padding: 10px 5px;
+    }
+    
+    .dash-card .card-body h4 {
+        font-size: 20px;
+    }
+    
+    .dash-card .btn-sm {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+    
+    /* County nav */
+    .county-nav {
+        padding: 10px;
+        gap: 6px;
+    }
+    
+    .county-pill {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    /* Search box */
+    .search-box {
+        flex-direction: column;
+        max-width: 100%;
+    }
+    
+    .search-box button {
+        width: 100%;
+    }
+    
+    /* County accordion */
+    .county-card > .card-header {
+        padding: 12px 15px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .county-card > .card-header h4 {
+        font-size: 16px;
+    }
+    
+    /* Tables */
     .table {
         font-size: 13px;
     }
-
-    .table th,
+    
+    .table thead th {
+        font-size: 11px;
+        padding: 8px 5px;
+    }
+    
     .table td {
         padding: 8px 5px;
     }
-
-    .btn {
-        padding: 5px 10px;
-        font-size: 14px;
-    }
-
+    
     .btn-sm {
-        padding: 3px 6px;
-        font-size: 12px;
-    }
-
-    .county-pill {
+        padding: 4px 8px;
         font-size: 11px;
-        padding: 4px 6px;
-        margin: 2px;
-    }
-
-    h1 {
-        font-size: 1.5rem;
-    }
-
-    h2 {
-        font-size: 1.3rem;
-    }
-
-    h3 {
-        font-size: 1.1rem;
-    }
-
-    .modal-dialog {
-        margin: 10px;
-        max-width: calc(100% - 20px);
-    }
-
-    .form-control {
-        font-size: 16px; /* Prevents zoom on iOS */
-    }
-
-    /* Stack dashboard cards */
-    .d-flex.flex-wrap {
-        flex-direction: column;
-    }
-
-    .d-flex.flex-wrap .dash-card-size {
-        width: 100%;
     }
 }
 
 @media (max-width: 576px) {
-    body {
-        font-size: 14px;
-    }
-
     .container {
         padding: 8px;
-        margin: 0;
     }
-
-    .table th,
-    .table td {
-        padding: 5px 3px;
-        font-size: 12px;
+    
+    h1 {
+        font-size: 20px;
     }
-
-    .btn-sm {
-        padding: 2px 4px;
+    
+    /* Dashboard cards - 3 per row on mobile, then wrap */
+    .dash-card-size {
+        width: calc(33.33% - 8px);
+        min-width: 90px;
+        min-height: 100px;
+    }
+    
+    .dash-card .card-header {
+        font-size: 8px;
+        padding: 6px 3px;
+        letter-spacing: 0;
+    }
+    
+    .dash-card .card-body h4 {
+        font-size: 18px;
+    }
+    
+    .dash-card .btn-sm {
+        font-size: 9px;
+        padding: 2px 5px;
+    }
+    
+    /* Hide details button on small screens */
+    .dash-card .btn {
+        display: none;
+    }
+    
+    /* County pills - smaller */
+    .county-pill {
+        padding: 5px 10px;
         font-size: 11px;
     }
-
-    .card-header {
-        padding: 8px;
-        font-size: 14px;
+    
+    /* Tables - make scrollable */
+    .table-responsive {
+        margin: 0 -8px;
     }
-
-    .alert {
-        padding: 8px;
+    
+    .table {
+        font-size: 12px;
+    }
+    
+    .table thead th {
+        font-size: 10px;
+        padding: 6px 4px;
+    }
+    
+    .table td {
+        padding: 6px 4px;
+    }
+    
+    /* District card */
+    .district-card > .card-header {
+        padding: 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+    }
+    
+    .district-card > .card-header h5 {
         font-size: 13px;
+    }
+    
+    /* Forms */
+    .form-control {
+        font-size: 16px; /* Prevents iOS zoom */
+    }
+    
+    /* Buttons */
+    .btn {
+        font-size: 13px;
+    }
+    
+    .btn-sm {
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
+    .dash-card-size {
+        width: calc(50% - 6px);
+    }
+    
+    .county-pill {
+        padding: 4px 8px;
+        font-size: 10px;
     }
 }

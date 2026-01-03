@@ -1,134 +1,113 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="mb-4">Candidate Tracker</h1>
+<h1 class="mb-3">Candidate Tracker</h1>
 
-<!-- First row: 7 Dashboard Boxes -->
-<div class="d-flex justify-content-center flex-nowrap mb-4">
-  <!-- Confirmed -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header dash-gradient-green text-white text-center">
-      CONFIRMED
+<!-- Dashboard Cards - First Row -->
+<div class="dashboard-row">
+    <div class="dash-card dash-card-size">
+        <div class="card-header dash-gradient-green text-white">Confirmed</div>
+        <div class="card-body">
+            <h4>{{ dashboard.confirmed.total }}</h4>
+            <a href="{{ url_for('filter_view', category='confirmed') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
     </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.confirmed.total }}</h4>
-      <a href="{{ url_for('filter_view', category='confirmed') }}" class="btn btn-light btn-sm mt-auto">Details</a>
+    <div class="dash-card dash-card-size">
+        <div class="card-header dash-gradient-orange text-white">Empty Seats</div>
+        <div class="card-body">
+            <h4>{{ dashboard.empty_seats.total }}</h4>
+            <a href="{{ url_for('filter_view', category='empty_seats') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
     </div>
-  </div>
-  <!-- Empty Seats -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header dash-gradient-orange text-white text-center">
-      EMPTY SEATS
+    <div class="dash-card dash-card-size">
+        <div class="card-header dash-gradient-red text-white">Empty Districts</div>
+        <div class="card-body">
+            <h4>{{ dashboard.empty_districts.total }}</h4>
+            <a href="{{ url_for('filter_view', category='empty_districts') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
     </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.empty_seats.total }}</h4>
-      <a href="{{ url_for('filter_view', category='empty_seats') }}" class="btn btn-light btn-sm mt-auto">Details</a>
+    <div class="dash-card dash-card-size">
+        <div class="card-header dash-gradient-teal text-white">Potentials</div>
+        <div class="card-body">
+            <h4>{{ dashboard.potentials.total }}</h4>
+            <a href="{{ url_for('filter_view', category='potentials') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
     </div>
-  </div>
-  <!-- Empty Districts -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header dash-gradient-red text-white text-center">
-      EMPTY DISTRICTS
+    <div class="dash-card dash-card-size">
+        <div class="card-header dash-gradient-purple text-white">Incumbents Running</div>
+        <div class="card-body">
+            <h4>{{ dashboard.incumbents_running.total }}</h4>
+            <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
     </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.empty_districts.total }}</h4>
-      <a href="{{ url_for('filter_view', category='empty_districts') }}" class="btn btn-light btn-sm mt-auto">Details</a>
+    <div class="dash-card dash-card-size">
+        <div class="card-header dash-gradient-gray text-white">Incumbents Not Running</div>
+        <div class="card-body">
+            <h4>{{ dashboard.incumbents_not_running.total }}</h4>
+            <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
     </div>
-  </div>
-  <!-- Potentials -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header dash-gradient-teal text-white text-center">
-      POTENTIALS
+    <div class="dash-card dash-card-size">
+        <div class="card-header dash-gradient-dark text-white">Primaries</div>
+        <div class="card-body">
+            <h4>{{ dashboard.primaries.total }}</h4>
+            <a href="{{ url_for('filter_view', category='primaries') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
     </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.potentials.total }}</h4>
-      <a href="{{ url_for('filter_view', category='potentials') }}" class="btn btn-light btn-sm mt-auto">Details</a>
-    </div>
-  </div>
-  <!-- Incumbents Running -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header dash-gradient-purple text-white text-center">
-      INCUMBENTS RUNNING
-    </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.incumbents_running.total }}</h4>
-      <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="btn btn-light btn-sm mt-auto">Details</a>
-    </div>
-  </div>
-  <!-- Incumbents Not Running -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header dash-gradient-gray text-white text-center">
-      INCUMBENTS NOT RUNNING
-    </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.incumbents_not_running.total }}</h4>
-      <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="btn btn-light btn-sm mt-auto">Details</a>
-    </div>
-  </div>
-  <!-- Primaries -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header dash-gradient-dark text-white text-center">
-      PRIMARIES
-    </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.primaries.total }}</h4>
-      <a href="{{ url_for('filter_view', category='primaries') }}" class="btn btn-light btn-sm mt-auto">Details</a>
-    </div>
-  </div>
 </div>
 
-<!-- Second row: Total Seats, Total Districts -->
-<div class="d-flex justify-content-center flex-nowrap mb-4">
-  <!-- Total Seats -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header bg-light text-dark text-center">
-      TOTAL SEATS
+<!-- Dashboard Cards - Second Row -->
+<div class="dashboard-row mb-4">
+    <div class="dash-card dash-card-size">
+        <div class="card-header bg-light text-dark">Total Seats</div>
+        <div class="card-body">
+            <h4>{{ dashboard.TOTAL_SEATS }}</h4>
+        </div>
     </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.TOTAL_SEATS }}</h4>
+    <div class="dash-card dash-card-size">
+        <div class="card-header bg-light text-dark">Total Districts</div>
+        <div class="card-body">
+            <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
+        </div>
     </div>
-  </div>
-  <!-- Total Districts -->
-  <div class="dash-card dash-card-size hover-scale m-2">
-    <div class="card-header bg-light text-dark text-center">
-      TOTAL DISTRICTS
-    </div>
-    <div class="card-body d-flex flex-column justify-content-center align-items-center">
-      <h4 class="mb-2">{{ dashboard.TOTAL_DISTRICTS }}</h4>
-    </div>
-  </div>
 </div>
 
-
-<form method="GET" action="{{ url_for('index') }}" class="mb-4">
-    <input type="text" name="search" class="form-control" placeholder="Search by name or district">
-    <button type="submit" class="btn btn-primary mt-2">Search</button>
+<!-- Search Box -->
+<form method="GET" action="{{ url_for('index') }}" class="search-box mb-4">
+    <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query if search_query else '' }}">
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-search"></i> Search
+    </button>
+    {% if search_query %}
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Clear</a>
+    {% endif %}
 </form>
 
-<!-- Jump to County / City Menu -->
-<div class="mb-3 d-flex flex-wrap justify-content-center">
-  {% for county_name in county_groups.keys() %}
-    <a class="btn btn-outline-primary rounded-pill m-1 county-pill"
-       href="#{{ county_name|replace(' ', '_') }}">
-      {{ county_name|title }}
+{% if search_query %}
+<div class="alert alert-info">
+    Showing results for "<strong>{{ search_query }}</strong>" 
+    <a href="{{ url_for('index') }}" class="float-right">Clear search</a>
+</div>
+{% endif %}
+
+<!-- County Navigation -->
+<div class="county-nav">
+    {% for county_name in county_groups.keys()|sort %}
+    <a class="county-pill" href="#{{ county_name|replace(' ', '_') }}">
+        {{ county_name|title }}
     </a>
-  {% endfor %}
+    {% endfor %}
 </div>
 
+<!-- County Accordion -->
 <div id="countyAccordion">
-    {% for county_name, dist_dict in county_groups.items() %}
-    <div class="card mb-4" id="{{ county_name|replace(' ', '_') }}">
-        <div class="card-header bg-secondary text-white" style="cursor: pointer;" data-toggle="collapse"
-             data-target="#collapse-{{ county_name|replace(' ', '_') }}" aria-expanded="false"
-             aria-controls="collapse-{{ county_name|replace(' ', '_') }}">
-            <h4 class="mb-0">
-                <span style="float:left;">{{ county_name|title }}</span>
-                <small style="float:right;">
-                    {{ county_stats[county_name].c2026_confirmed }} /
-                    {{ county_stats[county_name].total_seats }} Seats
-                </small>
-            </h4>
+    {% for county_name, dist_dict in county_groups.items()|sort %}
+    <div class="card county-card" id="{{ county_name|replace(' ', '_') }}">
+        <div class="card-header" data-toggle="collapse" data-target="#collapse-{{ county_name|replace(' ', '_') }}" 
+             aria-expanded="false" aria-controls="collapse-{{ county_name|replace(' ', '_') }}">
+            <h4>{{ county_name|title }}</h4>
+            <small>{{ county_stats[county_name].c2026_confirmed }} / {{ county_stats[county_name].total_seats }} Seats</small>
         </div>
-        <div id="collapse-{{ county_name|replace(' ', '_') }}" class="collapse">
+        <div id="collapse-{{ county_name|replace(' ', '_') }}" class="collapse{% if search_query %} show{% endif %}">
             <div class="card-body">
                 {% for fdc, info in dist_dict.items() %}
                 {% set active_2026 = info.cand2026|rejectattr("status","equalto","Declined")|list %}
@@ -137,122 +116,88 @@
                 {% set a2024 = active_2024|length %}
                 {% set seat_count = info.seat_count %}
 
-                <!-- Determine district status -->
                 {% set status = 'Empty' %}
                 {% if a2026 > 0 and a2026 < seat_count %}
-                    {% set status = 'Partially Filled' %}
+                    {% set status = 'Partial' %}
                 {% elif a2026 >= seat_count %}
                     {% set status = 'Full' %}
                 {% endif %}
-                {% if info.cand2026|selectattr("status","equalto","New Recruit")|list|length > 0 or info.cand2024|selectattr("status","equalto","New Recruit")|list|length > 0 %}
-                    {% set status = 'Primary' %}
-                {% endif %}
 
-                {% set dist_name = fdc %}
-                {% if not dist_name.endswith(' ' ~ info.district_code) %}
-                    {% set dist_name = dist_name ~ ' - ' ~ info.district_code %}
-                {% endif %}
-
-                <div class="card mb-2">
-                    <div class="card-header bg-info text-white" style="cursor: pointer;" data-toggle="collapse"
+                <div class="card district-card">
+                    <div class="card-header" data-toggle="collapse" 
                          data-target="#collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}"
-                         aria-expanded="false" aria-controls="collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}">
-                        <h5 class="mb-0">
-                            <span style="float:left;">{{ dist_name }} ({{ seat_count }} seat{{ 's' if seat_count != 1 else '' }})</span>
-                            <small style="float:right;">{{ a2026 }} / {{ seat_count }} - {{ status }}</small>
-                        </h5>
+                         aria-expanded="{% if search_query %}true{% else %}false{% endif %}">
+                        <h5>{{ fdc }} ({{ seat_count }} seat{{ 's' if seat_count != 1 else '' }})</h5>
+                        <small>{{ a2026 }}/{{ seat_count }} - {{ status }}</small>
                     </div>
-                    <div id="collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}" class="collapse">
+                    <div id="collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}" 
+                         class="collapse{% if search_query %} show{% endif %}">
                         <div class="card-body">
-                            <p class="text-muted mb-2"><strong>Towns:</strong> {{ info.towns|join(", ") }}</p>
-                            <table class="table table-bordered table-striped">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th style="width: 10%;">Seat #</th>
-                                        <th style="width: 45%;">2026 Candidate</th>
-                                        <th style="width: 45%;">2024 Candidate</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for row in range(max(seat_count, a2026)) %}
-                                    <tr>
-                                        <td>
-                                            {% if row < seat_count %}
-                                                Seat {{ row + 1 }}
-                                            {% else %}
-                                                &nbsp;
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if row < a2026 %}
-                                                {% set cand = active_2026[row] %}
-                                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}"
-                                                   class="candidate-link">
-                                                    <span class="
-                                                        {% if cand.status|upper == 'CONFIRMED' %}
-                                                            text-success
-                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}
-                                                            text-warning
-                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}
-                                                            text-primary
-                                                        {% else %}
-                                                            text-secondary
-                                                        {% endif %}
-                                                    ">
+                            <p class="text-muted small mb-2"><strong>Towns:</strong> {{ info.towns|join(", ") }}</p>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:10%">Seat</th>
+                                            <th style="width:45%">2026 Candidate</th>
+                                            <th style="width:45%">2024 Candidate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in range(max(seat_count, a2026)) %}
+                                        <tr>
+                                            <td>{% if row < seat_count %}{{ row + 1 }}{% endif %}</td>
+                                            <td>
+                                                {% if row < a2026 %}
+                                                    {% set cand = active_2026[row] %}
+                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}"
+                                                       class="candidate-link
+                                                        {% if cand.status|upper == 'CONFIRMED' %}text-success
+                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
+                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
+                                                        {% else %}text-secondary{% endif %}">
                                                         {{ cand.name|title }} ({{ cand.status }})
-                                                    </span>
-                                                </a>
-                                                <button type="button" class="btn btn-info btn-sm ml-2" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}">
-                                                    View Profile
-                                                </button>
-                                            {% else %}
-                                                <button class="btn btn-sm btn-outline-primary"
-                                                        onclick="openAddCandidateModal('{{ fdc }}', 2026)">
-                                                    Add 2026 Candidate
-                                                </button>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if row < a2024 %}
-                                                {% set cand = active_2024[row] %}
-                                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2024) }}"
-                                                   class="candidate-link">
-                                                    <span class="
-                                                        {% if cand.status|upper == 'CONFIRMED' %}
-                                                            text-success
-                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}
-                                                            text-warning
-                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}
-                                                            text-primary
-                                                        {% else %}
-                                                            text-secondary
-                                                        {% endif %}
-                                                    ">
+                                                    </a>
+                                                    <button type="button" class="btn btn-info btn-sm ml-1 d-none d-md-inline-block" 
+                                                            data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}">
+                                                        <i class="fas fa-info-circle"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-outline-primary"
+                                                            onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                                        + Add
+                                                    </button>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if row < a2024 %}
+                                                    {% set cand = active_2024[row] %}
+                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2024) }}"
+                                                       class="candidate-link
+                                                        {% if cand.status|upper == 'CONFIRMED' %}text-success
+                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
+                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
+                                                        {% else %}text-secondary{% endif %}">
                                                         {{ cand.name|title }} ({{ cand.status }})
-                                                    </span>
-                                                </a>
-                                                <button type="button" class="btn btn-info btn-sm ml-2" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}">
-                                                    View Profile
-                                                </button>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                                    </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                             {% if info.cand2026|selectattr("status","equalto","Declined")|list or info.cand2024|selectattr("status","equalto","Declined")|list %}
-                                <p class="text-muted">
-                                    <strong>NOTES:</strong>
-                                    {% if info.cand2026|selectattr("status","equalto","Declined")|list %}
-                                        Declined 2026: {{ info.cand2026|selectattr("status","equalto","Declined")|map(attribute='name')|map('title')|join(', ') }}
-                                    {% endif %}
-                                    {% if info.cand2026|selectattr("status","equalto","Declined")|list and info.cand2024|selectattr("status","equalto","Declined")|list %}
-                                        &nbsp;|&nbsp;
-                                    {% endif %}
-                                    {% if info.cand2024|selectattr("status","equalto","Declined")|list %}
-                                        Declined 2024: {{ info.cand2024|selectattr("status","equalto","Declined")|map(attribute='name')|map('title')|join(', ') }}
-                                    {% endif %}
-                                </p>
+                            <p class="text-muted small mt-2 mb-0">
+                                <strong>Declined:</strong>
+                                {% if info.cand2026|selectattr("status","equalto","Declined")|list %}
+                                    2026: {{ info.cand2026|selectattr("status","equalto","Declined")|map(attribute='name')|map('title')|join(', ') }}
+                                {% endif %}
+                                {% if info.cand2024|selectattr("status","equalto","Declined")|list %}
+                                    {% if info.cand2026|selectattr("status","equalto","Declined")|list %}| {% endif %}
+                                    2024: {{ info.cand2024|selectattr("status","equalto","Declined")|map(attribute='name')|map('title')|join(', ') }}
+                                {% endif %}
+                            </p>
                             {% endif %}
                         </div>
                     </div>
@@ -261,6 +206,6 @@
             </div>
         </div>
     </div>
-{% endfor %}
+    {% endfor %}
 </div>
 {% endblock %}

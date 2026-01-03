@@ -8,19 +8,24 @@
     <title>Candidate Tracker</title>
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Font Awesome for Icons (optional) -->
+    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <!-- Your Custom CSS -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% block head %}{% endblock %}
 </head>
 
 <body>
-    <div class="container mt-4">
+    <div class="container mt-3 mt-md-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
         {% endfor %}
         {% endif %}
         {% endwith %}
@@ -40,7 +45,6 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <!-- Hidden fields to store district code and election year -->
                         <input type="hidden" name="district_code" id="modalDistrictCode">
                         <input type="hidden" name="election_year" id="modalElectionYear">
 
@@ -89,97 +93,47 @@
         function openAddCandidateModal(districtCode, electionYear) {
             $('#modalDistrictCode').val(districtCode);
             $('#modalElectionYear').val(electionYear);
-            $('#addCandidateModalLabel').text("Add " + electionYear + " Candidate for District " + districtCode);
+            $('#addCandidateModalLabel').text("Add " + electionYear + " Candidate for " + districtCode);
             $('#addCandidateModal').modal('show');
         }
 
-        // Save scroll position and accordion states before navigation
         $(document).ready(function () {
-            // Save scroll position and accordion states
-            $('a').not('[data-toggle="collapse"]').on('click', function (e) {
-                if (!$(this).hasClass('candidate-link')) {
-                    sessionStorage.setItem('scrollPosition', window.scrollY);
-                    $('.collapse').each(function () {
-                        var stateKey = $(this).prev('.card-header').data('state-key');
-                        if (stateKey) {
-                            sessionStorage.setItem(stateKey, $(this).hasClass('show') ? 'expanded' : 'collapsed');
-                        }
-                    });
-                }
-            });
-
-            // Restore scroll position and accordion states on back button
-            window.onpopstate = function () {
-                var scrollPosition = sessionStorage.getItem('scrollPosition');
-                if (scrollPosition) {
-                    window.scrollTo(0, parseInt(scrollPosition));
-                    sessionStorage.removeItem('scrollPosition');
-                }
-                $('.collapse').each(function () {
-                    var stateKey = $(this).prev('.card-header').data('state-key');
-                    if (stateKey) {
-                        var state = sessionStorage.getItem(stateKey);
-                        if (state === 'expanded') {
-                            $(this).addClass('show');
-                            $(this).prev('.card-header').attr('aria-expanded', 'true');
-                        } else {
-                            $(this).removeClass('show');
-                            $(this).prev('.card-header').attr('aria-expanded', 'false');
-                        }
-                    }
-                });
-            };
-
-            // Initialize popovers with improved handling
+            // Initialize popovers
             $('[data-toggle="popover"]').popover({
                 content: function () {
                     var $popoverTrigger = $(this);
                     var candidateId = $popoverTrigger.data('candidate-id');
-                    $popoverTrigger.data('bs.popover').tip().addClass('custom-popover'); // Add custom class for styling
-                    return fetch(`/api/candidate/${candidateId}`)
+                    return fetch('/api/candidate/' + candidateId)
                         .then(response => response.json())
                         .then(data => {
                             if (data.error) {
                                 return '<p>Candidate not found</p>';
                             }
-                            return `
-                            <div>
-                                <p><strong>Candidate ID:</strong> ${data.candidate_id}</p>
-                                <p><strong>Name:</strong> ${data.first_name} ${data.last_name}</p>
-                                <p><strong>Email:</strong> ${data.email}</p>
-                                <p><strong>Address:</strong> ${data.address || 'N/A'}, ${data.city || 'N/A'}, ${data.zip || 'N/A'}</p>
-                                <p><strong>Phone:</strong> ${data.phone1 || 'N/A'}</p>
-                                <p><strong>Photo URL:</strong> ${data.photo_url ? '<a href="' + data.photo_url + '" target="_blank">' + data.photo_url + '</a>' : 'Not available'}</p>
-                                <div class="info-section">
-                                    ${data.other_info && data.other_info.includes('Local Issues:') ? '<h4>Local Issues</h4><pre>' + data.other_info.split('Local Issues: ')[1].split('Flags:')[0].strip() + '</pre>' : ''}
-                                    ${data.other_info && data.other_info.includes('Flags:') ? '<h4>Flags</h4><pre>' + data.other_info.split('Flags: ')[1].split('Other Info:')[0].strip() + '</pre>' : ''}
-                                    ${data.other_info && data.other_info.includes('Other Info:') ? '<h4>Other Info</h4><pre>' + data.other_info.split('Other Info: ')[1].strip() + '</pre>' : ''}
-                                </div>
-                            </div>
-                        `;
+                            return '<div>' +
+                                '<p><strong>Name:</strong> ' + data.first_name + ' ' + data.last_name + '</p>' +
+                                '<p><strong>Email:</strong> ' + (data.email || 'N/A') + '</p>' +
+                                '<p><strong>Phone:</strong> ' + (data.phone1 || 'N/A') + '</p>' +
+                                '<p><strong>Address:</strong> ' + (data.address || 'N/A') + ', ' + (data.city || '') + ' ' + (data.zip || '') + '</p>' +
+                                '</div>';
                         })
                         .catch(error => {
-                            console.error('Error fetching candidate data:', error);
                             return '<p>Error loading profile</p>';
                         });
                 },
                 html: true,
                 sanitize: false,
                 trigger: 'click',
-                placement: 'right',
-                container: 'body',
-                delay: { "show": 100, "hide": 100 } // Add delay to ensure content loads
-            }).on('shown.bs.popover', function () {
-                var $popover = $(this);
-                $popover.data('bs.popover').getTitle = function () {
-                    return 'Candidate Profile';
-                };
-                // Adjust popover size dynamically
-                var $popoverContent = $popover.data('bs.popover').tip().find('.popover-body');
-                $popoverContent.css('max-height', '400px').css('overflow-y', 'auto');
-            }).on('click', function (e) {
-                e.preventDefault(); // Prevent default link behavior
-                e.stopPropagation(); // Stop event bubbling
+                placement: 'auto',
+                container: 'body'
+            });
+
+            // Close popover when clicking outside
+            $('body').on('click', function (e) {
+                $('[data-toggle="popover"]').each(function () {
+                    if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {
+                        $(this).popover('hide');
+                    }
+                });
             });
         });
     </script>

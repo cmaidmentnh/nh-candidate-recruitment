@@ -367,11 +367,39 @@ def get_data_and_dashboard():
 
 # ============== ROUTES ==============
 
+# Replace the index() function (around line 368-372) with this:
+
 @app.route('/')
 @login_required
 def index():
+    search_query = request.args.get('search', '').strip()
     county_groups, dashboard, county_stats = get_data_and_dashboard()
-    return render_template("index.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max)
+    
+    if search_query:
+        # Filter by search query
+        filtered_groups = {}
+        search_upper = search_query.upper()
+        for county_name, dist_dict in county_groups.items():
+            filtered_districts = {}
+            for fdc, info in dist_dict.items():
+                # Check if search matches district code
+                if search_upper in fdc.upper():
+                    filtered_districts[fdc] = info
+                    continue
+                # Check if search matches town
+                if any(search_upper in town.upper() for town in info['towns']):
+                    filtered_districts[fdc] = info
+                    continue
+                # Check if search matches any candidate name in 2026 or 2024
+                match_2026 = any(search_upper in c['name'].upper() for c in info['cand2026'])
+                match_2024 = any(search_upper in c['name'].upper() for c in info['cand2024'])
+                if match_2026 or match_2024:
+                    filtered_districts[fdc] = info
+            if filtered_districts:
+                filtered_groups[county_name] = filtered_districts
+        county_groups = filtered_groups
+    
+    return render_template("index.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max, search_query=search_query)
 
 @app.route('/filter')
 @candidate_restricted
