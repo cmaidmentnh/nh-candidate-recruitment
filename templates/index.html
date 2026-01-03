@@ -53,6 +53,13 @@
             <a href="{{ url_for('filter_view', category='primaries') }}" class="btn btn-light btn-sm mt-2">Details</a>
         </div>
     </div>
+    <div class="dash-card dash-card-size">
+        <div class="card-header bg-warning text-dark">Unmatched Voters</div>
+        <div class="card-body">
+            <h4>{{ dashboard.unmatched_voters.total }}</h4>
+            <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="btn btn-light btn-sm mt-2">Details</a>
+        </div>
+    </div>
 </div>
 
 <!-- Dashboard Cards - Second Row -->

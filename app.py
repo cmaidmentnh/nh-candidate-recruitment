@@ -328,6 +328,25 @@ def get_data_and_dashboard():
             ordered[fdc] = val
         sorted_county_groups[county] = ordered
 
+    # Get count of 2026 candidates not matched to voter file
+    conn2 = get_db_connection()
+    cur2 = conn2.cursor()
+    try:
+        cur2.execute("""
+            SELECT COUNT(DISTINCT c.candidate_id)
+            FROM candidates c
+            JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+            WHERE ces.election_year = 2026 
+              AND c.voter_id IS NULL
+              AND ces.status != 'Declined'
+        """)
+        unmatched_count = cur2.fetchone()[0]
+    except:
+        unmatched_count = 0
+    finally:
+        cur2.close()
+        release_db_connection(conn2)
+
     dashboard = {
         "confirmed": {"total": 0, "districts": []},
         "empty_seats": {"total": 0, "districts": []},
@@ -336,6 +355,7 @@ def get_data_and_dashboard():
         "incumbents_running": {"total": 0, "districts": []},
         "incumbents_not_running": {"total": 0, "districts": []},
         "primaries": {"total": 0, "districts": []},
+        "unmatched_voters": {"total": unmatched_count},
         "TOTAL_SEATS": TOTAL_SEATS,
         "TOTAL_DISTRICTS": TOTAL_DISTRICTS
     }
@@ -429,6 +449,31 @@ def index():
 def filter_view():
     category = request.args.get("category", "").strip()
     county_groups, dashboard, county_stats = get_data_and_dashboard()
+    
+    # Special handling for unmatched_voters
+    if category == 'unmatched_voters':
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("""
+                SELECT c.candidate_id, c.first_name, c.last_name, c.city, ces.district_code, ces.status
+                FROM candidates c
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2026 
+                  AND c.voter_id IS NULL
+                  AND ces.status != 'Declined'
+                ORDER BY c.last_name, c.first_name
+            """)
+            unmatched = cur.fetchall()
+        finally:
+            cur.close()
+            release_db_connection(conn)
+        
+        return render_template("unmatched_voters.html",
+                              category=category,
+                              unmatched=unmatched,
+                              dashboard=dashboard)
+    
     if category not in dashboard:
         flash("Invalid category filter.", "warning")
         return redirect(url_for("index"))
