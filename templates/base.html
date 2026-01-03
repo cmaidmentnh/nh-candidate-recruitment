@@ -161,6 +161,14 @@
         var currentDistrictCode = '';
         var currentElectionYear = 2026;
 
+        function expandAll() {
+            $('.collapse').addClass('show');
+        }
+
+        function collapseAll() {
+            $('.collapse').removeClass('show');
+        }
+
         function openAddCandidateModal(districtCode, electionYear) {
             currentDistrictCode = districtCode;
             currentElectionYear = electionYear;
