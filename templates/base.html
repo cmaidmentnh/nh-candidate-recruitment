@@ -255,6 +255,20 @@
         }
 
         $(document).ready(function () {
+            // Back to top button
+            $(window).scroll(function() {
+                if ($(this).scrollTop() > 300) {
+                    $('#backToTop').fadeIn();
+                } else {
+                    $('#backToTop').fadeOut();
+                }
+            });
+
+            $('#backToTop').click(function() {
+                $('html, body').animate({scrollTop: 0}, 400);
+                return false;
+            });
+
             // Restore scroll position and accordion states
             var savedScroll = sessionStorage.getItem('scrollPosition');
             var savedAccordions = sessionStorage.getItem('openAccordions');
@@ -334,5 +348,9 @@
         });
     </script>
     {% endblock %}
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="btn btn-primary" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000; border-radius:50%; width:50px; height:50px;">
+        <i class="fas fa-arrow-up"></i>
+    </button>
 </body>
 </html>
