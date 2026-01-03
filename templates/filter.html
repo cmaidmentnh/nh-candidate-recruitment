@@ -67,6 +67,18 @@
                         </tr>
                         {% endfor %}
                     
+                    {% elif category == 'empty_districts' %}
+                        <tr class="table-danger">
+                            <td>{{ fdc }}</td>
+                            <td>{{ info.towns|join(', ') }}</td>
+                            <td><span class="badge badge-danger">{{ info.seat_count }} seat{{ 's' if info.seat_count != 1 else '' }}</span></td>
+                            <td class="d-none d-md-table-cell">
+                                <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </td>
+                        </tr>
+                    
                     {% elif category == 'empty_seats' %}
                         <tr class="table-warning">
                             <td>{{ fdc }}</td>
@@ -84,50 +96,6 @@
                                 <small class="text-muted">{{ info.towns|join(', ') }}</small>
                             </td>
                         </tr>
-                    
-                    {% elif category == 'empty_seats' %}
-                        {# Show existing candidates #}
-                        {% for cand in active_2026 %}
-                        <tr>
-                            <td>{{ fdc }}</td>
-                            <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="
-                                    {% if cand.status|upper == 'CONFIRMED' %}text-success
-                                    {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
-                                    {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
-                                    {% else %}text-secondary{% endif %}">
-                                    {{ cand.name|title }}
-                                </a>
-                            </td>
-                            <td>
-                                <span class="badge 
-                                    {% if cand.status|upper == 'CONFIRMED' %}badge-success
-                                    {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}badge-warning
-                                    {% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary
-                                    {% else %}badge-secondary{% endif %}">
-                                    {{ cand.status }}
-                                </span>
-                            </td>
-                            <td class="d-none d-md-table-cell">
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {# Show empty seat rows #}
-                        {% for i in range(empty_seats) %}
-                        <tr class="table-warning">
-                            <td>{% if not active_2026 and loop.first %}{{ fdc }}{% endif %}</td>
-                            <td class="text-muted"><em><i class="fas fa-chair"></i> Empty Seat</em></td>
-                            <td><span class="badge badge-danger">Unfilled</span></td>
-                            <td class="d-none d-md-table-cell">
-                                <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
-                                    <i class="fas fa-plus"></i> Add
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
                     
                     {% elif category == 'incumbents_running' %}
                         {% for cand in active_2026 if cand.incumbent %}
