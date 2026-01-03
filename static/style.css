@@ -335,10 +335,13 @@ pre {
         width: 140px;
         min-height: 160px;
     }
-    
+    /* Fix dashboard card header heights */
     .dash-card .card-header {
-        font-size: 12px;
-        padding: 12px 8px;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
     }
     
     .dash-card .card-body h4 {
