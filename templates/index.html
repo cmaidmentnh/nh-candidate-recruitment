@@ -89,15 +89,6 @@
 </div>
 {% endif %}
 
-<!-- County Navigation -->
-<div class="county-nav">
-    {% for county_name in county_groups.keys()|sort %}
-    <a class="county-pill" href="#{{ county_name|replace(' ', '_') }}">
-        {{ county_name|title }}
-    </a>
-    {% endfor %}
-</div>
-
 <!-- County Accordion -->
 <div id="countyAccordion">
     {% for county_name, dist_dict in county_groups.items()|sort %}
