@@ -1479,14 +1479,22 @@ def lookup_voter(candidate_id):
     
     voter_cur = voter_conn.cursor()
     try:
-        # Search by last name only - show all matches
+        # Search by last name, prioritize first name matches
+        # Use CASE to sort best matches first
         voter_cur.execute("""
             SELECT id_voter, nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
             FROM statewidechecklist
             WHERE UPPER(nm_last) = UPPER(%s)
-            ORDER BY nm_first
-            LIMIT 20
-        """, (last_name,))
+            ORDER BY 
+                CASE 
+                    WHEN UPPER(nm_first) = UPPER(%s) THEN 0
+                    WHEN UPPER(nm_first) LIKE UPPER(%s) || '%%' THEN 1
+                    WHEN UPPER(SUBSTRING(nm_first, 1, 3)) = UPPER(SUBSTRING(%s, 1, 3)) THEN 2
+                    ELSE 3
+                END,
+                nm_first
+            LIMIT 50
+        """, (last_name, first_name, first_name, first_name))
         
         voters = voter_cur.fetchall()
         results = []
@@ -1506,7 +1514,6 @@ def lookup_voter(candidate_id):
     finally:
         voter_cur.close()
         release_voter_db_connection(voter_conn)
-
 
 @app.route('/api/lookup_district', methods=['POST'])
 @login_required  
