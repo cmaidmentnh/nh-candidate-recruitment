@@ -15,6 +15,69 @@
         <button type="submit" class="btn btn-success">Update Candidates from Submission Data</button>
     </form>
 
+    <!-- Export Section -->
+    <h3 class="mt-4">Export Data</h3>
+    <div class="row mb-4">
+        <div class="col-md-4 mb-2">
+            <a href="{{ url_for('export_csv', export_type='all_candidates') }}" class="btn btn-success btn-block">
+                <i class="fas fa-download"></i> All 2026 Candidates
+            </a>
+        </div>
+        <div class="col-md-4 mb-2">
+            <a href="{{ url_for('export_csv', export_type='confirmed') }}" class="btn btn-success btn-block">
+                <i class="fas fa-download"></i> Confirmed Only
+            </a>
+        </div>
+        <div class="col-md-4 mb-2">
+            <a href="{{ url_for('export_csv', export_type='potentials') }}" class="btn btn-warning btn-block">
+                <i class="fas fa-download"></i> Potentials/Considering
+            </a>
+        </div>
+        <div class="col-md-4 mb-2">
+            <a href="{{ url_for('export_csv', export_type='empty_districts') }}" class="btn btn-danger btn-block">
+                <i class="fas fa-download"></i> Empty Districts
+            </a>
+        </div>
+        <div class="col-md-4 mb-2">
+            <a href="{{ url_for('export_csv', export_type='contact_list') }}" class="btn btn-info btn-block">
+                <i class="fas fa-download"></i> Contact List
+            </a>
+        </div>
+        <div class="col-md-4 mb-2">
+            <div class="input-group">
+                <select id="countySelect" class="form-control">
+                    <option value="">Select County...</option>
+                    <option value="Belknap">Belknap</option>
+                    <option value="Carroll">Carroll</option>
+                    <option value="Cheshire">Cheshire</option>
+                    <option value="Coos">Coos</option>
+                    <option value="Grafton">Grafton</option>
+                    <option value="Hillsborough">Hillsborough</option>
+                    <option value="Merrimack">Merrimack</option>
+                    <option value="Rockingham">Rockingham</option>
+                    <option value="Strafford">Strafford</option>
+                    <option value="Sullivan">Sullivan</option>
+                </select>
+                <div class="input-group-append">
+                    <button class="btn btn-outline-success" onclick="exportByCounty()">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function exportByCounty() {
+            var county = document.getElementById('countySelect').value;
+            if (county) {
+                window.location.href = '/admin/export/by_county?county=' + encodeURIComponent(county);
+            } else {
+                alert('Please select a county');
+            }
+        }
+    </script>
+
     <!-- Candidate Users Table with Bulk Delete -->
     <h4>Candidate Users</h4>
     <form method="POST" action="{{ url_for('delete_users_bulk') }}">

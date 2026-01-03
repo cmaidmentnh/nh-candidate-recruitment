@@ -1396,6 +1396,126 @@ def update_candidates():
             flash("Please upload a CSV file", "danger")
     return render_template('admin_dashboard.html')
 
+@app.route('/admin/export/<export_type>')
+@admin_required
+def export_csv(export_type):
+    """Export data to CSV"""
+    import io
+    import csv
+    from flask import Response
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        if export_type == 'all_candidates':
+            cur.execute("""
+                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email, 
+                       c.address, c.city, c.zip, c.phone1, c.incumbent,
+                       ces.district_code, ces.status, ces.election_year
+                FROM candidates c
+                LEFT JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2026
+                ORDER BY ces.district_code, c.last_name
+            """)
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'Incumbent', 'District', 'Status', 'Year']
+            filename = 'all_candidates_2026.csv'
+            
+        elif export_type == 'confirmed':
+            cur.execute("""
+                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email,
+                       c.address, c.city, c.zip, c.phone1,
+                       ces.district_code
+                FROM candidates c
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2026 AND ces.status = 'Confirmed'
+                ORDER BY ces.district_code, c.last_name
+            """)
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'District']
+            filename = 'confirmed_candidates_2026.csv'
+            
+        elif export_type == 'potentials':
+            cur.execute("""
+                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email,
+                       c.address, c.city, c.zip, c.phone1,
+                       ces.district_code, ces.status
+                FROM candidates c
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2026 AND ces.status IN ('Potential', 'Considering')
+                ORDER BY ces.district_code, c.last_name
+            """)
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'District', 'Status']
+            filename = 'potential_candidates_2026.csv'
+            
+        elif export_type == 'empty_districts':
+            cur.execute("""
+                SELECT d.full_district_code, d.county_name, d.seat_count, 
+                       STRING_AGG(DISTINCT d.town, ', ') as towns
+                FROM districts d
+                LEFT JOIN candidate_election_status ces 
+                    ON d.full_district_code = ces.district_code AND ces.election_year = 2026
+                LEFT JOIN candidates c ON ces.candidate_id = c.candidate_id AND c.party = 'R'
+                GROUP BY d.full_district_code, d.county_name, d.seat_count
+                HAVING COUNT(CASE WHEN ces.status NOT IN ('Declined') OR ces.status IS NULL THEN NULL ELSE 1 END) = 0
+                ORDER BY d.county_name, d.full_district_code
+            """)
+            headers = ['District', 'County', 'Seats', 'Towns']
+            filename = 'empty_districts_2026.csv'
+            
+        elif export_type == 'by_county':
+            county = request.args.get('county', '')
+            cur.execute("""
+                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email,
+                       c.address, c.city, c.zip, c.phone1, c.incumbent,
+                       ces.district_code, ces.status
+                FROM candidates c
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                JOIN districts d ON ces.district_code = d.full_district_code
+                WHERE ces.election_year = 2026 AND d.county_name ILIKE %s
+                ORDER BY ces.district_code, c.last_name
+            """, (county,))
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'Incumbent', 'District', 'Status']
+            filename = f'{county.lower()}_candidates_2026.csv'
+            
+        elif export_type == 'contact_list':
+            cur.execute("""
+                SELECT c.first_name, c.last_name, c.email, c.phone1, c.city,
+                       ces.district_code, ces.status
+                FROM candidates c
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2026 AND ces.status != 'Declined'
+                    AND (c.email IS NOT NULL OR c.phone1 IS NOT NULL)
+                ORDER BY c.last_name
+            """)
+            headers = ['First Name', 'Last Name', 'Email', 'Phone', 'City', 'District', 'Status']
+            filename = 'contact_list_2026.csv'
+            
+        else:
+            flash("Invalid export type.", "danger")
+            return redirect(url_for('admin_dashboard'))
+        
+        rows = cur.fetchall()
+        
+        # Create CSV
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        writer.writerows(rows)
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error exporting CSV: {e}")
+        flash("Error exporting data.", "danger")
+        return redirect(url_for('admin_dashboard'))
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
 @app.route('/profile/<int:candidate_id>')
 @admin_required
 def candidate_profile(candidate_id):
