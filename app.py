@@ -1738,7 +1738,7 @@ def sync_from_voter(candidate_id):
     voter_cur = voter_conn.cursor()
     try:
         voter_cur.execute("""
-            SELECT nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county
+            SELECT nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
             FROM statewidechecklist
             WHERE id_voter = %s
         """, (voter_id,))
@@ -1747,7 +1747,7 @@ def sync_from_voter(candidate_id):
         if not voter:
             return jsonify({'error': 'Voter not found'}), 404
         
-        nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county = voter
+        nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party = voter
         address = f"{ad_num or ''} {ad_str1 or ''}".strip()
         
     finally:
@@ -1760,9 +1760,9 @@ def sync_from_voter(candidate_id):
     try:
         cur.execute("""
             UPDATE candidates
-            SET address = %s, city = %s, zip = %s
+            SET address = %s, city = %s, zip = %s, voter_id = %s
             WHERE candidate_id = %s
-        """, (address, ad_city, ad_zip5, candidate_id))
+        """, (address, ad_city, ad_zip5, voter_id, candidate_id))
         conn.commit()
         
         return jsonify({
@@ -1771,7 +1771,9 @@ def sync_from_voter(candidate_id):
             'city': ad_city,
             'zip': ad_zip5,
             'ward': ward,
-            'county': county
+            'county': county,
+            'voter_id': voter_id,
+            'party': cd_party
         })
     except Exception as e:
         conn.rollback()
