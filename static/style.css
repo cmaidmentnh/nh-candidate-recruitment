@@ -1,0 +1,127 @@
+body {
+    background-color: #f8f9fa;
+}
+
+/* Container with subtle shadow */
+.container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Dashboard Card Base */
+.dash-card {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.dash-card .card-header {
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: none;
+    min-height: 100px;
+}
+
+/* Force a uniform size for the 7 main boxes */
+.dash-card-size {
+    width: 140px;
+    height: 240px;
+}
+
+/* Hover effect: scale up the entire card */
+.hover-scale:hover {
+    transform: scale(1.03);
+}
+
+/* Brighter gradient backgrounds */
+.dash-gradient-green {
+    background: linear-gradient(135deg, #63e77b 0%, #28a745 100%);
+}
+
+.dash-gradient-orange {
+    background: linear-gradient(135deg, #ffa500 0%, #ff7f0f 100%);
+}
+
+.dash-gradient-red {
+    background: linear-gradient(135deg, #ff6347 0%, #dc3545 100%);
+}
+
+.dash-gradient-teal {
+    background: linear-gradient(135deg, #20b2aa 0%, #138496 100%);
+}
+
+.dash-gradient-purple {
+    background: linear-gradient(135deg, #8a2be2 0%, #6f42c1 100%);
+}
+
+.dash-gradient-gray {
+    background: linear-gradient(135deg, #7f7f7f 0%, #5f5f5f 100%);
+}
+
+.dash-gradient-dark {
+    background: linear-gradient(135deg, #343a40 0%, #23272b 100%);
+}
+
+/* Candidate link styling */
+.candidate-link {
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.candidate-link:hover {
+    text-decoration: underline;
+}
+
+/* County pill buttons for "Jump to County" */
+.county-pill {
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+    text-transform: capitalize;
+}
+
+.county-pill:hover {
+    background-color: #0069d9;
+    color: #fff !important;
+}
+
+/* Make the card headers look clickable for collapse sections */
+.card-header {
+    user-select: none;
+    border-radius: 0;
+}
+
+.custom-popover {
+    max-width: 400px !important;
+    max-height: 500px !important;
+    overflow-y: auto !important;
+}
+.info-section {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-left: 4px solid #007bff;
+}
+.info-section h4 {
+    margin-top: 0;
+    color: #007bff;
+}
+.info-section p {
+    margin: 5px 0;
+}
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+.ml-2 {
+    margin-left: 0.5rem;
+}
+
+
+
+/* gcloud sql connect nh-candidate-tracker --user=postgres --database=nh_candidates
+/* DELETE FROM candidates WHERE candidate_id = %s

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4">Filtered: {{ category|replace('_', ' ')|title }}</h1>
+<p><a href="{{ url_for('index') }}" class="btn btn-secondary mb-3">Back to Dashboard</a></p>
+
+<div id="countyAccordion">
+{% for county_name, dist_dict in county_groups.items() %}
+  <div class="card mb-4" id="{{ county_name|replace(' ', '_') }}">
+    <div class="card-header bg-info text-white"
+         style="cursor: pointer;"
+         data-toggle="collapse"
+         data-target="#collapse-{{ county_name|replace(' ', '_') }}"
+         aria-expanded="false"
+         aria-controls="collapse-{{ county_name|replace(' ', '_') }}">
+      <h4 class="mb-0">{{ county_name|title }}</h4>
+    </div>
+    <div id="collapse-{{ county_name|replace(' ', '_') }}" class="collapse">
+      <div class="card-body">
+        {% for fdc, info in dist_dict.items() %}
+          {% set dist_name = fdc %}
+          {% if not dist_name.endswith(' ' ~ info.district_code) %}
+            {% set dist_name = dist_name ~ ' - ' ~ info.district_code %}
+          {% endif %}
+
+          {% set active_2026 = info.cand2026|rejectattr("status","equalto","Declined")|list %}
+          {% set declined_2026 = info.cand2026|selectattr("status","equalto","Declined")|list %}
+          {% set active_2024 = info.cand2024|rejectattr("status","equalto","Declined")|list %}
+          {% set declined_2024 = info.cand2024|selectattr("status","equalto","Declined")|list %}
+
+          {% set seats_filled = (active_2026|length >= info.seat_count) or (active_2024|length >= info.seat_count) %}
+          
+          {# Manual approach to "max" #}
+          {% set seatCount = info.seat_count %}
+          {% set a2026 = active_2026|length %}
+          {% set a2024 = active_2024|length %}
+          {% set baseCount = seatCount %}
+          {% if a2026 > baseCount %}
+            {% set baseCount = a2026 %}
+          {% endif %}
+          {% if a2024 > baseCount %}
+            {% set baseCount = a2024 %}
+          {% endif %}
+          {% if seats_filled %}
+            {% set row_count = baseCount + 1 %}
+          {% else %}
+            {% set row_count = baseCount %}
+          {% endif %}
+
+          <h5 class="mt-4">{{ dist_name }} ({{ info.seat_count }} seats)</h5>
+          <p class="text-muted mb-2">
+            <strong>Towns:</strong> {{ info.towns|join(", ") }}
+          </p>
+
+          <table class="table table-bordered table-striped">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 10%;">Seat #</th>
+                <th style="width: 45%;">2026 Candidate</th>
+                <th style="width: 45%;">2024 Candidate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in range(row_count) %}
+              <tr>
+                <td>
+                  {% if row < info.seat_count %}
+                    Seat {{ row+1 }}
+                  {% else %}
+                    &nbsp;
+                  {% endif %}
+                </td>
+                <!-- 2026 candidate (non-declined) -->
+                <td>
+                  {% if row < a2026 %}
+                    {% set cand = active_2026[row] %}
+                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}"
+                       class="candidate-link">
+                      <span class="
+                        {% if cand.status|upper == 'CONFIRMED' %}
+                          text-success
+                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}
+                          text-warning
+                        {% elif cand.status|upper == 'NEW RECRUIT' %}
+                          text-primary
+                        {% else %}
+                          text-secondary
+                        {% endif %}
+                      ">
+                        {{ cand.name|title }} ({{ cand.status }})
+                      </span>
+                    </a>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-primary"
+                            onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                      Add 2026 Candidate
+                    </button>
+                  {% endif %}
+                </td>
+                <!-- 2024 candidate (non-declined) -->
+                <td>
+                  {% if row < a2024 %}
+                    {% set cand = active_2024[row] %}
+                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2024) }}"
+                       class="candidate-link">
+                      <span class="
+                        {% if cand.status|upper == 'CONFIRMED' %}
+                          text-success
+                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}
+                          text-warning
+                        {% elif cand.status|upper == 'NEW RECRUIT' %}
+                          text-primary
+                        {% else %}
+                          text-secondary
+                        {% endif %}
+                      ">
+                        {{ cand.name|title }} ({{ cand.status }})
+                      </span>
+                    </a>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-primary"
+                            onclick="openAddCandidateModal('{{ fdc }}', 2024)">
+                      Add 2024 Candidate
+                    </button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <!-- NOTES for declined candidates -->
+          {% if declined_2026 or declined_2024 %}
+            <p class="text-muted">
+              <strong>NOTES:</strong>
+              {% if declined_2026 %}
+                Declined 2026:
+                {{ declined_2026|map(attribute='name')|map('title')|join(', ') }}
+              {% endif %}
+              {% if declined_2026 and declined_2024 %}
+                &nbsp;|&nbsp;
+              {% endif %}
+              {% if declined_2024 %}
+                Declined 2024:
+                {{ declined_2024|map(attribute='name')|map('title')|join(', ') }}
+              {% endif %}
+            </p>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

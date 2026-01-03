@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Candidate Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .info-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #007bff;
+        }
+        .info-section h4 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .info-section p {
+            margin: 5px 0;
+        }
+        pre {
+            white-space: pre-wrap; /* Allow text to wrap */
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Candidate Profile</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% if candidate %}
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Candidate ID:</strong> {{ candidate.candidate_id }}</p>
+                    <p><strong>Name:</strong> {{ candidate.first_name }} {{ candidate.last_name }}</p>
+                    <p><strong>Email:</strong> {{ candidate.email }}</p>
+                    <p><strong>Address:</strong> {{ candidate.address }}, {{ candidate.city }}, {{ candidate.zip }}</p>
+                    <p><strong>Phone:</strong> {{ candidate.phone1 }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Photo URL:</strong> {% if candidate.photo_url %}<a href="{{ candidate.photo_url }}" target="_blank">{{ candidate.photo_url }}</a>{% else %}Not available{% endif %}</p>
+                </div>
+            </div>
+            <div class="info-section">
+                {% if 'Local Issues:' in candidate.other_info %}
+                    <h4>Local Issues</h4>
+                    <pre>{{ candidate.other_info.split('Local Issues: ')[1].split('Flags:')[0].strip() | safe }}</pre>
+                {% endif %}
+                {% if 'Flags:' in candidate.other_info %}
+                    <h4>Flags</h4>
+                    <pre>{{ candidate.other_info.split('Flags: ')[1].split('Other Info:')[0].strip() | safe }}</pre>
+                {% endif %}
+                {% if 'Other Info:' in candidate.other_info %}
+                    <h4>Other Info</h4>
+                    <pre>{{ candidate.other_info.split('Other Info: ')[1].strip() | safe }}</pre>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+        {% else %}
+            <p>No candidate data available.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

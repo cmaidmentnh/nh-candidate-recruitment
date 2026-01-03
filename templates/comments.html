@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Comments for {{ candidate[0] }} {{ candidate[1] }}</h1>
+<form method="POST">
+    <div class="form-group">
+        <label>Add Comment:</label>
+        <textarea name="comment_text" class="form-control" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+<h3>Existing Comments</h3>
+{% for comment in comments %}
+    <p><strong>{{ comment[2] }}</strong> ({{ comment[3] }}): {{ comment[1] }}</p>
+{% endfor %}
+<a href="{{ url_for('index') }}" class="btn btn-secondary">Back</a>
+{% endblock %}

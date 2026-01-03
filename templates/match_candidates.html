@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Match Candidates with Statewide Checklist</h1>
+{% if matches %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Candidate ID</th>
+                <th>Candidate Name</th>
+                <th>Candidate Party</th>
+                <th>Checklist Name</th>
+                <th>Checklist Party</th>
+                <th>Checklist Address</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for match in matches %}
+            <tr>
+                <td>{{ match.candidate_id }}</td>
+                <td>{{ match.checklist_name }}</td>
+                <td>{{ match.candidate_party }}</td>
+                <td>{{ match.checklist_name }}</td>
+                <td>{{ match.checklist_party }}</td>
+                <td>{{ match.checklist_address }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('confirm_match', candidate_id=match.candidate_id) }}">
+                        <button type="submit" class="btn btn-success btn-sm">Confirm Match</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No potential matches found.</p>
+{% endif %}
+<a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+{% endblock %}

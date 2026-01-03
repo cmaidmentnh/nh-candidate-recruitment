@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Edit {{ user_type|capitalize }} User</h1>
+    <form method="POST">
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" name="email" class="form-control" value="{{ user[3] if user_type == 'candidate' else user[2] }}" required>
+        </div>
+        <div class="form-group">
+            <label>Password (leave blank to keep current):</label>
+            <input type="password" name="password" class="form-control">
+        </div>
+        {% if user_type == 'candidate' %}
+            <div class="form-group">
+                <label>First Name:</label>
+                <input type="text" name="first_name" class="form-control" value="{{ user[1] }}">
+            </div>
+            <div class="form-group">
+                <label>Last Name:</label>
+                <input type="text" name="last_name" class="form-control" value="{{ user[2] }}">
+            </div>
+            <div class="form-group">
+                <label>Party:</label>
+                <select name="party" class="form-control">
+                    <option value="R" {% if user[4] == 'R' %}selected{% endif %}>Republican</option>
+                    <option value="D" {% if user[4] == 'D' %}selected{% endif %}>Democrat</option>
+                    <option value="I" {% if user[4] == 'I' %}selected{% endif %}>Independent</option>
+                </select>
+            </div>
+        {% else %}
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" name="username" class="form-control" value="{{ user[1] }}" readonly>
+            </div>
+            <div class="form-group">
+                <label>Role:</label>
+                <select name="role" class="form-control">
+                    <option value="admin" {% if user[3] == 'admin' %}selected{% endif %}>Admin</option>
+                    <option value="staff" {% if user[3] == 'staff' %}selected{% endif %}>Staff</option>
+                </select>
+            </div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">Update User</button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

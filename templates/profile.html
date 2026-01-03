@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Profile</h1>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}  <!-- Close the if block -->
+    {% endwith %}  <!-- Close the with block -->
+    <form method="POST" enctype="multipart/form-data">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="first_name">First Name</label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name|default('') }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Last Name</label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name|default('') }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email|default('') }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">Address</label>
+                    <input type="text" class="form-control" id="address" name="address" value="{{ user.address|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="city">City</label>
+                    <input type="text" class="form-control" id="city" name="city" value="{{ user.city|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="zip">Zip Code</label>
+                    <input type="text" class="form-control" id="zip" name="zip" value="{{ user.zip|default('') }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="phone1">Phone 1</label>
+                    <input type="text" class="form-control" id="phone1" name="phone1" value="{{ user.phone1|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="phone2">Phone 2</label>
+                    <input type="text" class="form-control" id="phone2" name="phone2" value="{{ user.phone2|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="twitter_x">Twitter/X</label>
+                    <input type="text" class="form-control" id="twitter_x" name="twitter_x" value="{{ user.twitter_x|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="facebook">Facebook</label>
+                    <input type="text" class="form-control" id="facebook" name="facebook" value="{{ user.facebook|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="instagram">Instagram</label>
+                    <input type="text" class="form-control" id="instagram" name="instagram" value="{{ user.instagram|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="other">Other</label>
+                    <input type="text" class="form-control" id="other" name="other" value="{{ user.other|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="signal">Signal</label>
+                    <input type="text" class="form-control" id="signal" name="signal" value="{{ user.signal|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="email1">Email 1</label>
+                    <input type="text" class="form-control" id="email1" name="email1" value="{{ user.email1|default('') }}">
+                </div>
+                <div class="form-group">
+                    <label for="email2">Email 2</label>
+                    <input type="text" class="form-control" id="email2" name="email2" value="{{ user.email2|default('') }}">
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="password">New Password (leave blank to keep current)</label>
+            <input type="password" class="form-control" id="password" name="password">
+        </div>
+        <div class="form-group">
+            <label for="photo">Profile Photo</label>
+            <input type="file" class="form-control-file" id="photo" name="photo">
+            {% if user.photo_url %}
+                <p>Current Photo: <a href="{{ user.photo_url }}" target="_blank">{{ user.photo_url }}</a></p>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+</div>
+{% endblock %}

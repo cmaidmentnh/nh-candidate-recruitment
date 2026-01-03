@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Candidate</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        #copy2026Form { display: none; }
+        .comment-box { margin-top: 20px; }
+        .comments-list { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Edit Candidate</h1>
+        <form method="POST">
+            <div class="form-group">
+                <label>First Name:</label>
+                <input type="text" name="first_name" class="form-control" value="{{ first_name }}" required>
+            </div>
+            <div class="form-group">
+                <label>Last Name:</label>
+                <input type="text" name="last_name" class="form-control" value="{{ last_name }}" required>
+            </div>
+            <div class="form-group">
+                <label>Party:</label>
+                <select name="party" class="form-control">
+                    <option value="R" {% if party == 'R' %}selected{% endif %}>Republican</option>
+                    <option value="D" {% if party == 'D' %}selected{% endif %}>Democrat</option>
+                    <option value="I" {% if party == 'I' %}selected{% endif %}>Independent</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Status (Election {{ election_year }}):</label>
+                <select name="status" class="form-control">
+                    <option value="Considering" {% if status|upper == 'CONSIDERING' %}selected{% endif %}>Considering</option>
+                    <option value="Potential" {% if status|upper == 'POTENTIAL' %}selected{% endif %}>Potential</option>
+                    <option value="Confirmed" {% if status|upper == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
+                    <option value="Declined" {% if status|upper == 'DECLINED' %}selected{% endif %}>Declined</option>
+                    <option value="New Recruit" {% if status|upper == 'NEW RECRUIT' %}selected{% endif %}>New Recruit</option>
+                </select>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="incumbent" id="incumbentCheck"
+                       {% if incumbent %}checked{% endif %}>
+                <label class="form-check-label" for="incumbentCheck">
+                    Incumbent?
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Candidate</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+
+        <!-- Quick Add to 2026 Form -->
+        <div id="copy2026Form">
+            <h4 class="mt-4">Copy to 2026</h4>
+            <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=candidate_id) }}">
+                <div class="form-group">
+                    <label>Status for 2026:</label>
+                    <select name="status" class="form-control">
+                        <option value="Considering">Considering</option>
+                        <option value="Potential">Potential</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="New Recruit" selected>New Recruit</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>District Code:</label>
+                    <input type="text" name="district_code" class="form-control" value="{{ district_code if district_code else '' }}">
+                </div>
+                <div class="form-group comment-box">
+                    <label>Comment:</label>
+                    <textarea name="comment" class="form-control" placeholder="Add a comment for 2026"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success">Copy to 2026</button>
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('copy2026Form').style.display='none'">Cancel</button>
+            </form>
+        </div>
+
+        <!-- Comment Box for Current Edit -->
+        <div class="form-group comment-box">
+            <h4 class="mt-4">Add Comment</h4>
+            <form method="POST" action="{{ url_for('comments', candidate_id=candidate_id) }}">
+                <textarea name="comment_text" class="form-control" placeholder="Enter your comment"></textarea>
+                <button type="submit" class="btn btn-primary mt-2">Submit Comment</button>
+            </form>
+        </div>
+
+        <!-- Recent Comments -->
+        <div class="comments-list">
+            <h4>Recent Comments (Last 5)</h4>
+            {% if comments %}
+                {% for comment in comments %}
+                    <p><strong>{{ comment[2] }}</strong> ({{ comment[3] }}): {{ comment[1] }}</p>
+                {% endfor %}
+            {% else %}
+                <p>No comments yet.</p>
+            {% endif %}
+        </div>
+
+        {% if election_year == 2024 %}
+            <hr>
+            <h4 class="mt-4">Quick Add to 2026</h4>
+            <button class="btn btn-info" onclick="document.getElementById('copy2026Form').style.display='block'">Copy this Candidate to 2026</button>
+        {% endif %}
+
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    </div>
+</body>
+</html>

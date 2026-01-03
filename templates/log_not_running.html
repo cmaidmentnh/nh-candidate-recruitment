@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Not Running</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4">Incumbents and Former Candidates Not Running in 2026</h1>
+        <h3>Incumbents Not Running:</h3>
+        <ul class="list-group">
+            {% for incumbent in incumbents %}
+                <li class="list-group-item">{{ incumbent[1] }} {{ incumbent[2] }} (ID: {{ incumbent[0] }})</li>
+            {% endfor %}
+        </ul>
+        <h3 class="mt-4">Former Candidates Not Running:</h3>
+        <ul class="list-group">
+            {% for candidate in former %}
+                <li class="list-group-item">{{ candidate[1] }} {{ candidate[2] }} (ID: {{ candidate[0] }})</li>
+            {% endfor %}
+        </ul>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary mt-2">Back to Menu</a>
+    </div>
+</body>
+</html>

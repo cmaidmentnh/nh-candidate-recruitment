@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Admin Dashboard</h1>
+    <p>Welcome, {{ current_user.username }}!</p>
+
+    <!-- User Management Section -->
+    <h3>User Management</h3>
+    <a href="{{ url_for('add_user') }}" class="btn btn-primary mb-3">Add New User</a>
+    <form method="POST" action="{{ url_for('update_candidates') }}" enctype="multipart/form-data" class="mb-3">
+        <div class="form-group">
+            <label for="file">Upload Candidate Data (CSV)</label>
+            <input type="file" class="form-control-file" id="file" name="file" accept=".csv">
+        </div>
+        <button type="submit" class="btn btn-success">Update Candidates from Submission Data</button>
+    </form>
+
+    <!-- Candidate Users Table with Bulk Delete -->
+    <h4>Candidate Users</h4>
+    <form method="POST" action="{{ url_for('delete_users_bulk') }}">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>ID</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Email</th>
+                    <th>Party</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for candidate in candidate_users %}
+                <tr>
+                    <td><input type="checkbox" name="candidate_ids" value="{{ candidate[0] }}"></td>
+                    <td>{{ candidate[0] }}</td>
+                    <td>{{ candidate[1] }}</td>
+                    <td>{{ candidate[2] }}</td>
+                    <td>{{ candidate[3] }}</td>
+                    <td>{{ candidate[4] }}</td>
+                    <td>
+                        <a href="{{ url_for('edit_user', user_type='candidate', user_id=candidate[0]) }}"
+                            class="btn btn-sm btn-warning">Edit</a>
+                        <form method="POST"
+                            action="{{ url_for('delete_user', user_type='candidate', user_id=candidate[0]) }}"
+                            style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                onclick="return confirm('Are you sure?')">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-danger mb-3"
+            onclick="return confirm('Are you sure you want to delete selected candidate users?')">Delete
+            Selected</button>
+    </form>
+
+    <!-- Admins Table -->
+    <h4>Admins</h4>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for admin in admins %}
+            <tr>
+                <td>{{ admin[0] }}</td>
+                <td>{{ admin[1] }}</td>
+                <td>{{ admin[2] }}</td>
+                <td>{{ admin[3] }}</td>
+                <td>
+                    <a href="{{ url_for('edit_user', user_type='admin', user_id=admin[0]) }}"
+                        class="btn btn-sm btn-warning">Edit</a>
+                    <form method="POST" action="{{ url_for('delete_user', user_type='admin', user_id=admin[0]) }}"
+                        style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger"
+                            onclick="return confirm('Are you sure?')">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Token Management Section -->
+    <h4>Registration Tokens</h4>
+    <form method="POST" action="{{ url_for('generate_token') }}">
+        <div class="form-group">
+            <label for="token_count">Number of Tokens to Generate</label>
+            <input type="number" class="form-control" id="token_count" name="token_count" min="1" value="1">
+        </div>
+        <button type="submit" class="btn btn-primary mb-3">Generate Tokens</button>
+    </form>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Token</th>
+                <th>Created At</th>
+                <th>Used</th>
+                <th>Created By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for token in tokens %}
+            <tr>
+                <td>{{ token[0] }}</td>
+                <td>{{ token[1] }}</td>
+                <td>{{ token[2] }}</td>
+                <td>{{ token[3] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Other Admin Actions -->
+    <div class="list-group mt-4">
+        <a href="{{ url_for('match_candidates') }}" class="list-group-item list-group-item-action">
+            Match Candidates with Statewide Checklist
+        </a>
+        <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action">
+            Logout
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+
+<script>
+    // Select/Deselect all checkboxes
+    document.getElementById('select-all').addEventListener('click', function (e) {
+        let checkboxes = document.getElementsByName('candidate_ids');
+        for (let checkbox of checkboxes) {
+            checkbox.checked = e.target.checked;
+        }
+    });
+</script>
+{% endblock %}
