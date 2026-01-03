@@ -18,6 +18,10 @@
             {% for county_name, dist_dict in county_groups.items()|sort %}
                 {% for fdc, info in dist_dict.items() %}
                     {% set active_2026 = info.cand2026|rejectattr("status","equalto","Declined")|list %}
+                    {% set confirmed_count = info.cand2026|selectattr("status","equalto","Confirmed")|list|length %}
+                    {% set empty_seats = info.seat_count - confirmed_count %}
+                    
+                    {# Show existing candidates #}
                     {% if active_2026 %}
                         {% for cand in active_2026 %}
                         <tr>
@@ -47,18 +51,22 @@
                             </td>
                         </tr>
                         {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td>{{ fdc }}</td>
-                            <td colspan="2" class="text-muted">
-                                <em>No candidates - {{ info.seat_count }} seat{{ 's' if info.seat_count != 1 else '' }} available</em>
-                            </td>
+                    {% endif %}
+                    
+                    {# Show empty seat rows #}
+                    {% if empty_seats > 0 %}
+                        {% for i in range(empty_seats) %}
+                        <tr class="table-warning">
+                            <td>{% if not active_2026 and loop.first %}{{ fdc }}{% endif %}</td>
+                            <td class="text-muted"><em><i class="fas fa-chair"></i> Empty Seat</em></td>
+                            <td><span class="badge badge-danger">Unfilled</span></td>
                             <td class="d-none d-md-table-cell">
                                 <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
                             </td>
                         </tr>
+                        {% endfor %}
                     {% endif %}
                 {% endfor %}
             {% endfor %}
