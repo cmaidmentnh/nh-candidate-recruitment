@@ -656,14 +656,15 @@ def login():
         password = request.form.get('password').strip()
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Check candidates table first
         cur.execute("""
             SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url
             FROM candidates
             WHERE email = %s
         """, (email,))
         user_row = cur.fetchone()
-        cur.close()
-        release_db_connection(conn)
+        
         if user_row:
             candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url = user_row
             if password_hash and check_password_hash(password_hash, password):
@@ -671,10 +672,30 @@ def login():
                 login_user(user)
                 session.permanent = True
                 flash("Logged in successfully.", "success")
+                cur.close()
+                release_db_connection(conn)
                 if not password_changed:
                     flash("Please change your password on first login.", "warning")
                     return redirect(url_for('change_password'))
                 return redirect(url_for('index'))
+        
+        # Check admin users table
+        cur.execute("""
+            SELECT user_id, username, email, password_hash, role
+            FROM users
+            WHERE email = %s
+        """, (email,))
+        admin_row = cur.fetchone()
+        cur.close()
+        release_db_connection(conn)
+        
+        if admin_row and check_password_hash(admin_row[3], password):
+            user = AdminUser(*admin_row)
+            login_user(user)
+            session.permanent = True
+            flash("Logged in successfully.", "success")
+            return redirect(url_for('index'))
+        
         flash("Invalid email or password.", "danger")
     return render_template("login.html")
 
