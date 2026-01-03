@@ -23,6 +23,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Main database connection pool
 db_pool = None
 
 def get_db_pool():
@@ -48,6 +49,30 @@ def get_db_connection():
 
 def release_db_connection(conn):
     get_db_pool().putconn(conn)
+
+# Voter database connection (external - for statewide checklist lookups)
+VOTER_DATABASE_URL = os.environ.get("VOTER_DATABASE_URL")
+voter_db_pool = None
+
+def get_voter_db_pool():
+    global voter_db_pool
+    if voter_db_pool is None and VOTER_DATABASE_URL:
+        try:
+            voter_db_pool = psycopg2.pool.SimpleConnectionPool(1, 5, VOTER_DATABASE_URL)
+        except Exception as e:
+            logger.error(f"Could not connect to voter database: {e}")
+    return voter_db_pool
+
+def get_voter_db_connection():
+    pool = get_voter_db_pool()
+    if pool:
+        return pool.getconn()
+    return None
+
+def release_voter_db_connection(conn):
+    pool = get_voter_db_pool()
+    if pool and conn:
+        pool.putconn(conn)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-to-a-secure-random-string")
@@ -367,8 +392,6 @@ def get_data_and_dashboard():
 
 # ============== ROUTES ==============
 
-# Replace the index() function (around line 368-372) with this:
-
 @app.route('/')
 @login_required
 def index():
@@ -482,12 +505,15 @@ def edit_candidate(candidate_id, election_year):
         status = request.form.get("status").strip()
         is_incumbent = request.form.get("incumbent") == "on"
         is_running = (status.upper() != "DECLINED")
+        address = request.form.get("address", "").strip()
+        city = request.form.get("city", "").strip()
+        zip_code = request.form.get("zip", "").strip()
         try:
             cur.execute("""
                 UPDATE candidates
-                SET first_name=%s, last_name=%s, party=%s, incumbent=%s
+                SET first_name=%s, last_name=%s, party=%s, incumbent=%s, address=%s, city=%s, zip=%s
                 WHERE candidate_id=%s;
-            """, (first_name, last_name, party, is_incumbent, candidate_id))
+            """, (first_name, last_name, party, is_incumbent, address, city, zip_code, candidate_id))
             cur.execute("""
                 UPDATE candidate_election_status
                 SET status=%s, is_running=%s
@@ -507,7 +533,7 @@ def edit_candidate(candidate_id, election_year):
         try:
             cur.execute("""
                 SELECT c.first_name, c.last_name, c.party, c.incumbent,
-                       ces.status, ces.district_code
+                       ces.status, ces.district_code, c.address, c.city, c.zip
                 FROM candidates c
                 LEFT JOIN candidate_election_status ces
                   ON c.candidate_id=ces.candidate_id AND ces.election_year=%s
@@ -517,7 +543,7 @@ def edit_candidate(candidate_id, election_year):
             if not row:
                 flash("Candidate not found.", "warning")
                 return redirect(url_for("index"))
-            first_name, last_name, party, incumbent, status, district_code = row
+            first_name, last_name, party, incumbent, status, district_code, address, city, zip_code = row
 
             cur.execute("""
                 SELECT comment_id, comment_text, added_by, added_at
@@ -542,6 +568,9 @@ def edit_candidate(candidate_id, election_year):
             comments = []
             districts = []
             district_code = None
+            address = None
+            city = None
+            zip_code = None
         finally:
             cur.close()
             release_db_connection(conn)
@@ -554,6 +583,9 @@ def edit_candidate(candidate_id, election_year):
                               incumbent=incumbent,
                               status=status,
                               district_code=district_code,
+                              address=address,
+                              city=city,
+                              zip=zip_code,
                               districts=districts,
                               comments=comments)
 
@@ -1396,6 +1428,252 @@ def confirm_match(candidate_id):
         cur.close()
         release_db_connection(conn)
     return redirect(url_for('match_candidates'))
+
+
+# ============== VOTER DATABASE API ENDPOINTS ==============
+
+@app.route('/api/lookup_voter/<int:candidate_id>')
+@login_required
+def lookup_voter(candidate_id):
+    """Look up a candidate in the voter file by name"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Get candidate info
+        cur.execute("""
+            SELECT first_name, last_name, address, city
+            FROM candidates
+            WHERE candidate_id = %s
+        """, (candidate_id,))
+        candidate = cur.fetchone()
+        if not candidate:
+            return jsonify({'error': 'Candidate not found'}), 404
+        
+        first_name, last_name, address, city = candidate
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    
+    # Look up in voter database
+    voter_conn = get_voter_db_connection()
+    if not voter_conn:
+        return jsonify({'error': 'Voter database not available'}), 503
+    
+    voter_cur = voter_conn.cursor()
+    try:
+        # Search by name (case-insensitive)
+        voter_cur.execute("""
+            SELECT id_voter, nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
+            FROM statewidechecklist
+            WHERE UPPER(nm_last) = UPPER(%s) 
+              AND UPPER(nm_first) LIKE UPPER(%s) || '%%'
+            LIMIT 10
+        """, (last_name, first_name[:3] if first_name else ''))
+        
+        voters = voter_cur.fetchall()
+        results = []
+        for v in voters:
+            results.append({
+                'id_voter': v[0],
+                'name': f"{v[1]} {v[2]}",
+                'address': f"{v[3] or ''} {v[4] or ''}".strip(),
+                'city': v[5],
+                'zip': v[6],
+                'ward': v[7],
+                'county': v[8],
+                'party': v[9]
+            })
+        
+        return jsonify({'voters': results})
+    finally:
+        voter_cur.close()
+        release_voter_db_connection(voter_conn)
+
+
+@app.route('/api/lookup_district', methods=['POST'])
+@login_required  
+def lookup_district():
+    """Look up district based on town and ward"""
+    data = request.get_json()
+    city = data.get('city', '').strip()
+    ward = data.get('ward', '0').strip()
+    
+    if not city:
+        return jsonify({'error': 'City is required'}), 400
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Convert ward to int, default to 0
+        try:
+            ward_int = int(ward) if ward else 0
+        except:
+            ward_int = 0
+        
+        # Look up district - try exact match first
+        cur.execute("""
+            SELECT full_district_code, county_name, seat_count
+            FROM districts
+            WHERE UPPER(town) = UPPER(%s) AND ward = %s
+            LIMIT 1
+        """, (city, ward_int))
+        
+        result = cur.fetchone()
+        
+        # If no match with ward, try without ward
+        if not result and ward_int != 0:
+            cur.execute("""
+                SELECT full_district_code, county_name, seat_count
+                FROM districts
+                WHERE UPPER(town) = UPPER(%s) AND ward = 0
+                LIMIT 1
+            """, (city,))
+            result = cur.fetchone()
+        
+        # If still no match, try partial match
+        if not result:
+            cur.execute("""
+                SELECT full_district_code, county_name, seat_count
+                FROM districts
+                WHERE UPPER(town) LIKE '%%' || UPPER(%s) || '%%'
+                LIMIT 1
+            """, (city,))
+            result = cur.fetchone()
+        
+        if result:
+            return jsonify({
+                'district': result[0],
+                'county': result[1],
+                'seats': result[2]
+            })
+        else:
+            return jsonify({'error': f'No district found for {city}'}), 404
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/api/update_candidate_district/<int:candidate_id>', methods=['POST'])
+@login_required
+def update_candidate_district(candidate_id):
+    """Update a candidate's district"""
+    data = request.get_json()
+    new_district = data.get('district', '').strip()
+    election_year = data.get('election_year', 2026)
+    
+    if not new_district:
+        return jsonify({'error': 'District is required'}), 400
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Verify district exists
+        cur.execute("""
+            SELECT full_district_code FROM districts 
+            WHERE full_district_code = %s
+            LIMIT 1
+        """, (new_district,))
+        if not cur.fetchone():
+            return jsonify({'error': 'Invalid district'}), 400
+        
+        # Update the candidate's district
+        cur.execute("""
+            UPDATE candidate_election_status
+            SET district_code = %s
+            WHERE candidate_id = %s AND election_year = %s
+        """, (new_district, candidate_id, election_year))
+        
+        conn.commit()
+        return jsonify({'success': True, 'district': new_district})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error updating district: {e}")
+        return jsonify({'error': 'Failed to update district'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/api/districts')
+@login_required
+def get_districts():
+    """Get all districts for dropdown"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT DISTINCT full_district_code 
+            FROM districts 
+            ORDER BY full_district_code
+        """)
+        districts = [row[0] for row in cur.fetchall()]
+        return jsonify({'districts': districts})
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/api/sync_from_voter/<int:candidate_id>', methods=['POST'])
+@login_required
+def sync_from_voter(candidate_id):
+    """Sync candidate info from voter file"""
+    data = request.get_json()
+    voter_id = data.get('voter_id')
+    
+    if not voter_id:
+        return jsonify({'error': 'Voter ID required'}), 400
+    
+    # Get voter info
+    voter_conn = get_voter_db_connection()
+    if not voter_conn:
+        return jsonify({'error': 'Voter database not available'}), 503
+    
+    voter_cur = voter_conn.cursor()
+    try:
+        voter_cur.execute("""
+            SELECT nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county
+            FROM statewidechecklist
+            WHERE id_voter = %s
+        """, (voter_id,))
+        voter = voter_cur.fetchone()
+        
+        if not voter:
+            return jsonify({'error': 'Voter not found'}), 404
+        
+        nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county = voter
+        address = f"{ad_num or ''} {ad_str1 or ''}".strip()
+        
+    finally:
+        voter_cur.close()
+        release_voter_db_connection(voter_conn)
+    
+    # Update candidate
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE candidates
+            SET address = %s, city = %s, zip = %s
+            WHERE candidate_id = %s
+        """, (address, ad_city, ad_zip5, candidate_id))
+        conn.commit()
+        
+        return jsonify({
+            'success': True,
+            'address': address,
+            'city': ad_city,
+            'zip': ad_zip5,
+            'ward': ward,
+            'county': county
+        })
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error syncing from voter: {e}")
+        return jsonify({'error': 'Failed to sync'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
 
 # Health check endpoint
 @app.route('/health')
