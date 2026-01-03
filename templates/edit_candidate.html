@@ -211,128 +211,151 @@
 
         <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-        <script>
-            const candidateId = {{ candidate_id }};
-            const electionYear = {{ election_year }};
-            
-            function lookupVoter() {
-                $('#voterResults').show();
-                $('#voterList').html('<p><i class="fas fa-spinner fa-spin"></i> Searching voter file...</p>');
-                
-                fetch('/api/lookup_voter/' + candidateId)
+            <script>
+                const candidateId = {{ candidate_id }};
+                const electionYear = {{ election_year }};
+                var allVoters = [];
+                var displayedCount = 0;
+                const pageSize = 5;
+
+                function lookupVoter() {
+                    $('#voterResults').show();
+                    $('#voterList').html('<p><i class="fas fa-spinner fa-spin"></i> Searching voter file...</p>');
+                    allVoters = [];
+                    displayedCount = 0;
+                    
+                    fetch('/api/lookup_voter/' + candidateId)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                $('#voterList').html('<p class="text-danger">' + data.error + '</p>');
+                                return;
+                            }
+                            
+                            if (data.voters.length === 0) {
+                                $('#voterList').html('<p class="text-muted">No matches found in voter file.</p>');
+                                return;
+                            }
+                            
+                            allVoters = data.voters;
+                            displayedCount = 0;
+                            $('#voterList').html('');
+                            showMoreVoters();
+                        })
+                        .catch(error => {
+                            $('#voterList').html('<p class="text-danger">Error searching voter file.</p>');
+                        });
+                }
+
+                function showMoreVoters() {
+                    var html = '';
+                    var end = Math.min(displayedCount + pageSize, allVoters.length);
+                    
+                    for (var i = displayedCount; i < end; i++) {
+                        var v = allVoters[i];
+                        html += '<div class="voter-match" onclick="selectVoter(\'' + v.id_voter + '\', \'' + v.city + '\', \'' + v.ward + '\')">';
+                        html += '<strong>' + v.name + '</strong> (' + v.party + ')<br>';
+                        html += '<small>' + v.address + ', ' + v.city + ' ' + v.zip + '</small><br>';
+                        html += '<small class="text-muted">Ward: ' + v.ward + ' | County: ' + v.county + '</small>';
+                        html += '</div>';
+                    }
+                    
+                    $('#voterList').append(html);
+                    displayedCount = end;
+                    
+                    $('#showMoreBtn').remove();
+                    
+                    if (displayedCount < allVoters.length) {
+                        $('#voterList').append('<button id="showMoreBtn" class="btn btn-outline-primary btn-sm btn-block mt-2" onclick="showMoreVoters()">Show ' + Math.min(pageSize, allVoters.length - displayedCount) + ' more...</button>');
+                    }
+                }
+
+                function selectVoter(voterId, city, ward) {
+                    if (confirm('Sync address from voter file and lookup district?')) {
+                        fetch('/api/sync_from_voter/' + candidateId, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({voter_id: voterId})
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                $('#address').val(data.address);
+                                $('#city').val(data.city);
+                                $('#zip').val(data.zip);
+                                
+                                $('#voterResults').hide();
+                                $('#voterList').html('');
+                                
+                                lookupDistrictFor(data.city, data.ward);
+                            }
+                        });
+                    }
+                }
+
+                function lookupDistrictByAddress() {
+                    const city = $('#city').val();
+                    if (!city) {
+                        alert('Please enter a city first');
+                        return;
+                    }
+                    lookupDistrictFor(city, '0');
+                }
+
+                function lookupDistrictFor(city, ward) {
+                    $('#districtResult').show();
+                    $('#districtInfo').html('<i class="fas fa-spinner fa-spin"></i> Looking up district...');
+                    
+                    fetch('/api/lookup_district', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({city: city, ward: ward || '0'})
+                    })
                     .then(response => response.json())
                     .then(data => {
                         if (data.error) {
-                            $('#voterList').html('<p class="text-danger">' + data.error + '</p>');
+                            $('#districtInfo').html('<span class="text-danger">' + data.error + '</span>');
                             return;
                         }
                         
-                        if (data.voters.length === 0) {
-                            $('#voterList').html('<p class="text-muted">No matches found in voter file.</p>');
-                            return;
-                        }
-                        
-                        let html = '';
-                        data.voters.forEach(function(v) {
-                            html += '<div class="voter-match" onclick="selectVoter(\'' + v.id_voter + '\', \'' + v.city + '\', \'' + v.ward + '\')">';
-                            html += '<strong>' + v.name + '</strong> (' + v.party + ')<br>';
-                            html += '<small>' + v.address + ', ' + v.city + ' ' + v.zip + '</small><br>';
-                            html += '<small class="text-muted">Ward: ' + v.ward + ' | County: ' + v.county + '</small>';
-                            html += '</div>';
+                        var html = '<strong>Districts Found:</strong><br>';
+                        data.districts.forEach(function(d) {
+                            html += d.district + ' (' + d.county + ' County, ' + d.seats + ' seats) ';
+                            html += '<button class="btn btn-sm btn-success ml-2 mb-1" onclick="applyDistrict(\'' + d.district + '\')">Apply</button><br>';
                         });
-                        $('#voterList').html(html);
+                        $('#districtInfo').html(html);
                     })
                     .catch(error => {
-                        $('#voterList').html('<p class="text-danger">Error searching voter file.</p>');
+                        $('#districtInfo').html('<span class="text-danger">Error looking up district.</span>');
                     });
-            }
-            
-            function selectVoter(voterId, city, ward) {
-                if (confirm('Sync address from voter file and lookup district?')) {
-                    // Sync address
-                    fetch('/api/sync_from_voter/' + candidateId, {
+                }
+
+                function applyDistrict(district) {
+                    $('#districtSelect').val(district);
+                    saveDistrict();
+                }
+
+                function saveDistrict() {
+                    const district = $('#districtSelect').val();
+                    
+                    fetch('/api/update_candidate_district/' + candidateId, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({voter_id: voterId})
+                        body: JSON.stringify({district: district, election_year: electionYear})
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            // Update form fields
-                            $('#address').val(data.address);
-                            $('#city').val(data.city);
-                            $('#zip').val(data.zip);
-                            
-                            // Now lookup district
-                            lookupDistrictFor(data.city, data.ward);
+                            alert('District updated to: ' + data.district);
+                        } else {
+                            alert('Error: ' + data.error);
                         }
+                    })
+                    .catch(error => {
+                        alert('Error saving district');
                     });
                 }
-            }
-            
-            function lookupDistrictByAddress() {
-                const city = $('#city').val();
-                if (!city) {
-                    alert('Please enter a city first');
-                    return;
-                }
-                lookupDistrictFor(city, '0');
-            }
-            
-            function lookupDistrictFor(city, ward) {
-    $('#districtResult').show();
-    $('#districtInfo').html('<i class="fas fa-spinner fa-spin"></i> Looking up district...');
-    
-    fetch('/api/lookup_district', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({city: city, ward: ward || '0'})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            $('#districtInfo').html('<span class="text-danger">' + data.error + '</span>');
-            return;
-        }
-        
-        var html = '<strong>Districts Found:</strong><br>';
-        data.districts.forEach(function(d) {
-            html += d.district + ' (' + d.county + ' County, ' + d.seats + ' seats) ';
-            html += '<button class="btn btn-sm btn-success ml-2 mb-1" onclick="applyDistrict(\'' + d.district + '\')">Apply</button><br>';
-        });
-        $('#districtInfo').html(html);
-    })
-    .catch(error => {
-        $('#districtInfo').html('<span class="text-danger">Error looking up district.</span>');
-    });
-}
-            
-            function applyDistrict(district) {
-                $('#districtSelect').val(district);
-                saveDistrict();
-            }
-            
-            function saveDistrict() {
-                const district = $('#districtSelect').val();
-                
-                fetch('/api/update_candidate_district/' + candidateId, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({district: district, election_year: electionYear})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('District updated to: ' + data.district);
-                    } else {
-                        alert('Error: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    alert('Error saving district');
-                });
-            }
-        </script>
+            </script>
     </div>
 </body>
 </html>
