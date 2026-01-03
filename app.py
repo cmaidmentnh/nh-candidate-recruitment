@@ -1472,6 +1472,21 @@ def lookup_voter(candidate_id):
         cur.close()
         release_db_connection(conn)
     
+    # Parse first name - split off middle name if present
+    first_parts = first_name.split() if first_name else []
+    search_first = first_parts[0] if first_parts else ''
+    search_middle = first_parts[1] if len(first_parts) > 1 else None
+    
+    # Parse last name - split off suffix if present
+    suffixes = ['JR', 'SR', 'II', 'III', 'IV', 'V']
+    last_parts = last_name.split() if last_name else []
+    search_suffix = None
+    search_last = last_name
+    
+    if len(last_parts) > 1 and last_parts[-1].upper().replace('.', '') in suffixes:
+        search_suffix = last_parts[-1].upper().replace('.', '')
+        search_last = ' '.join(last_parts[:-1])
+    
     # Look up in voter database
     voter_conn = get_voter_db_connection()
     if not voter_conn:
@@ -1479,12 +1494,17 @@ def lookup_voter(candidate_id):
     
     voter_cur = voter_conn.cursor()
     try:
-        # Search by last name, prioritize first name matches
-        # Use CASE to sort best matches first
+        # Build query based on what we have
+        # Search by last name (handle hyphenated), prioritize matches
         voter_cur.execute("""
-            SELECT id_voter, nm_first, nm_last, nm_suffix, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
+            SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
             FROM statewidechecklist
-            WHERE UPPER(nm_last) = UPPER(%s)
+            WHERE (
+                UPPER(nm_last) = UPPER(%s)
+                OR UPPER(nm_last) LIKE UPPER(%s) || '%%'
+                OR UPPER(%s) LIKE UPPER(nm_last) || '%%'
+                OR UPPER(nm_last) LIKE '%%' || UPPER(%s) || '%%'
+            )
             ORDER BY 
                 CASE 
                     WHEN UPPER(nm_first) = UPPER(%s) THEN 0
@@ -1492,22 +1512,32 @@ def lookup_voter(candidate_id):
                     WHEN UPPER(SUBSTRING(nm_first, 1, 3)) = UPPER(SUBSTRING(%s, 1, 3)) THEN 2
                     ELSE 3
                 END,
+                CASE WHEN UPPER(nm_last) = UPPER(%s) THEN 0 ELSE 1 END,
                 nm_first
             LIMIT 50
-        """, (last_name, first_name, first_name, first_name))
+        """, (search_last, search_last, search_last, search_last, 
+              search_first, search_first, search_first, search_last))
         
         voters = voter_cur.fetchall()
         results = []
         for v in voters:
+            # Build display name with middle and suffix
+            display_name = v[1]  # nm_first
+            if v[2]:  # nm_mid
+                display_name += f" {v[2]}"
+            display_name += f" {v[3]}"  # nm_last
+            if v[4]:  # nm_suff
+                display_name += f" {v[4]}"
+            
             results.append({
                 'id_voter': v[0],
-                'name': f"{v[1]} {v[2]}",
-                'address': f"{v[3] or ''} {v[4] or ''}".strip(),
-                'city': v[5],
-                'zip': v[6],
-                'ward': v[7],
-                'county': v[8],
-                'party': v[9]
+                'name': display_name,
+                'address': f"{v[5] or ''} {v[6] or ''}".strip(),
+                'city': v[7],
+                'zip': v[8],
+                'ward': v[9],
+                'county': v[10],
+                'party': v[11]
             })
         
         return jsonify({'voters': results})
