@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Edit Candidate</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -62,12 +63,17 @@
                         <option value="Considering">Considering</option>
                         <option value="Potential">Potential</option>
                         <option value="Confirmed">Confirmed</option>
+                        <option value="Declined">Declined</option>
                         <option value="New Recruit" selected>New Recruit</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>District Code:</label>
-                    <input type="text" name="district_code" class="form-control" value="{{ district_code if district_code else '' }}">
+                    <select name="district_code" class="form-control">
+                        {% for dist in districts %}
+                            <option value="{{ dist }}" {% if dist == district_code %}selected{% endif %}>{{ dist }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-group comment-box">
                     <label>Comment:</label>

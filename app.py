@@ -479,7 +479,7 @@ def edit_candidate(candidate_id, election_year):
         try:
             cur.execute("""
                 SELECT c.first_name, c.last_name, c.party, c.incumbent,
-                       ces.status
+                       ces.status, ces.district_code
                 FROM candidates c
                 LEFT JOIN candidate_election_status ces
                   ON c.candidate_id=ces.candidate_id AND ces.election_year=%s
@@ -489,7 +489,7 @@ def edit_candidate(candidate_id, election_year):
             if not row:
                 flash("Candidate not found.", "warning")
                 return redirect(url_for("index"))
-            first_name, last_name, party, incumbent, status = row
+            first_name, last_name, party, incumbent, status, district_code = row
 
             cur.execute("""
                 SELECT comment_id, comment_text, added_by, added_at
@@ -499,10 +499,21 @@ def edit_candidate(candidate_id, election_year):
                 LIMIT 5
             """, (candidate_id,))
             comments = cur.fetchall()
+
+            # Get all districts for dropdown
+            cur.execute("""
+                SELECT DISTINCT full_district_code 
+                FROM districts 
+                ORDER BY full_district_code
+            """)
+            districts = [row[0] for row in cur.fetchall()]
+
         except Exception as e:
             logger.error(e)
             flash("Error loading candidate data.", "danger")
             comments = []
+            districts = []
+            district_code = None
         finally:
             cur.close()
             release_db_connection(conn)
@@ -514,6 +525,8 @@ def edit_candidate(candidate_id, election_year):
                               party=party,
                               incumbent=incumbent,
                               status=status,
+                              district_code=district_code,
+                              districts=districts,
                               comments=comments)
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
