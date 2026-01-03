@@ -15,6 +15,9 @@ from datetime import timedelta
 import boto3
 from botocore.client import Config
 import logging
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # Load environment variables
 load_dotenv()
@@ -78,6 +81,16 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-to-a-secure-random-string")
 app.permanent_session_lifetime = timedelta(hours=72)
 app.config['SESSION_PERMANENT'] = True
+
+# CSRF Protection
+csrf = CSRFProtect(app)
+
+# Rate Limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 # Flask-Login Setup
 login_manager = LoginManager()
@@ -820,6 +833,7 @@ def generate_token():
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute") 
 def login():
     if request.method == 'POST':
         email = request.form.get('email').strip()
@@ -1396,6 +1410,7 @@ def candidate_profile(candidate_id):
 
 @app.route('/api/candidate/<int:candidate_id>')
 @login_required
+@csrf.exempt
 def get_candidate_data(candidate_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -1426,6 +1441,29 @@ def get_candidate_data(candidate_id):
             return jsonify(candidate_dict)
         else:
             return jsonify({'error': 'Candidate not found'}), 404
+    finally:
+        cur.close()
+        release_db_connection(conn)
+        
+@app.route('/api/unmatch_voter/<int:candidate_id>', methods=['POST'])
+@login_required
+@csrf.exempt
+def unmatch_voter(candidate_id):
+    """Clear voter_id from candidate"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE candidates
+            SET voter_id = NULL
+            WHERE candidate_id = %s
+        """, (candidate_id,))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error unmatching voter: {e}")
+        return jsonify({'error': 'Failed to unmatch'}), 500
     finally:
         cur.close()
         release_db_connection(conn)
@@ -1531,6 +1569,7 @@ def confirm_match(candidate_id):
 
 @app.route('/api/lookup_voter/<int:candidate_id>')
 @login_required
+@csrf.exempt
 def lookup_voter(candidate_id):
     """Look up a candidate in the voter file by name"""
     conn = get_db_connection()
@@ -1694,6 +1733,7 @@ def lookup_voter(candidate_id):
 
 @app.route('/api/lookup_district', methods=['POST'])
 @login_required  
+@csrf.exempt
 def lookup_district():
     """Look up district based on town and ward"""
     data = request.get_json()
@@ -1759,6 +1799,7 @@ def lookup_district():
         
 @app.route('/api/search_candidates')
 @login_required
+@csrf.exempt
 def search_candidates():
     """Search existing candidates by name"""
     first_name = request.args.get('first_name', '').strip()
@@ -1809,6 +1850,7 @@ def search_candidates():
 
 @app.route('/api/update_candidate_district/<int:candidate_id>', methods=['POST'])
 @login_required
+@csrf.exempt
 def update_candidate_district(candidate_id):
     """Update a candidate's district"""
     data = request.get_json()
@@ -1852,6 +1894,7 @@ def update_candidate_district(candidate_id):
 
 @app.route('/api/districts')
 @login_required
+@csrf.exempt
 def get_districts():
     """Get all districts for dropdown"""
     conn = get_db_connection()
@@ -1871,6 +1914,7 @@ def get_districts():
 
 @app.route('/api/sync_from_voter/<int:candidate_id>', methods=['POST'])
 @login_required
+@csrf.exempt
 def sync_from_voter(candidate_id):
     """Sync candidate info from voter file"""
     data = request.get_json()
@@ -1935,6 +1979,7 @@ def sync_from_voter(candidate_id):
 
 # Health check endpoint
 @app.route('/health')
+@csrf.exempt
 def health():
     return jsonify({"status": "healthy"}), 200
 
