@@ -1266,7 +1266,7 @@ def candidate_profile(candidate_id):
         release_db_connection(conn)
 
 @app.route('/api/candidate/<int:candidate_id>')
-@admin_required
+@login_required
 def get_candidate_data(candidate_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -1280,6 +1280,20 @@ def get_candidate_data(candidate_id):
         if candidate:
             columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
             candidate_dict = dict(zip(columns, candidate))
+            
+            # Get recent comments
+            cur.execute("""
+                SELECT comment_text, added_by, added_at
+                FROM comments
+                WHERE candidate_id = %s
+                ORDER BY added_at DESC
+                LIMIT 5
+            """, (candidate_id,))
+            comments = cur.fetchall()
+            candidate_dict['comments'] = [
+                {'text': c[0], 'by': c[1], 'at': str(c[2])} for c in comments
+            ]
+            
             return jsonify(candidate_dict)
         else:
             return jsonify({'error': 'Candidate not found'}), 404
