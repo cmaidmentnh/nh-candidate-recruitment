@@ -23,22 +23,31 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Database connection pool using standard PostgreSQL connection
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if DATABASE_URL:
-    # Parse DATABASE_URL for connection pool
-    db_pool = psycopg2.pool.SimpleConnectionPool(1, 20, DATABASE_URL)
-else:
-    # Fallback to individual env vars
-    db_pool = psycopg2.pool.SimpleConnectionPool(
-        1, 20,
-        host=os.environ.get("DB_HOST", "localhost"),
-        port=os.environ.get("DB_PORT", "5432"),
-        dbname=os.environ.get("DB_NAME", "nh_candidates"),
-        user=os.environ.get("DB_USER", "postgres"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        sslmode=os.environ.get("DB_SSLMODE", "require")
-    )
+db_pool = None
+
+def get_db_pool():
+    global db_pool
+    if db_pool is None:
+        DATABASE_URL = os.environ.get("DATABASE_URL")
+        if DATABASE_URL:
+            db_pool = psycopg2.pool.SimpleConnectionPool(1, 20, DATABASE_URL)
+        else:
+            db_pool = psycopg2.pool.SimpleConnectionPool(
+                1, 20,
+                host=os.environ.get("DB_HOST", "localhost"),
+                port=os.environ.get("DB_PORT", "5432"),
+                dbname=os.environ.get("DB_NAME", "nh_candidates"),
+                user=os.environ.get("DB_USER", "postgres"),
+                password=os.environ.get("DB_PASSWORD", ""),
+                sslmode=os.environ.get("DB_SSLMODE", "require")
+            )
+    return db_pool
+
+def get_db_connection():
+    return get_db_pool().getconn()
+
+def release_db_connection(conn):
+    get_db_pool().putconn(conn)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "change-this-to-a-secure-random-string")
@@ -125,13 +134,6 @@ class AdminUser(UserMixin):
         self.password_hash = password_hash
         self.role = role
         self.is_candidate = False
-
-# DB Helpers
-def get_db_connection():
-    return db_pool.getconn()
-
-def release_db_connection(conn):
-    db_pool.putconn(conn)
 
 @login_manager.user_loader
 def load_user(user_id):
