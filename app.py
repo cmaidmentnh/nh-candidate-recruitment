@@ -554,13 +554,31 @@ def edit_candidate(candidate_id, election_year):
             """, (candidate_id,))
             comments = cur.fetchall()
 
-            # Get all districts for dropdown
-            cur.execute("""
-                SELECT DISTINCT full_district_code 
-                FROM districts 
-                ORDER BY full_district_code
-            """)
-            districts = [row[0] for row in cur.fetchall()]
+            # Get districts that include the candidate's city
+            if city:
+                cur.execute("""
+                    SELECT DISTINCT full_district_code 
+                    FROM districts 
+                    WHERE UPPER(town) = UPPER(%s)
+                    ORDER BY full_district_code
+                """, (city,))
+                districts = [row[0] for row in cur.fetchall()]
+                
+                # If no matches, fall back to all districts
+                if not districts:
+                    cur.execute("""
+                        SELECT DISTINCT full_district_code 
+                        FROM districts 
+                        ORDER BY full_district_code
+                    """)
+                    districts = [row[0] for row in cur.fetchall()]
+            else:
+                cur.execute("""
+                    SELECT DISTINCT full_district_code 
+                    FROM districts 
+                    ORDER BY full_district_code
+                """)
+                districts = [row[0] for row in cur.fetchall()]
 
         except Exception as e:
             logger.error(e)
