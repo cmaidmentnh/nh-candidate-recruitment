@@ -683,7 +683,7 @@ def edit_candidate(candidate_id, election_year):
                               city=city,
                               zip=zip_code,
                               districts=districts,
-                              comments=comments
+                              comments=comments,
                               voter_info=voter_info)
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
