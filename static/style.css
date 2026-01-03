@@ -100,28 +100,145 @@ body {
     max-height: 500px !important;
     overflow-y: auto !important;
 }
+
 .info-section {
     margin-bottom: 15px;
     padding: 10px;
     background-color: #f9f9f9;
     border-left: 4px solid #007bff;
 }
+
 .info-section h4 {
     margin-top: 0;
     color: #007bff;
 }
+
 .info-section p {
     margin: 5px 0;
 }
+
 pre {
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+
 .ml-2 {
     margin-left: 0.5rem;
 }
 
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+        margin: 5px;
+        max-width: 100%;
+        border-radius: 0;
+    }
 
+    .dash-card-size {
+        width: 100%;
+        height: auto;
+        min-height: 100px;
+        margin-bottom: 10px;
+    }
 
-/* gcloud sql connect nh-candidate-tracker --user=postgres --database=nh_candidates
-/* DELETE FROM candidates WHERE candidate_id = %s
+    .dash-card .card-header {
+        min-height: auto;
+        padding: 10px;
+    }
+
+    .card-body {
+        padding: 10px;
+    }
+
+    .table-responsive {
+        font-size: 14px;
+    }
+
+    .table {
+        font-size: 13px;
+    }
+
+    .table th,
+    .table td {
+        padding: 8px 5px;
+    }
+
+    .btn {
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+
+    .btn-sm {
+        padding: 3px 6px;
+        font-size: 12px;
+    }
+
+    .county-pill {
+        font-size: 11px;
+        padding: 4px 6px;
+        margin: 2px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.3rem;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+    }
+
+    .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+
+    .form-control {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Stack dashboard cards */
+    .d-flex.flex-wrap {
+        flex-direction: column;
+    }
+
+    .d-flex.flex-wrap .dash-card-size {
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    body {
+        font-size: 14px;
+    }
+
+    .container {
+        padding: 8px;
+        margin: 0;
+    }
+
+    .table th,
+    .table td {
+        padding: 5px 3px;
+        font-size: 12px;
+    }
+
+    .btn-sm {
+        padding: 2px 4px;
+        font-size: 11px;
+    }
+
+    .card-header {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    .alert {
+        padding: 8px;
+        font-size: 13px;
+    }
+}
