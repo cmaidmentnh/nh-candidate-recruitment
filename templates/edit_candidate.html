@@ -56,9 +56,15 @@
                 </div>
                 <div class="col-md-4">
                     <label>Auto-Lookup:</label>
+                    {% if voter_info %}
+                    <button type="button" class="btn btn-secondary btn-block" disabled>
+                        <i class="fas fa-check"></i> Voter Matched
+                    </button>
+                    {% else %}
                     <button type="button" class="btn btn-info btn-block" onclick="lookupVoter()">
                         <i class="fas fa-search"></i> Find in Voter File
                     </button>
+                    {% endif %}
                 </div>
                 <div class="col-md-4">
                     <label>Based on Address:</label>
