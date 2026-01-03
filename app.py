@@ -1086,14 +1086,14 @@ def admin_dashboard():
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT candidate_id, first_name, last_name, email, party
+            SELECT candidate_id, first_name, last_name, email, party, last_login
             FROM candidates
             WHERE email IS NOT NULL AND password_hash IS NOT NULL
         """)
         candidate_users = cur.fetchall()
 
         cur.execute("""
-            SELECT user_id, username, email, role
+            SELECT user_id, username, email, role, last_login
             FROM users
         """)
         admins = cur.fetchall()
