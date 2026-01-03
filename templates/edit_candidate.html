@@ -110,6 +110,7 @@
         {% endif %}
 
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -187,6 +188,7 @@
         <!-- Quick Add to 2026 Form -->
         <div id="copy2026Form">
             <h4 class="mt-4">Copy to 2026</h4>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=candidate_id) }}">
                 <div class="form-group">
                     <label>Status for 2026:</label>
@@ -217,6 +219,7 @@
 
         <!-- Comment Box for Current Edit -->
         <div class="form-group comment-box">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <h4 class="mt-4">Add Comment</h4>
             <form method="POST" action="{{ url_for('comments', candidate_id=candidate_id) }}">
                 <textarea name="comment_text" class="form-control" placeholder="Enter your comment"></textarea>
