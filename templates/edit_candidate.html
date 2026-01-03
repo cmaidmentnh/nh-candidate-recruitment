@@ -57,8 +57,12 @@
                 <div class="col-md-4">
                     <label>Auto-Lookup:</label>
                     {% if voter_info %}
-                    <button type="button" class="btn btn-secondary btn-block" disabled>
+                    <button type="button" class="btn btn-success btn-block" disabled>
                         <i class="fas fa-check"></i> Voter Matched
+                    </button>
+                    {% elif voter_id_exists %}
+                    <button type="button" class="btn btn-warning btn-block" onclick="location.reload()">
+                        <i class="fas fa-sync"></i> Reload Voter Data
                     </button>
                     {% else %}
                     <button type="button" class="btn btn-info btn-block" onclick="lookupVoter()">
@@ -106,14 +110,19 @@
                 </div>
             </div>
         </div>
+        {% elif voter_id_exists %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Connection Error:</strong> 
+                Voter ID {{ candidate.voter_id or 'exists' }} is saved but couldn't load details from voter database.
+                <button type="button" class="btn btn-sm btn-outline-danger ml-2" onclick="location.reload()">
+                    <i class="fas fa-sync"></i> Retry
+                </button>
+            </div>
         {% else %}
-        <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle"></i> <strong>Not Matched:</strong> 
-            This candidate has not been matched to a voter record. Use "Find in Voter File" above to match.
-            {% if voter_id_exists %}
-            <br><small class="text-muted">(Voter ID exists but could not load details - try refreshing)</small>
-            {% endif %}
-        </div>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Not Matched:</strong> 
+                This candidate has not been matched to a voter record. Use "Find in Voter File" above to match.
+            </div>
         {% endif %}
 
         <form method="POST">
