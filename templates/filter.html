@@ -66,5 +66,5 @@
     </table>
 </div>
 
-<p class="text-muted mt-3">Total: {{ county_groups.values()|map('values')|map('list')|sum(start=[]) |length }} districts</p>
+<p class="text-muted mt-3">Showing results for: {{ category|replace('_', ' ')|title }}</p>
 {% endblock %}
