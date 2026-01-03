@@ -589,6 +589,39 @@ def edit_candidate(candidate_id, election_year):
                 flash("Candidate not found.", "warning")
                 return redirect(url_for("index"))
             first_name, last_name, party, incumbent, status, district_code, address, city, zip_code = row
+            
+            # Get voter info if voter_id exists
+            voter_info = None
+            cur.execute("SELECT voter_id FROM candidates WHERE candidate_id = %s", (candidate_id,))
+            voter_id_row = cur.fetchone()
+            voter_id = voter_id_row[0] if voter_id_row else None
+            
+            if voter_id:
+                voter_conn = get_voter_db_connection()
+                if voter_conn:
+                    voter_cur = voter_conn.cursor()
+                    try:
+                        voter_cur.execute("""
+                            SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff, 
+                                   ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
+                            FROM statewidechecklist
+                            WHERE id_voter = %s
+                        """, (voter_id,))
+                        v = voter_cur.fetchone()
+                        if v:
+                            voter_info = {
+                                'voter_id': v[0],
+                                'name': f"{v[1]} {v[2] or ''} {v[3]} {v[4] or ''}".strip(),
+                                'address': f"{v[5] or ''} {v[6] or ''}".strip(),
+                                'city': v[7],
+                                'zip': v[8],
+                                'ward': v[9],
+                                'county': v[10],
+                                'party': v[11]
+                            }
+                    finally:
+                        voter_cur.close()
+                        release_voter_db_connection(voter_conn)
 
             cur.execute("""
                 SELECT comment_id, comment_text, added_by, added_at

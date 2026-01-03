@@ -76,6 +76,33 @@
             </div>
         </div>
 
+        <!-- Registered Voter Info (if matched) -->
+        {% if voter_info %}
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-check-circle"></i> Matched Voter Record
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Voter ID:</strong> {{ voter_info.voter_id }}</p>
+                        <p class="mb-1"><strong>Legal Name:</strong> {{ voter_info.name }}</p>
+                        <p class="mb-1"><strong>Party:</strong> {{ voter_info.party }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Address:</strong> {{ voter_info.address }}</p>
+                        <p class="mb-1"><strong>City:</strong> {{ voter_info.city }}, NH {{ voter_info.zip }}</p>
+                        <p class="mb-1"><strong>Ward:</strong> {{ voter_info.ward }} | <strong>County:</strong> {{ voter_info.county }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning mb-4">
+            <i class="fas fa-exclamation-triangle"></i> <strong>Not Matched:</strong> This candidate has not been matched to a voter record. Use "Find in Voter File" above to match.
+        </div>
+        {% endif %}
+
         <form method="POST">
             <div class="row">
                 <div class="col-md-6">
