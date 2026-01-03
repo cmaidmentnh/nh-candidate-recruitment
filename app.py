@@ -1416,55 +1416,72 @@ def export_csv(export_type):
     cur = conn.cursor()
     
     try:
+        include_voter = False
+        voter_id_index = None
+        
         if export_type == 'all_candidates':
             cur.execute("""
-                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email, 
-                       c.address, c.city, c.zip, c.phone1, c.incumbent,
-                       ces.district_code, ces.status, ces.election_year
+                SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party, 
+                       c.email, c.email1, c.email2,
+                       c.address, c.city, c.zip, c.phone1, c.phone2, 
+                       c.incumbent, c.twitter_x, c.facebook, c.instagram, c.signal,
+                       c.voter_id, ces.district_code, ces.status
                 FROM candidates c
-                LEFT JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2026 AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """)
-            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'Incumbent', 'District', 'Status', 'Year']
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Incumbent', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Status', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
             filename = 'all_candidates_2026.csv'
+            include_voter = True
+            voter_id_index = 17
             
         elif export_type == 'confirmed':
             cur.execute("""
-                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email,
-                       c.address, c.city, c.zip, c.phone1,
-                       ces.district_code
+                SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party,
+                       c.email, c.email1, c.email2,
+                       c.address, c.city, c.zip, c.phone1, c.phone2,
+                       c.incumbent, c.twitter_x, c.facebook, c.instagram, c.signal,
+                       c.voter_id, ces.district_code
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 AND ces.status = 'Confirmed'
+                WHERE ces.election_year = 2026 AND ces.status = 'Confirmed' AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """)
-            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'District']
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Incumbent', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
             filename = 'confirmed_candidates_2026.csv'
+            include_voter = True
+            voter_id_index = 17
             
         elif export_type == 'potentials':
             cur.execute("""
-                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email,
-                       c.address, c.city, c.zip, c.phone1,
-                       ces.district_code, ces.status
+                SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party,
+                       c.email, c.email1, c.email2,
+                       c.address, c.city, c.zip, c.phone1, c.phone2,
+                       c.twitter_x, c.facebook, c.instagram, c.signal,
+                       c.voter_id, ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 AND ces.status IN ('Potential', 'Considering')
+                WHERE ces.election_year = 2026 AND ces.status IN ('Potential', 'Considering') AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """)
-            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'District', 'Status']
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Status', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
             filename = 'potential_candidates_2026.csv'
+            include_voter = True
+            voter_id_index = 16
             
         elif export_type == 'empty_districts':
             cur.execute("""
-                SELECT d.full_district_code, d.county_name, d.seat_count, 
+                SELECT DISTINCT d.full_district_code, d.county_name, d.seat_count, 
                        STRING_AGG(DISTINCT d.town, ', ') as towns
                 FROM districts d
-                LEFT JOIN candidate_election_status ces 
-                    ON d.full_district_code = ces.district_code AND ces.election_year = 2026
-                LEFT JOIN candidates c ON ces.candidate_id = c.candidate_id AND c.party = 'R'
+                WHERE d.full_district_code NOT IN (
+                    SELECT ces.district_code 
+                    FROM candidate_election_status ces
+                    JOIN candidates c ON ces.candidate_id = c.candidate_id
+                    WHERE ces.election_year = 2026 AND ces.status != 'Declined' AND c.party = 'R'
+                )
                 GROUP BY d.full_district_code, d.county_name, d.seat_count
-                HAVING COUNT(CASE WHEN ces.status NOT IN ('Declined') OR ces.status IS NULL THEN NULL ELSE 1 END) = 0
                 ORDER BY d.county_name, d.full_district_code
             """)
             headers = ['District', 'County', 'Seats', 'Towns']
@@ -1473,29 +1490,34 @@ def export_csv(export_type):
         elif export_type == 'by_county':
             county = request.args.get('county', '')
             cur.execute("""
-                SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.email,
-                       c.address, c.city, c.zip, c.phone1, c.incumbent,
-                       ces.district_code, ces.status
+                SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party,
+                       c.email, c.email1, c.email2,
+                       c.address, c.city, c.zip, c.phone1, c.phone2,
+                       c.incumbent, c.twitter_x, c.facebook, c.instagram, c.signal,
+                       c.voter_id, ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
                 JOIN districts d ON ces.district_code = d.full_district_code
-                WHERE ces.election_year = 2026 AND d.county_name ILIKE %s
+                WHERE ces.election_year = 2026 AND d.county_name ILIKE %s AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """, (county,))
-            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Address', 'City', 'ZIP', 'Phone', 'Incumbent', 'District', 'Status']
+            headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Incumbent', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Status', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
             filename = f'{county.lower()}_candidates_2026.csv'
+            include_voter = True
+            voter_id_index = 17
             
         elif export_type == 'contact_list':
             cur.execute("""
-                SELECT c.first_name, c.last_name, c.email, c.phone1, c.city,
+                SELECT DISTINCT c.first_name, c.last_name, c.email, c.email1, c.email2,
+                       c.phone1, c.phone2, c.city,
                        ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 AND ces.status != 'Declined'
+                WHERE ces.election_year = 2026 AND ces.status != 'Declined' AND c.party = 'R'
                     AND (c.email IS NOT NULL OR c.phone1 IS NOT NULL)
                 ORDER BY c.last_name
             """)
-            headers = ['First Name', 'Last Name', 'Email', 'Phone', 'City', 'District', 'Status']
+            headers = ['First Name', 'Last Name', 'Email', 'Email1', 'Email2', 'Phone1', 'Phone2', 'City', 'District', 'Status']
             filename = 'contact_list_2026.csv'
             
         else:
@@ -1503,6 +1525,51 @@ def export_csv(export_type):
             return redirect(url_for('admin_dashboard'))
         
         rows = cur.fetchall()
+        
+        # Add voter info if needed
+        if include_voter and voter_id_index is not None:
+            voter_conn = get_voter_db_connection()
+            enhanced_rows = []
+            
+            for row in rows:
+                row_list = list(row)
+                voter_id = row_list[voter_id_index] if len(row_list) > voter_id_index else None
+                
+                voter_name = ''
+                voter_address = ''
+                voter_city = ''
+                voter_zip = ''
+                voter_ward = ''
+                voter_county = ''
+                voter_party = ''
+                
+                if voter_id and voter_conn:
+                    try:
+                        voter_cur = voter_conn.cursor()
+                        voter_cur.execute("""
+                            SELECT nm_first, nm_mid, nm_last, nm_suff, 
+                                   ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
+                            FROM statewidechecklist WHERE id_voter = %s
+                        """, (voter_id,))
+                        v = voter_cur.fetchone()
+                        voter_cur.close()
+                        if v:
+                            voter_name = f"{v[0] or ''} {v[1] or ''} {v[2] or ''} {v[3] or ''}".strip()
+                            voter_address = f"{v[4] or ''} {v[5] or ''}".strip()
+                            voter_city = v[6] or ''
+                            voter_zip = v[7] or ''
+                            voter_ward = v[8] or ''
+                            voter_county = v[9] or ''
+                            voter_party = v[10] or ''
+                    except Exception as e:
+                        logger.error(f"Error fetching voter {voter_id}: {e}")
+                
+                row_list.extend([voter_name, voter_address, voter_city, voter_zip, voter_ward, voter_county, voter_party])
+                enhanced_rows.append(row_list)
+            
+            if voter_conn:
+                release_voter_db_connection(voter_conn)
+            rows = enhanced_rows
         
         # Create CSV
         output = io.StringIO()
