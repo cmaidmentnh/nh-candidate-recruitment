@@ -89,6 +89,7 @@
 </div>
 {% endif %}
 
+
 <!-- County Accordion -->
 <div id="countyAccordion">
     {% for county_name, dist_dict in county_groups.items()|sort %}
@@ -175,6 +176,18 @@
                                             </td>
                                         </tr>
                                         {% endfor %}
+                                        {% if a2026 >= seat_count %}
+                                        <tr>
+                                            <td></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-secondary"
+                                                        onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                                    + Add Another Candidate
+                                                </button>
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        {% endif %}
                                     </tbody>
                                 </table>
                             </div>
