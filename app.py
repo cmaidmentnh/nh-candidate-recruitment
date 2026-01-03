@@ -1482,7 +1482,7 @@ def lookup_voter(candidate_id):
         # Search by last name, prioritize first name matches
         # Use CASE to sort best matches first
         voter_cur.execute("""
-            SELECT id_voter, nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
+            SELECT id_voter, nm_first, nm_last, nm_suffix, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
             FROM statewidechecklist
             WHERE UPPER(nm_last) = UPPER(%s)
             ORDER BY 
@@ -1576,7 +1576,56 @@ def lookup_district():
     finally:
         cur.close()
         release_db_connection(conn)
-
+        
+@app.route('/api/search_candidates')
+@login_required
+def search_candidates():
+    """Search existing candidates by name"""
+    first_name = request.args.get('first_name', '').strip()
+    last_name = request.args.get('last_name', '').strip()
+    
+    if not last_name:
+        return jsonify({'candidates': []})
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.city,
+                   STRING_AGG(DISTINCT ces.district_code, ', ') as districts,
+                   STRING_AGG(DISTINCT ces.election_year::text, ', ') as years
+            FROM candidates c
+            LEFT JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+            WHERE UPPER(c.last_name) = UPPER(%s)
+               OR UPPER(c.last_name) LIKE UPPER(%s) || '%%'
+               OR UPPER(%s) LIKE UPPER(c.last_name) || '%%'
+            GROUP BY c.candidate_id, c.first_name, c.last_name, c.party, c.city
+            ORDER BY 
+                CASE WHEN UPPER(c.first_name) = UPPER(%s) THEN 0
+                     WHEN UPPER(c.first_name) LIKE UPPER(%s) || '%%' THEN 1
+                     ELSE 2
+                END,
+                c.last_name, c.first_name
+            LIMIT 20
+        """, (last_name, last_name, last_name, first_name, first_name))
+        
+        candidates = cur.fetchall()
+        results = []
+        for c in candidates:
+            results.append({
+                'candidate_id': c[0],
+                'first_name': c[1],
+                'last_name': c[2],
+                'party': c[3],
+                'city': c[4],
+                'districts': c[5] or 'None',
+                'years': c[6] or 'None'
+            })
+        
+        return jsonify({'candidates': results})
+    finally:
+        cur.close()
+        release_db_connection(conn)
 
 @app.route('/api/update_candidate_district/<int:candidate_id>', methods=['POST'])
 @login_required

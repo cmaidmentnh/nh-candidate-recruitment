@@ -6,11 +6,8 @@
     <meta name="robots" content="noindex">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Candidate Tracker</title>
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     {% block head %}{% endblock %}
 </head>
@@ -32,41 +29,115 @@
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Inline Add Candidate Modal -->
-    <div class="modal fade" id="addCandidateModal" tabindex="-1" role="dialog" aria-labelledby="addCandidateModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <form method="POST" action="{{ url_for('add_candidate_inline') }}">
-                <div class="modal-content">
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title" id="addCandidateModalLabel">Add Candidate</h5>
-                        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+    <!-- Add Candidate Modal -->
+    <div class="modal fade" id="addCandidateModal" tabindex="-1" role="dialog" aria-labelledby="addCandidateModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="addCandidateModalLabel">Add Candidate</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Search Step -->
+                    <div id="searchStep">
+                        <p class="text-muted">Search for an existing candidate first:</p>
+                        <div class="row">
+                            <div class="col-md-5">
+                                <div class="form-group">
+                                    <label>First Name:</label>
+                                    <input type="text" id="searchFirstName" class="form-control" placeholder="First name">
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="form-group">
+                                    <label>Last Name:</label>
+                                    <input type="text" id="searchLastName" class="form-control" placeholder="Last name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="button" class="btn btn-info btn-block mb-3" onclick="searchExistingCandidates()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="searchResults" style="display:none;">
+                            <h6>Existing Candidates Found:</h6>
+                            <div id="candidatesList" style="max-height: 200px; overflow-y: auto;"></div>
+                            <hr>
+                            <p class="text-muted mb-0">Not found? 
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="showAddNewForm()">Add as New</button>
+                            </p>
+                        </div>
+                        
+                        <div id="noResults" style="display:none;">
+                            <div class="alert alert-info">
+                                No existing candidates found.
+                                <button type="button" class="btn btn-sm btn-primary ml-2" onclick="showAddNewForm()">Add New Candidate</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="modal-body">
+
+                    <!-- Add New Form -->
+                    <form method="POST" action="{{ url_for('add_candidate_inline') }}" id="addNewForm" style="display:none;">
                         <input type="hidden" name="district_code" id="modalDistrictCode">
                         <input type="hidden" name="election_year" id="modalElectionYear">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>First Name:</label>
+                                    <input type="text" name="first_name" id="newFirstName" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Last Name:</label>
+                                    <input type="text" name="last_name" id="newLastName" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Party:</label>
+                                    <select name="party" class="form-control">
+                                        <option value="R">Republican</option>
+                                        <option value="D">Democrat</option>
+                                        <option value="I">Independent</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Status:</label>
+                                    <select name="status" class="form-control">
+                                        <option value="Considering">Considering</option>
+                                        <option value="Potential">Potential</option>
+                                        <option value="Confirmed">Confirmed</option>
+                                        <option value="Declined">Declined</option>
+                                        <option value="New Recruit">New Recruit</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="backToSearch()"><i class="fas fa-arrow-left"></i> Back</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add New Candidate</button>
+                    </form>
 
-                        <div class="form-group">
-                            <label>First Name:</label>
-                            <input type="text" name="first_name" class="form-control" required>
+                    <!-- Add Existing Form -->
+                    <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=0) }}" id="addExistingForm" style="display:none;">
+                        <input type="hidden" name="district_code" id="existingDistrictCode">
+                        <input type="hidden" name="status" id="existingStatus" value="Considering">
+                        
+                        <div class="alert alert-success">
+                            <strong>Selected:</strong> <span id="selectedCandidateName"></span>
                         </div>
+                        
                         <div class="form-group">
-                            <label>Last Name:</label>
-                            <input type="text" name="last_name" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Party:</label>
-                            <select name="party" class="form-control">
-                                <option value="R">Republican</option>
-                                <option value="D">Democrat</option>
-                                <option value="I">Independent</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Status:</label>
-                            <select name="status" class="form-control">
+                            <label>Status for this election:</label>
+                            <select class="form-control" onchange="document.getElementById('existingStatus').value=this.value">
                                 <option value="Considering">Considering</option>
                                 <option value="Potential">Potential</option>
                                 <option value="Confirmed">Confirmed</option>
@@ -74,62 +145,133 @@
                                 <option value="New Recruit">New Recruit</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-success">Add Candidate</button>
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    </div>
+                        <button type="button" class="btn btn-secondary" onclick="backToSearch()"><i class="fas fa-arrow-left"></i> Back</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add to 2026</button>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <!-- jQuery + Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 
     {% block scripts %}
     <script>
+        var currentDistrictCode = '';
+        var currentElectionYear = 2026;
+
         function openAddCandidateModal(districtCode, electionYear) {
+            currentDistrictCode = districtCode;
+            currentElectionYear = electionYear;
+            
+            $('#searchStep').show();
+            $('#addNewForm').hide();
+            $('#addExistingForm').hide();
+            $('#searchResults').hide();
+            $('#noResults').hide();
+            $('#searchFirstName').val('');
+            $('#searchLastName').val('');
+            $('#candidatesList').html('');
+            
             $('#modalDistrictCode').val(districtCode);
             $('#modalElectionYear').val(electionYear);
+            $('#existingDistrictCode').val(districtCode);
+            
             $('#addCandidateModalLabel').text("Add " + electionYear + " Candidate for " + districtCode);
             $('#addCandidateModal').modal('show');
         }
 
+        function searchExistingCandidates() {
+            var firstName = $('#searchFirstName').val().trim();
+            var lastName = $('#searchLastName').val().trim();
+            
+            if (!lastName) {
+                alert('Please enter a last name');
+                return;
+            }
+            
+            $('#candidatesList').html('<p><i class="fas fa-spinner fa-spin"></i> Searching...</p>');
+            $('#searchResults').show();
+            $('#noResults').hide();
+            
+            fetch('/api/search_candidates?first_name=' + encodeURIComponent(firstName) + '&last_name=' + encodeURIComponent(lastName))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.candidates.length === 0) {
+                        $('#searchResults').hide();
+                        $('#noResults').show();
+                        $('#newFirstName').val(firstName);
+                        $('#newLastName').val(lastName);
+                    } else {
+                        var html = '';
+                        data.candidates.forEach(function(c) {
+                            html += '<div class="card mb-2 candidate-result" style="cursor:pointer;" onclick="selectExistingCandidate(' + c.candidate_id + ', \'' + escapeHtml(c.first_name) + ' ' + escapeHtml(c.last_name) + '\')">';
+                            html += '<div class="card-body py-2">';
+                            html += '<strong>' + escapeHtml(c.first_name) + ' ' + escapeHtml(c.last_name) + '</strong>';
+                            html += ' <span class="badge badge-secondary">' + (c.party || '?') + '</span>';
+                            if (c.city) html += ' <small class="text-muted">- ' + escapeHtml(c.city) + '</small>';
+                            html += '<br><small class="text-muted">Districts: ' + escapeHtml(c.districts) + ' | Years: ' + escapeHtml(c.years) + '</small>';
+                            html += '</div></div>';
+                        });
+                        $('#candidatesList').html(html);
+                        $('#newFirstName').val(firstName);
+                        $('#newLastName').val(lastName);
+                    }
+                });
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function selectExistingCandidate(candidateId, name) {
+            $('#searchStep').hide();
+            $('#addNewForm').hide();
+            $('#addExistingForm').show();
+            $('#selectedCandidateName').text(name);
+            $('#addExistingForm').attr('action', '/copy_candidate_to_2026/' + candidateId);
+        }
+
+        function showAddNewForm() {
+            $('#searchStep').hide();
+            $('#addExistingForm').hide();
+            $('#addNewForm').show();
+        }
+
+        function backToSearch() {
+            $('#addNewForm').hide();
+            $('#addExistingForm').hide();
+            $('#searchStep').show();
+        }
+
         $(document).ready(function () {
-            // Restore scroll position and accordion states on page load
+            // Restore scroll position and accordion states
             var savedScroll = sessionStorage.getItem('scrollPosition');
             var savedAccordions = sessionStorage.getItem('openAccordions');
 
             if (savedScroll) {
-                setTimeout(function() {
-                    window.scrollTo(0, parseInt(savedScroll));
-                }, 100);
+                setTimeout(function() { window.scrollTo(0, parseInt(savedScroll)); }, 100);
                 sessionStorage.removeItem('scrollPosition');
             }
 
             if (savedAccordions) {
                 var open = JSON.parse(savedAccordions);
-                open.forEach(function(id) {
-                    $('#' + id).addClass('show');
-                });
+                open.forEach(function(id) { $('#' + id).addClass('show'); });
                 sessionStorage.removeItem('openAccordions');
             }
 
-            // Save state before leaving page
             $(window).on('beforeunload', function() {
                 sessionStorage.setItem('scrollPosition', window.scrollY);
                 var openAccordions = [];
                 $('.collapse.show').each(function() {
-                    if ($(this).attr('id')) {
-                        openAccordions.push($(this).attr('id'));
-                    }
+                    if ($(this).attr('id')) openAccordions.push($(this).attr('id'));
                 });
                 sessionStorage.setItem('openAccordions', JSON.stringify(openAccordions));
             });
 
-            // Initialize popovers with loading state
+            // Popovers
             $('[data-toggle="popover"]').each(function() {
                 var $btn = $(this);
                 var candidateId = $btn.data('candidate-id');
@@ -149,42 +291,31 @@
                         .then(response => response.json())
                         .then(data => {
                             if (data.error) {
-                                popover.config.content = '<p>Candidate not found</p>';
+                                popover.config.content = '<p>Not found</p>';
                             } else {
                                 let html = '<div style="min-width:250px;max-width:300px">';
                                 html += '<p style="margin:0 0 5px 0"><strong>' + data.first_name + ' ' + data.last_name + '</strong></p>';
                                 if (data.email) html += '<p style="margin:0 0 3px 0"><small>✉️ ' + data.email + '</small></p>';
                                 if (data.phone1) html += '<p style="margin:0 0 3px 0"><small>📞 ' + data.phone1 + '</small></p>';
-                                if (data.address) html += '<p style="margin:0 0 3px 0"><small>📍 ' + data.address + (data.city ? ', ' + data.city : '') + (data.zip ? ' ' + data.zip : '') + '</small></p>';
-                                
-                                html += '<hr style="margin:8px 0">';
-                                html += '<p style="margin:0 0 5px 0"><strong>Recent Comments:</strong></p>';
-                                
+                                if (data.address) html += '<p style="margin:0 0 3px 0"><small>📍 ' + data.address + (data.city ? ', ' + data.city : '') + '</small></p>';
+                                html += '<hr style="margin:8px 0"><p style="margin:0 0 5px 0"><strong>Recent Comments:</strong></p>';
                                 if (data.comments && data.comments.length > 0) {
                                     data.comments.forEach(function(c) {
                                         html += '<div style="margin-bottom:6px;padding:5px;background:#f5f5f5;border-radius:4px;font-size:11px">';
                                         html += '<div>' + c.text + '</div>';
-                                        html += '<div style="color:#666;font-size:10px;margin-top:2px">— ' + c.by + '</div>';
-                                        html += '</div>';
+                                        html += '<div style="color:#666;font-size:10px;margin-top:2px">— ' + c.by + '</div></div>';
                                     });
                                 } else {
-                                    html += '<p style="color:#999;font-size:12px;margin:0">No comments yet</p>';
+                                    html += '<p style="color:#999;font-size:12px;margin:0">No comments</p>';
                                 }
-                                
                                 html += '</div>';
                                 popover.config.content = html;
                             }
-                            
-                            // Update the popover content
                             $(popover.tip).find('.popover-body').html(popover.config.content);
-                        })
-                        .catch(error => {
-                            $(popover.tip).find('.popover-body').html('<p>Error loading data</p>');
                         });
                 });
             });
 
-            // Close popover when clicking outside
             $('body').on('click', function (e) {
                 $('[data-toggle="popover"]').each(function () {
                     if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {
@@ -196,5 +327,4 @@
     </script>
     {% endblock %}
 </body>
-
 </html>
