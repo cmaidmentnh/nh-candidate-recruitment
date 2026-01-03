@@ -1514,7 +1514,7 @@ def lookup_voter(candidate_id):
                 END,
                 CASE WHEN UPPER(nm_last) = UPPER(%s) THEN 0 ELSE 1 END,
                 nm_first
-            LIMIT 50
+            LIMIT 200
         """, (search_last, search_last, search_last, search_last, 
               search_first, search_first, search_first, search_last))
         
