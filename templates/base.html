@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block head %}{% endblock %}
 </head>
 
@@ -352,5 +353,20 @@
     <button id="backToTop" class="btn btn-primary" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000; border-radius:50%; width:50px; height:50px;">
         <i class="fas fa-arrow-up"></i>
     </button>
+    <script>
+    // Auto-add CSRF token to all forms
+    document.addEventListener('DOMContentLoaded', function() {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function(form) {
+            if (!form.querySelector('input[name="csrf_token"]')) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'csrf_token';
+                input.value = csrfToken;
+                form.appendChild(input);
+            }
+        });
+    });
+</script>
 </body>
 </html>
