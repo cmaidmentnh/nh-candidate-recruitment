@@ -78,6 +78,40 @@
     </div>
 </div>
 
+<!-- County Progress Bars -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> County Progress (2026)</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for county_name, stats in county_stats.items()|sort %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <strong>{{ county_name }}</strong>
+                        <span>{{ stats.c2026_confirmed }}/{{ stats.total_seats }}</span>
+                    </div>
+                    {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar 
+                            {% if pct >= 75 %}bg-success
+                            {% elif pct >= 50 %}bg-info
+                            {% elif pct >= 25 %}bg-warning
+                            {% else %}bg-danger{% endif %}"
+                            role="progressbar" 
+                            style="width: {{ pct }}%;" 
+                            aria-valuenow="{{ pct }}" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100">
+                            {{ pct }}%
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
 <!-- Search Box -->
 <form method="GET" action="{{ url_for('index') }}" class="search-box mb-4">
     <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query or '' }}">    <button type="submit" class="btn btn-primary">

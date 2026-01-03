@@ -248,6 +248,22 @@ def override_county_for_cities(county_name, all_towns):
         if t.startswith("NASHUA"): return "NASHUA"
     return county_name
 
+def log_activity(action_type, description, candidate_id=None):
+    """Log an activity to the activity_log table"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        user_email = current_user.email if current_user.is_authenticated else 'system'
+        cur.execute("""
+            INSERT INTO activity_log (action_type, description, candidate_id, user_email)
+            VALUES (%s, %s, %s, %s)
+        """, (action_type, description, candidate_id, user_email))
+        conn.commit()
+        cur.close()
+        release_db_connection(conn)
+    except Exception as e:
+        logger.error(f"Error logging activity: {e}")
+
 def get_data_and_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -543,6 +559,7 @@ def add_candidate_inline():
             VALUES (%s, %s, %s, %s, %s, %s);
         """, (candidate_id, int(election_year), status, True, current_user.email, district_code))
         conn.commit()
+        log_activity('candidate_added', f"Added {first_name} {last_name} to {district_code} ({status})", candidate_id)
         flash(f"Added {first_name} {last_name} for {election_year} in {district_code}.", "success")
     except Exception as e:
         conn.rollback()
@@ -581,6 +598,7 @@ def edit_candidate(candidate_id, election_year):
                 WHERE candidate_id=%s AND election_year=%s;
             """, (status, is_running, candidate_id, election_year))
             conn.commit()
+            log_activity('candidate_updated', f"Updated {first_name} {last_name}", candidate_id)
             flash("Candidate updated successfully.", "success")
         except Exception as e:
             conn.rollback()
@@ -746,6 +764,7 @@ def copy_candidate_to_2026(candidate_id):
                 VALUES (%s, %s, %s)
             """, (candidate_id, comment, current_user.email))
         conn.commit()
+        log_activity('candidate_copied', f"Copied candidate to 2026 in {district_code} ({status})", candidate_id)
         flash("Candidate successfully copied to 2026.", "success")
     except Exception as e:
         conn.rollback()
@@ -1665,6 +1684,7 @@ def unmatch_voter(candidate_id):
             WHERE candidate_id = %s
         """, (candidate_id,))
         conn.commit()
+        log_activity('voter_unmatched', f"Unmatched from voter file", candidate_id)
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
@@ -2163,6 +2183,7 @@ def sync_from_voter(candidate_id):
             WHERE candidate_id = %s
         """, (address, ad_city, ad_zip5, voter_id, candidate_id))
         conn.commit()
+        log_activity('voter_matched', f"Matched to voter ID {voter_id}", candidate_id)
         
         return jsonify({
             'success': True,
