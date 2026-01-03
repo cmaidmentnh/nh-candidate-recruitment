@@ -155,6 +155,11 @@
                 <div class="col-md-4">
                     <div class="form-group">
                         <label>Status (Election {{ election_year }}):</label>
+                        {% if election_year < 2026 %}
+                        <select name="status" class="form-control">
+                            <option value="Ran" selected>Ran</option>
+                        </select>
+                        {% else %}
                         <select name="status" class="form-control">
                             <option value="Considering" {% if status|upper == 'CONSIDERING' %}selected{% endif %}>Considering</option>
                             <option value="Potential" {% if status|upper == 'POTENTIAL' %}selected{% endif %}>Potential</option>
@@ -162,6 +167,7 @@
                             <option value="Declined" {% if status|upper == 'DECLINED' %}selected{% endif %}>Declined</option>
                             <option value="New Recruit" {% if status|upper == 'NEW RECRUIT' %}selected{% endif %}>New Recruit</option>
                         </select>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="col-md-4">
