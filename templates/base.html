@@ -98,6 +98,37 @@
         }
 
         $(document).ready(function () {
+            // Restore scroll position and accordion states on page load
+            var savedScroll = sessionStorage.getItem('scrollPosition');
+            var savedAccordions = sessionStorage.getItem('openAccordions');
+
+            if (savedScroll) {
+                setTimeout(function() {
+                    window.scrollTo(0, parseInt(savedScroll));
+                }, 100);
+                sessionStorage.removeItem('scrollPosition');
+            }
+
+            if (savedAccordions) {
+                var open = JSON.parse(savedAccordions);
+                open.forEach(function(id) {
+                    $('#' + id).addClass('show');
+                });
+                sessionStorage.removeItem('openAccordions');
+            }
+
+            // Save state before leaving page
+            $(window).on('beforeunload', function() {
+                sessionStorage.setItem('scrollPosition', window.scrollY);
+                var openAccordions = [];
+                $('.collapse.show').each(function() {
+                    if ($(this).attr('id')) {
+                        openAccordions.push($(this).attr('id'));
+                    }
+                });
+                sessionStorage.setItem('openAccordions', JSON.stringify(openAccordions));
+            });
+
             // Initialize popovers with loading state
             $('[data-toggle="popover"]').each(function() {
                 var $btn = $(this);
