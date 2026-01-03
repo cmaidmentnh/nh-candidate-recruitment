@@ -854,6 +854,8 @@ def login():
             if password_hash and check_password_hash(password_hash, password):
                 user = CandidateUser(candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url)
                 login_user(user)
+                cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s", (candidate_id,))
+                conn.commit()
                 session.permanent = True
                 flash("Logged in successfully.", "success")
                 cur.close()
@@ -876,6 +878,12 @@ def login():
         if admin_row and check_password_hash(admin_row[3], password):
             user = AdminUser(*admin_row)
             login_user(user)
+            conn2 = get_db_connection()
+            cur2 = conn2.cursor()
+            cur2.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (admin_row[0],))
+            conn2.commit()
+            cur2.close()
+            release_db_connection(conn2)
             session.permanent = True
             flash("Logged in successfully.", "success")
             return redirect(url_for('index'))
