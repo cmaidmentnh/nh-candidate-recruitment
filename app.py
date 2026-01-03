@@ -18,6 +18,7 @@ import logging
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from datetime import timedelta  # Add this at the top with other imports if not already there
 
 # Load environment variables
 load_dotenv()
@@ -1114,7 +1115,7 @@ def admin_dashboard():
     finally:
         cur.close()
         release_db_connection(conn)
-    return render_template('admin_dashboard.html', candidate_users=candidate_users, admins=admins, tokens=tokens)
+    return render_template('admin_dashboard.html', candidate_users=candidate_users, admins=admins, tokens=tokens, timedelta=timedelta)
 
 @app.route('/add_user', methods=['GET', 'POST'])
 @admin_required

@@ -41,7 +41,7 @@
                         <td>{{ candidate[4] }}</td>
                         <td>
                             {% if candidate[5] %}
-                                {{ candidate[5].strftime('%m/%d/%Y %I:%M %p') }}
+                                {{ (candidate[5] - timedelta(hours=5)).strftime('%m/%d/%Y %I:%M %p') }} ET
                             {% else %}
                                 <span class="text-muted">Never</span>
                             {% endif %}
@@ -89,7 +89,7 @@
                     <td>{{ admin[3] }}</td>
                     <td>
                         {% if admin[4] %}
-                            {{ admin[4].strftime('%m/%d/%Y %I:%M %p') }}
+                            {{ (admin[4] - timedelta(hours=5)).strftime('%m/%d/%Y %I:%M %p') }} ET
                         {% else %}
                             <span class="text-muted">Never</span>
                         {% endif %}
