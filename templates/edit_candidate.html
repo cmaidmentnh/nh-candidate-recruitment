@@ -44,7 +44,7 @@
                     <div class="input-group">
                         <select id="districtSelect" class="form-control">
                             {% for dist in districts %}
-                                <option value="{{ dist }}" {% if dist == district_code %}selected{% endif %}>{{ dist }}</option>
+                                <option value="{{ dist }}" {{ 'selected' if dist == district_code else '' }}>{{ dist }}</option>                            
                             {% endfor %}
                         </select>
                         <div class="input-group-append">
@@ -280,31 +280,32 @@
             }
             
             function lookupDistrictFor(city, ward) {
-                $('#districtResult').show();
-                $('#districtInfo').html('<i class="fas fa-spinner fa-spin"></i> Looking up district...');
-                
-                fetch('/api/lookup_district', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({city: city, ward: ward || '0'})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        $('#districtInfo').html('<span class="text-danger">' + data.error + '</span>');
-                        return;
-                    }
-                    
-                    $('#districtInfo').html(
-                        '<strong>District Found:</strong> ' + data.district + 
-                        ' (' + data.county + ' County, ' + data.seats + ' seats) ' +
-                        '<button class="btn btn-sm btn-success ml-2" onclick="applyDistrict(\'' + data.district + '\')">Apply</button>'
-                    );
-                })
-                .catch(error => {
-                    $('#districtInfo').html('<span class="text-danger">Error looking up district.</span>');
-                });
-            }
+    $('#districtResult').show();
+    $('#districtInfo').html('<i class="fas fa-spinner fa-spin"></i> Looking up district...');
+    
+    fetch('/api/lookup_district', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({city: city, ward: ward || '0'})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            $('#districtInfo').html('<span class="text-danger">' + data.error + '</span>');
+            return;
+        }
+        
+        var html = '<strong>Districts Found:</strong><br>';
+        data.districts.forEach(function(d) {
+            html += d.district + ' (' + d.county + ' County, ' + d.seats + ' seats) ';
+            html += '<button class="btn btn-sm btn-success ml-2 mb-1" onclick="applyDistrict(\'' + d.district + '\')">Apply</button><br>';
+        });
+        $('#districtInfo').html(html);
+    })
+    .catch(error => {
+        $('#districtInfo').html('<span class="text-danger">Error looking up district.</span>');
+    });
+}
             
             function applyDistrict(district) {
                 $('#districtSelect').val(district);

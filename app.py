@@ -1565,42 +1565,45 @@ def lookup_district():
         except:
             ward_int = 0
         
-        # Look up district - try exact match first
+        # Look up ALL districts for this town (base + floterial)
         cur.execute("""
             SELECT full_district_code, county_name, seat_count
             FROM districts
-            WHERE UPPER(town) = UPPER(%s) AND ward = %s
-            LIMIT 1
+            WHERE UPPER(town) = UPPER(%s) AND (ward = %s OR ward = 0)
+            ORDER BY full_district_code
         """, (city, ward_int))
         
-        result = cur.fetchone()
+        results = cur.fetchall()
         
-        # If no match with ward, try without ward
-        if not result and ward_int != 0:
+        # If no match with ward, try without ward filter
+        if not results:
             cur.execute("""
                 SELECT full_district_code, county_name, seat_count
                 FROM districts
-                WHERE UPPER(town) = UPPER(%s) AND ward = 0
-                LIMIT 1
+                WHERE UPPER(town) = UPPER(%s)
+                ORDER BY full_district_code
             """, (city,))
-            result = cur.fetchone()
+            results = cur.fetchall()
         
         # If still no match, try partial match
-        if not result:
+        if not results:
             cur.execute("""
                 SELECT full_district_code, county_name, seat_count
                 FROM districts
                 WHERE UPPER(town) LIKE '%%' || UPPER(%s) || '%%'
-                LIMIT 1
+                ORDER BY full_district_code
             """, (city,))
-            result = cur.fetchone()
+            results = cur.fetchall()
         
-        if result:
-            return jsonify({
-                'district': result[0],
-                'county': result[1],
-                'seats': result[2]
-            })
+        if results:
+            districts = []
+            for r in results:
+                districts.append({
+                    'district': r[0],
+                    'county': r[1],
+                    'seats': r[2]
+                })
+            return jsonify({'districts': districts})
         else:
             return jsonify({'error': f'No district found for {city}'}), 404
     finally:
