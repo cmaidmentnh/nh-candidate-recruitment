@@ -135,9 +135,9 @@
     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="collapseAll()">
         <i class="fas fa-compress-alt"></i> Collapse All
     </button>
-    <a href="{{ url_for('activity_log_page') }}" class="btn btn-outline-secondary mb-3">
-        <i class="fas fa-history"></i> View Activity Log
-    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.location.href='{{ url_for('activity_log_page') }}'">
+        <i class="fas fa-history"></i> Activity Log
+    </button>
 </div>
 
 <!-- County Accordion -->
