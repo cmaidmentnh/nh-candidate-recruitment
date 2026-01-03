@@ -1693,6 +1693,45 @@ def unmatch_voter(candidate_id):
     finally:
         cur.close()
         release_db_connection(conn)
+        
+@app.route('/activity')
+@login_required
+@admin_required
+def activity_log_page():
+    """View activity log"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    offset = (page - 1) * per_page
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT COUNT(*) FROM activity_log")
+        total = cur.fetchone()[0]
+        
+        cur.execute("""
+            SELECT log_id, action_type, description, candidate_id, user_email, created_at
+            FROM activity_log
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        """, (per_page, offset))
+        activities = cur.fetchall()
+        
+        total_pages = (total + per_page - 1) // per_page
+        
+    except Exception as e:
+        logger.error(f"Error fetching activity log: {e}")
+        activities = []
+        total_pages = 1
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    
+    return render_template('activity_log.html', 
+                          activities=activities, 
+                          page=page, 
+                          total_pages=total_pages,
+                          timedelta=timedelta)
 
 @app.route('/match_candidates')
 @admin_required

@@ -76,41 +76,24 @@
             <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
         </div>
     </div>
-</div>
-
-<!-- County Progress Bars -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> County Progress (2026)</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                {% for county_name, stats in county_stats.items()|sort %}
-                <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <strong>{{ county_name }}</strong>
-                        <span>{{ stats.c2026_confirmed }}/{{ stats.total_seats }}</span>
-                    </div>
-                    {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
-                    <div class="progress" style="height: 20px;">
-                        <div class="progress-bar 
-                            {% if pct >= 75 %}bg-success
-                            {% elif pct >= 50 %}bg-info
-                            {% elif pct >= 25 %}bg-warning
-                            {% else %}bg-danger{% endif %}"
-                            role="progressbar" 
-                            style="width: {{ pct }}%;" 
-                            aria-valuenow="{{ pct }}" 
-                            aria-valuemin="0" 
-                            aria-valuemax="100">
-                            {{ pct }}%
-                        </div>
+    <div class="dash-card" style="flex: 2; min-width: 300px;">
+        <div class="card-header bg-primary text-white"><i class="fas fa-chart-bar"></i> County Progress</div>
+        <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+            {% for county_name, stats in county_stats.items()|sort %}
+            {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
+            <div class="d-flex align-items-center mb-1" style="font-size: 0.85rem;">
+                <span style="width: 90px;">{{ county_name }}</span>
+                <div class="progress flex-grow-1 mx-2" style="height: 14px;">
+                    <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
+                        style="width: {{ pct }}%;">
                     </div>
                 </div>
-                {% endfor %}
+                <span style="width: 45px; text-align: right;">{{ stats.c2026_confirmed }}/{{ stats.total_seats }}</span>
             </div>
+            {% endfor %}
         </div>
     </div>
+</div>
 
 <!-- Search Box -->
 <form method="GET" action="{{ url_for('index') }}" class="search-box mb-4">
@@ -137,6 +120,9 @@
     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="collapseAll()">
         <i class="fas fa-compress-alt"></i> Collapse All
     </button>
+    <a href="{{ url_for('activity_log_page') }}" class="btn btn-outline-secondary mb-3">
+        <i class="fas fa-history"></i> View Activity Log
+    </a>
 </div>
 
 <!-- County Accordion -->
