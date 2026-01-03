@@ -206,6 +206,7 @@
             <h4 class="mt-4">Copy to 2026</h4>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=candidate_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="form-group">
                     <label>Status for 2026:</label>
                     <select name="status" class="form-control">
@@ -239,6 +240,7 @@
             <h4 class="mt-4">Add Comment</h4>
             <form method="POST" action="{{ url_for('comments', candidate_id=candidate_id) }}">
                 <textarea name="comment_text" class="form-control" placeholder="Enter your comment"></textarea>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit" class="btn btn-primary mt-2">Submit Comment</button>
             </form>
         </div>

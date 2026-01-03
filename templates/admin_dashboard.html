@@ -8,6 +8,7 @@
     <h3>User Management</h3>
     <a href="{{ url_for('add_user') }}" class="btn btn-primary mb-3">Add New User</a>
     <form method="POST" action="{{ url_for('update_candidates') }}" enctype="multipart/form-data" class="mb-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="form-group">
             <label for="file">Upload Candidate Data (CSV)</label>
             <input type="file" class="form-control-file" id="file" name="file" accept=".csv">
@@ -81,6 +82,7 @@
     <!-- Candidate Users Table with Bulk Delete -->
     <h4>Candidate Users</h4>
     <form method="POST" action="{{ url_for('delete_users_bulk') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="table-responsive">
             <table class="table">
                 <thead>
@@ -113,6 +115,7 @@
                             <a href="{{ url_for('edit_user', user_type='candidate', user_id=candidate[0]) }}"
                                 class="btn btn-sm btn-warning">Edit</a>
                             <form method="POST"
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 action="{{ url_for('delete_user', user_type='candidate', user_id=candidate[0]) }}"
                                 style="display:inline;">
                                 <button type="submit" class="btn btn-sm btn-danger"
@@ -161,6 +164,7 @@
                         <a href="{{ url_for('edit_user', user_type='admin', user_id=admin[0]) }}"
                             class="btn btn-sm btn-warning">Edit</a>
                         <form method="POST" action="{{ url_for('delete_user', user_type='admin', user_id=admin[0]) }}"
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             style="display:inline;">
                             <button type="submit" class="btn btn-sm btn-danger"
                                 onclick="return confirm('Are you sure?')">Delete</button>
@@ -175,6 +179,7 @@
     <!-- Token Management Section -->
     <h4>Registration Tokens</h4>
     <form method="POST" action="{{ url_for('generate_token') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="form-group">
             <label for="token_count">Number of Tokens to Generate</label>
             <input type="number" class="form-control" id="token_count" name="token_count" min="1" value="1">

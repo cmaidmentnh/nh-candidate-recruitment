@@ -3,6 +3,8 @@
 <div class="container mt-4">
     <h1>Add New User</h1>
     <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="form-group">
             <label>User Type:</label>
             <select name="user_type" class="form-control" required>

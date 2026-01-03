@@ -25,6 +25,8 @@
                 <td>{{ match.checklist_address }}</td>
                 <td>
                     <form method="POST" action="{{ url_for('confirm_match', candidate_id=match.candidate_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-success btn-sm">Confirm Match</button>
                     </form>
                 </td>

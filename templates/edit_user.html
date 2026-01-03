@@ -3,6 +3,8 @@
 <div class="container mt-4">
     <h1>Edit {{ user_type|capitalize }} User</h1>
     <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <div class="form-group">
             <label>Email:</label>
             <input type="email" name="email" class="form-control" value="{{ user[3] if user_type == 'candidate' else user[2] }}" required>

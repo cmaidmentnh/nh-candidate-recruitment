@@ -10,6 +10,8 @@
     <div class="container">
         <h1 class="mt-4">Add Candidate Running in 2026</h1>
         <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label>First Name:</label>
                 <input type="text" class="form-control" name="first_name" required>

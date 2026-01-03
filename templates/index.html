@@ -112,6 +112,8 @@
 
 <!-- Search Box -->
 <form method="GET" action="{{ url_for('index') }}" class="search-box mb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query or '' }}">    <button type="submit" class="btn btn-primary">
         <i class="fas fa-search"></i> Search
     </button>

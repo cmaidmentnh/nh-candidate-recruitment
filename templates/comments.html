@@ -2,6 +2,8 @@
 {% block content %}
 <h1>Comments for {{ candidate[0] }} {{ candidate[1] }}</h1>
 <form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="form-group">
         <label>Add Comment:</label>
         <textarea name="comment_text" class="form-control" required></textarea>

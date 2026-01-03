@@ -83,6 +83,7 @@
 
                     <!-- Add New Form -->
                     <form method="POST" action="{{ url_for('add_candidate_inline') }}" id="addNewForm" style="display:none;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="district_code" id="modalDistrictCode">
                         <input type="hidden" name="election_year" id="modalElectionYear">
                         <div class="row">
@@ -130,6 +131,7 @@
                     <!-- Add Existing Form -->
                     <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=0) }}" id="addExistingForm" style="display:none;">
                         <input type="hidden" name="district_code" id="existingDistrictCode">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="status" id="existingStatus" value="Considering">
                         
                         <div class="alert alert-success">
