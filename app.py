@@ -683,7 +683,8 @@ def edit_candidate(candidate_id, election_year):
                               city=city,
                               zip=zip_code,
                               districts=districts,
-                              comments=comments)
+                              comments=comments
+                              voter_info=voter_info)
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
 @candidate_restricted
@@ -1572,29 +1573,97 @@ def lookup_voter(candidate_id):
     
     voter_cur = voter_conn.cursor()
     try:
-        # Build query based on what we have
-        # Search by last name (handle hyphenated), prioritize matches
+        # Build list of name variations to check (Joe -> Joseph, Bill -> William, etc.)
+        name_variants = {
+            'JOE': ['JOSEPH'], 'JOSEPH': ['JOE'],
+            'BILL': ['WILLIAM'], 'WILLIAM': ['BILL', 'WILL', 'WILLY'],
+            'BOB': ['ROBERT'], 'ROBERT': ['BOB', 'ROB', 'BOBBY'],
+            'TOM': ['THOMAS'], 'THOMAS': ['TOM', 'TOMMY'],
+            'MIKE': ['MICHAEL'], 'MICHAEL': ['MIKE', 'MIKEY'],
+            'JIM': ['JAMES'], 'JAMES': ['JIM', 'JIMMY', 'JAMIE'],
+            'DICK': ['RICHARD'], 'RICHARD': ['DICK', 'RICK', 'RICH'],
+            'TONY': ['ANTHONY'], 'ANTHONY': ['TONY'],
+            'DAN': ['DANIEL'], 'DANIEL': ['DAN', 'DANNY'],
+            'STEVE': ['STEVEN', 'STEPHEN'], 'STEVEN': ['STEVE'], 'STEPHEN': ['STEVE'],
+            'CHRIS': ['CHRISTOPHER'], 'CHRISTOPHER': ['CHRIS'],
+            'MATT': ['MATTHEW'], 'MATTHEW': ['MATT'],
+            'NICK': ['NICHOLAS'], 'NICHOLAS': ['NICK'],
+            'BETH': ['ELIZABETH'], 'ELIZABETH': ['BETH', 'LIZ', 'LIZZY'],
+            'LIZ': ['ELIZABETH'],
+            'KATE': ['KATHERINE', 'CATHERINE'], 'KATHERINE': ['KATE', 'KATHY', 'KATIE'],
+            'CATHERINE': ['KATE', 'KATHY', 'CATHY'],
+            'PAT': ['PATRICIA', 'PATRICK'], 'PATRICIA': ['PAT', 'PATTY'], 'PATRICK': ['PAT'],
+            'ED': ['EDWARD', 'EDWIN'], 'EDWARD': ['ED', 'EDDIE', 'TED'],
+            'DAVE': ['DAVID'], 'DAVID': ['DAVE'],
+            'ALEX': ['ALEXANDER', 'ALEXANDRA'], 'ALEXANDER': ['ALEX'], 'ALEXANDRA': ['ALEX'],
+            'SAM': ['SAMUEL', 'SAMANTHA'], 'SAMUEL': ['SAM'], 'SAMANTHA': ['SAM'],
+            'CHARLIE': ['CHARLES'], 'CHARLES': ['CHARLIE', 'CHUCK'],
+            'JERRY': ['GERALD', 'JEROME'], 'GERALD': ['JERRY'], 'JEROME': ['JERRY'],
+            'LARRY': ['LAWRENCE'], 'LAWRENCE': ['LARRY'],
+            'JENNY': ['JENNIFER'], 'JENNIFER': ['JENNY', 'JEN'],
+            'MAGGIE': ['MARGARET'], 'MARGARET': ['MAGGIE', 'PEGGY', 'MEG'],
+            'DEBBIE': ['DEBORAH'], 'DEBORAH': ['DEBBIE', 'DEB'],
+            'SUE': ['SUSAN', 'SUZANNE'], 'SUSAN': ['SUE', 'SUSIE'], 'SUZANNE': ['SUE'],
+            'VICKY': ['VICTORIA'], 'VICTORIA': ['VICKY', 'TORI'],
+            'DOUG': ['DOUGLAS'], 'DOUGLAS': ['DOUG'],
+            'GREG': ['GREGORY'], 'GREGORY': ['GREG'],
+            'JEFF': ['JEFFREY', 'GEOFFREY'], 'JEFFREY': ['JEFF'], 'GEOFFREY': ['JEFF'],
+            'RON': ['RONALD'], 'RONALD': ['RON', 'RONNIE'],
+            'DON': ['DONALD'], 'DONALD': ['DON', 'DONNIE'],
+            'KEN': ['KENNETH'], 'KENNETH': ['KEN', 'KENNY'],
+            'FRED': ['FREDERICK'], 'FREDERICK': ['FRED', 'FREDDY'],
+            'WALT': ['WALTER'], 'WALTER': ['WALT', 'WALLY'],
+            'ANDY': ['ANDREW'], 'ANDREW': ['ANDY', 'DREW'],
+            'PETE': ['PETER'], 'PETER': ['PETE'],
+            'HANK': ['HENRY'], 'HENRY': ['HANK'],
+            'JACK': ['JOHN', 'JACKSON'], 'JOHN': ['JACK', 'JOHNNY', 'JON'],
+            'TED': ['THEODORE', 'EDWARD'], 'THEODORE': ['TED', 'TEDDY'],
+            'RAY': ['RAYMOND'], 'RAYMOND': ['RAY'],
+            'PHIL': ['PHILIP', 'PHILLIP'], 'PHILIP': ['PHIL'], 'PHILLIP': ['PHIL'],
+            'MARTY': ['MARTIN'], 'MARTIN': ['MARTY'],
+            'VINNY': ['VINCENT'], 'VINCENT': ['VINNY', 'VINCE'],
+            'SANDY': ['SANDRA', 'ALEXANDER'], 'SANDRA': ['SANDY'],
+            'BECKY': ['REBECCA'], 'REBECCA': ['BECKY', 'BECCA'],
+            'CATHY': ['CATHERINE'], 'CINDY': ['CYNTHIA'], 'CYNTHIA': ['CINDY'],
+            'NANCY': ['ANN', 'ANNE'], 'ANN': ['NANCY', 'ANNIE'], 'ANNE': ['NANCY', 'ANNIE'],
+            'BARB': ['BARBARA'], 'BARBARA': ['BARB', 'BARBIE'],
+            'RICK': ['RICHARD', 'FREDERICK'], 'ROB': ['ROBERT'],
+            'BEN': ['BENJAMIN'], 'BENJAMIN': ['BEN', 'BENNY'],
+            'JON': ['JONATHAN', 'JOHN'], 'JONATHAN': ['JON'],
+            'NATE': ['NATHAN', 'NATHANIEL'], 'NATHAN': ['NATE'], 'NATHANIEL': ['NATE'],
+            'ZACH': ['ZACHARY'], 'ZACHARY': ['ZACH', 'ZACK'],
+            'JOSH': ['JOSHUA'], 'JOSHUA': ['JOSH'],
+            'WILL': ['WILLIAM'], 'WILLY': ['WILLIAM'],
+        }
+        
+        # Get variants for search
+        search_first_upper = search_first.upper() if search_first else ''
+        first_names_to_check = [search_first_upper]
+        if search_first_upper in name_variants:
+            first_names_to_check.extend(name_variants[search_first_upper])
+        
+        # Query with prioritized matching:
+        # 0 = exact first name or variant match
+        # 1 = first 3 letters match
+        # 2 = first 2 letters match  
+        # 3 = first letter matches
+        # 4 = middle name matches
         voter_cur.execute("""
             SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
             FROM statewidechecklist
-            WHERE (
-                UPPER(nm_last) = UPPER(%s)
-                OR UPPER(nm_last) LIKE UPPER(%s) || '%%'
-                OR UPPER(%s) LIKE UPPER(nm_last) || '%%'
-                OR UPPER(nm_last) LIKE '%%' || UPPER(%s) || '%%'
-            )
+            WHERE UPPER(nm_last) = UPPER(%s)
             ORDER BY 
                 CASE 
-                    WHEN UPPER(nm_first) = UPPER(%s) THEN 0
-                    WHEN UPPER(nm_first) LIKE UPPER(%s) || '%%' THEN 1
-                    WHEN UPPER(SUBSTRING(nm_first, 1, 3)) = UPPER(SUBSTRING(%s, 1, 3)) THEN 2
-                    ELSE 3
+                    WHEN UPPER(nm_first) = ANY(%s) THEN 0
+                    WHEN UPPER(SUBSTRING(nm_first, 1, 3)) = UPPER(SUBSTRING(%s, 1, 3)) THEN 1
+                    WHEN UPPER(SUBSTRING(nm_first, 1, 2)) = UPPER(SUBSTRING(%s, 1, 2)) THEN 2
+                    WHEN UPPER(SUBSTRING(nm_first, 1, 1)) = UPPER(SUBSTRING(%s, 1, 1)) THEN 3
+                    WHEN UPPER(nm_mid) = ANY(%s) OR UPPER(SUBSTRING(nm_mid, 1, 3)) = UPPER(SUBSTRING(%s, 1, 3)) THEN 4
+                    ELSE 5
                 END,
-                CASE WHEN UPPER(nm_last) = UPPER(%s) THEN 0 ELSE 1 END,
                 nm_first
-            LIMIT 200
-        """, (search_last, search_last, search_last, search_last, 
-              search_first, search_first, search_first, search_last))
+            LIMIT 500
+        """, (search_last, first_names_to_check, search_first, search_first, search_first, first_names_to_check, search_first))
         
         voters = voter_cur.fetchall()
         results = []
