@@ -1812,7 +1812,10 @@ def search_candidates():
 def update_candidate_district(candidate_id):
     """Update a candidate's district"""
     data = request.get_json()
-    new_district = data.get('district', '').strip()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    new_district = data.get('district', '').strip() if data.get('district') else ''
     election_year = data.get('election_year', 2026)
     
     if not new_district:
@@ -1846,7 +1849,6 @@ def update_candidate_district(candidate_id):
     finally:
         cur.close()
         release_db_connection(conn)
-
 
 @app.route('/api/districts')
 @login_required
