@@ -369,7 +369,8 @@ pre {
     }
     
     .dash-card .card-header {
-        font-size: 10px;
+        height: 20px;
+        font-size: 12px;
         padding: 10px 6px;
     }
     
