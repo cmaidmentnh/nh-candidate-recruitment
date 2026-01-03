@@ -113,7 +113,7 @@
         {% elif voter_id_exists %}
             <div class="alert alert-danger">
                 <i class="fas fa-exclamation-triangle"></i> <strong>Connection Error:</strong> 
-                Voter ID {{ candidate.voter_id or 'exists' }} is saved but couldn't load details from voter database.
+                Voter ID is saved but couldn't load details from voter database.
                 <button type="button" class="btn btn-sm btn-outline-danger ml-2" onclick="location.reload()">
                     <i class="fas fa-sync"></i> Retry
                 </button>
