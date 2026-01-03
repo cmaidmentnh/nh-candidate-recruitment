@@ -207,8 +207,10 @@ def load_user(user_id):
 # Role-Based Access Control
 def admin_required(f):
     @wraps(f)
-    @login_required
     def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("Please log in as admin.", "warning")
+            return redirect(url_for('admin_login'))
         if not hasattr(current_user, 'role') or current_user.role != 'admin':
             flash("Admin access required.", "danger")
             return redirect(url_for('index'))
