@@ -260,14 +260,31 @@
                         html += '</div>';
                     }
                     
-                    $('#voterList').append(html);
-                    displayedCount = end;
+                    // Show pagination info
+                    html += '<div class="text-muted small mt-2 mb-2">Showing ' + (displayedCount + 1) + '-' + end + ' of ' + allVoters.length + '</div>';
                     
-                    $('#showMoreBtn').remove();
-                    
-                    if (displayedCount < allVoters.length) {
-                        $('#voterList').append('<button id="showMoreBtn" class="btn btn-outline-primary btn-sm btn-block mt-2" onclick="showMoreVoters()">Show ' + Math.min(pageSize, allVoters.length - displayedCount) + ' more...</button>');
+                    // Navigation buttons
+                    html += '<div class="btn-group btn-block">';
+                    if (displayedCount > 0) {
+                        html += '<button class="btn btn-outline-secondary btn-sm" onclick="showPrevVoters()"><i class="fas fa-arrow-left"></i> Previous</button>';
                     }
+                    if (end < allVoters.length) {
+                        html += '<button class="btn btn-outline-primary btn-sm" onclick="showNextVoters()">Next <i class="fas fa-arrow-right"></i></button>';
+                    }
+                    html += '</div>';
+                    
+                    $('#voterList').html(html);
+                }
+
+                function showNextVoters() {
+                    displayedCount = Math.min(displayedCount + pageSize, allVoters.length - pageSize);
+                    if (displayedCount < 0) displayedCount = 0;
+                    showMoreVoters();
+                }
+
+                function showPrevVoters() {
+                    displayedCount = Math.max(displayedCount - pageSize, 0);
+                    showMoreVoters();
                 }
 
                 function selectVoter(voterId, city, ward) {
