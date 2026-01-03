@@ -258,6 +258,15 @@ body {
     text-decoration: underline;
 }
 
+/* Fix district dropdown text cutoff */
+.form-control, select.form-control {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    line-height: 1.5;
+    height: auto;
+    min-height: 38px;
+}
+
 /* Buttons */
 .btn {
     font-weight: 500;
