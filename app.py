@@ -613,31 +613,38 @@ def edit_candidate(candidate_id, election_year):
             voter_id = voter_id_row[0] if voter_id_row else None
             
             if voter_id:
-                voter_conn = get_voter_db_connection()
-                if voter_conn:
-                    voter_cur = voter_conn.cursor()
-                    try:
-                        voter_cur.execute("""
-                            SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff, 
-                                   ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
-                            FROM statewidechecklist
-                            WHERE id_voter = %s
-                        """, (voter_id,))
-                        v = voter_cur.fetchone()
-                        if v:
-                            voter_info = {
-                                'voter_id': v[0],
-                                'name': f"{v[1]} {v[2] or ''} {v[3]} {v[4] or ''}".strip(),
-                                'address': f"{v[5] or ''} {v[6] or ''}".strip(),
-                                'city': v[7],
-                                'zip': v[8],
-                                'ward': v[9],
-                                'county': v[10],
-                                'party': v[11]
-                            }
-                    finally:
-                        voter_cur.close()
-                        release_voter_db_connection(voter_conn)
+                try:
+                    voter_conn = get_voter_db_connection()
+                    if voter_conn:
+                        voter_cur = voter_conn.cursor()
+                        try:
+                            voter_cur.execute("""
+                                SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff, 
+                                       ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
+                                FROM statewidechecklist
+                                WHERE id_voter = %s
+                            """, (voter_id,))
+                            v = voter_cur.fetchone()
+                            if v:
+                                voter_info = {
+                                    'voter_id': v[0],
+                                    'name': f"{v[1]} {v[2] or ''} {v[3]} {v[4] or ''}".strip(),
+                                    'address': f"{v[5] or ''} {v[6] or ''}".strip(),
+                                    'city': v[7],
+                                    'zip': v[8],
+                                    'ward': v[9],
+                                    'county': v[10],
+                                    'party': v[11]
+                                }
+                            else:
+                                logger.warning(f"Voter ID {voter_id} not found in voter database")
+                        finally:
+                            voter_cur.close()
+                            release_voter_db_connection(voter_conn)
+                    else:
+                        logger.warning(f"Could not connect to voter database for voter_id {voter_id}")
+                except Exception as e:
+                    logger.error(f"Error fetching voter info for voter_id {voter_id}: {e}")
 
             cur.execute("""
                 SELECT comment_id, comment_text, added_by, added_at
@@ -687,20 +694,21 @@ def edit_candidate(candidate_id, election_year):
             cur.close()
             release_db_connection(conn)
         return render_template("edit_candidate.html",
-                              candidate_id=candidate_id,
-                              election_year=election_year,
-                              first_name=first_name,
-                              last_name=last_name,
-                              party=party,
-                              incumbent=incumbent,
-                              status=status,
-                              district_code=district_code,
-                              address=address,
-                              city=city,
-                              zip=zip_code,
-                              districts=districts,
-                              comments=comments,
-                              voter_info=voter_info)
+                                candidate_id=candidate_id,
+                                election_year=election_year,
+                                first_name=first_name,
+                                last_name=last_name,
+                                party=party,
+                                incumbent=incumbent,
+                                status=status,
+                                district_code=district_code,
+                                address=address,
+                                city=city,
+                                zip=zip_code,
+                                districts=districts,
+                                comments=comments,
+                                voter_info=voter_info,
+                                voter_id_exists=bool(voter_id))
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
 @candidate_restricted
