@@ -1461,14 +1461,18 @@ def lookup_voter(candidate_id):
     
     voter_cur = voter_conn.cursor()
     try:
-        # Search by name (case-insensitive)
+        # Search by last name, with flexible first name match
+        # This handles Tom/Thomas, Bill/William, etc.
         voter_cur.execute("""
             SELECT id_voter, nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
             FROM statewidechecklist
             WHERE UPPER(nm_last) = UPPER(%s) 
-              AND UPPER(nm_first) LIKE UPPER(%s) || '%%'
-            LIMIT 10
-        """, (last_name, first_name[:3] if first_name else ''))
+              AND (
+                  UPPER(nm_first) LIKE UPPER(%s) || '%%'
+                  OR UPPER(%s) LIKE UPPER(SUBSTRING(nm_first, 1, 3)) || '%%'
+              )
+            LIMIT 15
+        """, (last_name, first_name, first_name))
         
         voters = voter_cur.fetchall()
         results = []
