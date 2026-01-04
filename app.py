@@ -681,7 +681,7 @@ def edit_candidate(candidate_id, election_year):
         try:
             cur.execute("""
                 SELECT c.first_name, c.last_name, c.party, c.incumbent,
-                       ces.status, ces.district_code, c.address, c.city, c.zip
+                       ces.status, ces.district_code, c.address, c.city, c.zip, c.nhla_score, c.nhla_letter
                 FROM candidates c
                 LEFT JOIN candidate_election_status ces
                   ON c.candidate_id=ces.candidate_id AND ces.election_year=%s
@@ -691,7 +691,7 @@ def edit_candidate(candidate_id, election_year):
             if not row:
                 flash("Candidate not found.", "warning")
                 return redirect(url_for("index"))
-            first_name, last_name, party, incumbent, status, district_code, address, city, zip_code = row
+            first_name, last_name, party, incumbent, status, district_code, address, city, zip_code, nhla_score, nhla_letter = row
             
             # Get voter info if voter_id exists
             voter_info = None
@@ -795,7 +795,9 @@ def edit_candidate(candidate_id, election_year):
                                 districts=districts,
                                 comments=comments,
                                 voter_info=voter_info,
-                                voter_id_exists=bool(voter_id))
+                                voter_id_exists=bool(voter_id),
+                                nhla_score=nhla_score,
+                                nhla_letter=nhla_letter)
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
 @candidate_restricted
@@ -1437,7 +1439,7 @@ def update_candidates():
                     photo_url = candidate.get('photo_url', '')
 
                     cur.execute("""
-                        SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
+                        SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info, nhla_score, nhla_letter
                         FROM candidates
                         WHERE LOWER(email) = %s OR (UPPER(first_name) = UPPER(%s) AND UPPER(last_name) = UPPER(%s))
                     """, (email, first_name, last_name))
@@ -1687,13 +1689,13 @@ def candidate_profile(candidate_id):
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
+            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info, nhla_score, nhla_letter
             FROM candidates
             WHERE candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
         if candidate:
-            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
+            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info', 'nhla_score', 'nhla_letter']
             candidate = dict(zip(columns, candidate))
             return render_template('candidate_profile.html', candidate=candidate)
         else:
@@ -1711,13 +1713,13 @@ def get_candidate_data(candidate_id):
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
+            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info, nhla_score, nhla_letter
             FROM candidates
             WHERE candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
         if candidate:
-            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
+            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info', 'nhla_score', 'nhla_letter']
             candidate_dict = dict(zip(columns, candidate))
             
             # Get recent comments
