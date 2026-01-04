@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-3">Incumbents Undecided</h1>
+
+<a href="{{ url_for('index') }}" class="btn btn-secondary mb-3"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>District</th>
+                <th>Candidate</th>
+                <th>Status</th>
+                <th class="d-none d-md-table-cell">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cand in undecided %}
+            <tr {% if cand[5] == 2024 %}class="table-info"{% endif %}>
+                <td>{{ cand[3] }}</td>
+                <td>
+                    <a href="{{ url_for('edit_candidate', candidate_id=cand[0], election_year=cand[5]) }}" 
+                       class="{% if cand[5] == 2024 %}text-info{% else %}text-warning{% endif %}">
+                        {{ cand[1] }} {{ cand[2] }} <i class="fas fa-star text-warning"></i>
+                    </a>
+                    {% if cand[5] == 2024 %}<small class="text-muted">(2024 only)</small>{% endif %}
+                </td>
+                <td>
+                    {% if cand[5] == 2024 %}
+                    <span class="badge badge-info">No 2026 Record</span>
+                    {% else %}
+                    <span class="badge badge-warning">{{ cand[4] }}</span>
+                    {% endif %}
+                </td>
+                <td class="d-none d-md-table-cell">
+                    <a href="{{ url_for('edit_candidate', candidate_id=cand[0], election_year=cand[5]) }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p class="text-muted mt-3">Total: {{ undecided|length }} incumbents undecided</p>
+{% endblock %}
