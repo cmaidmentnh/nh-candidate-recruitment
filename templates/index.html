@@ -178,8 +178,7 @@
                     <div class="card-header" data-toggle="collapse" 
                          data-target="#collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}"
                          aria-expanded="{% if search_query %}true{% else %}false{% endif %}">
-                        <h5>{{ fdc }} ({{ seat_count }} seat{{ 's' if seat_count != 1 else '' }}){% if info.pvi is not none %} <span class="badge {% if info.pvi > 5 %}badge-danger{% elif info.pvi > 0 %}badge-warning{% elif info.pvi > -5 %}badge-info{% else %}badge-primary{% endif %}" style="font-size: 0.7em;">{{ info.pvi_rating or (info.pvi ~ '%') }}</span>{% endif %}</h5>
-                        <small>{{ a2026 }}/{{ seat_count }} - {{ status }}</small>
+                         <h5>{{ fdc }} ({{ seat_count }} seat{{ 's' if seat_count != 1 else '' }}){% if info.pvi is not none %} <span class="badge" style="font-size: 0.7em; {% if info.pvi_rating == 'SAFE GOP' %}background-color: #8B0000; color: white;{% elif info.pvi_rating == 'LIKELY GOP' %}background-color: #DC143C; color: white;{% elif info.pvi_rating == 'LEAN GOP' %}background-color: #FF6B6B; color: white;{% elif info.pvi_rating == 'SWING' %}background-color: #FFD700; color: black;{% elif info.pvi_rating == 'LEAN DEM' %}background-color: #87CEEB; color: black;{% elif info.pvi_rating == 'LIKELY DEM' %}background-color: #4169E1; color: white;{% elif info.pvi_rating == 'SAFE DEM' %}background-color: #00008B; color: white;{% else %}background-color: #6c757d; color: white;{% endif %}">{% if info.pvi > 0 %}+{% endif %}{{ info.pvi }}%</span>{% endif %}</h5>                        <small>{{ a2026 }}/{{ seat_count }} - {{ status }}</small>
                     </div>
                     <div id="collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}" 
                          class="collapse{% if search_query %} show{% endif %}">
