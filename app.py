@@ -983,8 +983,8 @@ def login():
             cur2.close()
             release_db_connection(conn2)
             session.permanent = True
-            flash("Logged in successfully.", "success")
-            return redirect(url_for('index'))
+            next_page = request.args.get('next')
+            return redirect(next_page if next_page else url_for('index'))
         
         flash("Invalid email or password.", "danger")
     return render_template("login.html")
