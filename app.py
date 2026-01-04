@@ -424,9 +424,16 @@ def get_data_and_dashboard():
                 if c["incumbent"] and c["status"].upper() == "DECLINED":
                     dashboard["incumbents_not_running"]["total"] += 1
                     dashboard["incumbents_not_running"]["districts"].append((county_name, fdc))
-            # Count individual incumbents undecided (not confirmed, not declined)
+            # Count individual incumbents undecided (not confirmed, not declined in 2026)
             for c in c2026:
                 if c["incumbent"] and c["status"].upper() not in ("CONFIRMED", "DECLINED"):
+                    dashboard["incumbents_undecided"]["total"] += 1
+                    dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
+            # Also count 2024 incumbents who have NO 2026 record at all
+            c2024 = info["cand2024"]
+            c2026_ids = {c["candidate_id"] for c in c2026}
+            for c in c2024:
+                if c["incumbent"] and c["candidate_id"] not in c2026_ids:
                     dashboard["incumbents_undecided"]["total"] += 1
                     dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
             
