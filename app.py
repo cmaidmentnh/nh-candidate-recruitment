@@ -272,7 +272,7 @@ def get_data_and_dashboard():
 
     try:
         cur.execute("""
-            SELECT counter, county_name, district_code, ward, town, seat_count, full_district_code
+            SELECT counter, county_name, district_code, ward, town, seat_count, full_district_code, pvi, pvi_rating
             FROM districts
             ORDER BY county_name, district_code, town;
         """)
@@ -322,7 +322,7 @@ def get_data_and_dashboard():
 
     county_groups = defaultdict(dict)
     for row in district_rows:
-        counter, county_name, district_code, ward, town, seat_count, full_district_code = row
+        counter, county_name, district_code, ward, town, seat_count, full_district_code, pvi, pvi_rating = row
         if ward and ward != 0:
             display_town = f"{town} Ward {ward}"
         else:
@@ -334,7 +334,9 @@ def get_data_and_dashboard():
                 "seat_count": seat_count,
                 "towns": [],
                 "cand2026": [],
-                "cand2024": []
+                "cand2024": [],
+                "pvi": pvi,
+                "pvi_rating": pvi_rating
             }
         county_groups[county_name][full_district_code]["towns"].append(display_town)
     
