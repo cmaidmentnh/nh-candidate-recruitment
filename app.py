@@ -440,6 +440,8 @@ def get_data_and_dashboard():
             c2024 = info["cand2024"]
             for c in c2024:
                 if c["incumbent"] and c["candidate_id"] not in all_2026_candidate_ids:
+                    dashboard["incumbents_undecided"]["total"] += 1
+                    dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
             
     dashboard["confirmed"]["total"] = total_confirmed
 
