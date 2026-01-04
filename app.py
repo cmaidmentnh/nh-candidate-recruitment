@@ -413,13 +413,16 @@ def get_data_and_dashboard():
             if pot_count > 0:
                 dashboard["potentials"]["total"] += pot_count
                 dashboard["potentials"]["districts"].append((county_name, fdc))
-            if any(c["incumbent"] and c["status"].upper() != "DECLINED" for c in c2026):
-                dashboard["incumbents_running"]["total"] += 1
-                dashboard["incumbents_running"]["districts"].append((county_name, fdc))
-            inc_cands = [c for c in c2026 if c["incumbent"]]
-            if inc_cands and not any(c["incumbent"] and c["status"].upper() != "DECLINED" for c in inc_cands):
-                dashboard["incumbents_not_running"]["total"] += 1
-                dashboard["incumbents_not_running"]["districts"].append((county_name, fdc))
+            # Count individual incumbents running (confirmed only)
+            for c in c2026:
+                if c["incumbent"] and c["status"].upper() == "CONFIRMED":
+                    dashboard["incumbents_running"]["total"] += 1
+                    dashboard["incumbents_running"]["districts"].append((county_name, fdc))
+            # Count individual incumbents who declined
+            for c in c2026:
+                if c["incumbent"] and c["status"].upper() == "DECLINED":
+                    dashboard["incumbents_not_running"]["total"] += 1
+                    dashboard["incumbents_not_running"]["districts"].append((county_name, fdc))
     dashboard["confirmed"]["total"] = total_confirmed
 
     county_stats = {}
