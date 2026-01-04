@@ -438,11 +438,8 @@ def get_data_and_dashboard():
                     dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
             # Also count 2024 incumbents who have NO 2026 record at all
             c2024 = info["cand2024"]
-            c2026_ids = {c["candidate_id"] for c in c2026}
             for c in c2024:
                 if c["incumbent"] and c["candidate_id"] not in all_2026_candidate_ids:
-                    dashboard["incumbents_undecided"]["total"] += 1
-                    dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
             
     dashboard["confirmed"]["total"] = total_confirmed
 
@@ -463,7 +460,7 @@ def get_data_and_dashboard():
             "c2024": c_2024,
             "c2026_confirmed": c_2026_confirmed
         }
-    return sorted_county_groups, dashboard, county_stats, all_2026_candidate_ids
+    return sorted_county_groups, dashboard, county_stats
 
 
 # ============== ROUTES ==============
@@ -472,7 +469,7 @@ def get_data_and_dashboard():
 @login_required
 def index():
     search_query = request.args.get('search', '').strip()
-    county_groups, dashboard, county_stats, all_2026_candidate_ids = get_data_and_dashboard()
+    county_groups, dashboard, county_stats = get_data_and_dashboard()
     
     if search_query:
         # Filter by search query
@@ -504,7 +501,7 @@ def index():
 @candidate_restricted
 def filter_view():
     category = request.args.get("category", "").strip()
-    county_groups, dashboard, county_stats, all_2026_candidate_ids = get_data_and_dashboard()
+    county_groups, dashboard, county_stats = get_data_and_dashboard()
     
     # Special handling for unmatched_voters
     if category == 'unmatched_voters':
@@ -529,6 +526,49 @@ def filter_view():
                               category=category,
                               unmatched=unmatched,
                               dashboard=dashboard)
+        
+    # Special handling for incumbents_undecided
+    if category == 'incumbents_undecided':
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            # Get 2026 incumbents with status not confirmed/declined
+            cur.execute("""
+                SELECT c.candidate_id, c.first_name, c.last_name, ces.district_code, ces.status, 2026 as year
+                FROM candidates c
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2026 
+                  AND c.incumbent = true
+                  AND c.party = 'R'
+                  AND ces.status NOT IN ('Confirmed', 'Declined')
+                ORDER BY c.last_name, c.first_name
+            """)
+            undecided_2026 = cur.fetchall()
+            
+            # Get 2024 incumbents with NO 2026 record at all
+            cur.execute("""
+                SELECT c.candidate_id, c.first_name, c.last_name, ces.district_code, 'No 2026 Record' as status, 2024 as year
+                FROM candidates c
+                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+                WHERE ces.election_year = 2024 
+                  AND c.incumbent = true
+                  AND c.party = 'R'
+                  AND c.candidate_id NOT IN (
+                      SELECT candidate_id FROM candidate_election_status WHERE election_year = 2026
+                  )
+                ORDER BY c.last_name, c.first_name
+            """)
+            undecided_no_2026 = cur.fetchall()
+            
+            undecided = list(undecided_2026) + list(undecided_no_2026)
+        finally:
+            cur.close()
+            release_db_connection(conn)
+        
+        return render_template("incumbents_undecided.html",
+                              category=category,
+                              undecided=undecided,
+                              dashboard=dashboard)
     
     if category not in dashboard:
         flash("Invalid category filter.", "warning")
@@ -546,7 +586,7 @@ def filter_view():
                           category=category,
                           county_groups=filtered_groups,
                           dashboard=dashboard,
-                          county_stats=county_stats, all_2026_candidate_ids=all_2026_candidate_ids)
+                          county_stats=county_stats)
 
 @app.route('/add_candidate_inline', methods=['POST'])
 @candidate_restricted
@@ -917,7 +957,8 @@ def login():
                 if not password_changed:
                     flash("Please change your password on first login.", "warning")
                     return redirect(url_for('change_password'))
-                return redirect(url_for('index'))
+                next_page = request.args.get('next')
+                return redirect(next_page if next_page else url_for('index'))
         
         # Check admin users table
         cur.execute("""
