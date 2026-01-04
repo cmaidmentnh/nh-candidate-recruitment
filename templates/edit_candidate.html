@@ -125,26 +125,23 @@
             </div>
         {% endif %}
 
-        <!-- NHLA Score -->
-        {% if nhla_score %}
+        <!-- Candidate Scores (NHLA/HRA) -->
+        {% if scores %}
         <div class="card mb-4 border-info">
             <div class="card-header bg-info text-white">
-                <i class="fas fa-chart-line"></i> 2025 NHLA Score
+                <i class="fas fa-chart-line"></i> Legislative Scores
             </div>
             <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-md-3 text-center">
-                        <h1 class="mb-0">{{ nhla_letter }}</h1>
-                    </div>
-                    <div class="col-md-9">
-                        <h4>{{ "%.2f"|format(nhla_score) }}%</h4>
-                        <div class="progress" style="height: 25px;">
-                            <div class="progress-bar {% if nhla_score >= 80 %}bg-success{% elif nhla_score >= 60 %}bg-info{% elif nhla_score >= 40 %}bg-warning{% else %}bg-danger{% endif %}" 
-                                 role="progressbar" 
-                                 style="width: {{ nhla_score }}%">
-                            </div>
+                <div class="row">
+                    {% for score in scores %}
+                    <div class="col-md-4 mb-2">
+                        <div class="border rounded p-2 text-center">
+                            <strong>{{ score.type }} {{ score.year }}</strong><br>
+                            <span class="h4">{{ "%.1f"|format(score.value) }}%</span>
+                            {% if score.letter %}<span class="badge badge-secondary">{{ score.letter }}</span>{% endif %}
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>

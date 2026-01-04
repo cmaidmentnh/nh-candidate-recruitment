@@ -681,7 +681,7 @@ def edit_candidate(candidate_id, election_year):
         try:
             cur.execute("""
                 SELECT c.first_name, c.last_name, c.party, c.incumbent,
-                       ces.status, ces.district_code, c.address, c.city, c.zip, c.nhla_score, c.nhla_letter
+                       ces.status, ces.district_code, c.address, c.city, c.zip
                 FROM candidates c
                 LEFT JOIN candidate_election_status ces
                   ON c.candidate_id=ces.candidate_id AND ces.election_year=%s
@@ -691,7 +691,7 @@ def edit_candidate(candidate_id, election_year):
             if not row:
                 flash("Candidate not found.", "warning")
                 return redirect(url_for("index"))
-            first_name, last_name, party, incumbent, status, district_code, address, city, zip_code, nhla_score, nhla_letter = row
+            first_name, last_name, party, incumbent, status, district_code, address, city, zip_code = row
             
             # Get voter info if voter_id exists
             voter_info = None
@@ -768,6 +768,18 @@ def edit_candidate(candidate_id, election_year):
                 """)
                 districts = [row[0] for row in cur.fetchall()]
 
+            # Get scores from candidate_scores table
+            cur.execute("""
+                SELECT score_type, score_year, score_value, letter_grade
+                FROM candidate_scores
+                WHERE candidate_id = %s
+                ORDER BY score_year DESC, score_type
+            """, (candidate_id,))
+            scores = cur.fetchall()
+            candidate_scores = [
+                {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] else None, 'letter': s[3]} for s in scores
+            ]
+
         except Exception as e:
             logger.error(e)
             flash("Error loading candidate data.", "danger")
@@ -796,8 +808,7 @@ def edit_candidate(candidate_id, election_year):
                                 comments=comments,
                                 voter_info=voter_info,
                                 voter_id_exists=bool(voter_id),
-                                nhla_score=nhla_score,
-                                nhla_letter=nhla_letter)
+                                scores=candidate_scores)
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
 @candidate_restricted
@@ -1439,7 +1450,7 @@ def update_candidates():
                     photo_url = candidate.get('photo_url', '')
 
                     cur.execute("""
-                        SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info, nhla_score, nhla_letter
+                        SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
                         FROM candidates
                         WHERE LOWER(email) = %s OR (UPPER(first_name) = UPPER(%s) AND UPPER(last_name) = UPPER(%s))
                     """, (email, first_name, last_name))
@@ -1689,13 +1700,13 @@ def candidate_profile(candidate_id):
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info, nhla_score, nhla_letter
+            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
             FROM candidates
             WHERE candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
         if candidate:
-            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info', 'nhla_score', 'nhla_letter']
+            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
             candidate = dict(zip(columns, candidate))
             return render_template('candidate_profile.html', candidate=candidate)
         else:
@@ -1713,13 +1724,13 @@ def get_candidate_data(candidate_id):
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info, nhla_score, nhla_letter
+            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
             FROM candidates
             WHERE candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
         if candidate:
-            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info', 'nhla_score', 'nhla_letter']
+            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
             candidate_dict = dict(zip(columns, candidate))
             
             # Get recent comments
@@ -1733,6 +1744,18 @@ def get_candidate_data(candidate_id):
             comments = cur.fetchall()
             candidate_dict['comments'] = [
                 {'text': c[0], 'by': c[1], 'at': str(c[2])} for c in comments
+            ]
+            
+            # Get scores from candidate_scores table
+            cur.execute("""
+                SELECT score_type, score_year, score_value, letter_grade
+                FROM candidate_scores
+                WHERE candidate_id = %s
+                ORDER BY score_year DESC, score_type
+            """, (candidate_id,))
+            scores = cur.fetchall()
+            candidate_dict['scores'] = [
+                {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] else None, 'letter': s[3]} for s in scores
             ]
             
             return jsonify(candidate_dict)

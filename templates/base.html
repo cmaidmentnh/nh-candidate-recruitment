@@ -320,8 +320,7 @@
                             } else {
                                 let html = '<div style="min-width:250px;max-width:300px">';
                                     html += '<p style="margin:0 0 5px 0"><strong>' + data.first_name + ' ' + data.last_name + '</strong></p>';
-                                    if (data.nhla_score) html += '<p style="margin:0 0 5px 0"><span style="background:#17a2b8;color:white;padding:2px 8px;border-radius:4px;font-weight:bold;">NHLA: ' + data.nhla_letter + ' (' + parseFloat(data.nhla_score).toFixed(2) + '%)</span></p>';
-                                    if (data.email) html += '<p style="margin:0 0 3px 0"><small>✉️ ' + data.email + '</small></p>';
+                                    if (data.scores && data.scores.length > 0) { data.scores.forEach(function(s) { html += '<p style="margin:0 0 3px 0"><span style="background:#17a2b8;color:white;padding:2px 6px;border-radius:3px;font-size:11px;">' + s.type + ' ' + s.year + ': ' + (s.value ? s.value.toFixed(1) : 'N/A') + '%' + (s.letter ? ' (' + s.letter + ')' : '') + '</span></p>'; }); }                                    if (data.email) html += '<p style="margin:0 0 3px 0"><small>✉️ ' + data.email + '</small></p>';
                                     if (data.phone1) html += '<p style="margin:0 0 3px 0"><small>📞 ' + data.phone1 + '</small></p>';
                                     if (data.address) html += '<p style="margin:0 0 3px 0"><small>📍 ' + data.address + (data.city ? ', ' + data.city : '') + '</small></p>';
                                     html += '<hr style="margin:8px 0"><p style="margin:0 0 5px 0"><strong>Recent Comments:</strong></p>';
