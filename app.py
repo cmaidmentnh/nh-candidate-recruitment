@@ -393,6 +393,13 @@ def get_data_and_dashboard():
         "TOTAL_DISTRICTS": TOTAL_DISTRICTS
     }
 
+    # Build global set of all candidate IDs with 2026 records
+    all_2026_candidate_ids = set()
+    for county_name, dist_dict in sorted_county_groups.items():
+        for fdc, info in dist_dict.items():
+            for c in info["cand2026"]:
+                all_2026_candidate_ids.add(c["candidate_id"])
+                
     total_confirmed = 0
     for county_name, dist_dict in sorted_county_groups.items():
         for fdc, info in dist_dict.items():
@@ -433,7 +440,7 @@ def get_data_and_dashboard():
             c2024 = info["cand2024"]
             c2026_ids = {c["candidate_id"] for c in c2026}
             for c in c2024:
-                if c["incumbent"] and c["candidate_id"] not in c2026_ids:
+                if c["incumbent"] and c["candidate_id"] not in all_2026_candidate_ids:
                     dashboard["incumbents_undecided"]["total"] += 1
                     dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
             
@@ -456,7 +463,7 @@ def get_data_and_dashboard():
             "c2024": c_2024,
             "c2026_confirmed": c_2026_confirmed
         }
-    return sorted_county_groups, dashboard, county_stats
+    return sorted_county_groups, dashboard, county_stats, all_2026_candidate_ids
 
 
 # ============== ROUTES ==============
@@ -465,7 +472,7 @@ def get_data_and_dashboard():
 @login_required
 def index():
     search_query = request.args.get('search', '').strip()
-    county_groups, dashboard, county_stats = get_data_and_dashboard()
+    county_groups, dashboard, county_stats, all_2026_candidate_ids = get_data_and_dashboard()
     
     if search_query:
         # Filter by search query
@@ -497,7 +504,7 @@ def index():
 @candidate_restricted
 def filter_view():
     category = request.args.get("category", "").strip()
-    county_groups, dashboard, county_stats = get_data_and_dashboard()
+    county_groups, dashboard, county_stats, all_2026_candidate_ids = get_data_and_dashboard()
     
     # Special handling for unmatched_voters
     if category == 'unmatched_voters':
@@ -539,7 +546,7 @@ def filter_view():
                           category=category,
                           county_groups=filtered_groups,
                           dashboard=dashboard,
-                          county_stats=county_stats)
+                          county_stats=county_stats, all_2026_candidate_ids=all_2026_candidate_ids)
 
 @app.route('/add_candidate_inline', methods=['POST'])
 @candidate_restricted
