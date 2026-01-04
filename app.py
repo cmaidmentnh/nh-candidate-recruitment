@@ -386,6 +386,7 @@ def get_data_and_dashboard():
         "potentials": {"total": 0, "districts": []},
         "incumbents_running": {"total": 0, "districts": []},
         "incumbents_not_running": {"total": 0, "districts": []},
+        "incumbents_undecided": {"total": 0, "districts": []},
         "primaries": {"total": 0, "districts": []},
         "unmatched_voters": {"total": unmatched_count},
         "TOTAL_SEATS": TOTAL_SEATS,
@@ -423,6 +424,12 @@ def get_data_and_dashboard():
                 if c["incumbent"] and c["status"].upper() == "DECLINED":
                     dashboard["incumbents_not_running"]["total"] += 1
                     dashboard["incumbents_not_running"]["districts"].append((county_name, fdc))
+            # Count individual incumbents undecided (not confirmed, not declined)
+            for c in c2026:
+                if c["incumbent"] and c["status"].upper() not in ("CONFIRMED", "DECLINED"):
+                    dashboard["incumbents_undecided"]["total"] += 1
+                    dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
+            
     dashboard["confirmed"]["total"] = total_confirmed
 
     county_stats = {}

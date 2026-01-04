@@ -51,6 +51,13 @@
                 </div>
             </div>
             <div class="dash-card dash-card-size">
+                <div class="card-header dash-gradient-yellow text-dark">Incumbents Undecided</div>
+                    <div class="card-body">
+                        <h4>{{ dashboard.incumbents_undecided.total }}</h4>
+                    <a href="{{ url_for('filter_view', category='incumbents_undecided') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size">
                 <div class="card-header dash-gradient-dark text-white">Primaries</div>
                 <div class="card-body">
                     <h4>{{ dashboard.primaries.total }}</h4>
