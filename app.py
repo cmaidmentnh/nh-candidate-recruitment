@@ -555,8 +555,9 @@ def filter_view():
                 WHERE ces.election_year = 2024 
                   AND c.incumbent = true
                   AND c.party = 'R'
-                  AND c.candidate_id NOT IN (
-                      SELECT candidate_id FROM candidate_election_status WHERE election_year = 2026
+                  AND NOT EXISTS (
+                      SELECT 1 FROM candidate_election_status ces2 
+                      WHERE ces2.candidate_id = c.candidate_id AND ces2.election_year = 2026
                   )
                 ORDER BY c.last_name, c.first_name
             """)
