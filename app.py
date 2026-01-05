@@ -777,7 +777,7 @@ def edit_candidate(candidate_id, election_year):
             """, (candidate_id,))
             scores = cur.fetchall()
             candidate_scores = [
-                {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] else None, 'letter': s[3]} for s in scores
+                {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] is not None else None, 'letter': s[3]} for s in scores
             ]
 
         except Exception as e:
@@ -1756,7 +1756,7 @@ def get_candidate_data(candidate_id):
             """, (candidate_id,))
             scores = cur.fetchall()
             candidate_dict['scores'] = [
-                {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] else None, 'letter': s[3]} for s in scores
+                {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] is not None else None, 'letter': s[3]} for s in scores
             ]
             
             return jsonify(candidate_dict)
