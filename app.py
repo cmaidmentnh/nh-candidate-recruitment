@@ -1208,7 +1208,7 @@ def admin_dashboard():
         cur.execute("""
             SELECT user_id, username, email, role, last_login
             FROM users
-            ORDER BY user_id DESC
+            ORDER BY user_id ASC
         """)
         admins = cur.fetchall()
 
