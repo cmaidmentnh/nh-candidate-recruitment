@@ -138,7 +138,7 @@ def send_email(to_email, subject, html_body, text_body=None):
 
     try:
         ses.send_email(
-            Source=f"{SES_SENDER_NAME} <{SES_SENDER_EMAIL}>",
+            Source=f'"{SES_SENDER_NAME}" <{SES_SENDER_EMAIL}>',
             Destination={"ToAddresses": [to_email]},
             Message={
                 "Subject": {"Data": subject, "Charset": "UTF-8"},
