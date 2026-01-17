@@ -30,8 +30,11 @@ article, section, header, footer, nav,
 
 body {
     background-color: #f4f6f9;
+    font-family: 'Inter', sans-serif !important;
     font-size: 15px;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Headings use Norwester */
