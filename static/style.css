@@ -116,9 +116,8 @@ h1, h2, h3, h4, h5, h6,
     background: #fff;
 }
 
-/* Large numbers in cards - use Inter for readability */
+/* Large numbers in cards */
 .dash-card .card-body h4 {
-    font-family: 'Inter', sans-serif !important;
     font-size: 36px;
     font-weight: 700;
     margin: 0;
