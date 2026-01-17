@@ -1,3 +1,11 @@
+/* Norwester Font */
+@font-face {
+    font-family: 'Norwester';
+    src: url('/static/fonts/norwester.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 /* Base Styles */
 * {
     box-sizing: border-box;
@@ -614,4 +622,26 @@ pre {
 
 .county-card > .card-header:hover {
     background: #5a6268;
+}
+
+/* Navbar Styling */
+.navbar {
+    font-family: 'Norwester', sans-serif;
+    letter-spacing: 0.5px;
+}
+
+.navbar .nav-link,
+.navbar .navbar-brand,
+.navbar .dropdown-toggle {
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+.navbar .dropdown-menu {
+    font-family: 'Inter', sans-serif;
+    text-transform: none;
+}
+
+.navbar .dropdown-item {
+    font-size: 14px;
 }
