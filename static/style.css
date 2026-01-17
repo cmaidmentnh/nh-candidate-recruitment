@@ -1,9 +1,11 @@
 /* Norwester Font */
 @font-face {
     font-family: 'Norwester';
-    src: url('/static/fonts/norwester.otf') format('opentype');
-    font-weight: normal;
+    src: url('/static/fonts/norwester.woff2') format('woff2'),
+         url('/static/fonts/norwester.woff') format('woff');
+    font-weight: 400;
     font-style: normal;
+    font-display: swap;
 }
 
 /* Base Styles - Force Inter on everything */
