@@ -1,0 +1,21 @@
+.env
+.DS_Store
+*.pyc
+__pycache__/
+venv/
+
+# Data files and analysis (not part of app)
+*.csv
+*.json
+!package.json
+*.xls
+*.xlsx
+database_export*/
+nh_election_data/
+nh_house_analysis_outputs/
+2026_predictions_analysis/
+Compiled/
+cloud-sql-proxy
+*.log
+parser_output.txt
+robots.txt

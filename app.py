@@ -1154,6 +1154,150 @@ def logout():
     return redirect(url_for('login'))
 
 
+# ============== PASSWORD RESET ==============
+
+def generate_reset_token(user_type, user_id):
+    """Generate a secure password reset token."""
+    return token_serializer.dumps({'type': user_type, 'id': user_id, 'action': 'reset'}, salt='password-reset')
+
+def verify_reset_token(token, max_age=3600):
+    """Verify a password reset token (1 hour expiry)."""
+    try:
+        data = token_serializer.loads(token, salt='password-reset', max_age=max_age)
+        if data.get('action') != 'reset':
+            return None
+        return data
+    except Exception:
+        return None
+
+def send_password_reset_email(email, name, user_type, user_id):
+    """Send password reset email."""
+    token = generate_reset_token(user_type, user_id)
+    reset_url = f"{APP_URL}/reset-password/{token}"
+
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #c41e3a;">Password Reset Request</h2>
+        <p>Hi {name},</p>
+        <p>We received a request to reset your password for the NH Candidate Recruitment system.</p>
+        <p>Click the button below to reset your password:</p>
+        <p style="margin: 30px 0;">
+            <a href="{reset_url}" style="background-color: #c41e3a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+        </p>
+        <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
+        <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+        <hr style="border: 1px solid #eee; margin: 30px 0;">
+        <p style="color: #999; font-size: 12px;">Committee to Elect House Republicans</p>
+    </body>
+    </html>
+    """
+
+    text_body = f"Hi {name},\n\nReset your password here: {reset_url}\n\nThis link expires in 1 hour."
+
+    return send_email(email, "Password Reset Request", html_body, text_body)
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit("3 per minute")
+def forgot_password():
+    """Handle forgot password requests."""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+
+        if not email:
+            flash("Please enter your email address.", "danger")
+            return render_template('forgot_password.html')
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            # Check candidates table
+            cur.execute("SELECT candidate_id, first_name FROM candidates WHERE LOWER(email) = %s", (email,))
+            candidate = cur.fetchone()
+
+            if candidate:
+                send_password_reset_email(email, candidate[1], 'candidate', candidate[0])
+                flash("If an account exists with that email, you'll receive a password reset link shortly.", "success")
+                return redirect(url_for('login'))
+
+            # Check users table
+            cur.execute("SELECT user_id, username FROM users WHERE LOWER(email) = %s", (email,))
+            user = cur.fetchone()
+
+            if user:
+                send_password_reset_email(email, user[1], 'admin', user[0])
+
+            # Always show success to prevent email enumeration
+            flash("If an account exists with that email, you'll receive a password reset link shortly.", "success")
+            return redirect(url_for('login'))
+
+        finally:
+            cur.close()
+            release_db_connection(conn)
+
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+@csrf.exempt
+def reset_password(token):
+    """Handle password reset from email link."""
+    data = verify_reset_token(token)
+    if not data:
+        flash("This password reset link has expired or is invalid. Please request a new one.", "danger")
+        return redirect(url_for('forgot_password'))
+
+    user_type = data['type']
+    user_id = data['id']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        if user_type == 'candidate':
+            cur.execute("SELECT email, first_name FROM candidates WHERE candidate_id = %s", (user_id,))
+        else:
+            cur.execute("SELECT email, username FROM users WHERE user_id = %s", (user_id,))
+
+        row = cur.fetchone()
+        if not row:
+            flash("Account not found.", "danger")
+            return redirect(url_for('login'))
+
+        user_email, user_name = row
+
+        if request.method == 'POST':
+            password = request.form.get('password', '').strip()
+            confirm_password = request.form.get('confirm_password', '').strip()
+
+            if len(password) < 8:
+                flash("Password must be at least 8 characters.", "danger")
+                return render_template('reset_password.html', token=token, email=user_email)
+
+            if password != confirm_password:
+                flash("Passwords do not match.", "danger")
+                return render_template('reset_password.html', token=token, email=user_email)
+
+            hashed_password = generate_password_hash(password)
+
+            if user_type == 'candidate':
+                cur.execute("UPDATE candidates SET password_hash = %s, password_changed = TRUE WHERE candidate_id = %s",
+                           (hashed_password, user_id))
+            else:
+                cur.execute("UPDATE users SET password_hash = %s WHERE user_id = %s",
+                           (hashed_password, user_id))
+
+            conn.commit()
+            flash("Password reset successfully! You can now log in.", "success")
+            return redirect(url_for('login'))
+
+        return render_template('reset_password.html', token=token, email=user_email)
+
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
 # ============== ACCOUNT SETUP (from email invite) ==============
 
 @app.route('/setup-account/<token>', methods=['GET', 'POST'])
