@@ -3,6 +3,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">Candidate Tracker</h1>
     <div>
+        <button type="button" class="btn btn-outline-secondary mr-2" data-toggle="modal" data-target="#countyProgressModal">
+            <i class="fas fa-chart-bar"></i> County Progress
+        </button>
         {% if is_super_admin %}
         <div class="btn-group mr-2">
             <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown">
@@ -31,123 +34,117 @@
 </div>
 {% endif %}
 
-<!-- Dashboard Layout -->
-<div class="row mb-4">
-    <!-- Left Column - Dashboard Cards -->
-    <div class="col-lg-8">
-        <!-- Main Dashboard Cards (Key Metrics) -->
-        <div class="dashboard-row">
-            <a href="{{ url_for('filter_view', category='confirmed') }}" class="dash-card dash-card-size dash-card-link">
-                <div class="card-header">Confirmed</div>
-                <div class="card-body">
-                    <h4>{{ dashboard.confirmed.total }}</h4>
-                    <small class="text-muted">of {{ dashboard.TOTAL_SEATS }}</small>
-                </div>
-            </a>
-            <a href="{{ url_for('filter_view', category='empty_districts') }}" class="dash-card dash-card-size dash-card-link">
-                <div class="card-header">Empty Districts</div>
-                <div class="card-body">
-                    <h4>{{ dashboard.empty_districts.total }}</h4>
-                    <small class="text-muted">need candidates</small>
-                </div>
-            </a>
-            <a href="{{ url_for('filter_view', category='potentials') }}" class="dash-card dash-card-size dash-card-link">
-                <div class="card-header">Potentials</div>
-                <div class="card-body">
-                    <h4>{{ dashboard.potentials.total }}</h4>
-                    <small class="text-muted">in pipeline</small>
-                </div>
-            </a>
-            <a href="{{ url_for('filter_view', category='primaries') }}" class="dash-card dash-card-size dash-card-link">
-                <div class="card-header">Primaries</div>
-                <div class="card-body">
-                    <h4>{{ dashboard.primaries.total }}</h4>
-                    <small class="text-muted">districts</small>
-                </div>
-            </a>
-            <a href="{{ url_for('filter_view', category='incumbents_undecided') }}" class="dash-card dash-card-size dash-card-link">
-                <div class="card-header">Incumbents Undecided</div>
-                <div class="card-body">
-                    <h4>{{ dashboard.incumbents_undecided.total }}</h4>
-                    <small class="text-muted">need follow-up</small>
-                </div>
-            </a>
-            <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="dash-card dash-card-size dash-card-link">
-                <div class="card-header">Unmatched Voters</div>
-                <div class="card-body">
-                    <h4>{{ dashboard.unmatched_voters.total }}</h4>
-                    <small class="text-muted">need matching</small>
-                </div>
-            </a>
+<!-- Dashboard Cards -->
+<div class="dashboard-row mb-4">
+    <a href="{{ url_for('filter_view', category='confirmed') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Confirmed</div>
+        <div class="card-body">
+            <h4>{{ dashboard.confirmed.total }}</h4>
+            <small class="text-muted">of {{ dashboard.TOTAL_SEATS }}</small>
         </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='empty_districts') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Empty Districts</div>
+        <div class="card-body">
+            <h4>{{ dashboard.empty_districts.total }}</h4>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='potentials') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Potentials</div>
+        <div class="card-body">
+            <h4>{{ dashboard.potentials.total }}</h4>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='primaries') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Primaries</div>
+        <div class="card-body">
+            <h4>{{ dashboard.primaries.total }}</h4>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='incumbents_undecided') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Incumbents Undecided</div>
+        <div class="card-body">
+            <h4>{{ dashboard.incumbents_undecided.total }}</h4>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Unmatched</div>
+        <div class="card-body">
+            <h4>{{ dashboard.unmatched_voters.total }}</h4>
+        </div>
+    </a>
+</div>
 
-        <!-- More Stats (Collapsible) -->
-        <div class="mt-2 mb-3">
-            <a class="text-muted small" data-toggle="collapse" href="#moreStatsCollapse" role="button" aria-expanded="false">
-                <i class="fas fa-chevron-down"></i> More Stats
+<!-- More Stats (Collapsible) -->
+<div class="mb-4">
+    <a class="text-muted small" data-toggle="collapse" href="#moreStatsCollapse" role="button" aria-expanded="false">
+        <i class="fas fa-chevron-down"></i> More Stats
+    </a>
+    <div class="collapse" id="moreStatsCollapse">
+        <div class="dashboard-row mt-2">
+            <a href="{{ url_for('filter_view', category='empty_seats') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Empty Seats</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.empty_seats.total }}</h4>
+                </div>
             </a>
-            <div class="collapse" id="moreStatsCollapse">
-                <div class="dashboard-row mt-2">
-                    <a href="{{ url_for('filter_view', category='empty_seats') }}" class="dash-card dash-card-size dash-card-link">
-                        <div class="card-header">Empty Seats</div>
-                        <div class="card-body">
-                            <h4>{{ dashboard.empty_seats.total }}</h4>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="dash-card dash-card-size dash-card-link">
-                        <div class="card-header">Incumbents Running</div>
-                        <div class="card-body">
-                            <h4>{{ dashboard.incumbents_running.total }}</h4>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="dash-card dash-card-size dash-card-link">
-                        <div class="card-header">Incumbents Not Running</div>
-                        <div class="card-body">
-                            <h4>{{ dashboard.incumbents_not_running.total }}</h4>
-                        </div>
-                    </a>
-                    <div class="dash-card dash-card-size dash-card-static">
-                        <div class="card-header">Total Seats</div>
-                        <div class="card-body">
-                            <h4>{{ dashboard.TOTAL_SEATS }}</h4>
-                        </div>
-                    </div>
-                    <div class="dash-card dash-card-size dash-card-static">
-                        <div class="card-header">Total Districts</div>
-                        <div class="card-body">
-                            <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
-                        </div>
-                    </div>
+            <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Incumbents Running</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.incumbents_running.total }}</h4>
+                </div>
+            </a>
+            <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Incumbents Not Running</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.incumbents_not_running.total }}</h4>
+                </div>
+            </a>
+            <div class="dash-card dash-card-size dash-card-static">
+                <div class="card-header">Total Seats</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.TOTAL_SEATS }}</h4>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size dash-card-static">
+                <div class="card-header">Total Districts</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Right Column - County Progress -->
-    <div class="col-lg-4">
-        <div class="card h-100">
-            <div class="card-header text-white" style="background-color: #495057; cursor: pointer;"
-                 data-toggle="collapse" data-target="#countyProgressCollapse">
-                <i class="fas fa-chart-bar"></i> County Progress
-                <i class="fas fa-chevron-down float-right mt-1"></i>
+</div>
+
+<!-- County Progress Modal -->
+<div class="modal fade" id="countyProgressModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #495057;">
+                <h5 class="modal-title text-white"><i class="fas fa-chart-bar"></i> County Progress</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
             </div>
-            <div id="countyProgressCollapse" class="collapse show">
-                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="row">
                     {% for county_name, stats in county_stats.items()|sort %}
                     {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
                     {% set needs = stats.total_seats - stats.c2026_confirmed %}
-                    <a href="{{ url_for('index', county=county_name) }}" class="county-progress-link d-block mb-2 text-decoration-none">
-                        <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
-                            <strong class="text-dark">{{ county_name }}</strong>
-                            <span class="text-muted">{{ stats.c2026_confirmed }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">(need {{ needs }})</small>{% endif %}</span>
-                        </div>
-                        <div class="progress" style="height: 16px;">
-                            <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
-                                style="width: {{ pct }}%;">
-                                {{ pct }}%
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('index', county=county_name) }}" class="county-progress-link d-block text-decoration-none" data-dismiss="modal">
+                            <div class="d-flex justify-content-between mb-1">
+                                <strong class="text-dark">{{ county_name }}</strong>
+                                <span class="text-muted">{{ stats.c2026_confirmed }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">({{ needs }})</small>{% endif %}</span>
                             </div>
-                        </div>
-                    </a>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
+                                    style="width: {{ pct }}%;">
+                                    {{ pct }}%
+                                </div>
+                            </div>
+                        </a>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
