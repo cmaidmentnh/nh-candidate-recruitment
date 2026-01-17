@@ -112,6 +112,9 @@ SES_SENDER_EMAIL = os.environ.get("SES_SENDER_EMAIL", "noreply@nhgop.org")
 SES_SENDER_NAME = os.environ.get("SES_SENDER_NAME", "NH GOP Candidate Recruitment")
 APP_URL = os.environ.get("APP_URL", "https://recruit.nhgop.org")
 
+# Super Admin - full access to admin dashboard
+SUPER_ADMIN_EMAIL = "chris@maidmentnh.com"
+
 # Token serializer for secure links
 token_serializer = URLSafeTimedSerializer(app.secret_key)
 
@@ -333,6 +336,12 @@ def load_user(user_id):
     return None
 
 # Role-Based Access Control
+def is_super_admin():
+    """Check if current user is super admin."""
+    if not current_user.is_authenticated:
+        return False
+    return current_user.email.lower() == SUPER_ADMIN_EMAIL.lower()
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -344,6 +353,23 @@ def admin_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
+
+def super_admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("Please log in.", "warning")
+            return redirect(url_for('login'))
+        if not is_super_admin():
+            flash("Super admin access required.", "danger")
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.context_processor
+def inject_super_admin():
+    """Make is_super_admin available in all templates."""
+    return {'is_super_admin': is_super_admin()}
 
 def candidate_restricted(f):
     @wraps(f)
@@ -1785,7 +1811,7 @@ def admin_login():
     return render_template("admin_login.html")
 
 @app.route('/admin/dashboard')
-@admin_required
+@super_admin_required
 def admin_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()

@@ -38,7 +38,7 @@
                         <a class="nav-link" href="{{ url_for('profile') }}">My Profile</a>
                     </li>
                     {% endif %}
-                    {% if not current_user.is_candidate and current_user.role == 'admin' %}
+                    {% if is_super_admin %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin</a>
                     </li>
