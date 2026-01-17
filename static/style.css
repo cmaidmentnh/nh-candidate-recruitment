@@ -73,57 +73,71 @@ h1, h2, h3, h4, h5, h6,
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 12px;
+    gap: 15px;
     margin-bottom: 25px;
 }
 
 .dash-card {
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .dash-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
 }
 
-/* Fix dashboard card header heights */
+/* Dashboard card headers */
 .dash-card .card-header {
-    min-height: 70px;
+    min-height: 50px;
+    padding: 12px 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
-    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
+/* Dashboard card body */
 .dash-card .card-body {
-    padding: 15px 10px;
+    padding: 20px 15px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     flex-grow: 1;
+    background: #fff;
 }
 
+/* Large numbers in cards - use Inter for readability */
 .dash-card .card-body h4 {
-    font-size: 32px;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 36px;
     font-weight: 700;
-    margin: 0 0 8px 0;
+    margin: 0;
+    color: #212529;
+    line-height: 1;
+}
+
+/* Subtitle text under numbers */
+.dash-card .card-body small {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #6c757d;
 }
 
 .dash-card-size {
-    width: calc(16.66% - 12px);
-    min-width: 130px;
-    max-width: 155px;
-    min-height: 170px;
+    width: calc(16.66% - 15px);
+    min-width: 140px;
+    max-width: 170px;
+    min-height: 140px;
 }
 
 /* Dashboard Card Link Styles */
@@ -131,31 +145,36 @@ h1, h2, h3, h4, h5, h6,
     text-decoration: none;
     color: inherit;
     background: #fff;
-    border: 1px solid #e9ecef;
+    border: 1px solid #dee2e6;
 }
 
 .dash-card-link:hover {
     text-decoration: none;
     color: inherit;
+    border-color: #adb5bd;
 }
 
 .dash-card-link .card-header {
-    background: #495057;
+    background: #343a40;
     color: #fff;
 }
 
 .dash-card-link:hover .card-header {
-    background: #5a6268;
+    background: #495057;
 }
 
 .dash-card-static {
     background: #fff;
-    border: 1px solid #e9ecef;
+    border: 1px solid #dee2e6;
 }
 
 .dash-card-static .card-header {
     background: #6c757d;
     color: #fff;
+}
+
+.dash-card-static .card-body h4 {
+    color: #495057;
 }
 
 /* Gradient Backgrounds */
