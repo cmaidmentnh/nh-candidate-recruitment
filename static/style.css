@@ -20,11 +20,16 @@ form, input, select, textarea, button,
 label, small, strong, em, b,
 article, section, header, footer, nav,
 .form-control, .btn, .alert, .badge,
-.card, .card-body, .modal, .modal-body,
+.card, .card-body, .card-title, .card-text,
+.modal, .modal-body, .modal-content,
 .popover, .popover-body, .tooltip,
 .dropdown-menu, .dropdown-item,
 .nav, .nav-link, .navbar-text,
-.list-group, .list-group-item {
+.list-group, .list-group-item,
+.pagination, .page-item, .page-link,
+.table, .table-responsive, .thead-light,
+.text-muted, .text-center, .text-secondary,
+.progress, .progress-bar {
     font-family: 'Inter', sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
