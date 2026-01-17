@@ -1,232 +1,268 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-4">
-    <h1>Admin Dashboard</h1>
-    <p>Welcome, {{ current_user.username }}!</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Admin Dashboard</h1>
+    <a href="{{ url_for('add_user') }}" class="btn btn-outline-dark">
+        <i class="fas fa-user-plus"></i> Add User
+    </a>
+</div>
 
-    <!-- User Management Section -->
-    <h3>User Management</h3>
-    <a href="{{ url_for('add_user') }}" class="btn btn-primary mb-3">Add New User</a>
-    <form method="POST" action="{{ url_for('update_candidates') }}" enctype="multipart/form-data" class="mb-3">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <div class="form-group">
-            <label for="file">Upload Candidate Data (CSV)</label>
-            <input type="file" class="form-control-file" id="file" name="file" accept=".csv">
+<div class="row">
+    <!-- Left Column -->
+    <div class="col-lg-8">
+        <!-- Export Data Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-download"></i> Export Data
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <a href="{{ url_for('export_csv', export_type='all_candidates') }}" class="btn btn-outline-dark btn-block">
+                            All 2026 Candidates
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <a href="{{ url_for('export_csv', export_type='confirmed') }}" class="btn btn-outline-dark btn-block">
+                            Confirmed Only
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <a href="{{ url_for('export_csv', export_type='potentials') }}" class="btn btn-outline-dark btn-block">
+                            Potentials
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <a href="{{ url_for('export_csv', export_type='empty_districts') }}" class="btn btn-outline-dark btn-block">
+                            Empty Districts
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <a href="{{ url_for('export_csv', export_type='contact_list') }}" class="btn btn-outline-dark btn-block">
+                            Contact List
+                        </a>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <div class="input-group">
+                            <select id="countySelect" class="form-control">
+                                <option value="">By County...</option>
+                                <option value="Belknap">Belknap</option>
+                                <option value="Carroll">Carroll</option>
+                                <option value="Cheshire">Cheshire</option>
+                                <option value="Coos">Coos</option>
+                                <option value="Grafton">Grafton</option>
+                                <option value="Hillsborough">Hillsborough</option>
+                                <option value="Merrimack">Merrimack</option>
+                                <option value="Rockingham">Rockingham</option>
+                                <option value="Strafford">Strafford</option>
+                                <option value="Sullivan">Sullivan</option>
+                            </select>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-dark" onclick="exportByCounty()">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <button type="submit" class="btn btn-success">Update Candidates from Submission Data</button>
-    </form>
 
-    <!-- Export Section -->
-    <h3 class="mt-4">Export Data</h3>
-    <div class="row mb-4">
-        <div class="col-md-4 mb-2">
-            <a href="{{ url_for('export_csv', export_type='all_candidates') }}" class="btn btn-success btn-block">
-                <i class="fas fa-download"></i> All 2026 Candidates
-            </a>
+        <!-- Candidate Users Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-users"></i> Candidate Users</span>
+                <span class="badge badge-secondary">{{ candidate_users|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                <form method="POST" action="{{ url_for('delete_users_bulk') }}" id="bulkDeleteForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all"></th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Party</th>
+                                    <th>Last Login</th>
+                                    <th style="width: 100px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for candidate in candidate_users %}
+                                <tr>
+                                    <td><input type="checkbox" name="candidate_ids" value="{{ candidate[0] }}"></td>
+                                    <td>{{ candidate[1] }} {{ candidate[2] }}</td>
+                                    <td><small>{{ candidate[3] }}</small></td>
+                                    <td><span class="badge badge-{% if candidate[4] == 'R' %}danger{% elif candidate[4] == 'D' %}primary{% else %}secondary{% endif %}">{{ candidate[4] or '?' }}</span></td>
+                                    <td>
+                                        {% if candidate[5] %}
+                                            <small class="text-muted">{{ (candidate[5] - timedelta(hours=5)).strftime('%m/%d %I:%M%p') }}</small>
+                                        {% else %}
+                                            <small class="text-muted">Never</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('edit_user', user_type='candidate', user_id=candidate[0]) }}" class="btn btn-sm btn-outline-dark" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">No candidate users</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if candidate_users %}
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete selected candidate users?')">
+                            <i class="fas fa-trash"></i> Delete Selected
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
         </div>
-        <div class="col-md-4 mb-2">
-            <a href="{{ url_for('export_csv', export_type='confirmed') }}" class="btn btn-success btn-block">
-                <i class="fas fa-download"></i> Confirmed Only
-            </a>
-        </div>
-        <div class="col-md-4 mb-2">
-            <a href="{{ url_for('export_csv', export_type='potentials') }}" class="btn btn-warning btn-block">
-                <i class="fas fa-download"></i> Potentials/Considering
-            </a>
-        </div>
-        <div class="col-md-4 mb-2">
-            <a href="{{ url_for('export_csv', export_type='empty_districts') }}" class="btn btn-danger btn-block">
-                <i class="fas fa-download"></i> Empty Districts
-            </a>
-        </div>
-        <div class="col-md-4 mb-2">
-            <a href="{{ url_for('export_csv', export_type='contact_list') }}" class="btn btn-info btn-block">
-                <i class="fas fa-download"></i> Contact List
-            </a>
-        </div>
-        <div class="col-md-4 mb-2">
-            <div class="input-group">
-                <select id="countySelect" class="form-control">
-                    <option value="">Select County...</option>
-                    <option value="Belknap">Belknap</option>
-                    <option value="Carroll">Carroll</option>
-                    <option value="Cheshire">Cheshire</option>
-                    <option value="Coos">Coos</option>
-                    <option value="Grafton">Grafton</option>
-                    <option value="Hillsborough">Hillsborough</option>
-                    <option value="Merrimack">Merrimack</option>
-                    <option value="Rockingham">Rockingham</option>
-                    <option value="Strafford">Strafford</option>
-                    <option value="Sullivan">Sullivan</option>
-                </select>
-                <div class="input-group-append">
-                    <button class="btn btn-outline-success" onclick="exportByCounty()">
-                        <i class="fas fa-download"></i>
-                    </button>
+
+        <!-- Admin Users Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user-shield"></i> Admin Users</span>
+                <span class="badge badge-secondary">{{ admins|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Last Login</th>
+                                <th style="width: 100px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for admin in admins %}
+                            <tr>
+                                <td>{{ admin[1] }}</td>
+                                <td><small>{{ admin[2] }}</small></td>
+                                <td><span class="badge badge-dark">{{ admin[3] }}</span></td>
+                                <td>
+                                    {% if admin[4] %}
+                                        <small class="text-muted">{{ (admin[4] - timedelta(hours=5)).strftime('%m/%d %I:%M%p') }}</small>
+                                    {% else %}
+                                        <small class="text-muted">Never</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('edit_user', user_type='admin', user_id=admin[0]) }}" class="btn btn-sm btn-outline-dark" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">No admin users</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        function exportByCounty() {
-            var county = document.getElementById('countySelect').value;
-            if (county) {
-                window.location.href = '/admin/export/by_county?county=' + encodeURIComponent(county);
-            } else {
-                alert('Please select a county');
-            }
-        }
-    </script>
+    <!-- Right Column -->
+    <div class="col-lg-4">
+        <!-- Quick Actions Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-bolt"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('match_candidates') }}" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="fas fa-link"></i> Match Candidates to Voter File
+                </a>
+                <a href="{{ url_for('activity_log_page') }}" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="fas fa-history"></i> View Activity Log
+                </a>
+            </div>
+        </div>
 
-    <!-- Candidate Users Table with Bulk Delete -->
-    <h4>Candidate Users</h4>
-    <form method="POST" action="{{ url_for('delete_users_bulk') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="select-all"></th>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Party</th>
-                        <th>Last Login</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for candidate in candidate_users %}
-                    <tr>
-                        <td><input type="checkbox" name="candidate_ids" value="{{ candidate[0] }}"></td>
-                        <td>{{ candidate[0] }}</td>
-                        <td>{{ candidate[1] }} {{ candidate[2] }}</td>
-                        <td>{{ candidate[3] }}</td>
-                        <td>{{ candidate[4] }}</td>
-                        <td>
-                            {% if candidate[5] %}
-                                {{ (candidate[5] - timedelta(hours=5)).strftime('%m/%d/%Y %I:%M %p') }} ET
-                            {% else %}
-                                <span class="text-muted">Never</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('edit_user', user_type='candidate', user_id=candidate[0]) }}"
-                                class="btn btn-sm btn-warning">Edit</a>
-                            <form method="POST" action="{{ url_for('delete_user', user_type='candidate', user_id=candidate[0]) }}" style="display:inline;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>, user_id=candidate[0]) }}"
-                                style="display:inline;">
-                                <button type="submit" class="btn btn-sm btn-danger"
-                                    onclick="return confirm('Are you sure?')">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
+        <!-- CSV Upload Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-upload"></i> Import Data
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_candidates') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="form-group">
+                        <label class="small text-muted">Upload Candidate CSV</label>
+                        <input type="file" class="form-control-file" name="file" accept=".csv">
+                    </div>
+                    <button type="submit" class="btn btn-outline-dark btn-block">
+                        <i class="fas fa-file-import"></i> Import
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Registration Tokens Card -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-key"></i> Registration Tokens</span>
+                <span class="badge badge-secondary">{{ tokens|length }}</span>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('generate_token') }}" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="input-group">
+                        <input type="number" class="form-control" name="token_count" min="1" value="1" style="max-width: 80px;">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-outline-dark">Generate</button>
+                        </div>
+                    </div>
+                </form>
+
+                {% if tokens %}
+                <div class="small">
+                    {% for token in tokens[:5] %}
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                        <code class="small">{{ token[0][:12] }}...</code>
+                        <span class="badge badge-{% if token[2] %}secondary{% else %}success{% endif %}">
+                            {{ 'Used' if token[2] else 'Active' }}
+                        </span>
+                    </div>
                     {% endfor %}
-                </tbody>
-            </table>
+                    {% if tokens|length > 5 %}
+                    <p class="text-muted small mt-2 mb-0">+ {{ tokens|length - 5 }} more tokens</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">No tokens generated</p>
+                {% endif %}
+            </div>
         </div>
-        <button type="submit" class="btn btn-danger mb-3"
-            onclick="return confirm('Are you sure you want to delete selected candidate users?')">Delete
-            Selected</button>
-    </form>
-
-    <!-- Admins Table -->
-    <h4>Admins</h4>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Last Login</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for admin in admins %}
-                <tr>
-                    <td>{{ admin[0] }}</td>
-                    <td>{{ admin[1] }}</td>
-                    <td>{{ admin[2] }}</td>
-                    <td>{{ admin[3] }}</td>
-                    <td>
-                        {% if admin[4] %}
-                            {{ (admin[4] - timedelta(hours=5)).strftime('%m/%d/%Y %I:%M %p') }} ET
-                        {% else %}
-                            <span class="text-muted">Never</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{{ url_for('edit_user', user_type='admin', user_id=admin[0]) }}"
-                            class="btn btn-sm btn-warning">Edit</a>
-                        <form method="POST" action="{{ url_for('delete_user', user_type='admin', user_id=admin[0]) }}" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                            <button type="submit" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Are you sure?')">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-
-    <!-- Token Management Section -->
-    <h4>Registration Tokens</h4>
-    <form method="POST" action="{{ url_for('generate_token') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <div class="form-group">
-            <label for="token_count">Number of Tokens to Generate</label>
-            <input type="number" class="form-control" id="token_count" name="token_count" min="1" value="1">
-        </div>
-        <button type="submit" class="btn btn-primary mb-3">Generate Tokens</button>
-    </form>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Token</th>
-                <th>Created At</th>
-                <th>Used</th>
-                <th>Created By</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for token in tokens %}
-            <tr>
-                <td>{{ token[0] }}</td>
-                <td>{{ token[1] }}</td>
-                <td>{{ token[2] }}</td>
-                <td>{{ token[3] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- Other Admin Actions -->
-    <div class="list-group mt-4">
-        <a href="{{ url_for('match_candidates') }}" class="list-group-item list-group-item-action">
-            Match Candidates with Statewide Checklist
-        </a>
-        <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action">
-            Logout
-        </a>
-    </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ category }}">{{ message }}</div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
 </div>
 
 <script>
-    // Select/Deselect all checkboxes
-    document.getElementById('select-all').addEventListener('click', function (e) {
+    function exportByCounty() {
+        var county = document.getElementById('countySelect').value;
+        if (county) {
+            window.location.href = '/admin/export/by_county?county=' + encodeURIComponent(county);
+        } else {
+            alert('Please select a county');
+        }
+    }
+
+    document.getElementById('select-all').addEventListener('click', function(e) {
         let checkboxes = document.getElementsByName('candidate_ids');
         for (let checkbox of checkboxes) {
             checkbox.checked = e.target.checked;
