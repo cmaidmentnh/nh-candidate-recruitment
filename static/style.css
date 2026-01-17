@@ -625,23 +625,16 @@ pre {
 }
 
 /* Navbar Styling */
-.navbar {
+.navbar,
+.navbar .dropdown-menu {
     font-family: 'Norwester', sans-serif;
     letter-spacing: 0.5px;
 }
 
 .navbar .nav-link,
 .navbar .navbar-brand,
-.navbar .dropdown-toggle {
-    text-transform: uppercase;
-    font-size: 14px;
-}
-
-.navbar .dropdown-menu {
-    font-family: 'Inter', sans-serif;
-    text-transform: none;
-}
-
+.navbar .dropdown-toggle,
 .navbar .dropdown-item {
+    text-transform: uppercase;
     font-size: 14px;
 }
