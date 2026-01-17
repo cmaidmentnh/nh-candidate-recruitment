@@ -35,79 +35,70 @@
 <div class="row mb-4">
     <!-- Left Column - Dashboard Cards -->
     <div class="col-lg-8">
-        <!-- Dashboard Cards - First Row -->
+        <!-- Dashboard Cards -->
         <div class="dashboard-row">
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-green text-white">Confirmed</div>
+            <a href="{{ url_for('filter_view', category='confirmed') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Confirmed</div>
                 <div class="card-body">
-                    <h4>{{ dashboard.confirmed.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='confirmed') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                    <h4 class="text-success">{{ dashboard.confirmed.total }}</h4>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-orange text-white">Empty Seats</div>
+            </a>
+            <a href="{{ url_for('filter_view', category='empty_seats') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Empty Seats</div>
                 <div class="card-body">
-                    <h4>{{ dashboard.empty_seats.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='empty_seats') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                    <h4 class="text-warning">{{ dashboard.empty_seats.total }}</h4>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-red text-white">Empty Districts</div>
+            </a>
+            <a href="{{ url_for('filter_view', category='empty_districts') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Empty Districts</div>
                 <div class="card-body">
-                    <h4>{{ dashboard.empty_districts.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='empty_districts') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                    <h4 class="text-danger">{{ dashboard.empty_districts.total }}</h4>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-teal text-white">Potentials</div>
+            </a>
+            <a href="{{ url_for('filter_view', category='potentials') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Potentials</div>
                 <div class="card-body">
-                    <h4>{{ dashboard.potentials.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='potentials') }}" class="btn btn-light btn-sm mt-2">Details</a>
+                    <h4 class="text-info">{{ dashboard.potentials.total }}</h4>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-purple text-white">Incumbents Running</div>
+            </a>
+            <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Incumbents Running</div>
                 <div class="card-body">
                     <h4>{{ dashboard.incumbents_running.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-gray text-white">Incumbents Not Running</div>
+            </a>
+            <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Incumbents Not Running</div>
                 <div class="card-body">
                     <h4>{{ dashboard.incumbents_not_running.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="btn btn-light btn-sm mt-2">Details</a>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-yellow text-dark">Incumbents Undecided</div>
-                    <div class="card-body">
-                        <h4>{{ dashboard.incumbents_undecided.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='incumbents_undecided') }}" class="btn btn-light btn-sm mt-2">Details</a>
+            </a>
+            <a href="{{ url_for('filter_view', category='incumbents_undecided') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Incumbents Undecided</div>
+                <div class="card-body">
+                    <h4 class="text-warning">{{ dashboard.incumbents_undecided.total }}</h4>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header dash-gradient-dark text-white">Primaries</div>
+            </a>
+            <a href="{{ url_for('filter_view', category='primaries') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Primaries</div>
                 <div class="card-body">
                     <h4>{{ dashboard.primaries.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='primaries') }}" class="btn btn-light btn-sm mt-2">Details</a>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header bg-warning text-dark">Unmatched Voters</div>
+            </a>
+            <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Unmatched Voters</div>
                 <div class="card-body">
                     <h4>{{ dashboard.unmatched_voters.total }}</h4>
-                    <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="btn btn-light btn-sm mt-2">Details</a>
                 </div>
-            </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header bg-light text-dark">Total Seats</div>
+            </a>
+            <div class="dash-card dash-card-size dash-card-static">
+                <div class="card-header">Total Seats</div>
                 <div class="card-body">
                     <h4>{{ dashboard.TOTAL_SEATS }}</h4>
                 </div>
             </div>
-            <div class="dash-card dash-card-size">
-                <div class="card-header bg-light text-dark">Total Districts</div>
+            <div class="dash-card dash-card-size dash-card-static">
+                <div class="card-header">Total Districts</div>
                 <div class="card-body">
                     <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
                 </div>
@@ -150,12 +141,12 @@
 <!-- Search Box -->
 <form method="GET" action="{{ url_for('index') }}" class="search-box mb-4">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query or '' }}">    <button type="submit" class="btn btn-primary">
-        <i class="fas fa-search"></i> Search
+    <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query or '' }}">
+    <button type="submit" class="btn btn-dark">
+        <i class="fas fa-search"></i>
     </button>
     {% if search_query %}
-    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Clear</a>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-dark">Clear</a>
     {% endif %}
 </form>
 
@@ -168,14 +159,11 @@
 
 <!-- Expand/Collapse All Buttons -->
 <div class="mb-3">
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="expandAll()">
+    <button type="button" class="btn btn-outline-dark btn-sm" onclick="expandAll()">
         <i class="fas fa-expand-alt"></i> Expand All
     </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="collapseAll()">
+    <button type="button" class="btn btn-outline-dark btn-sm" onclick="collapseAll()">
         <i class="fas fa-compress-alt"></i> Collapse All
-    </button>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.location.href='{{ url_for('activity_log_page') }}'">
-        <i class="fas fa-history"></i> Activity Log
     </button>
 </div>
 
@@ -238,12 +226,12 @@
                                                         {% else %}text-secondary{% endif %}">
                                                         {{ cand.name|title }} ({{ cand.status }})
                                                     </a>
-                                                    <button type="button" class="btn btn-info btn-sm ml-1 d-none d-md-inline-block" 
+                                                    <button type="button" class="btn btn-outline-dark btn-sm ml-1 d-none d-md-inline-block"
                                                             data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}">
                                                         <i class="fas fa-info-circle"></i>
                                                     </button>
                                                 {% else %}
-                                                    <button class="btn btn-sm btn-outline-primary"
+                                                    <button class="btn btn-sm btn-outline-dark"
                                                             onclick="openAddCandidateModal('{{ fdc }}', 2026)">
                                                         + Add
                                                     </button>
@@ -268,9 +256,9 @@
                                         <tr>
                                             <td></td>
                                             <td>
-                                                <button class="btn btn-sm btn-outline-secondary"
+                                                <button class="btn btn-sm btn-outline-dark"
                                                         onclick="openAddCandidateModal('{{ fdc }}', 2026)">
-                                                    + Add Another Candidate
+                                                    + Add Another
                                                 </button>
                                             </td>
                                             <td></td>

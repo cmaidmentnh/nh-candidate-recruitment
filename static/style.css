@@ -6,29 +6,24 @@
     font-style: normal;
 }
 
-/* Base Styles */
+/* Base Styles - Force Inter on everything */
 * {
     box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
 }
 
-body,
-input,
-select,
-textarea,
-button,
-table,
-.form-control,
-.btn,
-.alert,
-.card-body,
-.modal-body,
-.popover,
-.tooltip,
-label,
-p,
-span,
-div {
-    font-family: 'Inter', sans-serif;
+html, body, div, span, p, a, li, ul, ol,
+table, thead, tbody, tr, th, td,
+form, input, select, textarea, button,
+label, small, strong, em, b, i,
+article, section, header, footer, nav,
+.form-control, .btn, .alert, .badge,
+.card, .card-body, .modal, .modal-body,
+.popover, .popover-body, .tooltip,
+.dropdown-menu, .dropdown-item,
+.nav, .nav-link, .navbar-text,
+.list-group, .list-group-item {
+    font-family: 'Inter', sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -39,17 +34,18 @@ body {
     line-height: 1.5;
 }
 
+/* Headings use Norwester */
 h1, h2, h3, h4, h5, h6,
 .card-header,
 .modal-title,
+.modal-header,
 .page-title {
-    font-family: 'Norwester', sans-serif;
+    font-family: 'Norwester', sans-serif !important;
     letter-spacing: 0.5px;
     text-transform: uppercase;
 }
 
 .btn {
-    font-family: 'Inter', sans-serif;
     font-weight: 500;
 }
 
@@ -118,6 +114,38 @@ h1, h2, h3, h4, h5, h6,
     min-width: 130px;
     max-width: 155px;
     min-height: 170px;
+}
+
+/* Dashboard Card Link Styles */
+.dash-card-link {
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #e9ecef;
+}
+
+.dash-card-link:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.dash-card-link .card-header {
+    background: #495057;
+    color: #fff;
+}
+
+.dash-card-link:hover .card-header {
+    background: #5a6268;
+}
+
+.dash-card-static {
+    background: #fff;
+    border: 1px solid #e9ecef;
+}
+
+.dash-card-static .card-header {
+    background: #6c757d;
+    color: #fff;
 }
 
 /* Gradient Backgrounds */
@@ -651,15 +679,18 @@ pre {
 
 /* Navbar Styling */
 .navbar,
-.navbar .dropdown-menu {
-    font-family: 'Norwester', sans-serif;
-    letter-spacing: 0.5px;
-}
-
+.navbar .dropdown-menu,
 .navbar .nav-link,
 .navbar .navbar-brand,
 .navbar .dropdown-toggle,
 .navbar .dropdown-item {
+    font-family: 'Norwester', sans-serif !important;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
+}
+
+.navbar .nav-link,
+.navbar .dropdown-toggle,
+.navbar .dropdown-item {
     font-size: 14px;
 }
