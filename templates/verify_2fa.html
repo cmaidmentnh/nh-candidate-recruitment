@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Verify Two-Factor Authentication - Candidate Tracker</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #c41e3a 0%, #8b1528 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .verify-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+            margin: 20px;
+        }
+        .verify-header {
+            background: #c41e3a;
+            color: white;
+            padding: 30px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+        .verify-body {
+            padding: 30px;
+        }
+        .btn-verify {
+            background: #c41e3a;
+            border-color: #c41e3a;
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+        .btn-verify:hover {
+            background: #a01830;
+            border-color: #a01830;
+        }
+        .verification-input {
+            font-size: 32px;
+            letter-spacing: 10px;
+            text-align: center;
+            padding: 15px;
+            font-family: monospace;
+        }
+        .shield-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="verify-card">
+        <div class="verify-header">
+            <div class="shield-icon"><i class="fas fa-shield-alt"></i></div>
+            <h4 class="mb-1">Two-Factor Authentication</h4>
+            <p class="mb-0 small">Enter the code from your authenticator app</p>
+        </div>
+        <div class="verify-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label class="text-center d-block text-muted mb-3">
+                        Open your authenticator app and enter the 6-digit code
+                    </label>
+                    <input type="text" name="code" class="form-control verification-input"
+                           placeholder="------" maxlength="6" pattern="[0-9]{6}"
+                           inputmode="numeric" autocomplete="off" required autofocus>
+                </div>
+
+                <button type="submit" class="btn btn-verify btn-primary btn-block mt-4">
+                    <i class="fas fa-sign-in-alt"></i> Verify & Sign In
+                </button>
+            </form>
+
+            <hr class="my-4">
+
+            <div class="text-center">
+                <a href="{{ url_for('login') }}" class="text-muted">
+                    <i class="fas fa-arrow-left"></i> Back to Login
+                </a>
+            </div>
+
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    Having trouble? Contact your administrator for help.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-focus and format the verification code input
+        const input = document.querySelector('.verification-input');
+        input.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').substring(0, 6);
+            // Auto-submit when 6 digits entered
+            if (this.value.length === 6) {
+                setTimeout(() => this.form.submit(), 100);
+            }
+        });
+    </script>
+</body>
+</html>

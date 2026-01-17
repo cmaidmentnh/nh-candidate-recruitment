@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Set Up Your Account - Candidate Tracker</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #c41e3a 0%, #8b1528 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 480px;
+            width: 100%;
+            margin: 20px;
+        }
+        .setup-header {
+            background: #c41e3a;
+            color: white;
+            padding: 30px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+        .setup-body {
+            padding: 30px;
+        }
+        .btn-setup {
+            background: #c41e3a;
+            border-color: #c41e3a;
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+        .btn-setup:hover {
+            background: #a01830;
+            border-color: #a01830;
+        }
+        .password-strength {
+            height: 4px;
+            border-radius: 2px;
+            margin-top: 5px;
+            transition: all 0.3s;
+        }
+        .custom-switch .custom-control-label::before {
+            background-color: #dc3545;
+        }
+        .custom-switch .custom-control-input:checked ~ .custom-control-label::before {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-card">
+        <div class="setup-header">
+            <h2 class="mb-1"><i class="fas fa-user-shield"></i> Welcome!</h2>
+            <p class="mb-0">Set up your account to get started</p>
+        </div>
+        <div class="setup-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="mb-4">
+                <p class="text-muted mb-1">Setting up account for:</p>
+                <h5 class="mb-0">{{ user_name }}</h5>
+                <small class="text-muted">{{ user_email }}</small>
+            </div>
+
+            {% if has_password %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Your account already has a password set. You can use this link to reset it if needed.
+            </div>
+            {% endif %}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label for="password"><i class="fas fa-lock"></i> Create Password</label>
+                    <input type="password" name="password" id="password" class="form-control"
+                           placeholder="Enter a strong password" required minlength="8"
+                           onkeyup="checkPasswordStrength(this.value)">
+                    <div id="passwordStrength" class="password-strength bg-secondary"></div>
+                    <small class="text-muted">Minimum 8 characters</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password"><i class="fas fa-lock"></i> Confirm Password</label>
+                    <input type="password" name="confirm_password" id="confirm_password" class="form-control"
+                           placeholder="Re-enter your password" required minlength="8"
+                           onkeyup="checkPasswordMatch()">
+                    <small id="matchStatus" class="text-muted"></small>
+                </div>
+
+                <div class="form-group mt-4">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="enable_2fa" name="enable_2fa">
+                        <label class="custom-control-label" for="enable_2fa">
+                            <strong>Enable Two-Factor Authentication</strong>
+                        </label>
+                    </div>
+                    <small class="text-muted d-block mt-1">
+                        <i class="fas fa-shield-alt"></i> Recommended for extra security. You'll need an authenticator app like Google Authenticator or Authy.
+                    </small>
+                </div>
+
+                <button type="submit" class="btn btn-setup btn-primary btn-block mt-4">
+                    <i class="fas fa-check"></i> Complete Setup
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function checkPasswordStrength(password) {
+            const bar = document.getElementById('passwordStrength');
+            let strength = 0;
+
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/\d/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+            const colors = ['#dc3545', '#fd7e14', '#ffc107', '#28a745', '#28a745'];
+            const widths = ['20%', '40%', '60%', '80%', '100%'];
+
+            bar.style.width = widths[Math.min(strength, 4)];
+            bar.style.backgroundColor = colors[Math.min(strength, 4)];
+        }
+
+        function checkPasswordMatch() {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm_password').value;
+            const status = document.getElementById('matchStatus');
+
+            if (confirm.length === 0) {
+                status.textContent = '';
+                status.className = 'text-muted';
+            } else if (password === confirm) {
+                status.textContent = 'Passwords match';
+                status.className = 'text-success';
+            } else {
+                status.textContent = 'Passwords do not match';
+                status.className = 'text-danger';
+            }
+        }
+    </script>
+</body>
+</html>

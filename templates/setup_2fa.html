@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Set Up Two-Factor Authentication - Candidate Tracker</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #c41e3a 0%, #8b1528 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+            margin: 20px;
+        }
+        .setup-header {
+            background: #c41e3a;
+            color: white;
+            padding: 30px;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+        .setup-body {
+            padding: 30px;
+        }
+        .btn-setup {
+            background: #c41e3a;
+            border-color: #c41e3a;
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+        .btn-setup:hover {
+            background: #a01830;
+            border-color: #a01830;
+        }
+        .qr-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .qr-code {
+            max-width: 200px;
+            margin: 0 auto;
+        }
+        .secret-code {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 15px 0;
+        }
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: #c41e3a;
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .verification-input {
+            font-size: 24px;
+            letter-spacing: 8px;
+            text-align: center;
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-card">
+        <div class="setup-header">
+            <h2 class="mb-1"><i class="fas fa-shield-alt"></i> Two-Factor Authentication</h2>
+            <p class="mb-0">Add an extra layer of security</p>
+        </div>
+        <div class="setup-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <div class="step-item">
+                <span class="step-number">1</span>
+                <div>
+                    <strong>Download an authenticator app</strong>
+                    <p class="text-muted mb-0 small">If you don't have one, get Google Authenticator or Authy from your app store.</p>
+                </div>
+            </div>
+
+            <div class="step-item">
+                <span class="step-number">2</span>
+                <div>
+                    <strong>Scan this QR code</strong>
+                    <p class="text-muted mb-0 small">Open your authenticator app and scan the code below.</p>
+                </div>
+            </div>
+
+            <div class="qr-container">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="qr-code img-fluid">
+
+                <div class="mt-3">
+                    <small class="text-muted d-block">Can't scan? Enter this code manually:</small>
+                    <div class="secret-code">{{ totp_secret }}</div>
+                    <small class="text-muted">Account: {{ email }}</small>
+                </div>
+            </div>
+
+            <div class="step-item">
+                <span class="step-number">3</span>
+                <div>
+                    <strong>Enter the 6-digit code</strong>
+                    <p class="text-muted mb-0 small">Enter the code shown in your authenticator app to verify setup.</p>
+                </div>
+            </div>
+
+            <form method="POST">
+                <input type="hidden" name="totp_secret" value="{{ totp_secret }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <input type="text" name="verification_code" class="form-control verification-input"
+                           placeholder="000000" maxlength="6" pattern="[0-9]{6}"
+                           inputmode="numeric" autocomplete="off" required autofocus>
+                </div>
+
+                <button type="submit" class="btn btn-setup btn-primary btn-block">
+                    <i class="fas fa-check"></i> Verify & Enable 2FA
+                </button>
+            </form>
+
+            <div class="text-center mt-3">
+                <a href="{{ url_for('login') }}" class="text-muted small">
+                    <i class="fas fa-times"></i> Skip for now
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-focus and format the verification code input
+        const input = document.querySelector('.verification-input');
+        input.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').substring(0, 6);
+        });
+    </script>
+</body>
+</html>

@@ -2,38 +2,35 @@
 {% block content %}
 <div class="container mt-4">
     <h1>Add New User</h1>
+    <p class="text-muted">Create a new user account. They will receive an email with a secure link to set up their password.</p>
+
     <form method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <div class="form-group">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <div class="form-group mb-3">
             <label>User Type:</label>
-            <select name="user_type" class="form-control" required>
-                <option value="candidate">Candidate</option>
+            <select name="user_type" class="form-control" required id="userTypeSelect">
                 <option value="admin">Admin</option>
+                <option value="candidate">Candidate</option>
             </select>
         </div>
-        <div class="form-group">
+
+        <div class="form-group mb-3">
             <label>Email:</label>
-            <input type="email" name="email" class="form-control" required>
+            <input type="email" name="email" class="form-control" required placeholder="user@example.com">
+            <small class="text-muted">A welcome email with setup instructions will be sent to this address.</small>
         </div>
-        <div class="form-group">
-            <label>Password:</label>
-            <input type="password" name="password" class="form-control" required>
-        </div>
-        <div class="form-group">
-            <label>Confirm Password:</label>
-            <input type="password" name="confirm_password" class="form-control" required>
-        </div>
+
         <div class="candidate-fields" style="display:none;">
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label>First Name:</label>
                 <input type="text" name="first_name" class="form-control">
             </div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label>Last Name:</label>
                 <input type="text" name="last_name" class="form-control">
             </div>
-            <div class="form-group">
+            <div class="form-group mb-3">
                 <label>Party:</label>
                 <select name="party" class="form-control">
                     <option value="R">Republican</option>
@@ -42,8 +39,9 @@
                 </select>
             </div>
         </div>
-        <div class="admin-fields" style="display:none;">
-            <div class="form-group">
+
+        <div class="admin-fields">
+            <div class="form-group mb-3">
                 <label>Role:</label>
                 <select name="role" class="form-control">
                     <option value="admin">Admin</option>
@@ -51,12 +49,17 @@
                 </select>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary">Add User</button>
-        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-envelope"></i> Add User & Send Invite
+            </button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+        </div>
     </form>
 
     <script>
-        document.querySelector('select[name="user_type"]').addEventListener('change', function() {
+        document.getElementById('userTypeSelect').addEventListener('change', function() {
             const candidateFields = document.querySelector('.candidate-fields');
             const adminFields = document.querySelector('.admin-fields');
             if (this.value === 'candidate') {

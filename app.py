@@ -2,6 +2,7 @@ import os
 import re
 import json
 import csv
+import secrets
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from psycopg2 import pool
@@ -11,14 +12,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from datetime import timedelta
+from datetime import datetime, timedelta
 import boto3
 from botocore.client import Config
+from botocore.exceptions import ClientError
 import logging
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from datetime import timedelta  # Add this at the top with other imports if not already there
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+import pyotp
+import qrcode
+import io
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -97,6 +103,127 @@ limiter = Limiter(
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
+# AWS SES Configuration
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+SES_SENDER_EMAIL = os.environ.get("SES_SENDER_EMAIL", "noreply@nhgop.org")
+SES_SENDER_NAME = os.environ.get("SES_SENDER_NAME", "NH GOP Candidate Recruitment")
+APP_URL = os.environ.get("APP_URL", "https://recruit.nhgop.org")
+
+# Token serializer for secure links
+token_serializer = URLSafeTimedSerializer(app.secret_key)
+
+def get_ses_client():
+    """Get AWS SES client."""
+    if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY:
+        return None
+    return boto3.client(
+        "ses",
+        region_name=AWS_REGION,
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+    )
+
+def send_email(to_email, subject, html_body, text_body=None):
+    """Send an email via AWS SES."""
+    ses = get_ses_client()
+    if not ses:
+        logger.error("SES not configured - missing AWS credentials")
+        return False
+
+    if text_body is None:
+        text_body = "Please view this email in an HTML-compatible email client."
+
+    try:
+        ses.send_email(
+            Source=f"{SES_SENDER_NAME} <{SES_SENDER_EMAIL}>",
+            Destination={"ToAddresses": [to_email]},
+            Message={
+                "Subject": {"Data": subject, "Charset": "UTF-8"},
+                "Body": {
+                    "Text": {"Data": text_body, "Charset": "UTF-8"},
+                    "Html": {"Data": html_body, "Charset": "UTF-8"}
+                }
+            }
+        )
+        logger.info(f"Email sent to {to_email}: {subject}")
+        return True
+    except ClientError as e:
+        logger.error(f"SES error sending to {to_email}: {e}")
+        return False
+
+def generate_invite_token(user_type, user_id):
+    """Generate a secure invite token for account setup."""
+    return token_serializer.dumps({'type': user_type, 'id': user_id}, salt='invite-token')
+
+def verify_invite_token(token, max_age=86400 * 7):
+    """Verify an invite token (default 7 days expiry)."""
+    try:
+        data = token_serializer.loads(token, salt='invite-token', max_age=max_age)
+        return data
+    except SignatureExpired:
+        return None
+    except BadSignature:
+        return None
+
+def send_welcome_email(email, name, user_type, user_id):
+    """Send welcome email with secure setup link."""
+    token = generate_invite_token(user_type, user_id)
+    setup_link = f"{APP_URL}/setup-account/{token}"
+
+    subject = "Welcome to NH GOP Candidate Recruitment"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: #c41e3a; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 24px;">NH GOP Candidate Recruitment</h1>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 30px; border: 1px solid #e9ecef; border-top: none; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #333; margin-top: 0;">Welcome, {name}!</h2>
+
+            <p>You've been invited to join the NH GOP Candidate Recruitment system. Click the button below to set up your account and create your password.</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{setup_link}" style="background: #c41e3a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                    Set Up Your Account
+                </a>
+            </div>
+
+            <p style="color: #666; font-size: 14px;">This link will expire in 7 days. If you didn't expect this email, you can safely ignore it.</p>
+
+            <p style="color: #666; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="color: #666; font-size: 12px; word-break: break-all;">{setup_link}</p>
+        </div>
+
+        <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+            <p>NH GOP Candidate Recruitment System</p>
+        </div>
+    </body>
+    </html>
+    """
+
+    text_body = f"""
+Welcome to NH GOP Candidate Recruitment, {name}!
+
+You've been invited to join the system. Please visit the following link to set up your account:
+
+{setup_link}
+
+This link will expire in 7 days.
+
+If you didn't expect this email, you can safely ignore it.
+    """
+
+    return send_email(email, subject, html_body, text_body)
 
 # S3-compatible storage (DigitalOcean Spaces)
 S3_ENDPOINT = os.environ.get("S3_ENDPOINT")  # e.g., https://nyc3.digitaloceanspaces.com
@@ -945,25 +1072,33 @@ def generate_token():
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute") 
+@limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
         email = request.form.get('email').strip()
         password = request.form.get('password').strip()
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
         # Check candidates table first
         cur.execute("""
-            SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url
+            SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url,
+                   COALESCE(totp_enabled, FALSE) as totp_enabled
             FROM candidates
             WHERE email = %s
         """, (email,))
         user_row = cur.fetchone()
-        
+
         if user_row:
-            candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url = user_row
+            candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url, totp_enabled = user_row
             if password_hash and check_password_hash(password_hash, password):
+                # Check if 2FA is enabled
+                if totp_enabled:
+                    session['pending_2fa_user'] = {'type': 'candidate', 'id': candidate_id}
+                    cur.close()
+                    release_db_connection(conn)
+                    return redirect(url_for('verify_2fa'))
+
                 user = CandidateUser(candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url)
                 login_user(user)
                 cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s", (candidate_id,))
@@ -977,19 +1112,25 @@ def login():
                     return redirect(url_for('change_password'))
                 next_page = request.args.get('next')
                 return redirect(next_page if next_page else url_for('index'))
-        
+
         # Check admin users table
         cur.execute("""
-            SELECT user_id, username, email, password_hash, role
+            SELECT user_id, username, email, password_hash, role,
+                   COALESCE(totp_enabled, FALSE) as totp_enabled
             FROM users
             WHERE email = %s
         """, (email,))
         admin_row = cur.fetchone()
         cur.close()
         release_db_connection(conn)
-        
-        if admin_row and check_password_hash(admin_row[3], password):
-            user = AdminUser(*admin_row)
+
+        if admin_row and admin_row[3] and check_password_hash(admin_row[3], password):
+            # Check if 2FA is enabled
+            if admin_row[5]:  # totp_enabled
+                session['pending_2fa_user'] = {'type': 'admin', 'id': admin_row[0]}
+                return redirect(url_for('verify_2fa'))
+
+            user = AdminUser(admin_row[0], admin_row[1], admin_row[2], admin_row[3], admin_row[4])
             login_user(user)
             conn2 = get_db_connection()
             cur2 = conn2.cursor()
@@ -1000,7 +1141,7 @@ def login():
             session.permanent = True
             next_page = request.args.get('next')
             return redirect(next_page if next_page else url_for('index'))
-        
+
         flash("Invalid email or password.", "danger")
     return render_template("login.html")
 
@@ -1008,8 +1149,315 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.pop('pending_2fa_user', None)
     flash("Logged out.", "success")
     return redirect(url_for('login'))
+
+
+# ============== ACCOUNT SETUP (from email invite) ==============
+
+@app.route('/setup-account/<token>', methods=['GET', 'POST'])
+@csrf.exempt  # Token itself provides security
+def setup_account(token):
+    """Handle initial account setup from email invite."""
+    data = verify_invite_token(token)
+    if not data:
+        flash("This setup link has expired or is invalid. Please request a new invite.", "danger")
+        return redirect(url_for('login'))
+
+    user_type = data['type']
+    user_id = data['id']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        if user_type == 'candidate':
+            cur.execute("""
+                SELECT candidate_id, email, first_name, last_name, password_hash
+                FROM candidates WHERE candidate_id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                flash("User not found.", "danger")
+                return redirect(url_for('login'))
+            user_email = row[1]
+            user_name = f"{row[2]} {row[3]}"
+            has_password = row[4] is not None
+        else:
+            cur.execute("""
+                SELECT user_id, email, username, password_hash
+                FROM users WHERE user_id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                flash("User not found.", "danger")
+                return redirect(url_for('login'))
+            user_email = row[1]
+            user_name = row[2]
+            has_password = row[3] is not None
+
+        if request.method == 'POST':
+            password = request.form.get('password', '').strip()
+            confirm_password = request.form.get('confirm_password', '').strip()
+            enable_2fa = request.form.get('enable_2fa') == 'on'
+
+            if len(password) < 8:
+                flash("Password must be at least 8 characters.", "danger")
+                return render_template('setup_account.html', user_name=user_name, user_email=user_email, token=token)
+
+            if password != confirm_password:
+                flash("Passwords do not match.", "danger")
+                return render_template('setup_account.html', user_name=user_name, user_email=user_email, token=token)
+
+            hashed_password = generate_password_hash(password)
+
+            if user_type == 'candidate':
+                cur.execute("""
+                    UPDATE candidates
+                    SET password_hash = %s, password_changed = TRUE
+                    WHERE candidate_id = %s
+                """, (hashed_password, user_id))
+            else:
+                cur.execute("""
+                    UPDATE users
+                    SET password_hash = %s
+                    WHERE user_id = %s
+                """, (hashed_password, user_id))
+
+            conn.commit()
+
+            if enable_2fa:
+                # Store pending 2FA setup in session
+                session['pending_2fa_setup'] = {
+                    'type': user_type,
+                    'id': user_id
+                }
+                flash("Password set successfully! Now let's set up two-factor authentication.", "success")
+                return redirect(url_for('setup_2fa'))
+
+            flash("Account set up successfully! You can now log in.", "success")
+            return redirect(url_for('login'))
+
+        return render_template('setup_account.html', user_name=user_name, user_email=user_email, token=token, has_password=has_password)
+
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/setup-2fa', methods=['GET', 'POST'])
+def setup_2fa():
+    """Set up two-factor authentication."""
+    pending_setup = session.get('pending_2fa_setup')
+
+    # Also allow logged-in users to set up 2FA
+    if not pending_setup and current_user.is_authenticated:
+        if current_user.is_candidate:
+            pending_setup = {'type': 'candidate', 'id': current_user.candidate_id}
+        else:
+            pending_setup = {'type': 'admin', 'id': current_user.user_id}
+
+    if not pending_setup:
+        flash("Please log in first.", "warning")
+        return redirect(url_for('login'))
+
+    user_type = pending_setup['type']
+    user_id = pending_setup['id']
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        if user_type == 'candidate':
+            cur.execute("SELECT email, first_name FROM candidates WHERE candidate_id = %s", (user_id,))
+            row = cur.fetchone()
+            email = row[0]
+            display_name = row[1]
+        else:
+            cur.execute("SELECT email, username FROM users WHERE user_id = %s", (user_id,))
+            row = cur.fetchone()
+            email = row[0]
+            display_name = row[1]
+
+        if request.method == 'POST':
+            totp_secret = request.form.get('totp_secret')
+            verification_code = request.form.get('verification_code', '').strip()
+
+            # Verify the code
+            totp = pyotp.TOTP(totp_secret)
+            if not totp.verify(verification_code):
+                flash("Invalid verification code. Please try again.", "danger")
+                # Regenerate QR code with same secret
+                provisioning_uri = totp.provisioning_uri(name=email, issuer_name="NH GOP Recruit")
+                qr = qrcode.make(provisioning_uri)
+                buffer = io.BytesIO()
+                qr.save(buffer, format='PNG')
+                qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+                return render_template('setup_2fa.html', qr_code=qr_base64, totp_secret=totp_secret, email=email)
+
+            # Save the secret
+            if user_type == 'candidate':
+                cur.execute("""
+                    UPDATE candidates
+                    SET totp_secret = %s, totp_enabled = TRUE
+                    WHERE candidate_id = %s
+                """, (totp_secret, user_id))
+            else:
+                cur.execute("""
+                    UPDATE users
+                    SET totp_secret = %s, totp_enabled = TRUE
+                    WHERE user_id = %s
+                """, (totp_secret, user_id))
+
+            conn.commit()
+            session.pop('pending_2fa_setup', None)
+
+            flash("Two-factor authentication enabled successfully!", "success")
+            return redirect(url_for('login'))
+
+        # Generate new TOTP secret and QR code
+        totp_secret = pyotp.random_base32()
+        totp = pyotp.TOTP(totp_secret)
+        provisioning_uri = totp.provisioning_uri(name=email, issuer_name="NH GOP Recruit")
+
+        qr = qrcode.make(provisioning_uri)
+        buffer = io.BytesIO()
+        qr.save(buffer, format='PNG')
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+        return render_template('setup_2fa.html', qr_code=qr_base64, totp_secret=totp_secret, email=email)
+
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/verify-2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    """Verify 2FA code during login."""
+    pending_2fa = session.get('pending_2fa_user')
+    if not pending_2fa:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        user_type = pending_2fa['type']
+        user_id = pending_2fa['id']
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            if user_type == 'candidate':
+                cur.execute("SELECT totp_secret FROM candidates WHERE candidate_id = %s", (user_id,))
+            else:
+                cur.execute("SELECT totp_secret FROM users WHERE user_id = %s", (user_id,))
+
+            row = cur.fetchone()
+            if not row or not row[0]:
+                flash("2FA not configured properly.", "danger")
+                session.pop('pending_2fa_user', None)
+                return redirect(url_for('login'))
+
+            totp = pyotp.TOTP(row[0])
+            if totp.verify(code):
+                # 2FA verified - complete login
+                session.pop('pending_2fa_user', None)
+
+                if user_type == 'candidate':
+                    cur.execute("""
+                        SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url
+                        FROM candidates WHERE candidate_id = %s
+                    """, (user_id,))
+                    user_row = cur.fetchone()
+                    user = CandidateUser(user_row[0], user_row[1], user_row[2], user_row[3], user_row[4], user_row[5], user_row[6])
+                    login_user(user)
+                    cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s", (user_id,))
+                else:
+                    cur.execute("SELECT user_id, username, email, password_hash, role FROM users WHERE user_id = %s", (user_id,))
+                    user_row = cur.fetchone()
+                    user = AdminUser(*user_row)
+                    login_user(user)
+                    cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (user_id,))
+
+                conn.commit()
+                session.permanent = True
+                flash("Logged in successfully.", "success")
+                return redirect(url_for('index'))
+            else:
+                flash("Invalid verification code.", "danger")
+
+        finally:
+            cur.close()
+            release_db_connection(conn)
+
+    return render_template('verify_2fa.html')
+
+
+@app.route('/disable-2fa', methods=['POST'])
+@login_required
+def disable_2fa():
+    """Disable 2FA for current user."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        if current_user.is_candidate:
+            cur.execute("""
+                UPDATE candidates
+                SET totp_secret = NULL, totp_enabled = FALSE
+                WHERE candidate_id = %s
+            """, (current_user.candidate_id,))
+        else:
+            cur.execute("""
+                UPDATE users
+                SET totp_secret = NULL, totp_enabled = FALSE
+                WHERE user_id = %s
+            """, (current_user.user_id,))
+
+        conn.commit()
+        flash("Two-factor authentication has been disabled.", "success")
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    return redirect(url_for('profile') if current_user.is_candidate else url_for('admin_dashboard'))
+
+
+@app.route('/resend-invite/<user_type>/<int:user_id>', methods=['POST'])
+@admin_required
+def resend_invite(user_type, user_id):
+    """Resend the welcome/invite email to a user."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        if user_type == 'candidate':
+            cur.execute("SELECT email, first_name, last_name FROM candidates WHERE candidate_id = %s", (user_id,))
+            row = cur.fetchone()
+            if row:
+                email, first_name, last_name = row
+                name = f"{first_name} {last_name}"
+                if send_welcome_email(email, name, 'candidate', user_id):
+                    flash(f"Invite resent to {email}.", "success")
+                else:
+                    flash(f"Failed to send invite to {email}.", "danger")
+        else:
+            cur.execute("SELECT email, username FROM users WHERE user_id = %s", (user_id,))
+            row = cur.fetchone()
+            if row:
+                email, username = row
+                if send_welcome_email(email, username, 'admin', user_id):
+                    flash(f"Invite resent to {email}.", "success")
+                else:
+                    flash(f"Failed to send invite to {email}.", "danger")
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    return redirect(url_for('admin_dashboard'))
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -1234,42 +1682,62 @@ def add_user():
     if request.method == 'POST':
         user_type = request.form.get('user_type')
         email = request.form.get('email').strip()
-        password = request.form.get('password').strip()
-        confirm_password = request.form.get('confirm_password').strip()
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         party = request.form.get('party', '').strip()
-        role = request.form.get('role', 'user').strip()
+        role = request.form.get('role', 'admin').strip()
 
-        if password != confirm_password:
-            flash("Passwords do not match.", "danger")
-            return redirect(url_for('add_user'))
-
-        hashed_password = generate_password_hash(password)
         conn = get_db_connection()
         cur = conn.cursor()
         try:
+            # Check if email already exists
+            cur.execute("SELECT 1 FROM candidates WHERE email ILIKE %s", (email,))
+            if cur.fetchone():
+                flash("Email already exists in candidates.", "danger")
+                return redirect(url_for('add_user'))
+            cur.execute("SELECT 1 FROM users WHERE email ILIKE %s", (email,))
+            if cur.fetchone():
+                flash("Email already exists in admin users.", "danger")
+                return redirect(url_for('add_user'))
+
             if user_type == 'candidate':
                 if not (first_name and last_name and party):
                     flash("First name, last name, and party are required for candidates.", "danger")
                     return redirect(url_for('add_user'))
+                # Create candidate without password - they'll set it via email link
                 cur.execute("""
                     INSERT INTO candidates (first_name, last_name, party, email, password_hash, password_changed, created_by)
-                    VALUES (%s, %s, %s, %s, %s, FALSE, %s)
+                    VALUES (%s, %s, %s, %s, NULL, FALSE, %s)
                     RETURNING candidate_id
-                """, (first_name, last_name, party, email, hashed_password, current_user.email))
-                flash("Candidate added successfully.", "success")
+                """, (first_name, last_name, party, email, current_user.email))
+                user_id = cur.fetchone()[0]
+                conn.commit()
+
+                # Send welcome email
+                name = f"{first_name} {last_name}"
+                if send_welcome_email(email, name, 'candidate', user_id):
+                    flash(f"Candidate added and welcome email sent to {email}.", "success")
+                else:
+                    flash(f"Candidate added but failed to send welcome email to {email}.", "warning")
             else:
                 if not role:
                     flash("Role is required for admins.", "danger")
                     return redirect(url_for('add_user'))
+                # Create admin without password - they'll set it via email link
+                username = email.split('@')[0]
                 cur.execute("""
                     INSERT INTO users (username, email, password_hash, role, created_at)
-                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    VALUES (%s, %s, NULL, %s, CURRENT_TIMESTAMP)
                     RETURNING user_id
-                """, (email.split('@')[0], email, hashed_password, role))
-                flash("Admin added successfully.", "success")
-            conn.commit()
+                """, (username, email, role))
+                user_id = cur.fetchone()[0]
+                conn.commit()
+
+                # Send welcome email
+                if send_welcome_email(email, username, 'admin', user_id):
+                    flash(f"Admin added and welcome email sent to {email}.", "success")
+                else:
+                    flash(f"Admin added but failed to send welcome email to {email}.", "warning")
         except Exception as e:
             conn.rollback()
             logger.error(f"Error adding user: {e}")
