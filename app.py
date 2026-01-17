@@ -2416,8 +2416,17 @@ def get_candidate_data(candidate_id):
                 ORDER BY score_year DESC, score_type
             """, (candidate_id,))
             scores = cur.fetchall()
+
+            def safe_float(val):
+                if val is None:
+                    return None
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    return None
+
             candidate_dict['scores'] = [
-                {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] is not None else None, 'letter': s[3]} for s in scores
+                {'type': s[0], 'year': s[1], 'value': safe_float(s[2]), 'letter': s[3]} for s in scores
             ]
             
             return jsonify(candidate_dict)
@@ -2440,6 +2449,10 @@ def unmatch_voter(candidate_id):
             SET voter_id = NULL
             WHERE candidate_id = %s
         """, (candidate_id,))
+
+        if cur.rowcount == 0:
+            return jsonify({'error': 'Candidate not found'}), 404
+
         conn.commit()
         log_activity('voter_unmatched', f"Unmatched from voter file", candidate_id)
         return jsonify({'success': True})
@@ -2557,15 +2570,35 @@ def confirm_match(candidate_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
-            SELECT nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5
-            FROM statewidechecklist
-            WHERE nm_first || ' ' || nm_last IN (
-                SELECT first_name || ' ' || last_name FROM candidates WHERE candidate_id = %s
-            )
-            LIMIT 1
-        """, (candidate_id,))
-        checklist_data = cur.fetchone()
+        # First get the candidate's name
+        cur.execute("SELECT first_name, last_name FROM candidates WHERE candidate_id = %s", (candidate_id,))
+        candidate = cur.fetchone()
+        if not candidate:
+            flash("Candidate not found.", "danger")
+            return redirect(url_for('match_candidates'))
+
+        cand_first, cand_last = candidate
+
+        # Get voter database connection
+        voter_conn = get_voter_db_connection()
+        if not voter_conn:
+            flash("Voter database not available.", "danger")
+            return redirect(url_for('match_candidates'))
+
+        try:
+            voter_cur = voter_conn.cursor()
+            # Search voter file with case-insensitive match
+            voter_cur.execute("""
+                SELECT nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5
+                FROM statewidechecklist
+                WHERE UPPER(nm_first) = UPPER(%s) AND UPPER(nm_last) = UPPER(%s)
+                LIMIT 1
+            """, (cand_first, cand_last))
+            checklist_data = voter_cur.fetchone()
+            voter_cur.close()
+        finally:
+            release_voter_db_connection(voter_conn)
+
         if checklist_data:
             first_name, last_name, party, address, city, zip_code = checklist_data
             cur.execute("""
@@ -2903,7 +2936,10 @@ def update_candidate_district(candidate_id):
             SET district_code = %s
             WHERE candidate_id = %s AND election_year = %s
         """, (new_district, candidate_id, election_year))
-        
+
+        if cur.rowcount == 0:
+            return jsonify({'error': 'Candidate not found for this election year'}), 404
+
         conn.commit()
         return jsonify({'success': True, 'district': new_district})
     except Exception as e:
@@ -2978,6 +3014,10 @@ def sync_from_voter(candidate_id):
             SET address = %s, city = %s, zip = %s, voter_id = %s
             WHERE candidate_id = %s
         """, (address, ad_city, ad_zip5, voter_id, candidate_id))
+
+        if cur.rowcount == 0:
+            return jsonify({'error': 'Candidate not found'}), 404
+
         conn.commit()
         log_activity('voter_matched', f"Matched to voter ID {voter_id}", candidate_id)
         
