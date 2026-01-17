@@ -541,12 +541,76 @@ pre {
     .dash-card-size {
         width: calc(50% - 6px);
     }
-    
+
     .dash-card .card-body h4 {
         font-size: 20px;
     }
-    
+
     .dash-card .card-header {
         font-size: 8px;
     }
+}
+
+/* CTEHR Brand Colors */
+:root {
+    --ctehr-red: #d91720;
+    --ctehr-red-dark: #b8141b;
+    --ctehr-red-light: #e84049;
+}
+
+/* County Progress Links */
+.county-progress-link {
+    padding: 8px;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+}
+
+.county-progress-link:hover {
+    background-color: #f8f9fa;
+}
+
+/* Primary Button Override */
+.btn-primary {
+    background-color: var(--ctehr-red);
+    border-color: var(--ctehr-red);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--ctehr-red-dark);
+    border-color: var(--ctehr-red-dark);
+}
+
+.btn-primary:active {
+    background-color: var(--ctehr-red-dark) !important;
+    border-color: var(--ctehr-red-dark) !important;
+}
+
+/* Links */
+a {
+    color: var(--ctehr-red);
+}
+
+a:hover {
+    color: var(--ctehr-red-dark);
+}
+
+/* Text Colors */
+.text-primary {
+    color: var(--ctehr-red) !important;
+}
+
+/* Background Colors */
+.bg-primary {
+    background-color: var(--ctehr-red) !important;
+}
+
+/* County Card Headers */
+.county-card > .card-header {
+    background: var(--ctehr-red);
+    color: #fff;
+}
+
+.county-card > .card-header:hover {
+    background: var(--ctehr-red-dark);
 }

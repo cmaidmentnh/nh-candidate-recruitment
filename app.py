@@ -626,8 +626,14 @@ def get_data_and_dashboard():
 @login_required
 def index():
     search_query = request.args.get('search', '').strip()
+    county_filter = request.args.get('county', '').strip()
     county_groups, dashboard, county_stats = get_data_and_dashboard()
-    
+
+    # Filter by county if specified
+    if county_filter:
+        filtered_groups = {k: v for k, v in county_groups.items() if k.upper() == county_filter.upper()}
+        county_groups = filtered_groups
+
     if search_query:
         # Filter by search query
         filtered_groups = {}
@@ -651,8 +657,8 @@ def index():
             if filtered_districts:
                 filtered_groups[county_name] = filtered_districts
         county_groups = filtered_groups
-    
-    return render_template("index.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max, search_query=search_query)
+
+    return render_template("index.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max, search_query=search_query, county_filter=county_filter)
 
 @app.route('/filter')
 @candidate_restricted

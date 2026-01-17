@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="mb-3">Candidate Tracker</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Candidate Tracker</h1>
+    <button class="btn btn-danger" onclick="openAddCandidateModal('', 2026)" style="background-color: #d91720; border-color: #d91720;">
+        <i class="fas fa-plus"></i> Add Candidate
+    </button>
+</div>
+
+{% if county_filter %}
+<div class="alert alert-info d-flex justify-content-between align-items-center">
+    <span>Showing <strong>{{ county_filter|title }}</strong> County only</span>
+    <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-secondary">Show All Counties</a>
+</div>
+{% endif %}
 
 <!-- Dashboard Layout -->
 <div class="row mb-4">
@@ -89,7 +101,7 @@
     <!-- Right Column - County Progress -->
     <div class="col-lg-4">
         <div class="card h-100">
-            <div class="card-header bg-primary text-white" style="cursor: pointer;" 
+            <div class="card-header text-white" style="background-color: #d91720; cursor: pointer;"
                  data-toggle="collapse" data-target="#countyProgressCollapse">
                 <i class="fas fa-chart-bar"></i> County Progress
                 <i class="fas fa-chevron-down float-right mt-1"></i>
@@ -98,10 +110,11 @@
                 <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                     {% for county_name, stats in county_stats.items()|sort %}
                     {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
-                    <div class="mb-2">
+                    {% set needs = stats.total_seats - stats.c2026_confirmed %}
+                    <a href="{{ url_for('index', county=county_name) }}" class="county-progress-link d-block mb-2 text-decoration-none">
                         <div class="d-flex justify-content-between mb-1" style="font-size: 0.85rem;">
-                            <strong>{{ county_name }}</strong>
-                            <span>{{ stats.c2026_confirmed }}/{{ stats.total_seats }}</span>
+                            <strong class="text-dark">{{ county_name }}</strong>
+                            <span class="text-muted">{{ stats.c2026_confirmed }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">(need {{ needs }})</small>{% endif %}</span>
                         </div>
                         <div class="progress" style="height: 16px;">
                             <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
@@ -109,7 +122,7 @@
                                 {{ pct }}%
                             </div>
                         </div>
-                    </div>
+                    </a>
                     {% endfor %}
                 </div>
             </div>
