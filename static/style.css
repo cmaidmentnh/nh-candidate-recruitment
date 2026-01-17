@@ -15,7 +15,7 @@
 html, body, div, span, p, a, li, ul, ol,
 table, thead, tbody, tr, th, td,
 form, input, select, textarea, button,
-label, small, strong, em, b, i,
+label, small, strong, em, b,
 article, section, header, footer, nav,
 .form-control, .btn, .alert, .badge,
 .card, .card-body, .modal, .modal-body,
@@ -26,6 +26,11 @@ article, section, header, footer, nav,
     font-family: 'Inter', sans-serif !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+/* Preserve Font Awesome icons */
+.fas, .far, .fab, .fa {
+    font-family: "Font Awesome 5 Free", "Font Awesome 5 Brands" !important;
 }
 
 body {
