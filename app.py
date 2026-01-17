@@ -3,6 +3,7 @@ import re
 import json
 import csv
 import secrets
+from urllib.parse import urlparse, urljoin
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from psycopg2 import pool
@@ -85,7 +86,11 @@ def release_voter_db_connection(conn):
         pool.putconn(conn)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "change-this-to-a-secure-random-string")
+_secret_key = os.environ.get("SECRET_KEY")
+if not _secret_key:
+    logger.warning("WARNING: SECRET_KEY not set! Using insecure default. Set SECRET_KEY environment variable in production.")
+    _secret_key = "change-this-to-a-secure-random-string"
+app.secret_key = _secret_key
 app.permanent_session_lifetime = timedelta(hours=72)
 app.config['SESSION_PERMANENT'] = True
 
@@ -103,6 +108,30 @@ limiter = Limiter(
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
+# Security helper: validate redirect URLs to prevent open redirect attacks
+def is_safe_url(target):
+    """Check if URL is safe for redirect (same host or relative)"""
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
+def get_safe_redirect(target, default='index'):
+    """Get safe redirect URL, falling back to default if unsafe"""
+    if target and is_safe_url(target):
+        return target
+    return url_for(default)
+
+# Security headers
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
 
 # AWS SES Configuration
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
@@ -1141,7 +1170,7 @@ def login():
                     flash("Please change your password on first login.", "warning")
                     return redirect(url_for('change_password'))
                 next_page = request.args.get('next')
-                return redirect(next_page if next_page else url_for('index'))
+                return redirect(get_safe_redirect(next_page, 'index'))
 
         # Check admin users table
         cur.execute("""
@@ -1170,7 +1199,7 @@ def login():
             release_db_connection(conn2)
             session.permanent = True
             next_page = request.args.get('next')
-            return redirect(next_page if next_page else url_for('index'))
+            return redirect(get_safe_redirect(next_page, 'index'))
 
         flash("Invalid email or password.", "danger")
     return render_template("login.html")
@@ -1269,6 +1298,7 @@ def forgot_password():
     return render_template('forgot_password.html')
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 @csrf.exempt
 def reset_password(token):
     """Handle password reset from email link."""
@@ -1797,6 +1827,7 @@ def history(candidate_id):
     return render_template('history.html', history=history_list, candidate=candidate)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def admin_login():
     if request.method == 'POST':
         email = request.form.get('email').strip()
@@ -2438,6 +2469,7 @@ def get_candidate_data(candidate_id):
         
 @app.route('/api/unmatch_voter/<int:candidate_id>', methods=['POST'])
 @login_required
+@admin_required
 @csrf.exempt
 def unmatch_voter(candidate_id):
     """Clear voter_id from candidate"""
@@ -2905,6 +2937,7 @@ def search_candidates():
 
 @app.route('/api/update_candidate_district/<int:candidate_id>', methods=['POST'])
 @login_required
+@admin_required
 @csrf.exempt
 def update_candidate_district(candidate_id):
     """Update a candidate's district"""
@@ -2972,6 +3005,7 @@ def get_districts():
 
 @app.route('/api/sync_from_voter/<int:candidate_id>', methods=['POST'])
 @login_required
+@admin_required
 @csrf.exempt
 def sync_from_voter(candidate_id):
     """Sync candidate info from voter file"""
