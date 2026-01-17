@@ -523,12 +523,13 @@ def get_data_and_dashboard():
             SELECT COUNT(DISTINCT c.candidate_id)
             FROM candidates c
             JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-            WHERE ces.election_year = 2026 
+            WHERE ces.election_year = 2026
               AND c.voter_id IS NULL
               AND ces.status != 'Declined'
         """)
         unmatched_count = cur2.fetchone()[0]
-    except:
+    except Exception as e:
+        logger.error(f"Error getting unmatched count: {e}")
         unmatched_count = 0
     finally:
         cur2.close()
@@ -940,14 +941,11 @@ def edit_candidate(candidate_id, election_year):
             ]
 
         except Exception as e:
-            logger.error(e)
+            logger.error(f"Error loading candidate {candidate_id}: {e}")
             flash("Error loading candidate data.", "danger")
-            comments = []
-            districts = []
-            district_code = None
-            address = None
-            city = None
-            zip_code = None
+            cur.close()
+            release_db_connection(conn)
+            return redirect(url_for("index"))
         finally:
             cur.close()
             release_db_connection(conn)
@@ -1199,7 +1197,7 @@ def verify_reset_token(token, max_age=3600):
         if data.get('action') != 'reset':
             return None
         return data
-    except Exception:
+    except (SignatureExpired, BadSignature):
         return None
 
 def send_password_reset_email(email, name, user_type, user_id):
@@ -1448,11 +1446,17 @@ def setup_2fa():
         if user_type == 'candidate':
             cur.execute("SELECT email, first_name FROM candidates WHERE candidate_id = %s", (user_id,))
             row = cur.fetchone()
+            if not row:
+                flash("User not found.", "danger")
+                return redirect(url_for('login'))
             email = row[0]
             display_name = row[1]
         else:
             cur.execute("SELECT email, username FROM users WHERE user_id = %s", (user_id,))
             row = cur.fetchone()
+            if not row:
+                flash("User not found.", "danger")
+                return redirect(url_for('login'))
             email = row[0]
             display_name = row[1]
 
@@ -2044,6 +2048,8 @@ def delete_users_bulk():
         if not candidate_ids:
             flash("No candidate users selected for deletion.", "warning")
         else:
+            # Convert to integers for safety
+            candidate_ids = [int(cid) for cid in candidate_ids if cid.isdigit()]
             for candidate_id in candidate_ids:
                 cur.execute("""
                     UPDATE candidates
@@ -2765,7 +2771,7 @@ def lookup_district():
         # Convert ward to int, default to 0
         try:
             ward_int = int(ward) if ward else 0
-        except:
+        except (ValueError, TypeError):
             ward_int = 0
         
         # Look up ALL districts for this town (base + floterial)
