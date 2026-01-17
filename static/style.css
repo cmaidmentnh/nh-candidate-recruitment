@@ -586,15 +586,6 @@ pre {
     border-color: var(--ctehr-red-dark) !important;
 }
 
-/* Links */
-a {
-    color: var(--ctehr-red);
-}
-
-a:hover {
-    color: var(--ctehr-red-dark);
-}
-
 /* Text Colors */
 .text-primary {
     color: var(--ctehr-red) !important;
@@ -605,12 +596,12 @@ a:hover {
     background-color: var(--ctehr-red) !important;
 }
 
-/* County Card Headers */
+/* County Card Headers - neutral dark */
 .county-card > .card-header {
-    background: var(--ctehr-red);
+    background: #495057;
     color: #fff;
 }
 
 .county-card > .card-header:hover {
-    background: var(--ctehr-red-dark);
+    background: #5a6268;
 }
