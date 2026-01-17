@@ -1,0 +1,1402 @@
+import os
+import re
+import json
+import csv
+from collections import defaultdict
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from psycopg2 import pool
+import psycopg2
+from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from functools import wraps
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from google.oauth2 import service_account
+from google.cloud import storage, secretmanager
+from datetime import timedelta
+from jinja2 import Environment
+
+# Configure logging
+import logging
+logging.basicConfig(level=logging.INFO)
+
+# Secret Manager for DB Password
+client = secretmanager.SecretManagerServiceClient()
+secret_name = "projects/ctehr-453623/secrets/db-password/versions/latest"
+response = client.access_secret_version(request={"name": secret_name})
+db_password = response.payload.data.decode("utf-8").strip()
+
+db_pool = psycopg2.pool.SimpleConnectionPool(
+    1, 20,
+    host="/cloudsql/ctehr-453623:us-central1:nh-candidate-tracker",
+    dbname=os.environ.get("DB_NAME", "nh_candidates"),
+    user=os.environ.get("DB_USER", "postgres"),
+    password=db_password
+)
+
+load_dotenv()
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "supersecretkey")
+app.permanent_session_lifetime = timedelta(hours=72)
+app.config['SESSION_PERMANENT'] = True
+
+# Flask-Login Setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+# User Models
+class CandidateUser(UserMixin):
+    def __init__(self, candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url, address=None, city=None, zip=None, phone1=None, phone2=None, twitter_x=None, facebook=None, instagram=None, other=None, signal=None, email1=None, email2=None):
+        self.id = f"c_{candidate_id}"
+        self.email = email
+        self.password_hash = password_hash
+        self.first_name = first_name
+        self.last_name = last_name
+        self.password_changed = password_changed
+        self.photo_url = photo_url
+        self.address = address
+        self.city = city
+        self.zip = zip
+        self.phone1 = phone1
+        self.phone2 = phone2
+        self.twitter_x = twitter_x
+        self.facebook = facebook
+        self.instagram = instagram
+        self.other = other
+        self.signal = signal
+        self.email1 = email1
+        self.email2 = email2
+        self.is_candidate = True
+
+class AdminUser(UserMixin):
+    def __init__(self, user_id, username, email, password_hash, role):
+        self.id = f"u_{user_id}"
+        self.username = username
+        self.email = email
+        self.password_hash = password_hash
+        self.role = role
+        self.is_candidate = False
+
+@login_manager.user_loader
+def load_user(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        if user_id.startswith('c_'):
+            candidate_id = int(user_id[2:])
+            cur.execute("""
+                SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url,
+                       address, city, zip, phone1, phone2, twitter_x, facebook, instagram, other, signal, email1, email2
+                FROM candidates
+                WHERE candidate_id = %s
+            """, (candidate_id,))
+            row = cur.fetchone()
+            if row:
+                return CandidateUser(*row)
+        elif user_id.startswith('u_'):
+            user_id = int(user_id[2:])
+            cur.execute("""
+                SELECT user_id, username, email, password_hash, role
+                FROM users
+                WHERE user_id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if row:
+                return AdminUser(*row)
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    return None
+
+# Role-Based Access Control
+def admin_required(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if not hasattr(current_user, 'role') or current_user.role != 'admin':
+            flash("Admin access required.", "danger")
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def candidate_restricted(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if hasattr(current_user, 'is_candidate') and current_user.is_candidate:
+            allowed_routes = {'profile', 'logout', 'change_password'}
+            if request.endpoint not in allowed_routes:
+                flash("You are only authorized to access your profile.", "danger")
+                return redirect(url_for('profile'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Google Cloud Storage Configuration
+app.config['GCS_BUCKET'] = os.environ.get("GCS_BUCKET", "your-bucket-name")
+app.config['GCS_CREDENTIALS'] = os.path.join(app.root_path, 'gcs_credentials.json')
+
+def upload_file_to_gcs(file_obj, destination_blob_name):
+    credentials = service_account.Credentials.from_service_account_file(app.config['GCS_CREDENTIALS'])
+    client = storage.Client(credentials=credentials)
+    bucket = client.bucket(app.config['GCS_BUCKET'])
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_file(file_obj)
+    blob.make_public()
+    return blob.public_url
+
+# DB Helpers
+def get_db_connection():
+    return db_pool.getconn()
+
+def release_db_connection(conn):
+    db_pool.putconn(conn)
+
+# Helper Functions
+def natural_district_sort_key(district_str):
+    match = re.match(r"^(.*?)(\d+)$", district_str.strip())
+    if match:
+        alpha_part = match.group(1).strip()
+        num_part = int(match.group(2))
+        return (alpha_part, num_part)
+    else:
+        return (district_str, 0)
+
+def override_county_for_cities(county_name, all_towns):
+    towns_upper = [t.upper() for t in all_towns]
+    for t in towns_upper:
+        if t.startswith("CONCORD"): return "CONCORD"
+        if t.startswith("MANCHESTER"): return "MANCHESTER"
+        if t.startswith("NASHUA"): return "NASHUA"
+    return county_name
+
+def get_data_and_dashboard():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    TOTAL_SEATS = 400
+    TOTAL_DISTRICTS = 203
+
+    try:
+        cur.execute("""
+            SELECT counter, county_name, district_code, ward, town, seat_count, full_district_code
+            FROM districts
+            ORDER BY county_name, district_code, town;
+        """)
+        district_rows = cur.fetchall()
+
+        cur.execute("""
+            SELECT ces.district_code, ces.status, c.first_name, c.last_name, c.incumbent, c.candidate_id
+            FROM candidate_election_status ces
+            JOIN candidates c ON ces.candidate_id = c.candidate_id
+            WHERE ces.election_year = 2026 AND c.party = 'R';
+        """)
+        cands_2026_rows = cur.fetchall()
+
+        cur.execute("""
+            SELECT ces.district_code, ces.status, c.first_name, c.last_name, c.incumbent, c.candidate_id
+            FROM candidate_election_status ces
+            JOIN candidates c ON ces.candidate_id = c.candidate_id
+            WHERE ces.election_year = 2024 AND c.party = 'R';
+        """)
+        cands_2024_rows = cur.fetchall()
+    except Exception as e:
+        app.logger.error(e)
+        flash("Error fetching data from database.", "danger")
+        district_rows = []
+        cands_2026_rows = []
+        cands_2024_rows = []
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    cand2026_by_dist = defaultdict(list)
+    for dist_code, status, first, last, inc, cid in cands_2026_rows:
+        cand2026_by_dist[dist_code].append({
+            "name": f"{first} {last}",
+            "status": status,
+            "incumbent": inc,
+            "candidate_id": cid
+        })
+    cand2024_by_dist = defaultdict(list)
+    for dist_code, status, first, last, inc, cid in cands_2024_rows:
+        cand2024_by_dist[dist_code].append({
+            "name": f"{first} {last}",
+            "status": status,
+            "incumbent": inc,
+            "candidate_id": cid
+        })
+
+    county_groups = defaultdict(dict)
+    for row in district_rows:
+        counter, county_name, district_code, ward, town, seat_count, full_district_code = row
+        if ward and ward != 0:
+            display_town = f"{town} Ward {ward}"
+        else:
+            display_town = town
+        if full_district_code not in county_groups[county_name]:
+            county_groups[county_name][full_district_code] = {
+                "district_code": district_code,
+                "full_district_code": full_district_code,
+                "seat_count": seat_count,
+                "towns": [],
+                "cand2026": [],
+                "cand2024": []
+            }
+        county_groups[county_name][full_district_code]["towns"].append(display_town)
+    for c_name, dist_dict in county_groups.items():
+        for fdc, info in dist_dict.items():
+            info["cand2026"] = cand2026_by_dist.get(fdc, [])
+            info["cand2024"] = cand2024_by_dist.get(fdc, [])
+    final_groups = defaultdict(dict)
+    for old_county, dist_dict in county_groups.items():
+        for fdc, info in dist_dict.items():
+            real_county = override_county_for_cities(old_county, info["towns"])
+            if fdc not in final_groups[real_county]:
+                final_groups[real_county][fdc] = info
+            else:
+                final_groups[real_county][fdc]["towns"].extend(info["towns"])
+    sorted_county_groups = {}
+    for county, dist_dict in final_groups.items():
+        sorted_items = sorted(dist_dict.items(), key=lambda x: natural_district_sort_key(x[0]))
+        ordered = {}
+        for (fdc, val) in sorted_items:
+            ordered[fdc] = val
+        sorted_county_groups[county] = ordered
+
+    dashboard = {
+        "confirmed": {"total": 0, "districts": []},
+        "empty_seats": {"total": 0, "districts": []},
+        "empty_districts": {"total": 0, "districts": []},
+        "potentials": {"total": 0, "districts": []},
+        "incumbents_running": {"total": 0, "districts": []},
+        "incumbents_not_running": {"total": 0, "districts": []},
+        "primaries": {"total": 0, "districts": []},
+        "TOTAL_SEATS": TOTAL_SEATS,
+        "TOTAL_DISTRICTS": TOTAL_DISTRICTS
+    }
+
+    total_confirmed = 0
+    for county_name, dist_dict in sorted_county_groups.items():
+        for fdc, info in dist_dict.items():
+            seat_count = info["seat_count"]
+            c2026 = info["cand2026"]
+            c2024 = info["cand2024"]
+            active_2026 = [c for c in c2026 if c["status"].upper() != "DECLINED"]
+            confirmed_count = sum(1 for c in c2026 if c["status"].upper() == "CONFIRMED")
+            total_confirmed += confirmed_count
+            if confirmed_count > 0:
+                dashboard["confirmed"]["districts"].append((county_name, fdc))
+            empty_seats = max(0, seat_count - confirmed_count)
+            dashboard["empty_seats"]["total"] += empty_seats
+            if empty_seats > 0:
+                dashboard["empty_seats"]["districts"].append((county_name, fdc))
+            if len(active_2026) == 0:
+                dashboard["empty_districts"]["total"] += 1
+                dashboard["empty_districts"]["districts"].append((county_name, fdc))
+            pot_count = sum(1 for c in c2026 if c["status"].upper() in ("CONSIDERING", "POTENTIAL"))
+            if pot_count > 0:
+                dashboard["potentials"]["total"] += pot_count
+                dashboard["potentials"]["districts"].append((county_name, fdc))
+            if any(c["incumbent"] and c["status"].upper() != "DECLINED" for c in c2026):
+                dashboard["incumbents_running"]["total"] += 1
+                dashboard["incumbents_running"]["districts"].append((county_name, fdc))
+            inc_cands = [c for c in c2026 if c["incumbent"]]
+            if inc_cands and not any(c["incumbent"] and c["status"].upper() != "DECLINED" for c in inc_cands):
+                dashboard["incumbents_not_running"]["total"] += 1
+                dashboard["incumbents_not_running"]["districts"].append((county_name, fdc))
+    dashboard["confirmed"]["total"] = total_confirmed
+
+    county_stats = {}
+    for county_name, dist_dict in sorted_county_groups.items():
+        c_seats = 0
+        c_2026 = 0
+        c_2024 = 0
+        c_2026_confirmed = 0
+        for fdc, info in dist_dict.items():
+            c_seats += info["seat_count"]
+            c_2026 += len(info["cand2026"])
+            c_2024 += len(info["cand2024"])
+            c_2026_confirmed += sum(1 for c in info["cand2026"] if c["status"].upper() == "CONFIRMED")
+        county_stats[county_name] = {
+            "total_seats": c_seats,
+            "c2026": c_2026,
+            "c2024": c_2024,
+            "c2026_confirmed": c_2026_confirmed
+        }
+    return sorted_county_groups, dashboard, county_stats
+
+   # Routes
+@app.route('/')
+@login_required
+def index():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Fetch dashboard data
+    cur.execute("""
+        SELECT 
+            COUNT(*) FILTER (WHERE status = 'Confirmed') AS confirmed,
+            COUNT(*) FILTER (WHERE status = 'Potential') AS potentials,
+            COUNT(*) FILTER (WHERE status = 'Considering') AS considering,
+            COUNT(*) FILTER (WHERE status = 'Declined') AS declined,
+            COUNT(*) FILTER (WHERE status = 'New Recruit') AS new_recruit,
+            COUNT(*) FILTER (WHERE incumbent = TRUE AND status IN ('Confirmed', 'Potential', 'Considering', 'New Recruit')) AS incumbents_running,
+            COUNT(*) FILTER (WHERE incumbent = TRUE AND status = 'Declined') AS incumbents_not_running,
+            (SELECT COUNT(*) FROM districts) AS total_districts,
+            (SELECT COUNT(*) FROM seats) AS total_seats
+        FROM candidates
+        WHERE election_year = 2026
+    """)
+    dashboard = cur.fetchone()
+    dashboard = {
+        'confirmed': {'total': dashboard[0] if dashboard[0] else 0},
+        'potentials': {'total': dashboard[1] if dashboard[1] else 0},
+        'considering': {'total': dashboard[2] if dashboard[2] else 0},
+        'declined': {'total': dashboard[3] if dashboard[3] else 0},
+        'new_recruit': {'total': dashboard[4] if dashboard[4] else 0},
+        'incumbents_running': {'total': dashboard[5] if dashboard[5] else 0},
+        'incumbents_not_running': {'total': dashboard[6] if dashboard[6] else 0},
+        'TOTAL_DISTRICTS': dashboard[7] if dashboard[7] else 0,
+        'TOTAL_SEATS': dashboard[8] if dashboard[8] else 0
+    }
+
+    # Fetch county groups and stats
+    cur.execute("SELECT county, district_code, seat_count, towns FROM districts")
+    districts = cur.fetchall()
+    county_groups = {}
+    county_stats = {}
+    for row in districts:
+        county, district_code, seat_count, towns = row
+        if county not in county_groups:
+            county_groups[county] = {}
+            county_stats[county] = {'total_seats': 0, 'c2026_confirmed': 0}
+        county_groups[county][district_code] = {
+            'district_code': district_code,
+            'seat_count': seat_count,
+            'towns': towns.split(',') if towns else [],
+            'cand2026': [],
+            'cand2024': []
+        }
+        county_stats[county]['total_seats'] += seat_count
+
+    cur.execute("""
+        SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.status, c.incumbent, c.election_year, d.district_code
+        FROM candidates c
+        JOIN districts d ON c.district_code = d.district_code
+        WHERE c.election_year IN (2024, 2026)
+        ORDER BY c.election_year DESC
+    """)
+    candidates = cur.fetchall()
+    for candidate in candidates:
+        candidate_id, first_name, last_name, party, status, incumbent, election_year, district_code = candidate
+        name = f"{first_name} {last_name}"
+        county = next((c for c, dists in county_groups.items() if district_code in dists), None)
+        if county:
+            if election_year == 2026:
+                county_groups[county][district_code]['cand2026'].append({
+                    'candidate_id': candidate_id,
+                    'name': name,
+                    'party': party,
+                    'status': status,
+                    'incumbent': incumbent
+                })
+                if status == 'Confirmed':
+                    county_stats[county]['c2026_confirmed'] += 1
+            elif election_year == 2024:
+                county_groups[county][district_code]['cand2024'].append({
+                    'candidate_id': candidate_id,
+                    'name': name,
+                    'party': party,
+                    'status': status,
+                    'incumbent': incumbent
+                })
+
+    cur.close()
+    release_db_connection(conn)
+
+    # Pass max function to template
+    return render_template("index.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max)
+
+@app.route('/filter')
+@candidate_restricted
+def filter_view():
+       category = request.args.get("category", "").strip()
+       county_groups, dashboard, county_stats = get_data_and_dashboard()
+       if category not in dashboard:
+           flash("Invalid category filter.", "warning")
+           return redirect(url_for("index"))
+       if not isinstance(dashboard[category], dict):
+           flash("This category is not filterable.", "warning")
+           return redirect(url_for("index"))
+       filter_set = set(dashboard[category]["districts"])
+       filtered_groups = defaultdict(dict)
+       for c_name, dist_dict in county_groups.items():
+           for fdc, info in dist_dict.items():
+               if (c_name, fdc) in filter_set:
+                   filtered_groups[c_name][fdc] = info
+       return render_template("filter.html",
+                             category=category,
+                             county_groups=filtered_groups,
+                             dashboard=dashboard,
+                             county_stats=county_stats)
+
+@app.route('/add_candidate_inline', methods=['POST'])
+@candidate_restricted
+@admin_required
+def add_candidate_inline():
+       first_name = request.form.get("first_name", "").strip()
+       last_name = request.form.get("last_name", "").strip()
+       party = request.form.get("party", "").upper().strip()
+       district_code = request.form.get("district_code", "").strip()
+       election_year = request.form.get("election_year", "2026")
+       status = request.form.get("status", "CONSIDERING").strip()
+       if not (first_name and last_name and party and district_code and election_year and status):
+           flash("All fields are required to add a candidate.", "warning")
+           return redirect(url_for("index"))
+       conn = get_db_connection()
+       cur = conn.cursor()
+       try:
+           cur.execute("""
+               SELECT candidate_id FROM candidates
+               WHERE UPPER(first_name)=UPPER(%s) AND UPPER(last_name)=UPPER(%s);
+           """, (first_name, last_name))
+           existing = cur.fetchone()
+           if existing:
+               flash("Candidate already exists.", "warning")
+               return redirect(url_for("index"))
+           cur.execute("""
+               INSERT INTO candidates (first_name, last_name, party, created_by)
+               VALUES (%s, %s, %s, %s)
+               RETURNING candidate_id;
+           """, (first_name, last_name, party, "inline_user"))
+           candidate_id = cur.fetchone()[0]
+           cur.execute("""
+               INSERT INTO candidate_election_status (candidate_id, election_year, status, is_running, added_by, district_code)
+               VALUES (%s, %s, %s, %s, %s, %s);
+           """, (candidate_id, int(election_year), status, True, "inline_user", district_code))
+           conn.commit()
+           flash(f"Added {first_name} {last_name} for {election_year} in {district_code}.", "success")
+       except Exception as e:
+           conn.rollback()
+           app.logger.error(e)
+           flash("Error adding candidate.", "danger")
+       finally:
+           cur.close()
+           release_db_connection(conn)
+       return redirect(url_for("index"))
+
+@app.route('/edit_candidate/<int:candidate_id>/<int:election_year>', methods=['GET', 'POST'])
+@candidate_restricted
+@admin_required
+def edit_candidate(candidate_id, election_year):
+       conn = get_db_connection()
+       cur = conn.cursor()
+       if request.method == 'POST':
+           first_name = request.form.get("first_name").strip()
+           last_name = request.form.get("last_name").strip()
+           party = request.form.get("party").upper().strip()
+           status = request.form.get("status").strip()
+           is_incumbent = request.form.get("incumbent") == "on"
+           is_running = (status.upper() != "DECLINED")
+           try:
+               cur.execute("""
+                   UPDATE candidates
+                   SET first_name=%s, last_name=%s, party=%s, incumbent=%s
+                   WHERE candidate_id=%s;
+               """, (first_name, last_name, party, is_incumbent, candidate_id))
+               cur.execute("""
+                   UPDATE candidate_election_status
+                   SET status=%s, is_running=%s
+                   WHERE candidate_id=%s AND election_year=%s;
+               """, (status, is_running, candidate_id, election_year))
+               conn.commit()
+               flash("Candidate updated successfully.", "success")
+           except Exception as e:
+               conn.rollback()
+               app.logger.error(e)
+               flash("Error updating candidate.", "danger")
+           finally:
+               cur.close()
+               release_db_connection(conn)
+           return redirect(url_for("index"))
+       else:
+           try:
+               cur.execute("""
+                   SELECT c.first_name, c.last_name, c.party, c.incumbent,
+                          ces.status
+                   FROM candidates c
+                   LEFT JOIN candidate_election_status ces
+                     ON c.candidate_id=ces.candidate_id AND ces.election_year=%s
+                   WHERE c.candidate_id=%s;
+               """, (election_year, candidate_id))
+               row = cur.fetchone()
+               if not row:
+                   flash("Candidate not found.", "warning")
+                   return redirect(url_for("index"))
+               first_name, last_name, party, incumbent, status = row
+
+               # Fetch the 5 most recent comments
+               cur.execute("""
+                   SELECT comment_id, comment_text, added_by, added_at
+                   FROM comments
+                   WHERE candidate_id = %s
+                   ORDER BY added_at DESC
+                   LIMIT 5
+               """, (candidate_id,))
+               comments = cur.fetchall()
+           except Exception as e:
+               app.logger.error(e)
+               flash("Error loading candidate data.", "danger")
+               comments = []
+           finally:
+               cur.close()
+               release_db_connection(conn)
+           return render_template("edit_candidate.html",
+                                 candidate_id=candidate_id,
+                                 election_year=election_year,
+                                 first_name=first_name,
+                                 last_name=last_name,
+                                 party=party,
+                                 incumbent=incumbent,
+                                 status=status,
+                                 comments=comments)
+
+@app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
+@candidate_restricted
+@admin_required
+def copy_candidate_to_2026(candidate_id):
+       conn = get_db_connection()
+       cur = conn.cursor()
+       try:
+           cur.execute("""
+               SELECT status_id FROM candidate_election_status
+               WHERE candidate_id = %s AND election_year = 2026
+           """, (candidate_id,))
+           if cur.fetchone():
+               flash("Candidate already has a 2026 entry.", "warning")
+               return redirect(url_for("index"))
+           cur.execute("""
+               SELECT district_code, status FROM candidate_election_status
+               WHERE candidate_id = %s AND election_year = 2024
+           """, (candidate_id,))
+           row = cur.fetchone()
+           if not row:
+               flash("Candidate does not have a 2024 entry.", "warning")
+               return redirect(url_for("index"))
+           district_code = request.form.get("district_code", row[0]).strip()
+           status = request.form.get("status", "New Recruit").strip()
+           comment = request.form.get("comment", "").strip()
+           cur.execute("""
+               INSERT INTO candidate_election_status 
+                 (candidate_id, election_year, status, is_running, added_by, district_code)
+               VALUES (%s, 2026, %s, TRUE, %s, %s)
+           """, (candidate_id, status, current_user.email, district_code))
+           if comment:
+               cur.execute("""
+                   INSERT INTO comments (candidate_id, comment_text, added_by)
+                   VALUES (%s, %s, %s)
+               """, (candidate_id, comment, current_user.email))
+           conn.commit()
+           flash("Candidate successfully copied to 2026.", "success")
+       except Exception as e:
+           conn.rollback()
+           flash("Error copying candidate to 2026.", "danger")
+           app.logger.error(e)
+       finally:
+           cur.close()
+           release_db_connection(conn)
+       return redirect(url_for("index"))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form.get('email').strip()
+        first_name = request.form.get('first_name').strip()
+        last_name = request.form.get('last_name').strip()
+        party = request.form.get('party').strip()
+        password = request.form.get('password').strip()
+        confirm_password = request.form.get('confirm_password').strip()
+        token = request.form.get('token').strip()  # New field for token
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return redirect(url_for('register'))
+
+        if not token:
+            flash("Registration token is required.", "danger")
+            return redirect(url_for('register'))
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            # Validate token
+            cur.execute("""
+                SELECT token, used FROM registration_tokens
+                WHERE token = %s AND NOT used
+            """, (token,))
+            token_row = cur.fetchone()
+            if not token_row:
+                flash("Invalid or used registration token.", "danger")
+                return redirect(url_for('register'))
+
+            token_value, used = token_row
+            if used:
+                flash("This token has already been used.", "danger")
+                return redirect(url_for('register'))
+
+            # Check for existing email
+            cur.execute("SELECT candidate_id FROM candidates WHERE email ILIKE %s", (email,))
+            if cur.fetchone():
+                flash("Email already registered.", "warning")
+                return redirect(url_for('register'))
+
+            # Register the new candidate
+            hashed_password = generate_password_hash(password)
+            cur.execute("""
+                INSERT INTO candidates (first_name, last_name, party, email, password_hash, password_changed, created_by)
+                VALUES (%s, %s, %s, %s, %s, FALSE, %s)
+                RETURNING candidate_id;
+            """, (first_name, last_name, party, email, hashed_password, "self_register"))
+            candidate_id = cur.fetchone()[0]
+
+            # Mark the token as used
+            cur.execute("""
+                UPDATE registration_tokens
+                SET used = TRUE
+                WHERE token = %s
+            """, (token,))
+
+            conn.commit()
+            flash("Registration successful. Please log in.", "success")
+            return redirect(url_for('login'))
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(e)
+            flash("Registration failed.", "danger")
+        finally:
+            cur.close()
+            release_db_connection(conn)
+    return render_template("register.html")
+
+@app.route('/generate_token', methods=['POST'])
+@admin_required
+def generate_token():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        token_count = int(request.form.get('token_count', 1))
+        tokens = []
+        for _ in range(token_count):
+            token = os.urandom(16).hex()  # Generate a random 32-character hex token
+            cur.execute("""
+                INSERT INTO registration_tokens (token, created_by)
+                VALUES (%s, %s)
+            """, (token, current_user.email))
+            tokens.append(token)
+        conn.commit()
+        flash(f"Generated {token_count} new tokens: {', '.join(tokens)}", "success")
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error generating tokens: {e}")
+        flash("Error generating tokens.", "danger")
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+       if request.method == 'POST':
+           email = request.form.get('email').strip()
+           password = request.form.get('password').strip()
+           conn = get_db_connection()
+           cur = conn.cursor()
+           cur.execute("""
+               SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url
+               FROM candidates
+               WHERE email = %s
+           """, (email,))
+           user_row = cur.fetchone()
+           cur.close()
+           release_db_connection(conn)
+           if user_row:
+               candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url = user_row
+               if check_password_hash(password_hash, password):
+                   user = CandidateUser(candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url)
+                   login_user(user)
+                   session.permanent = True
+                   flash("Logged in successfully.", "success")
+                   if not password_changed:
+                       flash("Please change your password on first login.", "warning")
+                       return redirect(url_for('change_password'))
+                   return redirect(url_for('index'))
+           flash("Invalid email or password.", "danger")
+       return render_template("login.html")
+
+@app.route('/logout')
+@candidate_restricted
+def logout():
+       logout_user()
+       flash("Logged out.", "success")
+       return redirect(url_for('login'))
+
+@app.route('/profile', methods=['GET', 'POST'])
+@candidate_restricted
+def profile():
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip()
+        address = request.form.get('address', '').strip()
+        city = request.form.get('city', '').strip()
+        zip_code = request.form.get('zip', '').strip()
+        phone1 = request.form.get('phone1', '').strip()
+        phone2 = request.form.get('phone2', '').strip()
+        twitter_x = request.form.get('twitter_x', '').strip()
+        facebook = request.form.get('facebook', '').strip()
+        instagram = request.form.get('instagram', '').strip()
+        other = request.form.get('other', '').strip()
+        signal = request.form.get('signal', '').strip()
+        email1 = request.form.get('email1', '').strip()
+        email2 = request.form.get('email2', '').strip()
+        password = request.form.get('password')  # Don’t strip yet
+
+        # Debug: Log the received form data
+        app.logger.info(f"Received form data: {request.form}")
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            photo_url = current_user.photo_url
+            if 'photo' in request.files:
+                photo = request.files['photo']
+                if photo.filename != '':
+                    filename = secure_filename(photo.filename)
+                    destination = f"candidate_photos/{current_user.id}/{filename}"
+                    photo_url = upload_file_to_gcs(photo, destination)
+            if password:  # Only process password if it’s provided
+                password = password.strip()
+                if password:  # Ensure it’s not an empty string after stripping
+                    new_password_hash = generate_password_hash(password)
+                    cur.execute("""
+                        UPDATE candidates
+                        SET first_name = %s, last_name = %s, email = %s, address = %s, city = %s, zip = %s,
+                            phone1 = %s, phone2 = %s, twitter_x = %s, facebook = %s, instagram = %s,
+                            other = %s, signal = %s, email1 = %s, email2 = %s, password_hash = %s, photo_url = %s
+                        WHERE candidate_id = %s
+                    """, (first_name, last_name, email, address, city, zip_code, phone1, phone2, twitter_x,
+                          facebook, instagram, other, signal, email1, email2, new_password_hash, photo_url, int(current_user.id[2:])))
+                else:
+                    flash("Password cannot be empty if provided.", "danger")
+                    return redirect(url_for('profile'))
+            else:
+                cur.execute("""
+                    UPDATE candidates
+                    SET first_name = %s, last_name = %s, email = %s, address = %s, city = %s, zip = %s,
+                        phone1 = %s, phone2 = %s, twitter_x = %s, facebook = %s, instagram = %s,
+                        other = %s, signal = %s, email1 = %s, email2 = %s, photo_url = %s
+                    WHERE candidate_id = %s
+                """, (first_name, last_name, email, address, city, zip_code, phone1, phone2, twitter_x,
+                      facebook, instagram, other, signal, email1, email2, photo_url, int(current_user.id[2:])))
+            conn.commit()
+            # Debug: Log the updated data
+            app.logger.info(f"Updated candidate {current_user.id[2:]} with: first_name={first_name}, last_name={last_name}, email={email}")
+            flash("Profile updated.", "success")
+        except Exception as e:
+            conn.rollback()
+            flash("Error updating profile.", "danger")
+            app.logger.error(f"Error updating profile: {e}")
+        finally:
+            cur.close()
+            release_db_connection(conn)
+        return redirect(url_for('profile'))
+    # Debug: Log current_user data on GET using the proxy directly
+    app.logger.info(f"Rendering profile for user: {current_user.id}, name={current_user.first_name} {current_user.last_name}, email={current_user.email}")
+    return render_template("profile.html", user=current_user)
+
+@app.route('/change_password', methods=['GET', 'POST'])
+@candidate_restricted
+def change_password():
+       if request.method == 'POST':
+           new_password = request.form.get('new_password').strip()
+           confirm_password = request.form.get('confirm_password').strip()
+           if new_password != confirm_password:
+               flash("Passwords do not match.", "danger")
+               return redirect(url_for('change_password'))
+           new_hash = generate_password_hash(new_password)
+           conn = get_db_connection()
+           cur = conn.cursor()
+           try:
+               cur.execute("""
+                   UPDATE candidates
+                   SET password_hash = %s, password_changed = TRUE
+                   WHERE candidate_id = %s
+               """, (new_hash, int(current_user.id[2:])))
+               conn.commit()
+               flash("Password updated successfully.", "success")
+           except Exception as e:
+               conn.rollback()
+               flash("Error updating password.", "danger")
+               app.logger.error(e)
+           finally:
+               cur.close()
+               release_db_connection(conn)
+           return redirect(url_for('profile'))
+       return render_template("change_password.html")
+
+@app.route('/comments/<int:candidate_id>', methods=['GET', 'POST'])
+@candidate_restricted
+@admin_required
+def comments(candidate_id):
+       conn = get_db_connection()
+       cur = conn.cursor()
+       if request.method == 'POST':
+           comment_text = request.form.get('comment_text').strip()
+           try:
+               cur.execute("""
+                   INSERT INTO comments (candidate_id, comment_text, added_by)
+                   VALUES (%s, %s, %s)
+               """, (candidate_id, comment_text, current_user.email))
+               conn.commit()
+               flash("Comment added.", "success")
+           except Exception as e:
+               conn.rollback()
+               flash("Error adding comment.", "danger")
+       cur.execute("""
+           SELECT comment_id, comment_text, added_by, added_at
+           FROM comments
+           WHERE candidate_id = %s
+           ORDER BY added_at DESC
+       """, (candidate_id,))
+       comments = cur.fetchall()
+       cur.execute("SELECT first_name, last_name FROM candidates WHERE candidate_id = %s", (candidate_id,))
+       candidate = cur.fetchone()
+       cur.close()
+       release_db_connection(conn)
+       return render_template('comments.html', comments=comments, candidate=candidate, candidate_id=candidate_id)
+
+@app.route('/history/<int:candidate_id>')
+@candidate_restricted
+def history(candidate_id):
+       conn = get_db_connection()
+       cur = conn.cursor()
+       cur.execute("""
+           SELECT history_id, first_name, last_name, incumbent, address, city, zip, phone1, phone2,
+                  twitter_x, facebook, instagram, other, signal, email1, email2, change_comment, changed_by, changed_at
+           FROM candidate_history
+           WHERE candidate_id = %s
+           ORDER BY changed_at DESC
+       """, (candidate_id,))
+       history = cur.fetchall()
+       cur.execute("SELECT first_name, last_name FROM candidates WHERE candidate_id = %s", (candidate_id,))
+       candidate = cur.fetchone()
+       cur.close()
+       release_db_connection(conn)
+       return render_template('history.html', history=history, candidate=candidate)
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+       if request.method == 'POST':
+           email = request.form.get('email').strip()
+           password = request.form.get('password').strip()
+           conn = get_db_connection()
+           cur = conn.cursor()
+           cur.execute("""
+               SELECT user_id, username, email, password_hash, role
+               FROM users
+               WHERE email = %s
+           """, (email,))
+           user_row = cur.fetchone()
+           cur.close()
+           release_db_connection(conn)
+           if user_row and check_password_hash(user_row[3], password):
+               user = AdminUser(*user_row)
+               login_user(user)
+               session.permanent = True
+               flash("Admin logged in successfully.", "success")
+               return redirect(url_for('admin_dashboard'))
+           flash("Invalid email or password.", "danger")
+       return render_template("admin_login.html")
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Fetch only active candidate users with login credentials
+        cur.execute("""
+            SELECT candidate_id, first_name, last_name, email, party
+            FROM candidates
+            WHERE email IS NOT NULL AND password_hash IS NOT NULL
+        """)
+        candidate_users = cur.fetchall()
+
+        # Fetch all admins
+        cur.execute("""
+            SELECT user_id, username, email, role
+            FROM users
+        """)
+        admins = cur.fetchall()
+
+        # Fetch all tokens
+        cur.execute("""
+            SELECT token, created_at, used, created_by
+            FROM registration_tokens
+        """)
+        tokens = cur.fetchall()
+    except Exception as e:
+        app.logger.error(f"Error fetching users: {e}")
+        flash("Error loading user data.", "danger")
+        candidate_users = []
+        admins = []
+        tokens = []
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    return render_template('admin_dashboard.html', candidate_users=candidate_users, admins=admins, tokens=tokens)
+
+@app.route('/add_user', methods=['GET', 'POST'])
+@admin_required
+def add_user():
+       if request.method == 'POST':
+           user_type = request.form.get('user_type')
+           email = request.form.get('email').strip()
+           password = request.form.get('password').strip()
+           confirm_password = request.form.get('confirm_password').strip()
+           first_name = request.form.get('first_name', '').strip()  # Optional for admins
+           last_name = request.form.get('last_name', '').strip()   # Optional for admins
+           party = request.form.get('party', '').strip()           # Only for candidates
+           role = request.form.get('role', 'user').strip()         # Only for admins
+
+           if password != confirm_password:
+               flash("Passwords do not match.", "danger")
+               return redirect(url_for('add_user'))
+
+           hashed_password = generate_password_hash(password)
+           conn = get_db_connection()
+           cur = conn.cursor()
+           try:
+               if user_type == 'candidate':
+                   if not (first_name and last_name and party):
+                       flash("First name, last name, and party are required for candidates.", "danger")
+                       return redirect(url_for('add_user'))
+                   cur.execute("""
+                       INSERT INTO candidates (first_name, last_name, party, email, password_hash, password_changed, created_by)
+                       VALUES (%s, %s, %s, %s, %s, FALSE, %s)
+                       RETURNING candidate_id
+                   """, (first_name, last_name, party, email, hashed_password, current_user.email))
+                   candidate_id = cur.fetchone()[0]
+                   flash("Candidate added successfully.", "success")
+               else:  # admin
+                   if not role:
+                       flash("Role is required for admins.", "danger")
+                       return redirect(url_for('add_user'))
+                   cur.execute("""
+                       INSERT INTO users (username, email, password_hash, role, created_at)
+                       VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+                       RETURNING user_id
+                   """, (email.split('@')[0], email, hashed_password, role))
+                   user_id = cur.fetchone()[0]
+                   flash("Admin added successfully.", "success")
+               conn.commit()
+           except Exception as e:
+               conn.rollback()
+               app.logger.error(f"Error adding user: {e}")
+               flash("Error adding user.", "danger")
+           finally:
+               cur.close()
+               release_db_connection(conn)
+           return redirect(url_for('admin_dashboard'))
+       return render_template('add_user.html')
+
+@app.route('/edit_user/<user_type>/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def edit_user(user_type, user_id):
+       conn = get_db_connection()
+       cur = conn.cursor()
+       if request.method == 'POST':
+           email = request.form.get('email').strip()
+           password = request.form.get('password', '').strip()  # Optional
+           first_name = request.form.get('first_name', '').strip()
+           last_name = request.form.get('last_name', '').strip()
+           party = request.form.get('party', '').strip()
+           role = request.form.get('role', '').strip()
+
+           try:
+               if user_type == 'candidate':
+                   if password:
+                       hashed_password = generate_password_hash(password)
+                       cur.execute("""
+                           UPDATE candidates
+                           SET email = %s, password_hash = %s, first_name = %s, last_name = %s, party = %s
+                           WHERE candidate_id = %s
+                       """, (email, hashed_password, first_name, last_name, party, user_id))
+                   else:
+                       cur.execute("""
+                           UPDATE candidates
+                           SET email = %s, first_name = %s, last_name = %s, party = %s
+                           WHERE candidate_id = %s
+                       """, (email, first_name, last_name, party, user_id))
+                   flash("Candidate updated successfully.", "success")
+               else:  # admin
+                   if password:
+                       hashed_password = generate_password_hash(password)
+                       cur.execute("""
+                           UPDATE users
+                           SET email = %s, password_hash = %s, username = %s, role = %s
+                           WHERE user_id = %s
+                       """, (email, hashed_password, email.split('@')[0], role, user_id))
+                   else:
+                       cur.execute("""
+                           UPDATE users
+                           SET email = %s, username = %s, role = %s
+                           WHERE user_id = %s
+                       """, (email, email.split('@')[0], role, user_id))
+                   flash("Admin updated successfully.", "success")
+               conn.commit()
+           except Exception as e:
+               conn.rollback()
+               app.logger.error(f"Error editing user: {e}")
+               flash("Error editing user.", "danger")
+           finally:
+               cur.close()
+               release_db_connection(conn)
+           return redirect(url_for('admin_dashboard'))
+       else:
+           try:
+               if user_type == 'candidate':
+                   cur.execute("""
+                       SELECT candidate_id, first_name, last_name, email, party
+                       FROM candidates
+                       WHERE candidate_id = %s
+                   """, (user_id,))
+                   user = cur.fetchone()
+                   if not user:
+                       flash("Candidate not found.", "warning")
+                       return redirect(url_for('admin_dashboard'))
+               else:
+                   cur.execute("""
+                       SELECT user_id, username, email, role
+                       FROM users
+                       WHERE user_id = %s
+                   """, (user_id,))
+                   user = cur.fetchone()
+                   if not user:
+                       flash("Admin not found.", "warning")
+                       return redirect(url_for('admin_dashboard'))
+           except Exception as e:
+               app.logger.error(f"Error loading user: {e}")
+               flash("Error loading user data.", "danger")
+               user = None
+           finally:
+               cur.close()
+               release_db_connection(conn)
+           return render_template('edit_user.html', user_type=user_type, user=user)
+
+@app.route('/delete_user/<user_type>/<int:user_id>', methods=['POST'])
+@admin_required
+def delete_user(user_type, user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        if user_type == 'candidate':
+            cur.execute("""
+                UPDATE candidates
+                SET password_hash = NULL, password_changed = FALSE
+                WHERE candidate_id = %s
+            """, (user_id,))
+            flash("Candidate user's login credentials removed successfully. Other data retained.", "success")
+        else:
+            cur.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+            flash("Admin deleted successfully.", "success")
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error deleting user: {e}")
+        flash("Error deleting user.", "danger")
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/match_candidates')
+@admin_required
+def match_candidates():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        logging.info("Starting match_candidates process")
+        cur.execute("SET statement_timeout = '60s'")  # Increase timeout to 60 seconds
+
+        # Fetch all candidates with logging
+        cur.execute("""
+            SELECT candidate_id, first_name, last_name, party
+            FROM candidates
+        """)
+        candidates = {f"{row[1]} {row[2]}".upper(): {'id': row[0], 'party': row[3]} for row in cur.fetchall()}
+        logging.info(f"Loaded {len(candidates)} candidates")
+
+        # Batch process statewidechecklist
+        offset = 0
+        limit = 10000  # Process 10,000 records at a time
+        matches = []
+        while True:
+            cur.execute("""
+                SELECT DISTINCT nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5
+                FROM statewidechecklist
+                WHERE nm_first IS NOT NULL AND nm_last IS NOT NULL
+                LIMIT %s OFFSET %s
+            """, (limit, offset))
+            batch = cur.fetchall()
+            if not batch:
+                break
+            logging.info(f"Processing batch starting at offset {offset}")
+            for entry in batch:
+                checklist_name = f"{entry[0]} {entry[1]}".upper().strip()
+                checklist_party = entry[2].upper() if entry[2] else None
+                for candidate_name, candidate_data in candidates.items():
+                    if checklist_name in candidate_name or candidate_name in checklist_name:
+                        candidate_id = candidate_data['id']
+                        candidate_party = candidate_data['party'].upper()
+                        if not checklist_party or checklist_party == candidate_party:
+                            matches.append({
+                                'candidate_id': candidate_id,
+                                'checklist_name': f"{entry[0]} {entry[1]}",
+                                'checklist_party': entry[2],
+                                'checklist_address': f"{entry[3]}, {entry[4]}, {entry[5]}",
+                                'candidate_party': candidate_party
+                            })
+            offset += limit
+        logging.info(f"Found {len(matches)} potential matches after processing all batches")
+
+        return render_template('match_candidates.html', matches=matches)
+    except psycopg2.Error as e:
+        logging.error(f"Database operation timed out or failed: {e}")
+        flash("Operation timed out or failed. Try again or contact support.", "danger")
+        return redirect(url_for('admin_dashboard'))
+    except Exception as e:
+        logging.error(f"Error in match_candidates: {e}")
+        flash("Error processing matches. Check logs for details.", "danger")
+        return redirect(url_for('admin_dashboard'))
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+@app.route('/confirm_match/<int:candidate_id>', methods=['POST'])
+@admin_required
+def confirm_match(candidate_id):
+       conn = get_db_connection()
+       cur = conn.cursor()
+       try:
+           # Fetch checklist data for the matched candidate
+           cur.execute("""
+               SELECT nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5
+               FROM statewidechecklist
+               WHERE nm_first || ' ' || nm_last IN (
+                   SELECT first_name || ' ' || last_name FROM candidates WHERE candidate_id = %s
+               )
+               LIMIT 1
+           """, (candidate_id,))
+           checklist_data = cur.fetchone()
+           if checklist_data:
+               first_name, last_name, party, address, city, zip_code = checklist_data
+               cur.execute("""
+                   UPDATE candidates
+                   SET first_name = %s, last_name = %s, party = %s, address = %s, city = %s, zip = %s
+                   WHERE candidate_id = %s
+               """, (first_name, last_name, party, address, city, zip_code, candidate_id))
+               conn.commit()
+               flash("Candidate updated with statewide checklist data.", "success")
+           else:
+               flash("No matching checklist data found.", "warning")
+       except Exception as e:
+           conn.rollback()
+           app.logger.error(f"Error confirming match: {e}")
+           flash("Error confirming match.", "danger")
+       finally:
+           cur.close()
+           release_db_connection(conn)
+       return redirect(url_for('match_candidates'))
+
+@app.route('/delete_users_bulk', methods=['POST'])
+@admin_required
+def delete_users_bulk():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Get selected candidate IDs from the form
+        candidate_ids = request.form.getlist('candidate_ids')
+        if not candidate_ids:
+            flash("No candidate users selected for deletion.", "warning")
+        else:
+            for candidate_id in candidate_ids:
+                cur.execute("""
+                    UPDATE candidates
+                    SET password_hash = NULL, password_changed = FALSE
+                    WHERE candidate_id = %s
+                """, (candidate_id,))
+            flash(f"Removed login credentials for {len(candidate_ids)} candidate users successfully. Other data retained.", "success")
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error deleting users: {e}")
+        flash("Error deleting users.", "danger")
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    return redirect(url_for('admin_dashboard'))
+
+import csv
+
+import csv
+
+import csv
+
+@app.route('/admin/update_candidates', methods=['GET', 'POST'])
+@admin_required
+def update_candidates():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash("No file part", "danger")
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            flash("No selected file", "danger")
+            return redirect(request.url)
+        if file and file.filename.endswith('.csv'):
+            candidates_data = []
+            content = file.read().decode('utf-8')
+            # Define the expected CSV headers
+            reader = csv.DictReader(content.splitlines(), fieldnames=['submission_time', 'first_name', 'last_name', 'email', 'phone', 'address', 'city', 'zip', 'photo_url', 'local_issues', 'other_info', 'flags'])
+            next(reader, None)  # Skip the header row
+            for row in reader:
+                # Clean and process each row
+                # Truncate only varchar fields with limits
+                row = {k: (v.strip() if isinstance(v, str) else v)[:50] if k in ['first_name', 'last_name', 'city'] else (v.strip() if isinstance(v, str) else v)[:20] if k in ['phone'] else (v.strip() if isinstance(v, str) else v)[:100] if k in ['address'] else (v.strip() if isinstance(v, str) else v)[:10] if k in ['zip'] else (v.strip() if isinstance(v, str) else v)[:255] if k in ['email'] else v for k, v in row.items()}
+                candidates_data.append(row)
+            updated_count = 0
+            try:
+                for candidate in candidates_data:
+                    first_name = candidate.get('first_name', '')[:50]
+                    last_name = candidate.get('last_name', '')[:50]
+                    email = candidate.get('email', '').lower()[:255]
+                    address = candidate.get('address', '')[:100]
+                    city = candidate.get('city', '')[:50]
+                    zip_code = candidate.get('zip', '')[:10]
+                    phone = candidate.get('phone', '')[:20]
+                    photo_url = candidate.get('photo_url', '')  # TEXT field, no truncation
+
+                    cur.execute("""
+                        SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
+                        FROM candidates
+                        WHERE LOWER(email) = %s OR (UPPER(first_name) = UPPER(%s) AND UPPER(last_name) = UPPER(%s))
+                    """, (email, first_name, last_name))
+                    existing = cur.fetchone()
+
+                    if existing:
+                        candidate_id, existing_first_name, existing_last_name, existing_email, existing_address, existing_city, existing_zip, existing_phone1, existing_photo_url, existing_other_info = existing
+                        app.logger.info(f"Matched candidate {candidate_id}: {first_name} {last_name}, email={email}")
+
+                        new_address = address or existing_address
+                        new_city = city or existing_city
+                        new_zip = zip_code or existing_zip
+                        new_phone1 = phone or existing_phone1
+                        new_photo_url = photo_url or existing_photo_url
+
+                        local_issues = candidate.get('local_issues', '')
+                        flags = candidate.get('flags', '')
+                        other_info_text = candidate.get('other_info', '')
+                        new_other_info = ""
+                        if local_issues:
+                            new_other_info += f"Local Issues: {local_issues}\n"
+                        if flags:
+                            new_other_info += f"Flags: {flags}\n"
+                        if other_info_text:
+                            new_other_info += f"Other Info: {other_info_text}\n"
+                        if existing_other_info and not new_other_info:
+                            new_other_info = existing_other_info
+                        elif existing_other_info:
+                            new_other_info = f"{existing_other_info}\n{new_other_info}".strip()
+
+                        # Check for None before calling len()
+                        other_info_length = len(new_other_info) if new_other_info is not None else 0
+                        photo_url_length = len(new_photo_url) if new_photo_url is not None else 0
+                        app.logger.debug(f"other_info length: {other_info_length}")
+                        app.logger.debug(f"photo_url length: {photo_url_length}")
+
+                        cur.execute("""
+                            UPDATE candidates
+                            SET first_name = %s, last_name = %s, email = %s, address = %s, city = %s, zip = %s, phone1 = %s, photo_url = %s, other_info = %s
+                            WHERE candidate_id = %s
+                        """, (first_name, last_name, email, new_address, new_city, new_zip, new_phone1, new_photo_url, new_other_info, candidate_id))
+                        updated_count += 1
+                        app.logger.info(f"Updated candidate {candidate_id} with new data")
+                    else:
+                        app.logger.warning(f"No match found for {first_name} {last_name}, email={email}")
+
+                conn.commit()
+                flash(f"Updated {updated_count} candidate records.", "success")
+            except Exception as e:
+                conn.rollback()
+                app.logger.error(f"Error updating candidates: {e}")
+                flash("Error updating candidates.", "danger")
+            finally:
+                cur.close()
+                release_db_connection(conn)
+        else:
+            flash("Please upload a CSV file", "danger")
+    return render_template('admin_dashboard.html')
+
+@app.route('/profile/<int:candidate_id>')
+@admin_required
+def candidate_profile(candidate_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
+            FROM candidates
+            WHERE candidate_id = %s
+        """, (candidate_id,))
+        candidate = cur.fetchone()
+        if candidate:
+            # Convert tuple to dict with column names
+            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
+            candidate = dict(zip(columns, candidate))
+            return render_template('candidate_profile.html', candidate=candidate)
+        else:
+            flash("Candidate not found.", "danger")
+            return redirect(url_for('admin_dashboard'))
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+@app.route('/api/candidate/<int:candidate_id>')
+@admin_required
+def get_candidate_data(candidate_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
+            FROM candidates
+            WHERE candidate_id = %s
+        """, (candidate_id,))
+        candidate = cur.fetchone()
+        if candidate:
+            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
+            candidate_dict = dict(zip(columns, candidate))
+            return jsonify(candidate_dict)
+        else:
+            return jsonify({'error': 'Candidate not found'}), 404
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+if __name__ == "__main__":
+       port = int(os.getenv("PORT", 8080))
+       app.run(host='0.0.0.0', port=port)

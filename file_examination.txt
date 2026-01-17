@@ -1,0 +1,2716 @@
+
+================================================================================
+EXAMINING BELKNAP COUNTY
+File: nh_election_data/2022-ge-house-belknap_1.xls
+Shape: (54, 8)
+================================================================================
+
+Row   1: District No. 1 (1)
+     + 1: [0]Center Harbor | [1]343 | [2]313 | [3]3
+     + 2: [0]New Hampton | [1]710 | [2]579 | [3]0
+     + 3: [0]Totals | [1]1053 | [2]892 | [3]3
+     + 4: [0]District No. 2 (2) | [1]Smart, r | [2]Creteau-Miller, r | [3]Mucci, d | [4]Coker, d | [5]Scatter
+     + 5: [0]Meredith | [1]1649 | [2]1445 | [3]1546 | [4]1581 | [5]4
+     + 6: [0]District No. 3 (1) | [1]Harvey-Bolia, r | [2]Anderson, d
+     + 7: [0]Sanbornton | [1]1000 | [2]680
+     + 8: [0]Tilton | [1]817 | [2]667
+     + 9: [0]Totals | [1]1817 | [2]1347
+     +10: [0]District No. 4 (1) | [1]O'Hara, r | [2]Borden, d | [3]Scatter
+
+Row   5: District No. 2 (2)
+     + 1: [0]Meredith | [1]1649 | [2]1445 | [3]1546 | [4]1581 | [5]4
+     + 2: [0]District No. 3 (1) | [1]Harvey-Bolia, r | [2]Anderson, d
+     + 3: [0]Sanbornton | [1]1000 | [2]680
+     + 4: [0]Tilton | [1]817 | [2]667
+     + 5: [0]Totals | [1]1817 | [2]1347
+     + 6: [0]District No. 4 (1) | [1]O'Hara, r | [2]Borden, d | [3]Scatter
+     + 7: [0]Belmont | [1]2021 | [2]1048 | [3]6
+     + 8: [0]District No. 5 (4) | [1]Bordes, r | [2]Johnson, r | [3]Littlefield, r | [4]Bogert, r
+     + 9: [0]Laconia Ward 1 | [1]901 | [2]666 | [3]743 | [4]768
+     +10: [0]Laconia Ward 3 | [1]472 | [2]388 | [3]402 | [4]401
+
+Row   7: District No. 3 (1)
+     + 1: [0]Sanbornton | [1]1000 | [2]680
+     + 2: [0]Tilton | [1]817 | [2]667
+     + 3: [0]Totals | [1]1817 | [2]1347
+     + 4: [0]District No. 4 (1) | [1]O'Hara, r | [2]Borden, d | [3]Scatter
+     + 5: [0]Belmont | [1]2021 | [2]1048 | [3]6
+     + 6: [0]District No. 5 (4) | [1]Bordes, r | [2]Johnson, r | [3]Littlefield, r | [4]Bogert, r
+     + 7: [0]Laconia Ward 1 | [1]901 | [2]666 | [3]743 | [4]768
+     + 8: [0]Laconia Ward 3 | [1]472 | [2]388 | [3]402 | [4]401
+     + 9: [0]Laconia Ward 4 | [1]446 | [2]357 | [3]390 | [4]395
+     +10: [0]Laconia Ward 5 | [1]425 | [2]375 | [3]392 | [4]392
+
+Row  11: District No. 4 (1)
+     + 1: [0]Belmont | [1]2021 | [2]1048 | [3]6
+     + 2: [0]District No. 5 (4) | [1]Bordes, r | [2]Johnson, r | [3]Littlefield, r | [4]Bogert, r
+     + 3: [0]Laconia Ward 1 | [1]901 | [2]666 | [3]743 | [4]768
+     + 4: [0]Laconia Ward 3 | [1]472 | [2]388 | [3]402 | [4]401
+     + 5: [0]Laconia Ward 4 | [1]446 | [2]357 | [3]390 | [4]395
+     + 6: [0]Laconia Ward 5 | [1]425 | [2]375 | [3]392 | [4]392
+     + 7: [0]Laconia Ward 6 | [1]855 | [2]692 | [3]749 | [4]758
+     + 8: [0]Totals | [1]3099 | [2]2478 | [3]2676 | [4]2714
+     + 9: [1]Huot, d | [2]St. Clair, d | [3]Wood, d | [4]Hoffman, d | [5]Scatter
+     +10: [0]Laconia Ward 1 | [1]751 | [2]801 | [3]711 | [4]637 | [5]4
+
+Row  13: District No. 5 (4)
+     + 1: [0]Laconia Ward 1 | [1]901 | [2]666 | [3]743 | [4]768
+     + 2: [0]Laconia Ward 3 | [1]472 | [2]388 | [3]402 | [4]401
+     + 3: [0]Laconia Ward 4 | [1]446 | [2]357 | [3]390 | [4]395
+     + 4: [0]Laconia Ward 5 | [1]425 | [2]375 | [3]392 | [4]392
+     + 5: [0]Laconia Ward 6 | [1]855 | [2]692 | [3]749 | [4]758
+     + 6: [0]Totals | [1]3099 | [2]2478 | [3]2676 | [4]2714
+     + 7: [1]Huot, d | [2]St. Clair, d | [3]Wood, d | [4]Hoffman, d | [5]Scatter
+     + 8: [0]Laconia Ward 1 | [1]751 | [2]801 | [3]711 | [4]637 | [5]4
+     + 9: [0]Laconia Ward 3 | [1]645 | [2]658 | [3]631 | [4]583 | [5]9
+     +10: [0]Laconia Ward 4 | [1]435 | [2]436 | [3]402 | [4]464 | [5]1
+
+Row  27: District No. 6 (4)
+     + 1: [0]Gilford | [1]1749 | [2]1771 | [3]2259 | [4]2280 | [5]1948
+     + 2: [0]Gilmanton | [1]1036 | [2]1036 | [3]1059 | [4]1060 | [5]1175
+     + 3: [0]Laconia Ward 2 | [1]411 | [2]416 | [3]444 | [4]448 | [5]405
+     + 4: [0]Totals | [1]3196 | [2]3223 | [3]3762 | [4]3788 | [5]3528
+     + 5: [empty]
+     + 6: [1]Bean, r | [2]Recount | [3]Webber, i | [4]Recount | [5]DiMartino, d | [6]Recount
+     + 7: [0]Gilford | [1]2191 | [2]2210 | [3]797 | [4]799 | [5]1974
+     + 8: [0]Gilmanton | [1]1110 | [2]1110 | [3]176 | [4]176 | [5]753
+     + 9: [0]Laconia Ward 2 | [1]473 | [2]478 | [3]113 | [4]117 | [5]452
+     +10: [0]Totals | [1]3774 | [2]3798 | [3]1086 | [4]1092 | [5]3179
+
+Row  45: District No. 7 (3)
+     + 1: [0]Alton | [1]1755 | [2]1756 | [3]1783 | [4]1037 | [5]1134
+     + 2: [0]Barnstead | [1]1237 | [2]1210 | [3]1216 | [4]737 | [5]817
+     + 3: [0]Totals | [1]2992 | [2]2966 | [3]2999 | [4]1774 | [5]1951
+     + 4: [0]District No. 8 (2) F | [1]Trottier, r | [2]McCarter, r | [3]House, d | [4]Condodeme-traky, d | [5]Scatter
+     + 5: [0]Belmont | [1]1858 | [2]1559 | [3]1103 | [4]844 | [5]4
+     + 6: [0]Sanbornton | [1]933 | [2]819 | [3]674 | [4]505 | [5]0
+     + 7: [0]Tilton | [1]751 | [2]690 | [3]649 | [4]511 | [5]9
+     + 8: [0]Totals | [1]3542 | [2]3068 | [3]2426 | [4]1860 | [5]13
+
+Row  49: District No. 8 (2) F
+     + 1: [0]Belmont | [1]1858 | [2]1559 | [3]1103 | [4]844 | [5]4
+     + 2: [0]Sanbornton | [1]933 | [2]819 | [3]674 | [4]505 | [5]0
+     + 3: [0]Tilton | [1]751 | [2]690 | [3]649 | [4]511 | [5]9
+     + 4: [0]Totals | [1]3542 | [2]3068 | [3]2426 | [4]1860 | [5]13
+
+SUMMARY FOR Belknap:
+Districts found: 8
+Total seats: 18
+District details:
+  District 1: 1 seats
+  District 2: 2 seats
+  District 3: 1 seats
+  District 4: 1 seats
+  District 5: 4 seats
+  District 6: 4 seats
+  District 7: 3 seats
+  District 8: 2 seats
+
+================================================================================
+EXAMINING CARROLL COUNTY
+File: nh_election_data/2022-ge-house-carroll.xls
+Shape: (46, 8)
+================================================================================
+
+Row   1: District No. 1 (3)
+     + 1: [0]Conway | [1]1730 | [2]1614 | [3]1835 | [4]2206 | [5]2129
+     + 2: [empty]
+     + 3: [0]District No. 2 (2) | [1]Chandler, r | [2]Bacon, Jr., r | [3]McAleer, d | [4]Burroughs, d | [5]Scatter
+     + 4: [0]Albany | [1]158 | [2]125 | [3]163 | [4]184 | [5]0
+     + 5: [0]Bartlett | [1]856 | [2]547 | [3]879 | [4]1015 | [5]2
+     + 6: [0]Chatham | [1]101 | [2]88 | [3]75 | [4]83 | [5]1
+     + 7: [0]Hale's Location | [1]77 | [2]68 | [3]41 | [4]38 | [5]0
+     + 8: [0]Hart's Location | [1]23 | [2]18 | [3]12 | [4]16 | [5]0
+     + 9: [0]Jackson | [1]246 | [2]165 | [3]468 | [4]455 | [5]0
+     +10: [0]Sandwich | [1]366 | [2]308 | [3]594 | [4]626 | [5]0
+
+Row   4: District No. 2 (2)
+     + 1: [0]Albany | [1]158 | [2]125 | [3]163 | [4]184 | [5]0
+     + 2: [0]Bartlett | [1]856 | [2]547 | [3]879 | [4]1015 | [5]2
+     + 3: [0]Chatham | [1]101 | [2]88 | [3]75 | [4]83 | [5]1
+     + 4: [0]Hale's Location | [1]77 | [2]68 | [3]41 | [4]38 | [5]0
+     + 5: [0]Hart's Location | [1]23 | [2]18 | [3]12 | [4]16 | [5]0
+     + 6: [0]Jackson | [1]246 | [2]165 | [3]468 | [4]455 | [5]0
+     + 7: [0]Sandwich | [1]366 | [2]308 | [3]594 | [4]626 | [5]0
+     + 8: [0]Totals | [1]1827 | [2]1319 | [3]2232 | [4]2417 | [5]3
+     + 9: [0]District No. 3 (2) | [1]Crawford, r | [2]Brown, r | [3]Watson, d | [4]Todd, d | [5]Scatter
+     +10: [0]Madison | [1]559 | [2]580 | [3]721 | [4]665 | [5]2
+
+Row  13: District No. 3 (2)
+     + 1: [0]Madison | [1]559 | [2]580 | [3]721 | [4]665 | [5]2
+     + 2: [0]Moultonborough | [1]1826 | [2]1762 | [3]1139 | [4]978 | [5]8
+     + 3: [0]Tamworth | [1]615 | [2]605 | [3]692 | [4]648 | [5]1
+     + 4: [0]Totals | [1]3000 | [2]2947 | [3]2552 | [4]2291 | [5]11
+     + 5: [0]District No. 4 (2) | [1]Belcher, r | [2]Avellani, r | [3]Ogren, d | [4]Gehring, d | [5]Scatter
+     + 6: [0]Brookfield | [1]234 | [2]275 | [3]164 | [4]167 | [5]0
+     + 7: [0]Eaton | [1]93 | [2]79 | [3]164 | [4]148 | [5]0
+     + 8: [0]Effingham | [1]397 | [2]367 | [3]292 | [4]240 | [5]0
+     + 9: [0]Freedom | [1]484 | [2]385 | [3]442 | [4]363 | [5]0
+     +10: [0]Wakefield | [1]1428 | [2]1665 | [3]739 | [4]761 | [5]0
+
+Row  18: District No. 4 (2)
+     + 1: [0]Brookfield | [1]234 | [2]275 | [3]164 | [4]167 | [5]0
+     + 2: [0]Eaton | [1]93 | [2]79 | [3]164 | [4]148 | [5]0
+     + 3: [0]Effingham | [1]397 | [2]367 | [3]292 | [4]240 | [5]0
+     + 4: [0]Freedom | [1]484 | [2]385 | [3]442 | [4]363 | [5]0
+     + 5: [0]Wakefield | [1]1428 | [2]1665 | [3]739 | [4]761 | [5]0
+     + 6: [0]Totals | [1]2636 | [2]2771 | [3]1801 | [4]1679 | [5]0
+     + 7: [0]District No. 5 (1) | [1]Smith, r | [2]Pustell, d | [3]Scatter
+     + 8: [0]Ossipee | [1]1211 | [2]743 | [3]4
+     + 9: [0]District No. 6 (2) | [1]Peternel, r | [2]MacDonald, r | [3]Millner, d | [4]Duran, d | [5]Scatter
+     +10: [0]Tuftonboro | [1]863 | [2]783 | [3]541 | [4]605 | [5]4
+
+Row  25: District No. 5 (1)
+     + 1: [0]Ossipee | [1]1211 | [2]743 | [3]4
+     + 2: [0]District No. 6 (2) | [1]Peternel, r | [2]MacDonald, r | [3]Millner, d | [4]Duran, d | [5]Scatter
+     + 3: [0]Tuftonboro | [1]863 | [2]783 | [3]541 | [4]605 | [5]4
+     + 4: [0]Wolfeboro | [1]1958 | [2]1998 | [3]1540 | [4]1709 | [5]8
+     + 5: [0]Totals | [1]2821 | [2]2781 | [3]2081 | [4]2314 | [5]12
+     + 6: [0]District No. 7 (1) F | [1]Cordelli, r | [2]Boudman, d | [3]Scatter
+     + 7: [0]Ossipee | [1]1215 | [2]736 | [3]1
+     + 8: [0]Tuftonboro | [1]892 | [2]658 | [3]2
+     + 9: [0]Wolfeboro | [1]2012 | [2]1809 | [3]2
+     +10: [0]Totals | [1]4119 | [2]3203 | [3]5
+
+Row  27: District No. 6 (2)
+     + 1: [0]Tuftonboro | [1]863 | [2]783 | [3]541 | [4]605 | [5]4
+     + 2: [0]Wolfeboro | [1]1958 | [2]1998 | [3]1540 | [4]1709 | [5]8
+     + 3: [0]Totals | [1]2821 | [2]2781 | [3]2081 | [4]2314 | [5]12
+     + 4: [0]District No. 7 (1) F | [1]Cordelli, r | [2]Boudman, d | [3]Scatter
+     + 5: [0]Ossipee | [1]1215 | [2]736 | [3]1
+     + 6: [0]Tuftonboro | [1]892 | [2]658 | [3]2
+     + 7: [0]Wolfeboro | [1]2012 | [2]1809 | [3]2
+     + 8: [0]Totals | [1]4119 | [2]3203 | [3]5
+     + 9: [0]District No. 8 (2) F | [1]McConkey, r | [2]Costable, Jr., r | [3]Ringelstein, d | [4]Knirk, d | [5]Scatter
+     +10: [0]Brookfield | [1]261 | [2]225 | [3]166 | [4]161 | [5]0
+
+Row  31: District No. 7 (1) F
+     + 1: [0]Ossipee | [1]1215 | [2]736 | [3]1
+     + 2: [0]Tuftonboro | [1]892 | [2]658 | [3]2
+     + 3: [0]Wolfeboro | [1]2012 | [2]1809 | [3]2
+     + 4: [0]Totals | [1]4119 | [2]3203 | [3]5
+     + 5: [0]District No. 8 (2) F | [1]McConkey, r | [2]Costable, Jr., r | [3]Ringelstein, d | [4]Knirk, d | [5]Scatter
+     + 6: [0]Brookfield | [1]261 | [2]225 | [3]166 | [4]161 | [5]0
+     + 7: [0]Eaton | [1]103 | [2]71 | [3]142 | [4]158 | [5]0
+     + 8: [0]Effingham | [1]444 | [2]368 | [3]233 | [4]253 | [5]0
+     + 9: [0]Freedom | [1]513 | [2]358 | [3]349 | [4]457 | [5]0
+     +10: [0]Madison | [1]656 | [2]466 | [3]645 | [4]727 | [5]2
+
+Row  36: District No. 8 (2) F
+     + 1: [0]Brookfield | [1]261 | [2]225 | [3]166 | [4]161 | [5]0
+     + 2: [0]Eaton | [1]103 | [2]71 | [3]142 | [4]158 | [5]0
+     + 3: [0]Effingham | [1]444 | [2]368 | [3]233 | [4]253 | [5]0
+     + 4: [0]Freedom | [1]513 | [2]358 | [3]349 | [4]457 | [5]0
+     + 5: [0]Madison | [1]656 | [2]466 | [3]645 | [4]727 | [5]2
+     + 6: [0]Moultonborough | [1]1779 | [2]1463 | [3]1336 | [4]1098 | [5]0
+     + 7: [0]Tamworth | [1]698 | [2]515 | [3]634 | [4]697 | [5]2
+     + 8: [0]Wakefield | [1]1608 | [2]1319 | [3]782 | [4]747 | [5]0
+     + 9: [0]Totals | [1]6062 | [2]4785 | [3]4287 | [4]4298 | [5]4
+
+SUMMARY FOR Carroll:
+Districts found: 8
+Total seats: 15
+District details:
+  District 1: 3 seats
+  District 2: 2 seats
+  District 3: 2 seats
+  District 4: 2 seats
+  District 5: 1 seats
+  District 6: 2 seats
+  District 7: 1 seats
+  District 8: 2 seats
+
+================================================================================
+EXAMINING CHESHIRE COUNTY
+File: nh_election_data/2022-ge-house-cheshire_0.xls
+Shape: (84, 6)
+================================================================================
+
+Row   1: District No. 1 (1)
+     + 1: [0]Keene Ward 1 | [1]272 | [2]1095 | [3]11
+     + 2: [0]District No. 2 (1) | [1]Felix, r | [2]Fox, d | [3]Scatter
+     + 3: [0]Keene Ward 3 | [1]529 | [2]1289 | [3]0
+     + 4: [0]District No. 3 (1) | [1]Sickels, r | [2]Jones, d | [3]Scatter
+     + 5: [0]Keene Ward 5 | [1]636 | [2]1484 | [3]3
+     + 6: [0]District No. 4 (1) | [1]Savastano, r | [2]Newell, d | [3]Scatter
+     + 7: [0]Keene Ward 4 | [1]633 | [2]1276 | [3]1
+     + 8: [0]District No. 5 (1) | [1]Winter, r | [2]Weber, d | [3]Scatter
+     + 9: [0]Surry | [1]192 | [2]242 | [3]0
+     +10: [0]Walpole | [1]655 | [2]1197 | [3]3
+
+Row   3: District No. 2 (1)
+     + 1: [0]Keene Ward 3 | [1]529 | [2]1289 | [3]0
+     + 2: [0]District No. 3 (1) | [1]Sickels, r | [2]Jones, d | [3]Scatter
+     + 3: [0]Keene Ward 5 | [1]636 | [2]1484 | [3]3
+     + 4: [0]District No. 4 (1) | [1]Savastano, r | [2]Newell, d | [3]Scatter
+     + 5: [0]Keene Ward 4 | [1]633 | [2]1276 | [3]1
+     + 6: [0]District No. 5 (1) | [1]Winter, r | [2]Weber, d | [3]Scatter
+     + 7: [0]Surry | [1]192 | [2]242 | [3]0
+     + 8: [0]Walpole | [1]655 | [2]1197 | [3]3
+     + 9: [0]Totals | [1]847 | [2]1439 | [3]3
+     +10: [0]District No. 6 (2) | [1]Merkt, r | [2]Barton, r | [3]Harvey, d | [4]Abbott, d | [5]Scatter
+
+Row   5: District No. 3 (1)
+     + 1: [0]Keene Ward 5 | [1]636 | [2]1484 | [3]3
+     + 2: [0]District No. 4 (1) | [1]Savastano, r | [2]Newell, d | [3]Scatter
+     + 3: [0]Keene Ward 4 | [1]633 | [2]1276 | [3]1
+     + 4: [0]District No. 5 (1) | [1]Winter, r | [2]Weber, d | [3]Scatter
+     + 5: [0]Surry | [1]192 | [2]242 | [3]0
+     + 6: [0]Walpole | [1]655 | [2]1197 | [3]3
+     + 7: [0]Totals | [1]847 | [2]1439 | [3]3
+     + 8: [0]District No. 6 (2) | [1]Merkt, r | [2]Barton, r | [3]Harvey, d | [4]Abbott, d | [5]Scatter
+     + 9: [0]Chesterfield | [1]793 | [2]799 | [3]1036 | [4]1027 | [5]1
+     +10: [0]Hinsdale | [1]495 | [2]509 | [3]646 | [4]716 | [5]0
+
+Row   7: District No. 4 (1)
+     + 1: [0]Keene Ward 4 | [1]633 | [2]1276 | [3]1
+     + 2: [0]District No. 5 (1) | [1]Winter, r | [2]Weber, d | [3]Scatter
+     + 3: [0]Surry | [1]192 | [2]242 | [3]0
+     + 4: [0]Walpole | [1]655 | [2]1197 | [3]3
+     + 5: [0]Totals | [1]847 | [2]1439 | [3]3
+     + 6: [0]District No. 6 (2) | [1]Merkt, r | [2]Barton, r | [3]Harvey, d | [4]Abbott, d | [5]Scatter
+     + 7: [0]Chesterfield | [1]793 | [2]799 | [3]1036 | [4]1027 | [5]1
+     + 8: [0]Hinsdale | [1]495 | [2]509 | [3]646 | [4]716 | [5]0
+     + 9: [0]Westmoreland | [1]372 | [2]348 | [3]494 | [4]494 | [5]0
+     +10: [0]Totals | [1]1660 | [2]1656 | [3]2176 | [4]2237 | [5]1
+
+Row   9: District No. 5 (1)
+     + 1: [0]Surry | [1]192 | [2]242 | [3]0
+     + 2: [0]Walpole | [1]655 | [2]1197 | [3]3
+     + 3: [0]Totals | [1]847 | [2]1439 | [3]3
+     + 4: [0]District No. 6 (2) | [1]Merkt, r | [2]Barton, r | [3]Harvey, d | [4]Abbott, d | [5]Scatter
+     + 5: [0]Chesterfield | [1]793 | [2]799 | [3]1036 | [4]1027 | [5]1
+     + 6: [0]Hinsdale | [1]495 | [2]509 | [3]646 | [4]716 | [5]0
+     + 7: [0]Westmoreland | [1]372 | [2]348 | [3]494 | [4]494 | [5]0
+     + 8: [0]Totals | [1]1660 | [2]1656 | [3]2176 | [4]2237 | [5]1
+     + 9: [0]District No. 7 (1) | [1]Kamm, r | [2]Filiault, d | [3]Scatter
+     +10: [0]Keene Ward 2 | [1]497 | [2]1409 | [3]1
+
+Row  13: District No. 6 (2)
+     + 1: [0]Chesterfield | [1]793 | [2]799 | [3]1036 | [4]1027 | [5]1
+     + 2: [0]Hinsdale | [1]495 | [2]509 | [3]646 | [4]716 | [5]0
+     + 3: [0]Westmoreland | [1]372 | [2]348 | [3]494 | [4]494 | [5]0
+     + 4: [0]Totals | [1]1660 | [2]1656 | [3]2176 | [4]2237 | [5]1
+     + 5: [0]District No. 7 (1) | [1]Kamm, r | [2]Filiault, d | [3]Scatter
+     + 6: [0]Keene Ward 2 | [1]497 | [2]1409 | [3]1
+     + 7: [0]District No. 8 (1) | [2]Parshall, d | [3]Scatter
+     + 8: [0]Harrisville | [2]486 | [3]7
+     + 9: [0]Marlborough | [2]732 | [3]14
+     +10: [0]Nelson | [2]249 | [3]3
+
+Row  18: District No. 7 (1)
+     + 1: [0]Keene Ward 2 | [1]497 | [2]1409 | [3]1
+     + 2: [0]District No. 8 (1) | [2]Parshall, d | [3]Scatter
+     + 3: [0]Harrisville | [2]486 | [3]7
+     + 4: [0]Marlborough | [2]732 | [3]14
+     + 5: [0]Nelson | [2]249 | [3]3
+     + 6: [0]Roxbury | [2]82 | [3]0
+     + 7: [0]Sullivan | [2]196 | [3]5
+     + 8: [0]Totals | [2]1745 | [3]29
+     + 9: [0]District No. 9 (1) | [1]Nalevanko, r | [2]Eaton, d | [3]Scatter
+     +10: [0]Alstead | [1]410 | [2]516 | [3]0
+
+Row  20: District No. 8 (1)
+     + 1: [0]Harrisville | [2]486 | [3]7
+     + 2: [0]Marlborough | [2]732 | [3]14
+     + 3: [0]Nelson | [2]249 | [3]3
+     + 4: [0]Roxbury | [2]82 | [3]0
+     + 5: [0]Sullivan | [2]196 | [3]5
+     + 6: [0]Totals | [2]1745 | [3]29
+     + 7: [0]District No. 9 (1) | [1]Nalevanko, r | [2]Eaton, d | [3]Scatter
+     + 8: [0]Alstead | [1]410 | [2]516 | [3]0
+     + 9: [0]Gilsum | [1]193 | [2]201 | [3]0
+     +10: [0]Marlow | [1]180 | [2]187 | [3]1
+
+Row  27: District No. 9 (1)
+     + 1: [0]Alstead | [1]410 | [2]516 | [3]0
+     + 2: [0]Gilsum | [1]193 | [2]201 | [3]0
+     + 3: [0]Marlow | [1]180 | [2]187 | [3]1
+     + 4: [0]Stoddard | [1]344 | [2]351 | [3]0
+     + 5: [0]Totals | [1]1127 | [2]1255 | [3]1
+     + 6: [0]District No. 10 (2) | [1]York, r | [2]LeClair, r | [3]Tatro, d | [4]Faulkner, d | [5]Scatter
+     + 7: [0]Richmond | [1]264 | [2]298 | [3]201 | [4]191 | [5]2
+     + 8: [0]Swanzey | [1]1218 | [2]1265 | [3]1571 | [4]1467 | [5]0
+     + 9: [0]Totals | [1]1482 | [2]1563 | [3]1772 | [4]1658 | [5]2
+     +10: [0]District No. 11 (1) | [1]Nutting, r | [2]Quevedo, d | [3]Scatter
+
+Row  33: District No. 10 (2)
+     + 1: [0]Richmond | [1]264 | [2]298 | [3]201 | [4]191 | [5]2
+     + 2: [0]Swanzey | [1]1218 | [2]1265 | [3]1571 | [4]1467 | [5]0
+     + 3: [0]Totals | [1]1482 | [2]1563 | [3]1772 | [4]1658 | [5]2
+     + 4: [0]District No. 11 (1) | [1]Nutting, r | [2]Quevedo, d | [3]Scatter
+     + 5: [0]Winchester | [1]766 | [2]679 | [3]2
+     + 6: [0]District No. 12 (1) | [1]Thackston, r | [2]Gettens, d | [3]Scatter
+     + 7: [0]Fitzwilliam  | [1]597 | [2]505 | [3]2
+     + 8: [0]Troy | [1]449 | [2]355 | [3]1
+     + 9: [0]Totals | [1]1046 | [2]860 | [3]3
+     +10: [0]District No. 13 (1) | [1]Mattson, r | [2]Ames, d | [3]Scatter
+
+Row  37: District No. 11 (1)
+     + 1: [0]Winchester | [1]766 | [2]679 | [3]2
+     + 2: [0]District No. 12 (1) | [1]Thackston, r | [2]Gettens, d | [3]Scatter
+     + 3: [0]Fitzwilliam  | [1]597 | [2]505 | [3]2
+     + 4: [0]Troy | [1]449 | [2]355 | [3]1
+     + 5: [0]Totals | [1]1046 | [2]860 | [3]3
+     + 6: [0]District No. 13 (1) | [1]Mattson, r | [2]Ames, d | [3]Scatter
+     + 7: [0]Dublin | [1]375 | [2]548 | [3]0
+     + 8: [0]Jaffrey | [1]1150 | [2]1228 | [3]2
+     + 9: [0]Totals | [1]1525 | [2]1776 | [3]2
+     +10: [0]District No. 14 (1) FL | [1]Hunt, r | [2]Bissex, d | [3]Scatter
+
+Row  39: District No. 12 (1)
+     + 1: [0]Fitzwilliam  | [1]597 | [2]505 | [3]2
+     + 2: [0]Troy | [1]449 | [2]355 | [3]1
+     + 3: [0]Totals | [1]1046 | [2]860 | [3]3
+     + 4: [0]District No. 13 (1) | [1]Mattson, r | [2]Ames, d | [3]Scatter
+     + 5: [0]Dublin | [1]375 | [2]548 | [3]0
+     + 6: [0]Jaffrey | [1]1150 | [2]1228 | [3]2
+     + 7: [0]Totals | [1]1525 | [2]1776 | [3]2
+     + 8: [0]District No. 14 (1) FL | [1]Hunt, r | [2]Bissex, d | [3]Scatter
+     + 9: [0]Rindge | [1]1766 | [2]1028 | [3]2
+     +10: [0]District No. 15 (2) FL | [1]Schmitt, r | [2]Mirzoeff, r | [3]Toll, d | [4]Monteil, d | [5]Scatter
+
+Row  43: District No. 13 (1)
+     + 1: [0]Dublin | [1]375 | [2]548 | [3]0
+     + 2: [0]Jaffrey | [1]1150 | [2]1228 | [3]2
+     + 3: [0]Totals | [1]1525 | [2]1776 | [3]2
+     + 4: [0]District No. 14 (1) FL | [1]Hunt, r | [2]Bissex, d | [3]Scatter
+     + 5: [0]Rindge | [1]1766 | [2]1028 | [3]2
+     + 6: [0]District No. 15 (2) FL | [1]Schmitt, r | [2]Mirzoeff, r | [3]Toll, d | [4]Monteil, d | [5]Scatter
+     + 7: [0]Chesterfield | [1]818 | [2]745 | [3]1030 | [4]976 | [5]2
+     + 8: [0]Hinsdale | [1]556 | [2]487 | [3]666 | [4]620 | [5]0
+     + 9: [0]Keene Ward 1 | [1]325 | [2]295 | [3]1017 | [4]962 | [5]8
+     +10: [0]Keene Ward 3 | [1]524 | [2]464 | [3]1221 | [4]1147 | [5]0
+
+Row  47: District No. 14 (1) FL
+     + 1: [0]Rindge | [1]1766 | [2]1028 | [3]2
+     + 2: [0]District No. 15 (2) FL | [1]Schmitt, r | [2]Mirzoeff, r | [3]Toll, d | [4]Monteil, d | [5]Scatter
+     + 3: [0]Chesterfield | [1]818 | [2]745 | [3]1030 | [4]976 | [5]2
+     + 4: [0]Hinsdale | [1]556 | [2]487 | [3]666 | [4]620 | [5]0
+     + 5: [0]Keene Ward 1 | [1]325 | [2]295 | [3]1017 | [4]962 | [5]8
+     + 6: [0]Keene Ward 3 | [1]524 | [2]464 | [3]1221 | [4]1147 | [5]0
+     + 7: [0]Keene Ward 4 | [1]582 | [2]522 | [3]1243 | [4]1141 | [5]4
+     + 8: [0]Keene Ward 5 | [1]623 | [2]567 | [3]1462 | [4]1366 | [5]0
+     + 9: [0]Surry | [1]184 | [2]162 | [3]227 | [4]214 | [5]1
+     +10: [0]Walpole | [1]667 | [2]593 | [3]1129 | [4]1033 | [5]1
+
+Row  49: District No. 15 (2) FL
+     + 1: [0]Chesterfield | [1]818 | [2]745 | [3]1030 | [4]976 | [5]2
+     + 2: [0]Hinsdale | [1]556 | [2]487 | [3]666 | [4]620 | [5]0
+     + 3: [0]Keene Ward 1 | [1]325 | [2]295 | [3]1017 | [4]962 | [5]8
+     + 4: [0]Keene Ward 3 | [1]524 | [2]464 | [3]1221 | [4]1147 | [5]0
+     + 5: [0]Keene Ward 4 | [1]582 | [2]522 | [3]1243 | [4]1141 | [5]4
+     + 6: [0]Keene Ward 5 | [1]623 | [2]567 | [3]1462 | [4]1366 | [5]0
+     + 7: [0]Surry | [1]184 | [2]162 | [3]227 | [4]214 | [5]1
+     + 8: [0]Walpole | [1]667 | [2]593 | [3]1129 | [4]1033 | [5]1
+     + 9: [0]Westmoreland | [1]368 | [2]336 | [3]490 | [4]563 | [5]0
+     +10: [0]Totals | [1]4647 | [2]4171 | [3]8485 | [4]8022 | [5]16
+
+Row  60: District No. 16 (1) FL
+     + 1: [0]Alstead | [1]394 | [2]517 | [3]0
+     + 2: [0]Gilsum | [1]195 | [2]193 | [3]0
+     + 3: [0]Harrisville | [1]166 | [2]455 | [3]0
+     + 4: [0]Keene Ward 2 | [1]514 | [2]1404 | [3]1
+     + 5: [0]Marlborough | [1]343 | [2]624 | [3]0
+     + 6: [0]Marlow | [1]169 | [2]196 | [3]0
+     + 7: [0]Nelson | [1]133 | [2]219 | [3]0
+     + 8: [0]Roxbury | [1]33 | [2]73 | [3]0
+     + 9: [0]Stoddard | [1]328 | [2]358 | [3]2
+     +10: [0]Sullivan | [1]149 | [2]157 | [3]1
+
+Row  72: District No. 17 (1) FL
+     + 1: [0]Fitzwilliam | [1]606 | [2]500 | [3]1
+     + 2: [0]Richmond | [1]340 | [2]186 | [3]0
+     + 3: [0]Swanzey | [1]1568 | [2]1428 | [3]0
+     + 4: [0]Troy | [1]479 | [2]320 | [3]0
+     + 5: [0]Winchester | [1]799 | [2]636 | [3]4
+     + 6: [0]Totals | [1]3792 | [2]3070 | [3]5
+     + 7: [0]District No. 18 (2) FL | [1]Santonastaso, r | [2]Qualey, r | [3]McCarthy, d | [4]Dickler, d | [5]Scatter 
+     + 8: [0]Dublin | [1]328 | [2]331 | [3]534 | [4]518 | [5]0
+     + 9: [0]Jaffrey | [1]1040 | [2]985 | [3]1257 | [4]1135 | [5]1
+     +10: [0]Rindge | [1]1549 | [2]1611 | [3]1020 | [4]968 | [5]3
+
+Row  79: District No. 18 (2) FL
+     + 1: [0]Dublin | [1]328 | [2]331 | [3]534 | [4]518 | [5]0
+     + 2: [0]Jaffrey | [1]1040 | [2]985 | [3]1257 | [4]1135 | [5]1
+     + 3: [0]Rindge | [1]1549 | [2]1611 | [3]1020 | [4]968 | [5]3
+     + 4: [0]Totals | [1]2917 | [2]2927 | [3]2811 | [4]2621 | [5]4
+
+SUMMARY FOR Cheshire:
+Districts found: 18
+Total seats: 22
+District details:
+  District 1: 1 seats
+  District 2: 1 seats
+  District 3: 1 seats
+  District 4: 1 seats
+  District 5: 1 seats
+  District 6: 2 seats
+  District 7: 1 seats
+  District 8: 1 seats
+  District 9: 1 seats
+  District 10: 2 seats
+  District 11: 1 seats
+  District 12: 1 seats
+  District 13: 1 seats
+  District 14: 1 seats
+  District 15: 2 seats
+  District 16: 1 seats
+  District 17: 1 seats
+  District 18: 2 seats
+
+================================================================================
+EXAMINING COOS COUNTY
+File: nh_election_data/2022-ge-house-coos_1.xls
+Shape: (63, 6)
+================================================================================
+
+Row   1: District No. 1 (2) 
+     + 1: [0]Dalton | [1]215 | [2]211 | [3]204 | [4]3
+     + 2: [0]Lancaster | [1]641 | [2]668 | [3]565 | [4]2
+     + 3: [0]Northumberland | [1]472 | [2]405 | [3]227 | [4]0
+     + 4: [0]Stratford | [1]118 | [2]96 | [3]114 | [4]2
+     + 5: [0]Totals | [1]1446 | [2]1380 | [3]1110 | [4]7
+     + 6: [0]District No. 2 (1) | [1]Davis, r | [2]Doherty, d | [3]Scatter
+     + 7: [0]At. & Gilm. Ac. Grant | [1]0 | [2]0 | [3]0
+     + 8: [0]Cambridge | [1]2 | [2]1 | [3]0
+     + 9: [0]Clarksville | [1]90 | [2]60 | [3]2
+     +10: [0]Dix's Grant | [1]0 | [2]0 | [3]0
+
+Row   7: District No. 2 (1)
+     + 1: [0]At. & Gilm. Ac. Grant | [1]0 | [2]0 | [3]0
+     + 2: [0]Cambridge | [1]2 | [2]1 | [3]0
+     + 3: [0]Clarksville | [1]90 | [2]60 | [3]2
+     + 4: [0]Dix's Grant | [1]0 | [2]0 | [3]0
+     + 5: [0]Dixville | [1]3 | [2]2 | [3]0
+     + 6: [0]Dummer | [1]79 | [2]50 | [3]0
+     + 7: [0]Errol | [1]119 | [2]55 | [3]0
+     + 8: [0]Milan | [1]360 | [2]249 | [3]0
+     + 9: [0]Millsfield | [1]13 | [2]4 | [3]0
+     +10: [0]Odell | [1]0 | [2]0 | [3]0
+
+Row  23: District No. 3 (1)
+     + 1: [0]Colebrook | [1]695 | [3]12
+     + 2: [0]Columbia | [1]236 | [3]1
+     + 3: [0]Erving's Location | [1]0 | [3]0
+     + 4: [0]Stewartstown | [1]238 | [3]10
+     + 5: [0]Totals | [1]1169 | [3]23
+     + 6: [0]District No. 4 (1) | [1]King, r | [2]Colt, d | [3]Scatter
+     + 7: [0]Carroll | [1]227 | [2]194 | [3]0
+     + 8: [0]Jefferson | [1]352 | [2]187 | [3]0
+     + 9: [0]Kilkenny | [1]0 | [2]0 | [3]0
+     +10: [0]Whitefield | [1]530 | [2]530 | [3]1
+
+Row  29: District No. 4 (1)
+     + 1: [0]Carroll | [1]227 | [2]194 | [3]0
+     + 2: [0]Jefferson | [1]352 | [2]187 | [3]0
+     + 3: [0]Kilkenny | [1]0 | [2]0 | [3]0
+     + 4: [0]Whitefield | [1]530 | [2]530 | [3]1
+     + 5: [0]Totals | [1]1109 | [2]911 | [3]1
+     + 6: [0]District No. 5 (2) | [1]Hale, r | [2]Korzen, r | [3]Noel, d | [4]Cascadden, d | [5]Scatter
+     + 7: [0]Berlin | [1]1048 | [2]1355 | [3]1410 | [4]1515 | [5]3
+     + 8: [0]Recount | [1]1048 | [2]1361 | [3]1418 | [4]1519
+     + 9: [0]District No. 6 (1) | [1]Unger, Jr., r | [2]Hatch, d | [3]Scatter
+     +10: [0]Bean's Grant | [1]0 | [2]0 | [3]0
+
+Row  35: District No. 5 (2)
+     + 1: [0]Berlin | [1]1048 | [2]1355 | [3]1410 | [4]1515 | [5]3
+     + 2: [0]Recount | [1]1048 | [2]1361 | [3]1418 | [4]1519
+     + 3: [0]District No. 6 (1) | [1]Unger, Jr., r | [2]Hatch, d | [3]Scatter
+     + 4: [0]Bean's Grant | [1]0 | [2]0 | [3]0
+     + 5: [0]Bean's Purchase | [1]0 | [2]0 | [3]0
+     + 6: [0]Chandler's Purchase | [1]0 | [2]0 | [3]0
+     + 7: [0]Crawford's Purchase | [1]0 | [2]0 | [3]0
+     + 8: [0]Cutt's Grant | [1]0 | [2]0 | [3]0
+     + 9: [0]Gorham | [1]540 | [2]727 | [3]1
+     +10: [0]Green's Grant | [1]0 | [2]1 | [3]0
+
+Row  38: District No. 6 (1)
+     + 1: [0]Bean's Grant | [1]0 | [2]0 | [3]0
+     + 2: [0]Bean's Purchase | [1]0 | [2]0 | [3]0
+     + 3: [0]Chandler's Purchase | [1]0 | [2]0 | [3]0
+     + 4: [0]Crawford's Purchase | [1]0 | [2]0 | [3]0
+     + 5: [0]Cutt's Grant | [1]0 | [2]0 | [3]0
+     + 6: [0]Gorham | [1]540 | [2]727 | [3]1
+     + 7: [0]Green's Grant | [1]0 | [2]1 | [3]0
+     + 8: [0]Hadley's Purchase | [1]0 | [2]0 | [3]0
+     + 9: [0]Low and Burbank's Gt. | [1]0 | [2]0 | [3]0
+     +10: [0]Martin's Location | [1]0 | [2]0 | [3]0
+
+Row  56: District No. 7 (1) FL
+     + 1: [0]Berlin | [1]1325 | [2]1329 | [3]1595 | [4]1600 | [5]1
+     + 2: [0]Carroll | [1]230 | [2]230 | [3]186 | [4]188 | [5]0
+     + 3: [0]Jefferson | [1]339 | [2]338 | [3]182 | [4]183 | [5]0
+     + 4: [0]Kilkenny | [1]0 | [2]0 | [3]0 | [4]0 | [5]0
+     + 5: [0]Whitefield | [1]553 | [2]553 | [3]480 | [4]481 | [5]0
+     + 6: [0]Totals | [1]2447 | [2]2450 | [3]2443 | [4]2452 | [5]1
+
+SUMMARY FOR Coos:
+Districts found: 7
+Total seats: 9
+District details:
+  District 1: 2 seats
+  District 2: 1 seats
+  District 3: 1 seats
+  District 4: 1 seats
+  District 5: 2 seats
+  District 6: 1 seats
+  District 7: 1 seats
+
+================================================================================
+EXAMINING GRAFTON COUNTY
+File: nh_election_data/2022-ge-house-grafton_1.xls
+Shape: (104, 8)
+================================================================================
+
+Row   1: District No. 1 (3)
+     + 1: [0]Bath | [1]249 | [2]263 | [3]237 | [4]188 | [5]184
+     + 2: [0]Lisbon | [1]286 | [2]309 | [3]307 | [4]238 | [5]237
+     + 3: [0]Littleton | [1]1037 | [2]1177 | [3]1307 | [4]1028 | [5]1007
+     + 4: [0]Lyman | [1]156 | [2]179 | [3]164 | [4]122 | [5]127
+     + 5: [0]Monroe | [1]213 | [2]234 | [3]217 | [4]153 | [5]145
+     + 6: [0]Sugar Hill | [1]117 | [2]130 | [3]126 | [4]255 | [5]258
+     + 7: [0]Totals | [1]2058 | [2]2292 | [3]2358 | [4]1984 | [5]1958
+     + 8: [empty]
+     + 9: [0]District No. 2 (1) | [1]Qi, r | [2]Sullivan, d | [3]Scatter
+     +10: [0]Bethlehem | [1]494 | [2]857 | [3]3
+
+Row  10: District No. 2 (1)
+     + 1: [0]Bethlehem | [1]494 | [2]857 | [3]3
+     + 2: [0]Franconia | [1]229 | [2]462 | [3]0
+     + 3: [0]Totals | [1]723 | [2]1319 | [3]3
+     + 4: [empty]
+     + 5: [0]District No. 3 (1) | [1]Ham, r | [2]Stringham, d | [3]Scatter
+     + 6: [0]Easton | [1]67 | [2]143 | [3]0
+     + 7: [0]Lincoln | [1]328 | [2]377 | [3]5
+     + 8: [0]Livermore | [1]0 | [2]0 | [3]0
+     + 9: [0]Woodstock | [1]304 | [2]342 | [3]2
+     +10: [0]Totals | [1]699 | [2]862 | [3]7
+
+Row  15: District No. 3 (1)
+     + 1: [0]Easton | [1]67 | [2]143 | [3]0
+     + 2: [0]Lincoln | [1]328 | [2]377 | [3]5
+     + 3: [0]Livermore | [1]0 | [2]0 | [3]0
+     + 4: [0]Woodstock | [1]304 | [2]342 | [3]2
+     + 5: [0]Totals | [1]699 | [2]862 | [3]7
+     + 6: [empty]
+     + 7: [0]District No 4 (1) | [1]Babin, r | [2]Baldwin, d | [3]Scatter
+     + 8: [0]Ellsworth | [1]27 | [2]34 | [3]0
+     + 9: [0]Thornton | [1]666 | [2]763 | [3]0
+     +10: [0]Waterville Valley | [1]158 | [2]191 | [3]0
+
+Row  22: District No 4 (1)
+     + 1: [0]Ellsworth | [1]27 | [2]34 | [3]0
+     + 2: [0]Thornton | [1]666 | [2]763 | [3]0
+     + 3: [0]Waterville Valley | [1]158 | [2]191 | [3]0
+     + 4: [0]Totals | [1]851 | [2]988 | [3]0
+     + 5: [empty]
+     + 6: [0]District No. 5 (2) | [1]Ladd, r | [2]Coulon, r | [3]scatter
+     + 7: [0]Benton | [1]136 | [2]103 | [3]0
+     + 8: [0]Haverhill | [1]1173 | [2]950 | [3]17
+     + 9: [0]Landaff | [1]135 | [2]123 | [3]6
+     +10: [0]Piermont | [1]223 | [2]185 | [3]8
+
+Row  28: District No. 5 (2)
+     + 1: [0]Benton | [1]136 | [2]103 | [3]0
+     + 2: [0]Haverhill | [1]1173 | [2]950 | [3]17
+     + 3: [0]Landaff | [1]135 | [2]123 | [3]6
+     + 4: [0]Piermont | [1]223 | [2]185 | [3]8
+     + 5: [0]Warren | [1]236 | [2]199 | [3]7
+     + 6: [0]Totals | [1]1903 | [2]1560 | [3]38
+     + 7: [empty]
+     + 8: [0]District No. 6 (1) | [1]Greeson, r | [2]Tomlinson, d | [3]Scatter
+     + 9: [0]Orford | [1]237 | [2]410 | [3]2
+     +10: [0]Rumney | [1]462 | [2]330
+
+Row  36: District No. 6 (1)
+     + 1: [0]Orford | [1]237 | [2]410 | [3]2
+     + 2: [0]Rumney | [1]462 | [2]330
+     + 3: [0]Wentworth | [1]307 | [2]184 | [3]3
+     + 4: [0]Totals | [1]1006 | [2]924 | [3]5
+     + 5: [empty]
+     + 6: [0]District No.7 (1) | [1]Alliegro, r | [2]Hoyt, d | [3]Scatter
+     + 7: [0]Campton | [1]837 | [2]856 | [3]4
+     + 8: [0]Recount | [1]840 | [2]858
+     + 9: [0]District No 8 (3) | [1]Hughes, r | [2]Kirk, r | [3]McLaughlin, r | [4]Bolton, d | [5]Fellows, d
+     +10: [0]Ashland | [1]490 | [2]332 | [3]362 | [4]406 | [5]435
+
+Row  42: District No.7 (1)
+     + 1: [0]Campton | [1]837 | [2]856 | [3]4
+     + 2: [0]Recount | [1]840 | [2]858
+     + 3: [0]District No 8 (3) | [1]Hughes, r | [2]Kirk, r | [3]McLaughlin, r | [4]Bolton, d | [5]Fellows, d
+     + 4: [0]Ashland | [1]490 | [2]332 | [3]362 | [4]406 | [5]435
+     + 5: [0]Holderness | [1]463 | [2]407 | [3]422 | [4]638 | [5]676
+     + 6: [0]Plymouth | [1]709 | [2]620 | [3]666 | [4]1377 | [5]1414
+     + 7: [0]Totals | [1]1662 | [2]1359 | [3]1450 | [4]2421 | [5]2525
+     + 8: [empty]
+     + 9: [0]District No. 9 (1) | [1]McFarlane, r | [2]Morse, d | [3]Scatter
+     +10: [0]Canaan | [1]692 | [2]884 | [3]0
+
+Row  45: District No 8 (3)
+     + 1: [0]Ashland | [1]490 | [2]332 | [3]362 | [4]406 | [5]435
+     + 2: [0]Holderness | [1]463 | [2]407 | [3]422 | [4]638 | [5]676
+     + 3: [0]Plymouth | [1]709 | [2]620 | [3]666 | [4]1377 | [5]1414
+     + 4: [0]Totals | [1]1662 | [2]1359 | [3]1450 | [4]2421 | [5]2525
+     + 5: [empty]
+     + 6: [0]District No. 9 (1) | [1]McFarlane, r | [2]Morse, d | [3]Scatter
+     + 7: [0]Canaan | [1]692 | [2]884 | [3]0
+     + 8: [0]Dorchester | [1]99 | [2]82 | [3]0
+     + 9: [0]Orange | [1]84 | [2]64 | [3]0
+     +10: [0]Totals | [1]875 | [2]1030 | [3]0
+
+Row  51: District No. 9 (1)
+     + 1: [0]Canaan | [1]692 | [2]884 | [3]0
+     + 2: [0]Dorchester | [1]99 | [2]82 | [3]0
+     + 3: [0]Orange | [1]84 | [2]64 | [3]0
+     + 4: [0]Totals | [1]875 | [2]1030 | [3]0
+     + 5: [empty]
+     + 6: [0]District No. 10 (1) | [1]Brown, Jr., r | [2]Largmann, d | [3]Scatter
+     + 7: [0]Bridgewater | [1]349 | [2]259 | [3]0
+     + 8: [0]Bristol | [1]906 | [2]604 | [3]1
+     + 9: [0]Totals | [1]1255 | [2]863 | [3]1
+     +10: [empty]
+
+Row  57: District No. 10 (1)
+     + 1: [0]Bridgewater | [1]349 | [2]259 | [3]0
+     + 2: [0]Bristol | [1]906 | [2]604 | [3]1
+     + 3: [0]Totals | [1]1255 | [2]863 | [3]1
+     + 4: [empty]
+     + 5: [0]District No 11 (1) | [1]Berezhny, r | [2]Mulholland, d | [3]Scatter
+     + 6: [0]Alexandria | [1]483 | [2]331 | [3]2
+     + 7: [0]Grafton | [1]349 | [2]254 | [3]0
+     + 8: [0]Groton | [1]191 | [2]114 | [3]0
+     + 9: [0]Hebron | [1]241 | [2]206 | [3]0
+     +10: [0]Totals | [1]1264 | [2]905 | [3]2
+
+Row  62: District No 11 (1)
+     + 1: [0]Alexandria | [1]483 | [2]331 | [3]2
+     + 2: [0]Grafton | [1]349 | [2]254 | [3]0
+     + 3: [0]Groton | [1]191 | [2]114 | [3]0
+     + 4: [0]Hebron | [1]241 | [2]206 | [3]0
+     + 5: [0]Totals | [1]1264 | [2]905 | [3]2
+     + 6: [empty]
+     + 7: [0]District No. 12 (4) | [1]Muirhead, d | [2]Murphy, d | [3]Nordgren, d | [4]Hakken-Phillips, d | [5]Scatter
+     + 8: [0]Hanover | [1]4527 | [2]4500 | [3]4449 | [4]4464 | [5]109
+     + 9: [0]Lyme | [1]859 | [2]865 | [3]863 | [4]858 | [5]12
+     +10: [0]TOTALS | [1]5386 | [2]5365 | [3]5312 | [4]5322 | [5]121
+
+Row  69: District No. 12 (4)
+     + 1: [0]Hanover | [1]4527 | [2]4500 | [3]4449 | [4]4464 | [5]109
+     + 2: [0]Lyme | [1]859 | [2]865 | [3]863 | [4]858 | [5]12
+     + 3: [0]TOTALS | [1]5386 | [2]5365 | [3]5312 | [4]5322 | [5]121
+     + 4: [empty]
+     + 5: [0]District No. 13 (1) | [1]Stavis, d | [2]Scatter
+     + 6: [0]Lebanon Ward 1 | [1]1640 | [2]8
+     + 7: [empty]
+     + 8: [0]District No. 14 (1) | [1]Sykes, d | [2]Scatter
+     + 9: [0]Lebanon Ward 2 | [1]1641 | [2]12
+     +10: [empty]
+
+Row  74: District No. 13 (1)
+     + 1: [0]Lebanon Ward 1 | [1]1640 | [2]8
+     + 2: [empty]
+     + 3: [0]District No. 14 (1) | [1]Sykes, d | [2]Scatter
+     + 4: [0]Lebanon Ward 2 | [1]1641 | [2]12
+     + 5: [empty]
+     + 6: [0]District No. 15 (1) | [1]Cormen, d | [2]Mouzourakis, i | [3]Scatter
+     + 7: [0]Lebanon Ward 3 | [1]1416 | [2]486 | [3]0
+     + 8: [empty]
+     + 9: [0]District No. 16 (1)FL | [1]Adjutant, d | [2]Scatter
+     +10: [0]Enfield | [1]1597 | [2]0
+
+Row  77: District No. 14 (1)
+     + 1: [0]Lebanon Ward 2 | [1]1641 | [2]12
+     + 2: [empty]
+     + 3: [0]District No. 15 (1) | [1]Cormen, d | [2]Mouzourakis, i | [3]Scatter
+     + 4: [0]Lebanon Ward 3 | [1]1416 | [2]486 | [3]0
+     + 5: [empty]
+     + 6: [0]District No. 16 (1)FL | [1]Adjutant, d | [2]Scatter
+     + 7: [0]Enfield | [1]1597 | [2]0
+     + 8: [empty]
+     + 9: [0]District No. 17 (1)FL | [1]Almy, d | [2]Scatter
+     +10: [0]Lebanon Ward 1 | [1]1646 | [2]4
+
+Row  80: District No. 15 (1)
+     + 1: [0]Lebanon Ward 3 | [1]1416 | [2]486 | [3]0
+     + 2: [empty]
+     + 3: [0]District No. 16 (1)FL | [1]Adjutant, d | [2]Scatter
+     + 4: [0]Enfield | [1]1597 | [2]0
+     + 5: [empty]
+     + 6: [0]District No. 17 (1)FL | [1]Almy, d | [2]Scatter
+     + 7: [0]Lebanon Ward 1 | [1]1646 | [2]4
+     + 8: [0]Lebanon Ward 2 | [1]1638 | [2]9
+     + 9: [0]Lebanon Ward 3 | [1]1701 | [2]20
+     +10: [0]Totals | [1]4985 | [2]33
+
+Row  83: District No. 16 (1)FL
+     + 1: [0]Enfield | [1]1597 | [2]0
+     + 2: [empty]
+     + 3: [0]District No. 17 (1)FL | [1]Almy, d | [2]Scatter
+     + 4: [0]Lebanon Ward 1 | [1]1646 | [2]4
+     + 5: [0]Lebanon Ward 2 | [1]1638 | [2]9
+     + 6: [0]Lebanon Ward 3 | [1]1701 | [2]20
+     + 7: [0]Totals | [1]4985 | [2]33
+     + 8: [empty]
+     + 9: [0]District No. 18 (1)FL | [1]Sellers, r | [2]Recount | [3]Fluehr-Lobban, d | [4]Recount | [5]Scatter
+     +10: [0]Alexandria | [1]506 | [2]507 | [3]318 | [4]317 | [5]1
+
+Row  86: District No. 17 (1)FL
+     + 1: [0]Lebanon Ward 1 | [1]1646 | [2]4
+     + 2: [0]Lebanon Ward 2 | [1]1638 | [2]9
+     + 3: [0]Lebanon Ward 3 | [1]1701 | [2]20
+     + 4: [0]Totals | [1]4985 | [2]33
+     + 5: [empty]
+     + 6: [0]District No. 18 (1)FL | [1]Sellers, r | [2]Recount | [3]Fluehr-Lobban, d | [4]Recount | [5]Scatter
+     + 7: [0]Alexandria | [1]506 | [2]507 | [3]318 | [4]317 | [5]1
+     + 8: [0]Bridgewater | [1]410 | [2]410 | [3]246 | [4]287 | [5]0
+     + 9: [0]Bristol | [1]804 | [2]805 | [3]703 | [4]703 | [5]2
+     +10: [0]Canaan | [1]696 | [2]700 | [3]865 | [4]867 | [5]0
+
+Row  92: District No. 18 (1)FL
+     + 1: [0]Alexandria | [1]506 | [2]507 | [3]318 | [4]317 | [5]1
+     + 2: [0]Bridgewater | [1]410 | [2]410 | [3]246 | [4]287 | [5]0
+     + 3: [0]Bristol | [1]804 | [2]805 | [3]703 | [4]703 | [5]2
+     + 4: [0]Canaan | [1]696 | [2]700 | [3]865 | [4]867 | [5]0
+     + 5: [0]Dorchester | [1]98 | [2]98 | [3]81 | [4]81 | [5]0
+     + 6: [0]Enfield | [1]825 | [2]826 | [3]1341 | [4]1340 | [5]0
+     + 7: [0]Grafton | [1]358 | [2]356 | [3]247 | [4]247 | [5]0
+     + 8: [0]Groton | [1]197 | [2]197 | [3]110 | [4]108 | [5]0
+     + 9: [0]Hebron | [1]249 | [2]250 | [3]207 | [4]205 | [5]0
+     +10: [0]Orange | [1]80 | [2]80 | [3]70 | [4]70 | [5]0
+
+SUMMARY FOR Grafton:
+Districts found: 18
+Total seats: 26
+District details:
+  District 1: 3 seats
+  District 2: 1 seats
+  District 3: 1 seats
+  District 4: 1 seats
+  District 5: 2 seats
+  District 6: 1 seats
+  District 7: 1 seats
+  District 8: 3 seats
+  District 9: 1 seats
+  District 10: 1 seats
+  District 11: 1 seats
+  District 12: 4 seats
+  District 13: 1 seats
+  District 14: 1 seats
+  District 15: 1 seats
+  District 16: 1 seats
+  District 17: 1 seats
+  District 18: 1 seats
+
+================================================================================
+EXAMINING HILLSBOROUGH COUNTY
+File: nh_election_data/2022-ge-house-hillsborough_12.xls
+Shape: (196, 10)
+================================================================================
+
+Row   1: District No. 1 (4)
+     + 1: [0]Pelham | [1]3610 | [2]3540 | [3]3533 | [4]4240
+     + 2: [1]Dadak, d | [2]Hennessey, d | [3]Lynde, d | [4]Chapman, d | [5]Scattrer
+     + 3: [0]Pelham | [1]2157 | [2]2339 | [3]2294 | [4]2171 | [5]11
+     + 4: [empty]
+     + 5: [0]District No. 2 (7) | [1]Schneller, r | [2]Albiston, r | [3]Gorski, r | [4]Gould, r | [5]Hynes, r
+     + 6: [0]Bedford | [1]5176 | [2]5107 | [3]5466 | [4]5607 | [5]5227
+     + 7: [1]Schmitt, d | [2]Fitzgerald, d | [3]Foxx, d | [4]Kerr, d | [5]LaMarche, d | [6]Potvin, d
+     + 8: [0]Bedford | [1]4818 | [2]5107 | [3]5223 | [4]4946 | [5]5168
+     + 9: [empty]
+     +10: [0]District No. 3 (3) | [1]Baumeister, r | [2]Cote, d | [3]Davis, d | [4]Laughton, d | [5]Scatter
+
+Row   6: District No. 2 (7)
+     + 1: [0]Bedford | [1]5176 | [2]5107 | [3]5466 | [4]5607 | [5]5227
+     + 2: [1]Schmitt, d | [2]Fitzgerald, d | [3]Foxx, d | [4]Kerr, d | [5]LaMarche, d | [6]Potvin, d
+     + 3: [0]Bedford | [1]4818 | [2]5107 | [3]5223 | [4]4946 | [5]5168
+     + 4: [empty]
+     + 5: [0]District No. 3 (3) | [1]Baumeister, r | [2]Cote, d | [3]Davis, d | [4]Laughton, d | [5]Scatter
+     + 6: [0]Nashua Ward 4 | [1]668 | [2]894 | [3]778 | [4]841
+     + 7: [empty]
+     + 8: [0]District No.  4 (3) | [1]MacLean, r | [2]McCarthy, r | [3]Smith, r | [4]Newman, R., d | [5]Newman, S., d
+     + 9: [0]Nashua Ward 2 | [1]1559 | [2]1694 | [3]1621 | [4]2198 | [5]2284
+     +10: [empty]
+
+Row  11: District No. 3 (3)
+     + 1: [0]Nashua Ward 4 | [1]668 | [2]894 | [3]778 | [4]841
+     + 2: [empty]
+     + 3: [0]District No.  4 (3) | [1]MacLean, r | [2]McCarthy, r | [3]Smith, r | [4]Newman, R., d | [5]Newman, S., d
+     + 4: [0]Nashua Ward 2 | [1]1559 | [2]1694 | [3]1621 | [4]2198 | [5]2284
+     + 5: [empty]
+     + 6: [0]District No. 5 (3) | [1]Dyer, r | [2]Ferreira, r | [3]Lanzara, r | [4]Devine, d | [5]Elberger, d
+     + 7: [0]Nashua Ward 1 | [1]1926 | [2]1964 | [3]2111 | [4]2367 | [5]2414
+     + 8: [0]Recount | [1]1930 | [2]1969 | [3]2119 | [4]2369 | [5]2424
+     + 9: [0]District No. 6 (3) | [1]Berube, r | [2]Canaway, r | [3]Schoneman, r | [4]Dutzy, d | [5]Spier, d
+     +10: [0]Nashua Ward 3 | [1]1240 | [2]1257 | [3]1188 | [4]1731 | [5]1708
+
+Row  14: District No.  4 (3)
+     + 1: [0]Nashua Ward 2 | [1]1559 | [2]1694 | [3]1621 | [4]2198 | [5]2284
+     + 2: [empty]
+     + 3: [0]District No. 5 (3) | [1]Dyer, r | [2]Ferreira, r | [3]Lanzara, r | [4]Devine, d | [5]Elberger, d
+     + 4: [0]Nashua Ward 1 | [1]1926 | [2]1964 | [3]2111 | [4]2367 | [5]2414
+     + 5: [0]Recount | [1]1930 | [2]1969 | [3]2119 | [4]2369 | [5]2424
+     + 6: [0]District No. 6 (3) | [1]Berube, r | [2]Canaway, r | [3]Schoneman, r | [4]Dutzy, d | [5]Spier, d
+     + 7: [0]Nashua Ward 3 | [1]1240 | [2]1257 | [3]1188 | [4]1731 | [5]1708
+     + 8: [empty]
+     + 9: [0]District No. 7 (3) | [1]Hogan, r | [2]Lewis, r | [3]Moriarty, r | [4]Gregg, d | [5]Juris, d
+     +10: [0]Nashua Ward 7 | [1]1107 | [2]1119 | [3]1098 | [4]1496 | [5]1351
+
+Row  17: District No. 5 (3)
+     + 1: [0]Nashua Ward 1 | [1]1926 | [2]1964 | [3]2111 | [4]2367 | [5]2414
+     + 2: [0]Recount | [1]1930 | [2]1969 | [3]2119 | [4]2369 | [5]2424
+     + 3: [0]District No. 6 (3) | [1]Berube, r | [2]Canaway, r | [3]Schoneman, r | [4]Dutzy, d | [5]Spier, d
+     + 4: [0]Nashua Ward 3 | [1]1240 | [2]1257 | [3]1188 | [4]1731 | [5]1708
+     + 5: [empty]
+     + 6: [0]District No. 7 (3) | [1]Hogan, r | [2]Lewis, r | [3]Moriarty, r | [4]Gregg, d | [5]Juris, d
+     + 7: [0]Nashua Ward 7 | [1]1107 | [2]1119 | [3]1098 | [4]1496 | [5]1351
+     + 8: [empty]
+     + 9: [0]District No. 8 (3) | [1]Decatur, r | [2]Scully, r | [3]Thibodeau, r | [4]Booras, d | [5]Lloyd, d
+     +10: [0]Nashua Ward 6 | [1]1009 | [2]1204 | [3]1103 | [4]1409 | [5]1411
+
+Row  20: District No. 6 (3)
+     + 1: [0]Nashua Ward 3 | [1]1240 | [2]1257 | [3]1188 | [4]1731 | [5]1708
+     + 2: [empty]
+     + 3: [0]District No. 7 (3) | [1]Hogan, r | [2]Lewis, r | [3]Moriarty, r | [4]Gregg, d | [5]Juris, d
+     + 4: [0]Nashua Ward 7 | [1]1107 | [2]1119 | [3]1098 | [4]1496 | [5]1351
+     + 5: [empty]
+     + 6: [0]District No. 8 (3) | [1]Decatur, r | [2]Scully, r | [3]Thibodeau, r | [4]Booras, d | [5]Lloyd, d
+     + 7: [0]Nashua Ward 6 | [1]1009 | [2]1204 | [3]1103 | [4]1409 | [5]1411
+     + 8: [empty]
+     + 9: [0]District No. 9 (3) | [1]Johnson, r | [2]Lothrop, r | [3]Schmidt, r | [4]Dolan, d | [5]Nutting-Wong, d
+     +10: [0]Nashua Ward 5 | [1]2148 | [2]1901 | [3]1984 | [4]2313 | [5]2433
+
+Row  23: District No. 7 (3)
+     + 1: [0]Nashua Ward 7 | [1]1107 | [2]1119 | [3]1098 | [4]1496 | [5]1351
+     + 2: [empty]
+     + 3: [0]District No. 8 (3) | [1]Decatur, r | [2]Scully, r | [3]Thibodeau, r | [4]Booras, d | [5]Lloyd, d
+     + 4: [0]Nashua Ward 6 | [1]1009 | [2]1204 | [3]1103 | [4]1409 | [5]1411
+     + 5: [empty]
+     + 6: [0]District No. 9 (3) | [1]Johnson, r | [2]Lothrop, r | [3]Schmidt, r | [4]Dolan, d | [5]Nutting-Wong, d
+     + 7: [0]Nashua Ward 5 | [1]2148 | [2]1901 | [3]1984 | [4]2313 | [5]2433
+     + 8: [0]Recount | [1]2151 | [2]1902 | [3]1980 | [4]2314 | [5]2436
+     + 9: [0]District No. 10 (3) | [1]Cawthron, r | [2]Ohm, r | [3]Thoman, r | [4]Harriott-Gathright, d | [5]Jack, d
+     +10: [0]Nashua Ward 9 | [1]1574 | [2]1805 | [3]1522 | [4]2102 | [5]2023
+
+Row  26: District No. 8 (3)
+     + 1: [0]Nashua Ward 6 | [1]1009 | [2]1204 | [3]1103 | [4]1409 | [5]1411
+     + 2: [empty]
+     + 3: [0]District No. 9 (3) | [1]Johnson, r | [2]Lothrop, r | [3]Schmidt, r | [4]Dolan, d | [5]Nutting-Wong, d
+     + 4: [0]Nashua Ward 5 | [1]2148 | [2]1901 | [3]1984 | [4]2313 | [5]2433
+     + 5: [0]Recount | [1]2151 | [2]1902 | [3]1980 | [4]2314 | [5]2436
+     + 6: [0]District No. 10 (3) | [1]Cawthron, r | [2]Ohm, r | [3]Thoman, r | [4]Harriott-Gathright, d | [5]Jack, d
+     + 7: [0]Nashua Ward 9 | [1]1574 | [2]1805 | [3]1522 | [4]2102 | [5]2023
+     + 8: [0]Recount | [1]1594 | [2]1828 | [3]1541 | [4]2118 | [5]2039
+     + 9: [0]District No. 11 (3) | [1]Hart, r | [2]Powell, r | [3]Silva, r | [4]Darby, d | [5]Mangipudi, d
+     +10: [0]Nashua Ward 8 | [1]1334 | [2]1166 | [3]1319 | [4]1926 | [5]2011
+
+Row  29: District No. 9 (3)
+     + 1: [0]Nashua Ward 5 | [1]2148 | [2]1901 | [3]1984 | [4]2313 | [5]2433
+     + 2: [0]Recount | [1]2151 | [2]1902 | [3]1980 | [4]2314 | [5]2436
+     + 3: [0]District No. 10 (3) | [1]Cawthron, r | [2]Ohm, r | [3]Thoman, r | [4]Harriott-Gathright, d | [5]Jack, d
+     + 4: [0]Nashua Ward 9 | [1]1574 | [2]1805 | [3]1522 | [4]2102 | [5]2023
+     + 5: [0]Recount | [1]1594 | [2]1828 | [3]1541 | [4]2118 | [5]2039
+     + 6: [0]District No. 11 (3) | [1]Hart, r | [2]Powell, r | [3]Silva, r | [4]Darby, d | [5]Mangipudi, d
+     + 7: [0]Nashua Ward 8 | [1]1334 | [2]1166 | [3]1319 | [4]1926 | [5]2011
+     + 8: [0]District No. 12 (8) | [1]Mooney, r | [2]Notter, r | [3]Blasek, r | [4]Boyd, r | [5]Healey, Barb, r
+     + 9: [0]Merrimack | [1]6037 | [2]5860 | [3]5635 | [4]5839 | [5]5625
+     +10: [1]Mayville, r | [2]McGough, r | [3]Stack, d | [4]Thomas, d | [5]LaRue, d | [6]Locke, d
+
+Row  32: District No. 10 (3)
+     + 1: [0]Nashua Ward 9 | [1]1574 | [2]1805 | [3]1522 | [4]2102 | [5]2023
+     + 2: [0]Recount | [1]1594 | [2]1828 | [3]1541 | [4]2118 | [5]2039
+     + 3: [0]District No. 11 (3) | [1]Hart, r | [2]Powell, r | [3]Silva, r | [4]Darby, d | [5]Mangipudi, d
+     + 4: [0]Nashua Ward 8 | [1]1334 | [2]1166 | [3]1319 | [4]1926 | [5]2011
+     + 5: [0]District No. 12 (8) | [1]Mooney, r | [2]Notter, r | [3]Blasek, r | [4]Boyd, r | [5]Healey, Barb, r
+     + 6: [0]Merrimack | [1]6037 | [2]5860 | [3]5635 | [4]5839 | [5]5625
+     + 7: [1]Mayville, r | [2]McGough, r | [3]Stack, d | [4]Thomas, d | [5]LaRue, d | [6]Locke, d
+     + 8: [0]Merrimack | [1]5456 | [2]5828 | [3]5545 | [4]5843 | [5]5341
+     + 9: [1]Manning, d | [2]Murphy, d | [3]Plante, d | [4]Rung, d | [5]Scatter
+     +10: [0]Merrimack | [1]5262 | [2]6131 | [3]5258 | [4]6245
+
+Row  35: District No. 11 (3)
+     + 1: [0]Nashua Ward 8 | [1]1334 | [2]1166 | [3]1319 | [4]1926 | [5]2011
+     + 2: [0]District No. 12 (8) | [1]Mooney, r | [2]Notter, r | [3]Blasek, r | [4]Boyd, r | [5]Healey, Barb, r
+     + 3: [0]Merrimack | [1]6037 | [2]5860 | [3]5635 | [4]5839 | [5]5625
+     + 4: [1]Mayville, r | [2]McGough, r | [3]Stack, d | [4]Thomas, d | [5]LaRue, d | [6]Locke, d
+     + 5: [0]Merrimack | [1]5456 | [2]5828 | [3]5545 | [4]5843 | [5]5341
+     + 6: [1]Manning, d | [2]Murphy, d | [3]Plante, d | [4]Rung, d | [5]Scatter
+     + 7: [0]Merrimack | [1]5262 | [2]6131 | [3]5258 | [4]6245
+     + 8: [empty]
+     + 9: [0]District No. 13 (6) | [1]Kennedy, r | [2]Kenny, r | [3]Prout, r | [4]Renzullo, r | [5]Ulery, r
+     +10: [0]Hudson | [1]5474 | [2]5454 | [3]5161 | [4]5170 | [5]5293
+
+Row  37: District No. 12 (8)
+     + 1: [0]Merrimack | [1]6037 | [2]5860 | [3]5635 | [4]5839 | [5]5625
+     + 2: [1]Mayville, r | [2]McGough, r | [3]Stack, d | [4]Thomas, d | [5]LaRue, d | [6]Locke, d
+     + 3: [0]Merrimack | [1]5456 | [2]5828 | [3]5545 | [4]5843 | [5]5341
+     + 4: [1]Manning, d | [2]Murphy, d | [3]Plante, d | [4]Rung, d | [5]Scatter
+     + 5: [0]Merrimack | [1]5262 | [2]6131 | [3]5258 | [4]6245
+     + 6: [empty]
+     + 7: [0]District No. 13 (6) | [1]Kennedy, r | [2]Kenny, r | [3]Prout, r | [4]Renzullo, r | [5]Ulery, r
+     + 8: [0]Hudson | [1]5474 | [2]5454 | [3]5161 | [4]5170 | [5]5293
+     + 9: [1]Katsos, d | [2]Knowles, d | [3]Urrutia, d | [4]Blue, d | [5]Scatter
+     +10: [0]Hudson | [1]4068 | [2]4135 | [3]3894 | [4]4052 | [5]44
+
+Row  44: District No. 13 (6)
+     + 1: [0]Hudson | [1]5474 | [2]5454 | [3]5161 | [4]5170 | [5]5293
+     + 2: [1]Katsos, d | [2]Knowles, d | [3]Urrutia, d | [4]Blue, d | [5]Scatter
+     + 3: [0]Hudson | [1]4068 | [2]4135 | [3]3894 | [4]4052 | [5]44
+     + 4: [empty]
+     + 5: [0]District No. 14 (2) | [1]Lascelles, r | [2]Boehm, r | [3]Stanieich-Burke, d | [4]Bakshi, d | [5]Scatter
+     + 6: [0]Litchfield | [1]2358 | [2]2090 | [3]1702 | [4]1370
+     + 7: [empty]
+     + 8: [0]District No. 15 (2) | [1]Proulx, r | [2]McLean, r | [3]Quiroga, d | [4]Lemay, d | [5]Scatter
+     + 9: [0]Manchester Ward 8 | [1]2011 | [2]1946 | [3]1627 | [4]1678 | [5]3
+     +10: [empty]
+
+Row  49: District No. 14 (2)
+     + 1: [0]Litchfield | [1]2358 | [2]2090 | [3]1702 | [4]1370
+     + 2: [empty]
+     + 3: [0]District No. 15 (2) | [1]Proulx, r | [2]McLean, r | [3]Quiroga, d | [4]Lemay, d | [5]Scatter
+     + 4: [0]Manchester Ward 8 | [1]2011 | [2]1946 | [3]1627 | [4]1678 | [5]3
+     + 5: [empty]
+     + 6: [0]District No. 16 (2) | [1]Infantine, r | [2]Gagne, r | [3]Mosley, d | [4]Hillhouse, d | [5]Scatter
+     + 7: [0]Manchester Ward 6 | [1]1895 | [2]1820 | [3]1797 | [4]1644 | [5]4
+     + 8: [0]Recount | [1]1877 | [2]1798 | [3]1799 | [4]1643
+     + 9: [0]Court ordered recount | [1]1903 | [2]1824 | [3]1798 | [4]1643
+     +10: [0]District No 17 (2) | [1]Davis, r | [2]Chase, r | [3]Preece, d | [4]DiSilvestro, d | [5]Sarwark, l
+
+Row  52: District No. 15 (2)
+     + 1: [0]Manchester Ward 8 | [1]2011 | [2]1946 | [3]1627 | [4]1678 | [5]3
+     + 2: [empty]
+     + 3: [0]District No. 16 (2) | [1]Infantine, r | [2]Gagne, r | [3]Mosley, d | [4]Hillhouse, d | [5]Scatter
+     + 4: [0]Manchester Ward 6 | [1]1895 | [2]1820 | [3]1797 | [4]1644 | [5]4
+     + 5: [0]Recount | [1]1877 | [2]1798 | [3]1799 | [4]1643
+     + 6: [0]Court ordered recount | [1]1903 | [2]1824 | [3]1798 | [4]1643
+     + 7: [0]District No 17 (2) | [1]Davis, r | [2]Chase, r | [3]Preece, d | [4]DiSilvestro, d | [5]Sarwark, l
+     + 8: [0]Manchester Ward 2 | [1]1243 | [2]1397 | [3]1940 | [4]2053 | [5]323
+     + 9: [empty]
+     +10: [0]District No. 18 (2) | [1]Whitlock, r | [2]Marston, r | [3]Smith, d | [4]Grill, d | [5]Scatter
+
+Row  55: District No. 16 (2)
+     + 1: [0]Manchester Ward 6 | [1]1895 | [2]1820 | [3]1797 | [4]1644 | [5]4
+     + 2: [0]Recount | [1]1877 | [2]1798 | [3]1799 | [4]1643
+     + 3: [0]Court ordered recount | [1]1903 | [2]1824 | [3]1798 | [4]1643
+     + 4: [0]District No 17 (2) | [1]Davis, r | [2]Chase, r | [3]Preece, d | [4]DiSilvestro, d | [5]Sarwark, l
+     + 5: [0]Manchester Ward 2 | [1]1243 | [2]1397 | [3]1940 | [4]2053 | [5]323
+     + 6: [empty]
+     + 7: [0]District No. 18 (2) | [1]Whitlock, r | [2]Marston, r | [3]Smith, d | [4]Grill, d | [5]Scatter
+     + 8: [0]Manchester Ward 12 | [1]1295 | [2]1458 | [3]1665 | [4]1719 | [5]6
+     + 9: [empty]
+     +10: [0]District No. 19 (2) | [1]Garthwaite, T., r | [2]Garthwaite, D., r | [3]Hamer, d | [4]Beaulieu, d | [5]Scatter
+
+Row  59: District No 17 (2)
+     + 1: [0]Manchester Ward 2 | [1]1243 | [2]1397 | [3]1940 | [4]2053 | [5]323
+     + 2: [empty]
+     + 3: [0]District No. 18 (2) | [1]Whitlock, r | [2]Marston, r | [3]Smith, d | [4]Grill, d | [5]Scatter
+     + 4: [0]Manchester Ward 12 | [1]1295 | [2]1458 | [3]1665 | [4]1719 | [5]6
+     + 5: [empty]
+     + 6: [0]District No. 19 (2) | [1]Garthwaite, T., r | [2]Garthwaite, D., r | [3]Hamer, d | [4]Beaulieu, d | [5]Scatter
+     + 7: [0]Manchester Ward 10 | [1]1300 | [2]1242 | [3]1471 | [4]1425 | [5]10
+     + 8: [empty]
+     + 9: [0]District No. 20 (2) | [1]Kliskey, r | [2]Dupont, r | [3]Murray, d | [4]Moulton, d | [5]Scatter
+     +10: [0]Manchester Ward 9 | [1]1150 | [2]1160 | [3]1398 | [4]1376 | [5]2
+
+Row  62: District No. 18 (2)
+     + 1: [0]Manchester Ward 12 | [1]1295 | [2]1458 | [3]1665 | [4]1719 | [5]6
+     + 2: [empty]
+     + 3: [0]District No. 19 (2) | [1]Garthwaite, T., r | [2]Garthwaite, D., r | [3]Hamer, d | [4]Beaulieu, d | [5]Scatter
+     + 4: [0]Manchester Ward 10 | [1]1300 | [2]1242 | [3]1471 | [4]1425 | [5]10
+     + 5: [empty]
+     + 6: [0]District No. 20 (2) | [1]Kliskey, r | [2]Dupont, r | [3]Murray, d | [4]Moulton, d | [5]Scatter
+     + 7: [0]Manchester Ward 9 | [1]1150 | [2]1160 | [3]1398 | [4]1376 | [5]2
+     + 8: [empty]
+     + 9: [0]District No. 21 (2) | [1]Fromuth, Gus, r | [2]Fromuth, A., r | [3]Seibert, d | [4]Goley, d | [5]Scatter
+     +10: [0]Manchester Ward 1 | [1]1676 | [2]1612 | [3]2459 | [4]2527 | [5]5
+
+Row  65: District No. 19 (2)
+     + 1: [0]Manchester Ward 10 | [1]1300 | [2]1242 | [3]1471 | [4]1425 | [5]10
+     + 2: [empty]
+     + 3: [0]District No. 20 (2) | [1]Kliskey, r | [2]Dupont, r | [3]Murray, d | [4]Moulton, d | [5]Scatter
+     + 4: [0]Manchester Ward 9 | [1]1150 | [2]1160 | [3]1398 | [4]1376 | [5]2
+     + 5: [empty]
+     + 6: [0]District No. 21 (2) | [1]Fromuth, Gus, r | [2]Fromuth, A., r | [3]Seibert, d | [4]Goley, d | [5]Scatter
+     + 7: [0]Manchester Ward 1 | [1]1676 | [2]1612 | [3]2459 | [4]2527 | [5]5
+     + 8: [empty]
+     + 9: [0]District No. 22 (2) | [1]Ping, r | [2]Gericke, r | [3]Leapley, d | [4]Cornell, d | [5]Scatter
+     +10: [0]Manchester Ward 11 | [1]897 | [2]966 | [3]1196 | [4]1225
+
+Row  68: District No. 20 (2)
+     + 1: [0]Manchester Ward 9 | [1]1150 | [2]1160 | [3]1398 | [4]1376 | [5]2
+     + 2: [empty]
+     + 3: [0]District No. 21 (2) | [1]Fromuth, Gus, r | [2]Fromuth, A., r | [3]Seibert, d | [4]Goley, d | [5]Scatter
+     + 4: [0]Manchester Ward 1 | [1]1676 | [2]1612 | [3]2459 | [4]2527 | [5]5
+     + 5: [empty]
+     + 6: [0]District No. 22 (2) | [1]Ping, r | [2]Gericke, r | [3]Leapley, d | [4]Cornell, d | [5]Scatter
+     + 7: [0]Manchester Ward 11 | [1]897 | [2]966 | [3]1196 | [4]1225
+     + 8: [empty]
+     + 9: [0]District No. 23 (2) | [1]Long, d | [2]Jeudy, d | [3]Scatter
+     +10: [0]Manchester Ward 3 | [1]1490 | [2]1356 | [3]19
+
+Row  71: District No. 21 (2)
+     + 1: [0]Manchester Ward 1 | [1]1676 | [2]1612 | [3]2459 | [4]2527 | [5]5
+     + 2: [empty]
+     + 3: [0]District No. 22 (2) | [1]Ping, r | [2]Gericke, r | [3]Leapley, d | [4]Cornell, d | [5]Scatter
+     + 4: [0]Manchester Ward 11 | [1]897 | [2]966 | [3]1196 | [4]1225
+     + 5: [empty]
+     + 6: [0]District No. 23 (2) | [1]Long, d | [2]Jeudy, d | [3]Scatter
+     + 7: [0]Manchester Ward 3 | [1]1490 | [2]1356 | [3]19
+     + 8: [empty]
+     + 9: [0]District No. 24 (2) | [1]Mathieu, r | [2]Hagala, r | [3]Herbert, d | [4]Bouchard, d | [5]Scatter
+     +10: [0]Manchester Ward 4 | [1]982 | [2]824 | [3]1290 | [4]1229 | [5]1
+
+Row  74: District No. 22 (2)
+     + 1: [0]Manchester Ward 11 | [1]897 | [2]966 | [3]1196 | [4]1225
+     + 2: [empty]
+     + 3: [0]District No. 23 (2) | [1]Long, d | [2]Jeudy, d | [3]Scatter
+     + 4: [0]Manchester Ward 3 | [1]1490 | [2]1356 | [3]19
+     + 5: [empty]
+     + 6: [0]District No. 24 (2) | [1]Mathieu, r | [2]Hagala, r | [3]Herbert, d | [4]Bouchard, d | [5]Scatter
+     + 7: [0]Manchester Ward 4 | [1]982 | [2]824 | [3]1290 | [4]1229 | [5]1
+     + 8: [empty]
+     + 9: [0]District No. 25 (2) | [1]Paquette, r | [2]Mattiello, r | [3]Staub, d | [4]Bouldin, d | [5]Scatter
+     +10: [0]Manchester Ward 5 | [1]676 | [2]581 | [3]853 | [4]899 | [5]1
+
+Row  77: District No. 23 (2)
+     + 1: [0]Manchester Ward 3 | [1]1490 | [2]1356 | [3]19
+     + 2: [empty]
+     + 3: [0]District No. 24 (2) | [1]Mathieu, r | [2]Hagala, r | [3]Herbert, d | [4]Bouchard, d | [5]Scatter
+     + 4: [0]Manchester Ward 4 | [1]982 | [2]824 | [3]1290 | [4]1229 | [5]1
+     + 5: [empty]
+     + 6: [0]District No. 25 (2) | [1]Paquette, r | [2]Mattiello, r | [3]Staub, d | [4]Bouldin, d | [5]Scatter
+     + 7: [0]Manchester Ward 5 | [1]676 | [2]581 | [3]853 | [4]899 | [5]1
+     + 8: [empty]
+     + 9: [0]District No. 26 (2) | [1]Cole, r | [2]Freitas, d | [3]Forsing, d | [4]Scatter
+     +10: [0]Manchester Ward 7 | [1]1159 | [2]1408 | [3]1085 | [4]5
+
+Row  80: District No. 24 (2)
+     + 1: [0]Manchester Ward 4 | [1]982 | [2]824 | [3]1290 | [4]1229 | [5]1
+     + 2: [empty]
+     + 3: [0]District No. 25 (2) | [1]Paquette, r | [2]Mattiello, r | [3]Staub, d | [4]Bouldin, d | [5]Scatter
+     + 4: [0]Manchester Ward 5 | [1]676 | [2]581 | [3]853 | [4]899 | [5]1
+     + 5: [empty]
+     + 6: [0]District No. 26 (2) | [1]Cole, r | [2]Freitas, d | [3]Forsing, d | [4]Scatter
+     + 7: [0]Manchester Ward 7 | [1]1159 | [2]1408 | [3]1085 | [4]5
+     + 8: [empty]
+     + 9: [0]District No. 27 (1) | [1]Reid, r | [2]Kane, d | [3]Scatter
+     +10: [0]Deering | [1]567 | [2]343 | [3]2
+
+Row  83: District No. 25 (2)
+     + 1: [0]Manchester Ward 5 | [1]676 | [2]581 | [3]853 | [4]899 | [5]1
+     + 2: [empty]
+     + 3: [0]District No. 26 (2) | [1]Cole, r | [2]Freitas, d | [3]Forsing, d | [4]Scatter
+     + 4: [0]Manchester Ward 7 | [1]1159 | [2]1408 | [3]1085 | [4]5
+     + 5: [empty]
+     + 6: [0]District No. 27 (1) | [1]Reid, r | [2]Kane, d | [3]Scatter
+     + 7: [0]Deering | [1]567 | [2]343 | [3]2
+     + 8: [0]Francestown | [1]465 | [2]484
+     + 9: [0]Totals | [1]1032 | [2]827
+     +10: [0]District No. 28 (2) | [1]Erf, r | [2]Cushman, r | [3]Politt, d | [4]Erikson, d | [5]Scatter
+
+Row  86: District No. 26 (2)
+     + 1: [0]Manchester Ward 7 | [1]1159 | [2]1408 | [3]1085 | [4]5
+     + 2: [empty]
+     + 3: [0]District No. 27 (1) | [1]Reid, r | [2]Kane, d | [3]Scatter
+     + 4: [0]Deering | [1]567 | [2]343 | [3]2
+     + 5: [0]Francestown | [1]465 | [2]484
+     + 6: [0]Totals | [1]1032 | [2]827
+     + 7: [0]District No. 28 (2) | [1]Erf, r | [2]Cushman, r | [3]Politt, d | [4]Erikson, d | [5]Scatter
+     + 8: [0]Weare | [1]2342 | [2]2297 | [3]1553 | [4]1512
+     + 9: [empty]
+     +10: [0]District No. 29 (4) | [1]Plett, r | [2]Pounds, r | [3]Seidel, r | [4]Alexander, r
+
+Row  89: District No. 27 (1)
+     + 1: [0]Deering | [1]567 | [2]343 | [3]2
+     + 2: [0]Francestown | [1]465 | [2]484
+     + 3: [0]Totals | [1]1032 | [2]827
+     + 4: [0]District No. 28 (2) | [1]Erf, r | [2]Cushman, r | [3]Politt, d | [4]Erikson, d | [5]Scatter
+     + 5: [0]Weare | [1]2342 | [2]2297 | [3]1553 | [4]1512
+     + 6: [empty]
+     + 7: [0]District No. 29 (4) | [1]Plett, r | [2]Pounds, r | [3]Seidel, r | [4]Alexander, r
+     + 8: [0]Goffstown | [1]3531 | [2]3435 | [3]3510 | [4]3589
+     + 9: [0]Recount | [1]3536 | [2]3436 | [3]3515 | [4]3591
+     +10: [1]Lanza, d | [2]McCarthy, d | [3]Renfrew-Hebert, d | [4]DeVetter, d | [5]Scatter
+
+Row  93: District No. 28 (2)
+     + 1: [0]Weare | [1]2342 | [2]2297 | [3]1553 | [4]1512
+     + 2: [empty]
+     + 3: [0]District No. 29 (4) | [1]Plett, r | [2]Pounds, r | [3]Seidel, r | [4]Alexander, r
+     + 4: [0]Goffstown | [1]3531 | [2]3435 | [3]3510 | [4]3589
+     + 5: [0]Recount | [1]3536 | [2]3436 | [3]3515 | [4]3591
+     + 6: [1]Lanza, d | [2]McCarthy, d | [3]Renfrew-Hebert, d | [4]DeVetter, d | [5]Scatter
+     + 7: [0]Goffstown | [1]3443 | [2]3357 | [3]3273 | [4]3010 | [5]9
+     + 8: [0]Recount | [1]3443 | [2]3358 | [3]3275 | [4]3009
+     + 9: [0]District No. 30 (3) | [1]Colcombe, r | [2]Creighton, r | [3]Fedolfi, r | [4]Koutroubas, d | [5]Manley, d
+     +10: [0]Antrim | [1]582 | [2]622 | [3]517 | [4]608 | [5]592
+
+Row  96: District No. 29 (4)
+     + 1: [0]Goffstown | [1]3531 | [2]3435 | [3]3510 | [4]3589
+     + 2: [0]Recount | [1]3536 | [2]3436 | [3]3515 | [4]3591
+     + 3: [1]Lanza, d | [2]McCarthy, d | [3]Renfrew-Hebert, d | [4]DeVetter, d | [5]Scatter
+     + 4: [0]Goffstown | [1]3443 | [2]3357 | [3]3273 | [4]3010 | [5]9
+     + 5: [0]Recount | [1]3443 | [2]3358 | [3]3275 | [4]3009
+     + 6: [0]District No. 30 (3) | [1]Colcombe, r | [2]Creighton, r | [3]Fedolfi, r | [4]Koutroubas, d | [5]Manley, d
+     + 7: [0]Antrim | [1]582 | [2]622 | [3]517 | [4]608 | [5]592
+     + 8: [0]Bennington | [1]324 | [2]341 | [3]274 | [4]298 | [5]328
+     + 9: [0]Hillsborough | [1]1299 | [2]1250 | [3]1213 | [4]1020 | [5]992
+     +10: [0]Windsor | [1]63 | [2]64 | [3]60 | [4]18 | [5]18
+
+Row 102: District No. 30 (3)
+     + 1: [0]Antrim | [1]582 | [2]622 | [3]517 | [4]608 | [5]592
+     + 2: [0]Bennington | [1]324 | [2]341 | [3]274 | [4]298 | [5]328
+     + 3: [0]Hillsborough | [1]1299 | [2]1250 | [3]1213 | [4]1020 | [5]992
+     + 4: [0]Windsor | [1]63 | [2]64 | [3]60 | [4]18 | [5]18
+     + 5: [0]Totals | [1]2268 | [2]2277 | [3]2064 | [4]1944 | [5]1930
+     + 6: [0]District No. 31 (1) | [1]Adams, IV, r | [2]Howard, d | [3]Scatter
+     + 7: [0]Greenfield | [1]452 | [2]372
+     + 8: [0]Hancock | [1]400 | [2]721
+     + 9: [0]Totals | [1]852 | [2]1093
+     +10: [0]District No. 32 (3) | [1]Kelley, r | [2]Kofalt, r | [3]Sirois, r | [4]DeLoria, d | [5]Swanson, d
+
+Row 108: District No. 31 (1)
+     + 1: [0]Greenfield | [1]452 | [2]372
+     + 2: [0]Hancock | [1]400 | [2]721
+     + 3: [0]Totals | [1]852 | [2]1093
+     + 4: [0]District No. 32 (3) | [1]Kelley, r | [2]Kofalt, r | [3]Sirois, r | [4]DeLoria, d | [5]Swanson, d
+     + 5: [0]New Ipswich | [1]1567 | [2]1612 | [3]1619 | [4]605 | [5]588
+     + 6: [0]Temple | [1]322 | [2]325 | [3]303 | [4]399 | [5]372
+     + 7: [0]Wilton | [1]805 | [2]822 | [3]721 | [4]928 | [5]909
+     + 8: [0]Totals | [1]2694 | [2]2759 | [3]2643 | [4]1932 | [5]1869
+     + 9: [empty]
+     +10: [0]District No. 33 (2) | [1]Pilcher, r | [2]Maidment, r | [3]Wheeler, d | [4]Leishman, d | [5]Scatter
+
+Row 112: District No. 32 (3)
+     + 1: [0]New Ipswich | [1]1567 | [2]1612 | [3]1619 | [4]605 | [5]588
+     + 2: [0]Temple | [1]322 | [2]325 | [3]303 | [4]399 | [5]372
+     + 3: [0]Wilton | [1]805 | [2]822 | [3]721 | [4]928 | [5]909
+     + 4: [0]Totals | [1]2694 | [2]2759 | [3]2643 | [4]1932 | [5]1869
+     + 5: [empty]
+     + 6: [0]District No. 33 (2) | [1]Pilcher, r | [2]Maidment, r | [3]Wheeler, d | [4]Leishman, d | [5]Scatter
+     + 7: [0]Peterborough | [1]918 | [2]955 | [3]2422 | [4]2316 | [5]2
+     + 8: [0]Sharon | [1]102 | [2]99 | [3]116 | [4]117 | [5]1
+     + 9: [0]Totals | [1]1020 | [2]1054 | [3]2538 | [4]2433 | [5]3
+     +10: [0]District No. 34 (3) | [1]Coughlin, r | [2]Hodgkins, r | [3]O'Mara, Jr., r | [4]LeClerc, d | [5]Morton, d
+
+Row 118: District No. 33 (2)
+     + 1: [0]Peterborough | [1]918 | [2]955 | [3]2422 | [4]2316 | [5]2
+     + 2: [0]Sharon | [1]102 | [2]99 | [3]116 | [4]117 | [5]1
+     + 3: [0]Totals | [1]1020 | [2]1054 | [3]2538 | [4]2433 | [5]3
+     + 4: [0]District No. 34 (3) | [1]Coughlin, r | [2]Hodgkins, r | [3]O'Mara, Jr., r | [4]LeClerc, d | [5]Morton, d
+     + 5: [0]Amherst | [1]2757 | [2]2502 | [3]2831 | [4]3353 | [5]3550
+     + 6: [empty]
+     + 7: [0]District No. 35 (2) | [1]Homola, r | [2]Barbour, r | [3]Ming, d | [4]McGhee, d | [5]Scatter
+     + 8: [0]Hollis | [1]2127 | [2]2206 | [3]2337 | [4]2359 | [5]1
+     + 9: [0]Recount | [1]2129 | [2]2208 | [3]2337 | [4]2361
+     +10: [0]District No. 36 (2) | [1]Pauer, r | [2]Lewicke, r | [3]Rater, d | [4]Denehy, d | [5]Scatter
+
+Row 122: District No. 34 (3)
+     + 1: [0]Amherst | [1]2757 | [2]2502 | [3]2831 | [4]3353 | [5]3550
+     + 2: [empty]
+     + 3: [0]District No. 35 (2) | [1]Homola, r | [2]Barbour, r | [3]Ming, d | [4]McGhee, d | [5]Scatter
+     + 4: [0]Hollis | [1]2127 | [2]2206 | [3]2337 | [4]2359 | [5]1
+     + 5: [0]Recount | [1]2129 | [2]2208 | [3]2337 | [4]2361
+     + 6: [0]District No. 36 (2) | [1]Pauer, r | [2]Lewicke, r | [3]Rater, d | [4]Denehy, d | [5]Scatter
+     + 7: [0]Brookline | [1]1401 | [2]1335 | [3]1371 | [4]1395 | [5]2
+     + 8: [0]Greenville | [1]395 | [2]356 | [3]267 | [4]285
+     + 9: [0]Mason | [1]414 | [2]450 | [3]257 | [4]258
+     +10: [0]Totals | [1]2210 | [2]2141 | [3]1895 | [4]1938 | [5]2
+
+Row 125: District No. 35 (2)
+     + 1: [0]Hollis | [1]2127 | [2]2206 | [3]2337 | [4]2359 | [5]1
+     + 2: [0]Recount | [1]2129 | [2]2208 | [3]2337 | [4]2361
+     + 3: [0]District No. 36 (2) | [1]Pauer, r | [2]Lewicke, r | [3]Rater, d | [4]Denehy, d | [5]Scatter
+     + 4: [0]Brookline | [1]1401 | [2]1335 | [3]1371 | [4]1395 | [5]2
+     + 5: [0]Greenville | [1]395 | [2]356 | [3]267 | [4]285
+     + 6: [0]Mason | [1]414 | [2]450 | [3]257 | [4]258
+     + 7: [0]Totals | [1]2210 | [2]2141 | [3]1895 | [4]1938 | [5]2
+     + 8: [empty]
+     + 9: [0]District No. 37 (1) FL | [1]Facques, r | [2]Murray, d | [3]Scatter
+     +10: [0]Amherst | [1]2803 | [2]3734 | [3]9
+
+Row 128: District No. 36 (2)
+     + 1: [0]Brookline | [1]1401 | [2]1335 | [3]1371 | [4]1395 | [5]2
+     + 2: [0]Greenville | [1]395 | [2]356 | [3]267 | [4]285
+     + 3: [0]Mason | [1]414 | [2]450 | [3]257 | [4]258
+     + 4: [0]Totals | [1]2210 | [2]2141 | [3]1895 | [4]1938 | [5]2
+     + 5: [empty]
+     + 6: [0]District No. 37 (1) FL | [1]Facques, r | [2]Murray, d | [3]Scatter
+     + 7: [0]Amherst | [1]2803 | [2]3734 | [3]9
+     + 8: [0]Milford | [1]3329 | [2]3428
+     + 9: [0]Totals | [1]6132 | [2]7162 | [3]9
+     +10: [empty]
+
+Row 134: District No. 37 (1) FL
+     + 1: [0]Amherst | [1]2803 | [2]3734 | [3]9
+     + 2: [0]Milford | [1]3329 | [2]3428
+     + 3: [0]Totals | [1]6132 | [2]7162 | [3]9
+     + 4: [empty]
+     + 5: [0]District No. 38 (2) FL | [1]Lekas, T., r | [2]Lekas, A., r | [3]Wyatt, d | [4]Koutroubas, d | [5]Scatter
+     + 6: [0]Hudson | [1]5485 | [2]5377 | [3]3875 | [4]4060 | [5]51
+     + 7: [0]Litchfield | [1]2092 | [2]2093 | [3]1605 | [4]1618 | [5]2
+     + 8: [0]Totals | [1]7577 | [2]7470 | [3]5480 | [4]5678 | [5]53
+     + 9: [empty]
+     +10: [0]District No. 39 (2) FL | [1]McConville, r | [2]Berry, r | [3]Query, d | [4]Baroody, d | [5]Scatter
+
+Row 139: District No. 38 (2) FL
+     + 1: [0]Hudson | [1]5485 | [2]5377 | [3]3875 | [4]4060 | [5]51
+     + 2: [0]Litchfield | [1]2092 | [2]2093 | [3]1605 | [4]1618 | [5]2
+     + 3: [0]Totals | [1]7577 | [2]7470 | [3]5480 | [4]5678 | [5]53
+     + 4: [empty]
+     + 5: [0]District No. 39 (2) FL | [1]McConville, r | [2]Berry, r | [3]Query, d | [4]Baroody, d | [5]Scatter
+     + 6: [0]Manchester Ward 6 | [1]1757 | [2]1749 | [3]1661 | [4]1824 | [5]3
+     + 7: [0]Manchester Ward 8 | [1]1867 | [2]1948 | [3]1589 | [4]1705 | [5]7
+     + 8: [0]Manchester Ward 9 | [1]1105 | [2]1225 | [3]1348 | [4]1370
+     + 9: [0]Totals | [1]4729 | [2]4922 | [3]4598 | [4]4899 | [5]10
+     +10: [0]District No. 40 (4) FL | [1]Fraser, r | [2]Gonzalez, r | [3]Yaakov, r | [4]Brasill, r
+
+Row 144: District No. 39 (2) FL
+     + 1: [0]Manchester Ward 6 | [1]1757 | [2]1749 | [3]1661 | [4]1824 | [5]3
+     + 2: [0]Manchester Ward 8 | [1]1867 | [2]1948 | [3]1589 | [4]1705 | [5]7
+     + 3: [0]Manchester Ward 9 | [1]1105 | [2]1225 | [3]1348 | [4]1370
+     + 4: [0]Totals | [1]4729 | [2]4922 | [3]4598 | [4]4899 | [5]10
+     + 5: [0]District No. 40 (4) FL | [1]Fraser, r | [2]Gonzalez, r | [3]Yaakov, r | [4]Brasill, r
+     + 6: [0]Manchester Ward 1 | [1]1646 | [2]1708 | [3]1454 | [4]1540
+     + 7: [0]Manchester Ward 3 | [1]730 | [2]720 | [3]611 | [4]657
+     + 8: [0]Manchester Ward 10 | [1]1243 | [2]1286 | [3]1068 | [4]1183
+     + 9: [0]Manchester Ward 11 | [1]888 | [2]951 | [3]774 | [4]840
+     +10: [0]Manchester Ward 12 | [1]1299 | [2]1471 | [3]1166 | [4]1255
+
+Row 149: District No. 40 (4) FL
+     + 1: [0]Manchester Ward 1 | [1]1646 | [2]1708 | [3]1454 | [4]1540
+     + 2: [0]Manchester Ward 3 | [1]730 | [2]720 | [3]611 | [4]657
+     + 3: [0]Manchester Ward 10 | [1]1243 | [2]1286 | [3]1068 | [4]1183
+     + 4: [0]Manchester Ward 11 | [1]888 | [2]951 | [3]774 | [4]840
+     + 5: [0]Manchester Ward 12 | [1]1299 | [2]1471 | [3]1166 | [4]1255
+     + 6: [0]Totals | [1]5806 | [2]6136 | [3]5073 | [4]5475
+     + 7: [1]Mackenzie, d | [2]Tellez, d | [3]Wilhelm, d | [4]Ford, d | [5]Scatter
+     + 8: [0]Manchester Ward 1 | [1]2371 | [2]2221 | [3]2262 | [4]2119 | [5]4
+     + 9: [0]Manchester Ward 3 | [1]1274 | [2]1181 | [3]1211 | [4]1173 | [5]2
+     +10: [0]Manchester Ward 10 | [1]1436 | [2]1242 | [3]1274 | [4]1243 | [5]11
+
+Row 163: District No 41 (3) FL
+     + 1: [0]Manchester Ward 2 | [1]1405 | [2]1464 | [3]1288 | [4]2017 | [5]1955
+     + 2: [0]Manchester Ward 4 | [1]866 | [2]932 | [3]854 | [4]1214 | [5]1134
+     + 3: [0]Manchester Ward 5 | [1]585 | [2]674 | [3]538 | [4]850 | [5]799
+     + 4: [0]Manchester Ward 7 | [1]905 | [2]1028 | [3]813 | [4]1136 | [5]1091
+     + 5: [0]Totals | [1]3761 | [2]4098 | [3]3493 | [4]5217 | [5]4979
+     + 6: [0]District No 42 (3) | [1]Ammon, r | [2]Recount | [3]Griffin, r | [4]Recount | [5]Post, r
+     + 7: [0]Lyndeborough | [1]443 | [2]441 | [3]425 | [4]425 | [5]503
+     + 8: [0]Mont Vernon | [1]671 | [2]672 | [3]673 | [4]675 | [5]653
+     + 9: [0]New Boston | [1]1525 | [2]1536 | [3]1550 | [4]1551 | [5]1528
+     +10: [0]Totals | [1]2639 | [2]2649 | [3]2648 | [4]2651 | [5]2684
+
+Row 169: District No 42 (3)
+     + 1: [0]Lyndeborough | [1]443 | [2]441 | [3]425 | [4]425 | [5]503
+     + 2: [0]Mont Vernon | [1]671 | [2]672 | [3]673 | [4]675 | [5]653
+     + 3: [0]New Boston | [1]1525 | [2]1536 | [3]1550 | [4]1551 | [5]1528
+     + 4: [0]Totals | [1]2639 | [2]2649 | [3]2648 | [4]2651 | [5]2684
+     + 5: [empty]
+     + 6: [1]Backus, d | [2]Recount | [3]Paquette, d | [4]Recount | [5]Roach, d | [6]Recount
+     + 7: [0]Lyndeborough | [1]410 | [2]406 | [3]409 | [4]404 | [5]405
+     + 8: [0]Mont Vernon | [1]725 | [2]725 | [3]734 | [4]734 | [5]760
+     + 9: [0]New Boston | [1]1457 | [2]1459 | [3]1447 | [4]1451 | [5]1471
+     +10: [0]Totals | [1]2592 | [2]2590 | [3]2590 | [4]2589 | [5]2636
+
+Row 181: District No 43 (4)
+     + 1: [0]Milford | [1]3114 | [2]3151 | [3]2929 | [4]2783
+     + 2: [1]Perez, d | [2]Petrigno, d | [3]Salmon, d | [4]Lawrence, d | [5]Scatter
+     + 3: [0]Milford | [1]3274 | [2]3395 | [3]2895 | [4]2999
+     + 4: [empty]
+     + 5: [0]District No. 44 (2) | [1]Mazur, r | [2]Corcoran, r | [3]Trumble, d | [4]Johnson, d | [5]Scatter
+     + 6: [0]Goffstown | [1]3711 | [2]3412 | [3]3300 | [4]3356 | [5]1
+     + 7: [0]Weare | [1]2295 | [2]2247 | [3]1554 | [4]1503
+     + 8: [0]Totals | [1]6006 | [2]5659 | [3]4854 | [4]4859 | [5]1
+     + 9: [0]District No. 45 (1) FL | [1]Skorupan, r | [2]Recount | [3]Calabro, d | [4]Recount
+     +10: [0]Brookline | [1]1433 | [2]1432 | [3]1417 | [4]1416
+
+Row 186: District No. 44 (2)
+     + 1: [0]Goffstown | [1]3711 | [2]3412 | [3]3300 | [4]3356 | [5]1
+     + 2: [0]Weare | [1]2295 | [2]2247 | [3]1554 | [4]1503
+     + 3: [0]Totals | [1]6006 | [2]5659 | [3]4854 | [4]4859 | [5]1
+     + 4: [0]District No. 45 (1) FL | [1]Skorupan, r | [2]Recount | [3]Calabro, d | [4]Recount
+     + 5: [0]Brookline | [1]1433 | [2]1432 | [3]1417 | [4]1416
+     + 6: [0]Greenville | [1]404 | [2]404 | [3]316 | [4]315
+     + 7: [0]Hollis | [1]2170 | [2]2172 | [3]2456 | [4]2456
+     + 8: [0]Mason | [1]459 | [2]459 | [3]287 | [4]287
+     + 9: [0]Totals | [1]4466 | [2]4467 | [3]4476 | [4]4474
+
+Row 190: District No. 45 (1) FL
+     + 1: [0]Brookline | [1]1433 | [2]1432 | [3]1417 | [4]1416
+     + 2: [0]Greenville | [1]404 | [2]404 | [3]316 | [4]315
+     + 3: [0]Hollis | [1]2170 | [2]2172 | [3]2456 | [4]2456
+     + 4: [0]Mason | [1]459 | [2]459 | [3]287 | [4]287
+     + 5: [0]Totals | [1]4466 | [2]4467 | [3]4476 | [4]4474
+
+SUMMARY FOR Hillsborough:
+Districts found: 45
+Total seats: 123
+District details:
+  District 1: 4 seats
+  District 2: 7 seats
+  District 3: 3 seats
+  District 4: 3 seats
+  District 5: 3 seats
+  District 6: 3 seats
+  District 7: 3 seats
+  District 8: 3 seats
+  District 9: 3 seats
+  District 10: 3 seats
+  District 11: 3 seats
+  District 12: 8 seats
+  District 13: 6 seats
+  District 14: 2 seats
+  District 15: 2 seats
+  District 16: 2 seats
+  District 17: 2 seats
+  District 18: 2 seats
+  District 19: 2 seats
+  District 20: 2 seats
+  District 21: 2 seats
+  District 22: 2 seats
+  District 23: 2 seats
+  District 24: 2 seats
+  District 25: 2 seats
+  District 26: 2 seats
+  District 27: 1 seats
+  District 28: 2 seats
+  District 29: 4 seats
+  District 30: 3 seats
+  District 31: 1 seats
+  District 32: 3 seats
+  District 33: 2 seats
+  District 34: 3 seats
+  District 35: 2 seats
+  District 36: 2 seats
+  District 37: 1 seats
+  District 38: 2 seats
+  District 39: 2 seats
+  District 40: 4 seats
+  District 41: 3 seats
+  District 42: 3 seats
+  District 43: 4 seats
+  District 44: 2 seats
+  District 45: 1 seats
+
+================================================================================
+EXAMINING MERRIMACK COUNTY
+File: nh_election_data/2022-ge-house-merrimack_5.xls
+Shape: (122, 9)
+================================================================================
+
+Row   1: District No. 1 (1)
+     + 1: [0]Boscawen | [1]729 | [2]752 | [3]4
+     + 2: [0]Recount | [1]730 | [2]752
+     + 3: [0]District No. 2 (1) | [1]Hill, r | [2]Fulweiler, d | [3]Scatter
+     + 4: [0]Northfield | [1]1101 | [2]795 | [3]0
+     + 5: [0]District No. 3 (2) | [1]Testerman, r | [2]Mason, r | [3]Kovacs, d | [4]Burns, d | [5]Scatter
+     + 6: [0]Franklin Ward 1 | [1]570 | [2]524 | [3]337 | [4]413 | [5]3
+     + 7: [0]Franklin Ward 2 | [1]392 | [2]333 | [3]244 | [4]318 | [5]3
+     + 8: [0]Franklin Ward 3 | [1]622 | [2]573 | [3]445 | [4]522 | [5]0
+     + 9: [0]Totals | [1]1584 | [2]1430 | [3]1026 | [4]1253 | [5]6
+     +10: [0]District No. 4 (2) | [1]Moffett, r | [2]Cambrils, r | [3]Scarponi, d | [4]Heath, d | [5]Scatter
+
+Row   4: District No. 2 (1)
+     + 1: [0]Northfield | [1]1101 | [2]795 | [3]0
+     + 2: [0]District No. 3 (2) | [1]Testerman, r | [2]Mason, r | [3]Kovacs, d | [4]Burns, d | [5]Scatter
+     + 3: [0]Franklin Ward 1 | [1]570 | [2]524 | [3]337 | [4]413 | [5]3
+     + 4: [0]Franklin Ward 2 | [1]392 | [2]333 | [3]244 | [4]318 | [5]3
+     + 5: [0]Franklin Ward 3 | [1]622 | [2]573 | [3]445 | [4]522 | [5]0
+     + 6: [0]Totals | [1]1584 | [2]1430 | [3]1026 | [4]1253 | [5]6
+     + 7: [0]District No. 4 (2) | [1]Moffett, r | [2]Cambrils, r | [3]Scarponi, d | [4]Heath, d | [5]Scatter
+     + 8: [0]Canterbury | [1]585 | [2]498 | [3]834 | [4]839 | [5]0
+     + 9: [0]Loudon | [1]1736 | [2]1474 | [3]1057 | [4]1085 | [5]1
+     +10: [0]Totals | [1]2321 | [2]1972 | [3]1891 | [4]1924 | [5]1
+
+Row   6: District No. 3 (2)
+     + 1: [0]Franklin Ward 1 | [1]570 | [2]524 | [3]337 | [4]413 | [5]3
+     + 2: [0]Franklin Ward 2 | [1]392 | [2]333 | [3]244 | [4]318 | [5]3
+     + 3: [0]Franklin Ward 3 | [1]622 | [2]573 | [3]445 | [4]522 | [5]0
+     + 4: [0]Totals | [1]1584 | [2]1430 | [3]1026 | [4]1253 | [5]6
+     + 5: [0]District No. 4 (2) | [1]Moffett, r | [2]Cambrils, r | [3]Scarponi, d | [4]Heath, d | [5]Scatter
+     + 6: [0]Canterbury | [1]585 | [2]498 | [3]834 | [4]839 | [5]0
+     + 7: [0]Loudon | [1]1736 | [2]1474 | [3]1057 | [4]1085 | [5]1
+     + 8: [0]Totals | [1]2321 | [2]1972 | [3]1891 | [4]1924 | [5]1
+     + 9: [0]District No. 5 (2) | [1]Aylward, r | [2]Recount | [3]Andrus, r | [4]Recount | [5]Wells, d
+     +10: [0]Andover | [1]434 | [2]429 | [3]531 | [4]534 | [5]614
+
+Row  11: District No. 4 (2)
+     + 1: [0]Canterbury | [1]585 | [2]498 | [3]834 | [4]839 | [5]0
+     + 2: [0]Loudon | [1]1736 | [2]1474 | [3]1057 | [4]1085 | [5]1
+     + 3: [0]Totals | [1]2321 | [2]1972 | [3]1891 | [4]1924 | [5]1
+     + 4: [0]District No. 5 (2) | [1]Aylward, r | [2]Recount | [3]Andrus, r | [4]Recount | [5]Wells, d
+     + 5: [0]Andover | [1]434 | [2]429 | [3]531 | [4]534 | [5]614
+     + 6: [0]Danbury | [1]265 | [2]240 | [3]296 | [4]322 | [5]242
+     + 7: [0]Hill | [1]287 | [2]288 | [3]279 | [4]280 | [5]169
+     + 8: [0]Salisbury | [1]347 | [2]347 | [3]419 | [4]420 | [5]297
+     + 9: [0]Webster | [1]445 | [2]445 | [3]464 | [4]465 | [5]419
+     +10: [0]Totals | [1]1778 | [2]1749 | [3]1989 | [4]2021 | [5]1741
+
+Row  15: District No. 5 (2)
+     + 1: [0]Andover | [1]434 | [2]429 | [3]531 | [4]534 | [5]614
+     + 2: [0]Danbury | [1]265 | [2]240 | [3]296 | [4]322 | [5]242
+     + 3: [0]Hill | [1]287 | [2]288 | [3]279 | [4]280 | [5]169
+     + 4: [0]Salisbury | [1]347 | [2]347 | [3]419 | [4]420 | [5]297
+     + 5: [0]Webster | [1]445 | [2]445 | [3]464 | [4]465 | [5]419
+     + 6: [0]Totals | [1]1778 | [2]1749 | [3]1989 | [4]2021 | [5]1741
+     + 7: [0]District No. 6 (1) | [1]Stanton, r | [2]Schamberg, d | [3]Scatter
+     + 8: [0]Sutton | [1]498 | [2]625 | [3]2
+     + 9: [0]Wilmot | [1]297 | [2]512 | [3]2
+     +10: [0]Totals | [1]795 | [2]1137 | [3]4
+
+Row  22: District No. 6 (1)
+     + 1: [0]Sutton | [1]498 | [2]625 | [3]2
+     + 2: [0]Wilmot | [1]297 | [2]512 | [3]2
+     + 3: [0]Totals | [1]795 | [2]1137 | [3]4
+     + 4: [0]District No. 7 (2) | [1]Wolf, r | [2]Ketteler, r | [3]Sargent, d | [4]Ebel, d | [5]Scatter
+     + 5: [0]New London | [1]1196 | [2]781 | [3]1374 | [4]1673 | [5]3
+     + 6: [0]Newbury | [1]779 | [2]563 | [3]527 | [4]619 | [5]5
+     + 7: [0]Totals | [1]1975 | [2]1344 | [3]1901 | [4]2292 | [5]8
+     + 8: [0]District No. 8 (3) | [1]Kennedy, r | [2]Kirsch, r | [3]Parker, r | [4]Caplan, d | [5]Gould, d
+     + 9: [0]Bradford | [1]418 | [2]374 | [3]362 | [4]436 | [5]450
+     +10: [0]Henniker | [1]857 | [2]733 | [3]762 | [4]1111 | [5]1149
+
+Row  26: District No. 7 (2)
+     + 1: [0]New London | [1]1196 | [2]781 | [3]1374 | [4]1673 | [5]3
+     + 2: [0]Newbury | [1]779 | [2]563 | [3]527 | [4]619 | [5]5
+     + 3: [0]Totals | [1]1975 | [2]1344 | [3]1901 | [4]2292 | [5]8
+     + 4: [0]District No. 8 (3) | [1]Kennedy, r | [2]Kirsch, r | [3]Parker, r | [4]Caplan, d | [5]Gould, d
+     + 5: [0]Bradford | [1]418 | [2]374 | [3]362 | [4]436 | [5]450
+     + 6: [0]Henniker | [1]857 | [2]733 | [3]762 | [4]1111 | [5]1149
+     + 7: [0]Warner | [1]669 | [2]566 | [3]559 | [4]819 | [5]849
+     + 8: [0]Totals | [1]1944 | [2]1673 | [3]1683 | [4]2366 | [5]2448
+     + 9: [0]District No. 9 (4) | [1]Lins, r | [2]Martin, r | [3]Richardson, r | [4]Gildersleeve, r
+     +10: [0]Bow | [1]1857 | [2]1760 | [3]1703 | [4]1674
+
+Row  30: District No. 8 (3)
+     + 1: [0]Bradford | [1]418 | [2]374 | [3]362 | [4]436 | [5]450
+     + 2: [0]Henniker | [1]857 | [2]733 | [3]762 | [4]1111 | [5]1149
+     + 3: [0]Warner | [1]669 | [2]566 | [3]559 | [4]819 | [5]849
+     + 4: [0]Totals | [1]1944 | [2]1673 | [3]1683 | [4]2366 | [5]2448
+     + 5: [0]District No. 9 (4) | [1]Lins, r | [2]Martin, r | [3]Richardson, r | [4]Gildersleeve, r
+     + 6: [0]Bow | [1]1857 | [2]1760 | [3]1703 | [4]1674
+     + 7: [0]Hopkinton | [1]1167 | [2]1157 | [3]1210 | [4]1158
+     + 8: [0]Totals | [1]3024 | [2]2917 | [3]2913 | [4]2832
+     + 9: [1]Hall, d | [2]Luneau, d | [3]Myler, d | [4]Brennan, d | [5]Scatter
+     +10: [0]Bow | [1]2612 | [2]2335 | [3]2283 | [4]2464 | [5]1
+
+Row  35: District No. 9 (4)
+     + 1: [0]Bow | [1]1857 | [2]1760 | [3]1703 | [4]1674
+     + 2: [0]Hopkinton | [1]1167 | [2]1157 | [3]1210 | [4]1158
+     + 3: [0]Totals | [1]3024 | [2]2917 | [3]2913 | [4]2832
+     + 4: [1]Hall, d | [2]Luneau, d | [3]Myler, d | [4]Brennan, d | [5]Scatter
+     + 5: [0]Bow | [1]2612 | [2]2335 | [3]2283 | [4]2464 | [5]1
+     + 6: [0]Hopkinton | [1]2035 | [2]2167 | [3]2094 | [4]2062
+     + 7: [0]Totals | [1]4647 | [2]4502 | [3]4377 | [4]4526 | [5]1
+     + 8: [0]District No. 10 (4) | [1]Leavitt, r | [2]Polozov, r | [3]Walsh, r | [4]Boyd, r
+     + 9: [0]Dunbarton | [1]916 | [2]855 | [3]897 | [4]875
+     +10: [0]Hooksett | [1]3351 | [2]2976 | [3]3374 | [4]3086
+
+Row  43: District No. 10 (4)
+     + 1: [0]Dunbarton | [1]916 | [2]855 | [3]897 | [4]875
+     + 2: [0]Hooksett | [1]3351 | [2]2976 | [3]3374 | [4]3086
+     + 3: [0]Totals | [1]4267 | [2]3831 | [3]4271 | [4]3961
+     + 4: [1]Martins, d | [2]Ray, d | [3]Tahoun, d | [4]Gurung, d | [5]Scatter
+     + 5: [0]Dunbarton | [1]654 | [2]613 | [3]566 | [4]571 | [5]0
+     + 6: [0]Hooksett | [1]2915 | [2]2607 | [3]2405 | [4]2518 | [5]4
+     + 7: [0]Totals | [1]3569 | [2]3220 | [3]2971 | [4]3089 | [5]4
+     + 8: [0]District No. 11 (1) | [1]Pitaro, r | [2]Turcotte, d | [3]Scatter
+     + 9: [0]Allenstown | [1]848 | [2]864 | [3]0
+     +10: [0]Recount | [1]848 | [2]864
+
+Row  51: District No. 11 (1)
+     + 1: [0]Allenstown | [1]848 | [2]864 | [3]0
+     + 2: [0]Recount | [1]848 | [2]864
+     + 3: [0]District No. 12 (2) | [1]White, r | [2]Seaworth, r | [3]Schuett, d | [4]Regan, d | [5]Scatter
+     + 4: [0]Pembroke | [1]1372 | [2]1543 | [3]1677 | [4]1498 | [5]5
+     + 5: [0]Recount | [1]1376 | [2]1549 | [3]1684 | [4]1502
+     + 6: [0]District No. 13 (2) | [1]Wood, r | [2]Aures, r | [3]Schroth, d | [4]Kelly, d | [5]Allard w-in
+     + 7: [0]Chichester | [1]753 | [2]674 | [3]407 | [4]600 | [5]113
+     + 8: [0]Pittsfield | [1]829 | [2]717 | [3]535 | [4]639 | [5]163
+     + 9: [0]Totals | [1]1582 | [2]1391 | [3]942 | [4]1239 | [5]276
+     +10: [0]District No. 14 (1) | [1]McGuire, r | [2]Rousseau, d | [3]Scatter
+
+Row  54: District No. 12 (2)
+     + 1: [0]Pembroke | [1]1372 | [2]1543 | [3]1677 | [4]1498 | [5]5
+     + 2: [0]Recount | [1]1376 | [2]1549 | [3]1684 | [4]1502
+     + 3: [0]District No. 13 (2) | [1]Wood, r | [2]Aures, r | [3]Schroth, d | [4]Kelly, d | [5]Allard w-in
+     + 4: [0]Chichester | [1]753 | [2]674 | [3]407 | [4]600 | [5]113
+     + 5: [0]Pittsfield | [1]829 | [2]717 | [3]535 | [4]639 | [5]163
+     + 6: [0]Totals | [1]1582 | [2]1391 | [3]942 | [4]1239 | [5]276
+     + 7: [0]District No. 14 (1) | [1]McGuire, r | [2]Rousseau, d | [3]Scatter
+     + 8: [0]Epsom | [1]1368 | [2]908 | [3]0
+     + 9: [0]District No. 15 (1) | [1]Shurtleff, d | [2]Scatter
+     +10: [0]Concord Ward 1 | [1]1293 | [2]19
+
+Row  57: District No. 13 (2)
+     + 1: [0]Chichester | [1]753 | [2]674 | [3]407 | [4]600 | [5]113
+     + 2: [0]Pittsfield | [1]829 | [2]717 | [3]535 | [4]639 | [5]163
+     + 3: [0]Totals | [1]1582 | [2]1391 | [3]942 | [4]1239 | [5]276
+     + 4: [0]District No. 14 (1) | [1]McGuire, r | [2]Rousseau, d | [3]Scatter
+     + 5: [0]Epsom | [1]1368 | [2]908 | [3]0
+     + 6: [0]District No. 15 (1) | [1]Shurtleff, d | [2]Scatter
+     + 7: [0]Concord Ward 1 | [1]1293 | [2]19
+     + 8: [0]District No. 16 (1) | [1]Lane, d | [2]Scatter
+     + 9: [0]Concord Ward 2 | [1]1100 | [2]8
+     +10: [0]District No. 17 (1) | [1]Richards, d | [2]Scatter
+
+Row  61: District No. 14 (1)
+     + 1: [0]Epsom | [1]1368 | [2]908 | [3]0
+     + 2: [0]District No. 15 (1) | [1]Shurtleff, d | [2]Scatter
+     + 3: [0]Concord Ward 1 | [1]1293 | [2]19
+     + 4: [0]District No. 16 (1) | [1]Lane, d | [2]Scatter
+     + 5: [0]Concord Ward 2 | [1]1100 | [2]8
+     + 6: [0]District No. 17 (1) | [1]Richards, d | [2]Scatter
+     + 7: [0]Concord Ward 3 | [1]713 | [2]18
+     + 8: [0]District No. 18 (1) | [1]Jackson, r | [2]MacKay, d | [3]Scatter
+     + 9: [0]Concord Ward 4 | [1]498 | [2]1308 | [3]1
+     +10: [0]District No. 19 (1) | [1]Myers, r | [2]Wallner, d | [3]Scatter
+
+Row  63: District No. 15 (1)
+     + 1: [0]Concord Ward 1 | [1]1293 | [2]19
+     + 2: [0]District No. 16 (1) | [1]Lane, d | [2]Scatter
+     + 3: [0]Concord Ward 2 | [1]1100 | [2]8
+     + 4: [0]District No. 17 (1) | [1]Richards, d | [2]Scatter
+     + 5: [0]Concord Ward 3 | [1]713 | [2]18
+     + 6: [0]District No. 18 (1) | [1]Jackson, r | [2]MacKay, d | [3]Scatter
+     + 7: [0]Concord Ward 4 | [1]498 | [2]1308 | [3]1
+     + 8: [0]District No. 19 (1) | [1]Myers, r | [2]Wallner, d | [3]Scatter
+     + 9: [0]Concord Ward 5 | [1]593 | [2]1784 | [3]0
+     +10: [0]District No. 20 (1) | [1]Gallager, d | [2]Scatter
+
+Row  65: District No. 16 (1)
+     + 1: [0]Concord Ward 2 | [1]1100 | [2]8
+     + 2: [0]District No. 17 (1) | [1]Richards, d | [2]Scatter
+     + 3: [0]Concord Ward 3 | [1]713 | [2]18
+     + 4: [0]District No. 18 (1) | [1]Jackson, r | [2]MacKay, d | [3]Scatter
+     + 5: [0]Concord Ward 4 | [1]498 | [2]1308 | [3]1
+     + 6: [0]District No. 19 (1) | [1]Myers, r | [2]Wallner, d | [3]Scatter
+     + 7: [0]Concord Ward 5 | [1]593 | [2]1784 | [3]0
+     + 8: [0]District No. 20 (1) | [1]Gallager, d | [2]Scatter
+     + 9: [0]Concord Ward 6 | [1]1085 | [2]13
+     +10: [0]District No. 21 (1) | [1]Bertrand, r | [2]Soucy, T., d | [3]Scatter
+
+Row  67: District No. 17 (1)
+     + 1: [0]Concord Ward 3 | [1]713 | [2]18
+     + 2: [0]District No. 18 (1) | [1]Jackson, r | [2]MacKay, d | [3]Scatter
+     + 3: [0]Concord Ward 4 | [1]498 | [2]1308 | [3]1
+     + 4: [0]District No. 19 (1) | [1]Myers, r | [2]Wallner, d | [3]Scatter
+     + 5: [0]Concord Ward 5 | [1]593 | [2]1784 | [3]0
+     + 6: [0]District No. 20 (1) | [1]Gallager, d | [2]Scatter
+     + 7: [0]Concord Ward 6 | [1]1085 | [2]13
+     + 8: [0]District No. 21 (1) | [1]Bertrand, r | [2]Soucy, T., d | [3]Scatter
+     + 9: [0]Concord Ward 7 | [1]674 | [2]1631 | [3]3
+     +10: [0]District No. 22 (1) | [1]Soucy, D., R | [2]Roesener, d | [3]Scatter
+
+Row  69: District No. 18 (1)
+     + 1: [0]Concord Ward 4 | [1]498 | [2]1308 | [3]1
+     + 2: [0]District No. 19 (1) | [1]Myers, r | [2]Wallner, d | [3]Scatter
+     + 3: [0]Concord Ward 5 | [1]593 | [2]1784 | [3]0
+     + 4: [0]District No. 20 (1) | [1]Gallager, d | [2]Scatter
+     + 5: [0]Concord Ward 6 | [1]1085 | [2]13
+     + 6: [0]District No. 21 (1) | [1]Bertrand, r | [2]Soucy, T., d | [3]Scatter
+     + 7: [0]Concord Ward 7 | [1]674 | [2]1631 | [3]3
+     + 8: [0]District No. 22 (1) | [1]Soucy, D., R | [2]Roesener, d | [3]Scatter
+     + 9: [0]Concord Ward 8 | [1]765 | [2]954 | [3]1
+     +10: [0]District No. 23 (1) | [1]Georgevits, r | [2]Gibbs, d | [3]Scatter
+
+Row  71: District No. 19 (1)
+     + 1: [0]Concord Ward 5 | [1]593 | [2]1784 | [3]0
+     + 2: [0]District No. 20 (1) | [1]Gallager, d | [2]Scatter
+     + 3: [0]Concord Ward 6 | [1]1085 | [2]13
+     + 4: [0]District No. 21 (1) | [1]Bertrand, r | [2]Soucy, T., d | [3]Scatter
+     + 5: [0]Concord Ward 7 | [1]674 | [2]1631 | [3]3
+     + 6: [0]District No. 22 (1) | [1]Soucy, D., R | [2]Roesener, d | [3]Scatter
+     + 7: [0]Concord Ward 8 | [1]765 | [2]954 | [3]1
+     + 8: [0]District No. 23 (1) | [1]Georgevits, r | [2]Gibbs, d | [3]Scatter
+     + 9: [0]Concord Ward 9 | [1]625 | [2]911 | [3]1
+     +10: [0]District No. 24 (1) | [1]Cate, r | [2]Hicks, d | [3]Scatter
+
+Row  73: District No. 20 (1)
+     + 1: [0]Concord Ward 6 | [1]1085 | [2]13
+     + 2: [0]District No. 21 (1) | [1]Bertrand, r | [2]Soucy, T., d | [3]Scatter
+     + 3: [0]Concord Ward 7 | [1]674 | [2]1631 | [3]3
+     + 4: [0]District No. 22 (1) | [1]Soucy, D., R | [2]Roesener, d | [3]Scatter
+     + 5: [0]Concord Ward 8 | [1]765 | [2]954 | [3]1
+     + 6: [0]District No. 23 (1) | [1]Georgevits, r | [2]Gibbs, d | [3]Scatter
+     + 7: [0]Concord Ward 9 | [1]625 | [2]911 | [3]1
+     + 8: [0]District No. 24 (1) | [1]Cate, r | [2]Hicks, d | [3]Scatter
+     + 9: [0]Concord Ward 10 | [1]871 | [2]1545 | [3]2
+     +10: [0]District No. 25 (1)FL | [1]Gerhard, r | [2]Wheeler, d | [3]Scatter
+
+Row  75: District No. 21 (1)
+     + 1: [0]Concord Ward 7 | [1]674 | [2]1631 | [3]3
+     + 2: [0]District No. 22 (1) | [1]Soucy, D., R | [2]Roesener, d | [3]Scatter
+     + 3: [0]Concord Ward 8 | [1]765 | [2]954 | [3]1
+     + 4: [0]District No. 23 (1) | [1]Georgevits, r | [2]Gibbs, d | [3]Scatter
+     + 5: [0]Concord Ward 9 | [1]625 | [2]911 | [3]1
+     + 6: [0]District No. 24 (1) | [1]Cate, r | [2]Hicks, d | [3]Scatter
+     + 7: [0]Concord Ward 10 | [1]871 | [2]1545 | [3]2
+     + 8: [0]District No. 25 (1)FL | [1]Gerhard, r | [2]Wheeler, d | [3]Scatter
+     + 9: [0]Franklin Ward 1 | [1]601 | [2]447 | [3]2
+     +10: [0]Franklin Ward 2 | [1]409 | [2]321 | [3]2
+
+Row  77: District No. 22 (1)
+     + 1: [0]Concord Ward 8 | [1]765 | [2]954 | [3]1
+     + 2: [0]District No. 23 (1) | [1]Georgevits, r | [2]Gibbs, d | [3]Scatter
+     + 3: [0]Concord Ward 9 | [1]625 | [2]911 | [3]1
+     + 4: [0]District No. 24 (1) | [1]Cate, r | [2]Hicks, d | [3]Scatter
+     + 5: [0]Concord Ward 10 | [1]871 | [2]1545 | [3]2
+     + 6: [0]District No. 25 (1)FL | [1]Gerhard, r | [2]Wheeler, d | [3]Scatter
+     + 7: [0]Franklin Ward 1 | [1]601 | [2]447 | [3]2
+     + 8: [0]Franklin Ward 2 | [1]409 | [2]321 | [3]2
+     + 9: [0]Franklin Ward 3 | [1]663 | [2]572 | [3]1
+     +10: [0]Northfield | [1]1038 | [2]830 | [3]6
+
+Row  79: District No. 23 (1)
+     + 1: [0]Concord Ward 9 | [1]625 | [2]911 | [3]1
+     + 2: [0]District No. 24 (1) | [1]Cate, r | [2]Hicks, d | [3]Scatter
+     + 3: [0]Concord Ward 10 | [1]871 | [2]1545 | [3]2
+     + 4: [0]District No. 25 (1)FL | [1]Gerhard, r | [2]Wheeler, d | [3]Scatter
+     + 5: [0]Franklin Ward 1 | [1]601 | [2]447 | [3]2
+     + 6: [0]Franklin Ward 2 | [1]409 | [2]321 | [3]2
+     + 7: [0]Franklin Ward 3 | [1]663 | [2]572 | [3]1
+     + 8: [0]Northfield | [1]1038 | [2]830 | [3]6
+     + 9: [0]Totals | [1]2711 | [2]2170 | [3]11
+     +10: [0]District No. 26 (1)FL | [1]See, r | [2]Nesbitt, d | [3]Scatter
+
+Row  81: District No. 24 (1)
+     + 1: [0]Concord Ward 10 | [1]871 | [2]1545 | [3]2
+     + 2: [0]District No. 25 (1)FL | [1]Gerhard, r | [2]Wheeler, d | [3]Scatter
+     + 3: [0]Franklin Ward 1 | [1]601 | [2]447 | [3]2
+     + 4: [0]Franklin Ward 2 | [1]409 | [2]321 | [3]2
+     + 5: [0]Franklin Ward 3 | [1]663 | [2]572 | [3]1
+     + 6: [0]Northfield | [1]1038 | [2]830 | [3]6
+     + 7: [0]Totals | [1]2711 | [2]2170 | [3]11
+     + 8: [0]District No. 26 (1)FL | [1]See, r | [2]Nesbitt, d | [3]Scatter
+     + 9: [0]Andover | [1]551 | [2]628 | [3]0
+     +10: [0]Boscawen | [1]736 | [2]711 | [3]3
+
+Row  83: District No. 25 (1)FL
+     + 1: [0]Franklin Ward 1 | [1]601 | [2]447 | [3]2
+     + 2: [0]Franklin Ward 2 | [1]409 | [2]321 | [3]2
+     + 3: [0]Franklin Ward 3 | [1]663 | [2]572 | [3]1
+     + 4: [0]Northfield | [1]1038 | [2]830 | [3]6
+     + 5: [0]Totals | [1]2711 | [2]2170 | [3]11
+     + 6: [0]District No. 26 (1)FL | [1]See, r | [2]Nesbitt, d | [3]Scatter
+     + 7: [0]Andover | [1]551 | [2]628 | [3]0
+     + 8: [0]Boscawen | [1]736 | [2]711 | [3]3
+     + 9: [0]Canterbury | [1]562 | [2]851 | [3]1
+     +10: [0]Danbury | [1]348 | [2]226 | [3]0
+
+Row  89: District No. 26 (1)FL
+     + 1: [0]Andover | [1]551 | [2]628 | [3]0
+     + 2: [0]Boscawen | [1]736 | [2]711 | [3]3
+     + 3: [0]Canterbury | [1]562 | [2]851 | [3]1
+     + 4: [0]Danbury | [1]348 | [2]226 | [3]0
+     + 5: [0]Hill | [1]324 | [2]174 | [3]0
+     + 6: [0]Loudon | [1]1715 | [2]1135 | [3]1
+     + 7: [0]Salisbury | [1]421 | [2]323 | [3]0
+     + 8: [0]Webster | [1]485 | [2]478 | [3]0
+     + 9: [0]Totals | [1]5142 | [2]4526 | [3]5
+     +10: [0]District No. 27 (2)FL | [1]McGuire, r | [2]Hoell, r | [3]Frambach, d | [4]Davis, d | [5]Scatter
+
+Row  99: District No. 27 (2)FL
+     + 1: [0]Allenstown | [1]960 | [2]724 | [3]696 | [4]605 | [5]1
+     + 2: [0]Dunbarton | [1]919 | [2]845 | [3]660 | [4]585 | [5]3
+     + 3: [0]Epsom | [1]1354 | [2]1075 | [3]901 | [4]702 | [5]1
+     + 4: [0]Hooksett | [1]3513 | [2]2930 | [3]2786 | [4]2563
+     + 5: [0]Totals | [1]6746 | [2]5574 | [3]5043 | [4]4455 | [5]5
+     + 6: [0]District No. 28 (1)FL | [1]Moore, r | [2]Ellison, d | [3]Scatter
+     + 7: [0]Concord Ward 1 | [1]714 | [2]1060 | [3]7
+     + 8: [0]Concord Ward 2 | [1]620 | [2]982 | [3]2
+     + 9: [0]Concord Ward 3 | [1]371 | [2]619 | [3]0
+     +10: [0]Totals | [1]1705 | [2]2661 | [3]9
+
+Row 105: District No. 28 (1)FL
+     + 1: [0]Concord Ward 1 | [1]714 | [2]1060 | [3]7
+     + 2: [0]Concord Ward 2 | [1]620 | [2]982 | [3]2
+     + 3: [0]Concord Ward 3 | [1]371 | [2]619 | [3]0
+     + 4: [0]Totals | [1]1705 | [2]2661 | [3]9
+     + 5: [0]District No. 29 (1)FL | [1]Georgevits, r | [2]Schultz, d | [3]Scatter
+     + 6: [0]Concord Ward 4 | [1]527 | [2]1269 | [3]1
+     + 7: [0]Concord Ward 9 | [1]590 | [2]932 | [3]0
+     + 8: [0]Concord Ward 10 | [1]1059 | [2]1361 | [3]0
+     + 9: [0]Totals | [1]2176 | [2]3562 | [3]1
+     +10: [0]District No. 30 (1) FL | [1]Wood, r | [2]McWilliams, d | [3]Scatter
+
+Row 110: District No. 29 (1)FL
+     + 1: [0]Concord Ward 4 | [1]527 | [2]1269 | [3]1
+     + 2: [0]Concord Ward 9 | [1]590 | [2]932 | [3]0
+     + 3: [0]Concord Ward 10 | [1]1059 | [2]1361 | [3]0
+     + 4: [0]Totals | [1]2176 | [2]3562 | [3]1
+     + 5: [0]District No. 30 (1) FL | [1]Wood, r | [2]McWilliams, d | [3]Scatter
+     + 6: [0]Concord Ward 5 | [1]598 | [2]1724 | [3]0
+     + 7: [0]Concord Ward 6 | [1]451 | [2]1003 | [3]0
+     + 8: [0]Concord Ward 7 | [1]701 | [2]1585 | [3]1
+     + 9: [0]Concord Ward 8 | [1]701 | [2]996 | [3]1
+     +10: [0]Totals | [1]2451 | [2]5308 | [3]2
+
+Row 115: District No. 30 (1) FL
+     + 1: [0]Concord Ward 5 | [1]598 | [2]1724 | [3]0
+     + 2: [0]Concord Ward 6 | [1]451 | [2]1003 | [3]0
+     + 3: [0]Concord Ward 7 | [1]701 | [2]1585 | [3]1
+     + 4: [0]Concord Ward 8 | [1]701 | [2]996 | [3]1
+     + 5: [0]Totals | [1]2451 | [2]5308 | [3]2
+     + 6: [empty]
+
+SUMMARY FOR Merrimack:
+Districts found: 30
+Total seats: 45
+District details:
+  District 1: 1 seats
+  District 2: 1 seats
+  District 3: 2 seats
+  District 4: 2 seats
+  District 5: 2 seats
+  District 6: 1 seats
+  District 7: 2 seats
+  District 8: 3 seats
+  District 9: 4 seats
+  District 10: 4 seats
+  District 11: 1 seats
+  District 12: 2 seats
+  District 13: 2 seats
+  District 14: 1 seats
+  District 15: 1 seats
+  District 16: 1 seats
+  District 17: 1 seats
+  District 18: 1 seats
+  District 19: 1 seats
+  District 20: 1 seats
+  District 21: 1 seats
+  District 22: 1 seats
+  District 23: 1 seats
+  District 24: 1 seats
+  District 25: 1 seats
+  District 26: 1 seats
+  District 27: 2 seats
+  District 28: 1 seats
+  District 29: 1 seats
+  District 30: 1 seats
+
+================================================================================
+EXAMINING ROCKINGHAM COUNTY
+File: nh_election_data/2022-ge-house-rockingham_7.xls
+Shape: (156, 10)
+================================================================================
+
+Row   1: District No. 1 (3)
+     + 1: [1]994 | [2]979 | [3]1006 | [4]989 | [5]1082 | [6]1056
+     + 2: [1]1369 | [2]1394 | [3]1321 | [4]1347 | [5]1332 | [6]1368
+     + 3: [1]2363 | [2]2373 | [3]2327 | [4]2336 | [5]2414 | [6]2424
+     + 4: [empty]
+     + 5: [1]McGuigan, d | [2]Recount | [3]Rafter, d | [4]Recount | [5]Tappan, d | [6]Recount
+     + 6: [0]Northwood | [1]1005 | [2]973 | [3]889 | [4]859 | [5]894
+     + 7: [0]Nottingham | [1]1317 | [2]1353 | [3]1419 | [4]1452 | [5]1324
+     + 8: [0]Totals | [1]2322 | [2]2326 | [3]2308 | [4]2311 | [5]2218
+     + 9: [0]District No. 2 (3) | [1]Osborne, r | [2]Spillane, r | [3]Verville, r | [4]Messier, d | [5]Power, d
+     +10: [0]Auburn | [1]1810 | [2]1659 | [3]1624 | [4]1130 | [5]1026
+
+Row  10: District No. 2 (3)
+     + 1: [0]Auburn | [1]1810 | [2]1659 | [3]1624 | [4]1130 | [5]1026
+     + 2: [0]Candia | [1]1309 | [2]1295 | [3]1283 | [4]772 | [5]688
+     + 3: [0]Deerfield | [1]1306 | [2]1239 | [3]1344 | [4]1162 | [5]1018
+     + 4: [0]Totals | [1]4425 | [2]4193 | [3]4251 | [4]3064 | [5]2732
+     + 5: [0]District No. 3 (1) | [1]Ford, r | [2]Van Zandt, d | [3]Scatter
+     + 6: [0]Chester | [1]1591 | [2]1097 | [3]1
+     + 7: [0]District No. 4 (3) | [1]Cahill, r | [2]Drago, r | [3]Pratt, r | [4]Couture, d | [5]DiTommaso, d
+     + 8: [0]Raymond | [1]2508 | [2]2353 | [3]2748 | [4]1593 | [5]1513
+     + 9: [0]District No. 5 (2) | [1]Vose, r | [2]Belanger, r | [3]Vallone, d | [4]Perry, d | [5]Scatter
+     +10: [0]Epping | [1]1896 | [2]1685 | [3]1692 | [4]1281
+
+Row  15: District No. 3 (1)
+     + 1: [0]Chester | [1]1591 | [2]1097 | [3]1
+     + 2: [0]District No. 4 (3) | [1]Cahill, r | [2]Drago, r | [3]Pratt, r | [4]Couture, d | [5]DiTommaso, d
+     + 3: [0]Raymond | [1]2508 | [2]2353 | [3]2748 | [4]1593 | [5]1513
+     + 4: [0]District No. 5 (2) | [1]Vose, r | [2]Belanger, r | [3]Vallone, d | [4]Perry, d | [5]Scatter
+     + 5: [0]Epping | [1]1896 | [2]1685 | [3]1692 | [4]1281
+     + 6: [0]Recount | [1]1894 | [2]1685 | [3]1690 | [4]1280
+     + 7: [0]District No. 6 (1) | [1]Litchfield, r | [2]Recount | [3]BLC | [4]Turer, d | [5]Recount
+     + 8: [0]Brentwood | [1]1198 | [2]1198 | [3]1208 | [4]1214 | [5]1214
+     + 9: [0]District No. 7 (1) | [1]Phillips, r | [2]Douglas, d | [3]Scatter
+     +10: [0]Fremont | [1]1416 | [2]914 | [3]7
+
+Row  17: District No. 4 (3)
+     + 1: [0]Raymond | [1]2508 | [2]2353 | [3]2748 | [4]1593 | [5]1513
+     + 2: [0]District No. 5 (2) | [1]Vose, r | [2]Belanger, r | [3]Vallone, d | [4]Perry, d | [5]Scatter
+     + 3: [0]Epping | [1]1896 | [2]1685 | [3]1692 | [4]1281
+     + 4: [0]Recount | [1]1894 | [2]1685 | [3]1690 | [4]1280
+     + 5: [0]District No. 6 (1) | [1]Litchfield, r | [2]Recount | [3]BLC | [4]Turer, d | [5]Recount
+     + 6: [0]Brentwood | [1]1198 | [2]1198 | [3]1208 | [4]1214 | [5]1214
+     + 7: [0]District No. 7 (1) | [1]Phillips, r | [2]Douglas, d | [3]Scatter
+     + 8: [0]Fremont | [1]1416 | [2]914 | [3]7
+     + 9: [0]District No. 8 (1) | [1]Wallace, r | [2]West, d | [3]Scatter
+     +10: [0]Danville | [1]1348 | [2]744
+
+Row  19: District No. 5 (2)
+     + 1: [0]Epping | [1]1896 | [2]1685 | [3]1692 | [4]1281
+     + 2: [0]Recount | [1]1894 | [2]1685 | [3]1690 | [4]1280
+     + 3: [0]District No. 6 (1) | [1]Litchfield, r | [2]Recount | [3]BLC | [4]Turer, d | [5]Recount
+     + 4: [0]Brentwood | [1]1198 | [2]1198 | [3]1208 | [4]1214 | [5]1214
+     + 5: [0]District No. 7 (1) | [1]Phillips, r | [2]Douglas, d | [3]Scatter
+     + 6: [0]Fremont | [1]1416 | [2]914 | [3]7
+     + 7: [0]District No. 8 (1) | [1]Wallace, r | [2]West, d | [3]Scatter
+     + 8: [0]Danville | [1]1348 | [2]744
+     + 9: [0]District No. 9 (2) | [1]True, r | [2]Piemonte, r | [3]Sharpe, d | [4]Cronyn, d | [5]Scatter
+     +10: [0]Sandown | [1]1831 | [2]1666 | [3]1103 | [4]992 | [5]2
+
+Row  22: District No. 6 (1)
+     + 1: [0]Brentwood | [1]1198 | [2]1198 | [3]1208 | [4]1214 | [5]1214
+     + 2: [0]District No. 7 (1) | [1]Phillips, r | [2]Douglas, d | [3]Scatter
+     + 3: [0]Fremont | [1]1416 | [2]914 | [3]7
+     + 4: [0]District No. 8 (1) | [1]Wallace, r | [2]West, d | [3]Scatter
+     + 5: [0]Danville | [1]1348 | [2]744
+     + 6: [0]District No. 9 (2) | [1]True, r | [2]Piemonte, r | [3]Sharpe, d | [4]Cronyn, d | [5]Scatter
+     + 7: [0]Sandown | [1]1831 | [2]1666 | [3]1103 | [4]992 | [5]2
+     + 8: [0]District No. 10 (3) | [1]Chamberland, r | [2]Cooper, r | [3]Sank, r | [4]Cahill, d | [5]DiLorenzo, d
+     + 9: [0]Newfields | [1]373 | [2]464 | [3]346 | [4]542 | [5]528
+     +10: [0]Newmarket | [1]1284 | [2]1577 | [3]1180 | [4]2907 | [5]2760
+
+Row  24: District No. 7 (1)
+     + 1: [0]Fremont | [1]1416 | [2]914 | [3]7
+     + 2: [0]District No. 8 (1) | [1]Wallace, r | [2]West, d | [3]Scatter
+     + 3: [0]Danville | [1]1348 | [2]744
+     + 4: [0]District No. 9 (2) | [1]True, r | [2]Piemonte, r | [3]Sharpe, d | [4]Cronyn, d | [5]Scatter
+     + 5: [0]Sandown | [1]1831 | [2]1666 | [3]1103 | [4]992 | [5]2
+     + 6: [0]District No. 10 (3) | [1]Chamberland, r | [2]Cooper, r | [3]Sank, r | [4]Cahill, d | [5]DiLorenzo, d
+     + 7: [0]Newfields | [1]373 | [2]464 | [3]346 | [4]542 | [5]528
+     + 8: [0]Newmarket | [1]1284 | [2]1577 | [3]1180 | [4]2907 | [5]2760
+     + 9: [0]Totals | [1]1657 | [2]2041 | [3]1526 | [4]3449 | [5]3288
+     +10: [0]District No. 11 (4) | [1]Griset, r | [2]Smith, r | [3]Tyner, r | [4]Duncan, r | [5]Grossman, d
+
+Row  26: District No. 8 (1)
+     + 1: [0]Danville | [1]1348 | [2]744
+     + 2: [0]District No. 9 (2) | [1]True, r | [2]Piemonte, r | [3]Sharpe, d | [4]Cronyn, d | [5]Scatter
+     + 3: [0]Sandown | [1]1831 | [2]1666 | [3]1103 | [4]992 | [5]2
+     + 4: [0]District No. 10 (3) | [1]Chamberland, r | [2]Cooper, r | [3]Sank, r | [4]Cahill, d | [5]DiLorenzo, d
+     + 5: [0]Newfields | [1]373 | [2]464 | [3]346 | [4]542 | [5]528
+     + 6: [0]Newmarket | [1]1284 | [2]1577 | [3]1180 | [4]2907 | [5]2760
+     + 7: [0]Totals | [1]1657 | [2]2041 | [3]1526 | [4]3449 | [5]3288
+     + 8: [0]District No. 11 (4) | [1]Griset, r | [2]Smith, r | [3]Tyner, r | [4]Duncan, r | [5]Grossman, d
+     + 9: [0]Exeter | [1]2563 | [2]2513 | [3]2581 | [4]2476 | [5]5255
+     +10: [0]District No. 12 (2) | [1]Ward, r | [2]Abrami, r | [3]Manos, d | [4]Knab, d | [5]Scatter
+
+Row  28: District No. 9 (2)
+     + 1: [0]Sandown | [1]1831 | [2]1666 | [3]1103 | [4]992 | [5]2
+     + 2: [0]District No. 10 (3) | [1]Chamberland, r | [2]Cooper, r | [3]Sank, r | [4]Cahill, d | [5]DiLorenzo, d
+     + 3: [0]Newfields | [1]373 | [2]464 | [3]346 | [4]542 | [5]528
+     + 4: [0]Newmarket | [1]1284 | [2]1577 | [3]1180 | [4]2907 | [5]2760
+     + 5: [0]Totals | [1]1657 | [2]2041 | [3]1526 | [4]3449 | [5]3288
+     + 6: [0]District No. 11 (4) | [1]Griset, r | [2]Smith, r | [3]Tyner, r | [4]Duncan, r | [5]Grossman, d
+     + 7: [0]Exeter | [1]2563 | [2]2513 | [3]2581 | [4]2476 | [5]5255
+     + 8: [0]District No. 12 (2) | [1]Ward, r | [2]Abrami, r | [3]Manos, d | [4]Knab, d | [5]Scatter
+     + 9: [0]Stratham | [1]1748 | [2]2100 | [3]2425 | [4]2503 | [5]2
+     +10: [0]District No. 13 (10) | [1]Nelson, r | [2]O'Brien, r | [3]Pearson, r | [4]Potucek, r | [5]Tripp, r
+
+Row  30: District No. 10 (3)
+     + 1: [0]Newfields | [1]373 | [2]464 | [3]346 | [4]542 | [5]528
+     + 2: [0]Newmarket | [1]1284 | [2]1577 | [3]1180 | [4]2907 | [5]2760
+     + 3: [0]Totals | [1]1657 | [2]2041 | [3]1526 | [4]3449 | [5]3288
+     + 4: [0]District No. 11 (4) | [1]Griset, r | [2]Smith, r | [3]Tyner, r | [4]Duncan, r | [5]Grossman, d
+     + 5: [0]Exeter | [1]2563 | [2]2513 | [3]2581 | [4]2476 | [5]5255
+     + 6: [0]District No. 12 (2) | [1]Ward, r | [2]Abrami, r | [3]Manos, d | [4]Knab, d | [5]Scatter
+     + 7: [0]Stratham | [1]1748 | [2]2100 | [3]2425 | [4]2503 | [5]2
+     + 8: [0]District No. 13 (10) | [1]Nelson, r | [2]O'Brien, r | [3]Pearson, r | [4]Potucek, r | [5]Tripp, r
+     + 9: [0]Derry | [1]5950 | [2]5586 | [3]5477 | [4]5530 | [5]5537
+     +10: [1]Layon, r | [2]Love, r | [3]Milz, r | [4]Gaskill, d | [5]Greenberg, d | [6]Moge, d
+
+Row  34: District No. 11 (4)
+     + 1: [0]Exeter | [1]2563 | [2]2513 | [3]2581 | [4]2476 | [5]5255
+     + 2: [0]District No. 12 (2) | [1]Ward, r | [2]Abrami, r | [3]Manos, d | [4]Knab, d | [5]Scatter
+     + 3: [0]Stratham | [1]1748 | [2]2100 | [3]2425 | [4]2503 | [5]2
+     + 4: [0]District No. 13 (10) | [1]Nelson, r | [2]O'Brien, r | [3]Pearson, r | [4]Potucek, r | [5]Tripp, r
+     + 5: [0]Derry | [1]5950 | [2]5586 | [3]5477 | [4]5530 | [5]5537
+     + 6: [1]Layon, r | [2]Love, r | [3]Milz, r | [4]Gaskill, d | [5]Greenberg, d | [6]Moge, d
+     + 7: [0]Derry | [1]5364 | [2]5682 | [3]5340 | [4]4652 | [5]4868
+     + 8: [1]West, d | [2]Cunningham, d | [3]Dattner-Levy, d | [4]Doolittle, d | [5]Evdokimov, d | [6]Gallo, d
+     + 9: [0]Derry | [1]4614 | [2]4771 | [3]4503 | [4]4497 | [5]4076
+     +10: [empty]
+
+Row  36: District No. 12 (2)
+     + 1: [0]Stratham | [1]1748 | [2]2100 | [3]2425 | [4]2503 | [5]2
+     + 2: [0]District No. 13 (10) | [1]Nelson, r | [2]O'Brien, r | [3]Pearson, r | [4]Potucek, r | [5]Tripp, r
+     + 3: [0]Derry | [1]5950 | [2]5586 | [3]5477 | [4]5530 | [5]5537
+     + 4: [1]Layon, r | [2]Love, r | [3]Milz, r | [4]Gaskill, d | [5]Greenberg, d | [6]Moge, d
+     + 5: [0]Derry | [1]5364 | [2]5682 | [3]5340 | [4]4652 | [5]4868
+     + 6: [1]West, d | [2]Cunningham, d | [3]Dattner-Levy, d | [4]Doolittle, d | [5]Evdokimov, d | [6]Gallo, d
+     + 7: [0]Derry | [1]4614 | [2]4771 | [3]4503 | [4]4497 | [5]4076
+     + 8: [empty]
+     + 9: [0]District No. 14 (2) | [1]Weyler, r | [2]Hobson, r | [3]Tidd, d | [4]Casey, d | [5]Scatter
+     +10: [0]East Kingston | [1]684 | [2]747 | [3]531 | [4]561 | [5]1
+
+Row  38: District No. 13 (10)
+     + 1: [0]Derry | [1]5950 | [2]5586 | [3]5477 | [4]5530 | [5]5537
+     + 2: [1]Layon, r | [2]Love, r | [3]Milz, r | [4]Gaskill, d | [5]Greenberg, d | [6]Moge, d
+     + 3: [0]Derry | [1]5364 | [2]5682 | [3]5340 | [4]4652 | [5]4868
+     + 4: [1]West, d | [2]Cunningham, d | [3]Dattner-Levy, d | [4]Doolittle, d | [5]Evdokimov, d | [6]Gallo, d
+     + 5: [0]Derry | [1]4614 | [2]4771 | [3]4503 | [4]4497 | [5]4076
+     + 6: [empty]
+     + 7: [0]District No. 14 (2) | [1]Weyler, r | [2]Hobson, r | [3]Tidd, d | [4]Casey, d | [5]Scatter
+     + 8: [0]East Kingston | [1]684 | [2]747 | [3]531 | [4]561 | [5]1
+     + 9: [0]Kingston | [1]1740 | [2]1652 | [3]1249 | [4]1103 | [5]2
+     +10: [0]Totals | [1]2424 | [2]2399 | [3]1780 | [4]1664 | [5]3
+
+Row  45: District No. 14 (2)
+     + 1: [0]East Kingston | [1]684 | [2]747 | [3]531 | [4]561 | [5]1
+     + 2: [0]Kingston | [1]1740 | [2]1652 | [3]1249 | [4]1103 | [5]2
+     + 3: [0]Totals | [1]2424 | [2]2399 | [3]1780 | [4]1664 | [5]3
+     + 4: [0]District No. 15 (2) | [1]Walsh, r | [2]Guthrie, r | [3]Warnock, d | [4]DeMio, d | [5]Scatter
+     + 5: [0]Hampstead | [1]2422 | [2]2604 | [3]1797 | [4]1546 | [5]2
+     + 6: [0]District No. 16 (7) | [1]Thomas, r | [2]Dolan, r | [3]Dunn, r | [4]Lundgren, r | [5]MacDonald, r
+     + 7: [0]Londonderry | [1]5593 | [2]6056 | [3]5544 | [4]6083 | [5]5436
+     + 8: [empty]
+     + 9: [0]Londonderry | [1]Warner, d | [2]Combes, d | [3]Fenn, d | [4]Green, d | [5]Hites, d
+     +10: [1]4677 | [2]5106 | [3]4997 | [4]4775 | [5]4718 | [6]4543
+
+Row  49: District No. 15 (2)
+     + 1: [0]Hampstead | [1]2422 | [2]2604 | [3]1797 | [4]1546 | [5]2
+     + 2: [0]District No. 16 (7) | [1]Thomas, r | [2]Dolan, r | [3]Dunn, r | [4]Lundgren, r | [5]MacDonald, r
+     + 3: [0]Londonderry | [1]5593 | [2]6056 | [3]5544 | [4]6083 | [5]5436
+     + 4: [empty]
+     + 5: [0]Londonderry | [1]Warner, d | [2]Combes, d | [3]Fenn, d | [4]Green, d | [5]Hites, d
+     + 6: [1]4677 | [2]5106 | [3]4997 | [4]4775 | [5]4718 | [6]4543
+     + 7: [0]District No. 17 (4) | [1]Lynn, r | [2]McMahon, r | [3]Popovici-Muller, r | [4]Kuttab, r | [5]Singureanu, d
+     + 8: [0]Windham | [1]3700 | [2]3882 | [3]3591 | [4]3654 | [5]1811
+     + 9: [1]Yanish, d | [2]Roman, d | [3]Carpenter, i | [4]Rounds, i | [5]Scatter
+     +10: [0]Windham | [1]1881 | [2]2492 | [3]1563 | [4]1098 | [5]52
+
+Row  51: District No. 16 (7)
+     + 1: [0]Londonderry | [1]5593 | [2]6056 | [3]5544 | [4]6083 | [5]5436
+     + 2: [empty]
+     + 3: [0]Londonderry | [1]Warner, d | [2]Combes, d | [3]Fenn, d | [4]Green, d | [5]Hites, d
+     + 4: [1]4677 | [2]5106 | [3]4997 | [4]4775 | [5]4718 | [6]4543
+     + 5: [0]District No. 17 (4) | [1]Lynn, r | [2]McMahon, r | [3]Popovici-Muller, r | [4]Kuttab, r | [5]Singureanu, d
+     + 6: [0]Windham | [1]3700 | [2]3882 | [3]3591 | [4]3654 | [5]1811
+     + 7: [1]Yanish, d | [2]Roman, d | [3]Carpenter, i | [4]Rounds, i | [5]Scatter
+     + 8: [0]Windham | [1]1881 | [2]2492 | [3]1563 | [4]1098 | [5]52
+     + 9: [empty]
+     +10: [0]District No. 18 (2) | [1]Quaratiello, r | [2]DeSimone, r | [3]Duerr, d | [4]Delfino, d | [5]Scatter
+
+Row  56: District No. 17 (4)
+     + 1: [0]Windham | [1]3700 | [2]3882 | [3]3591 | [4]3654 | [5]1811
+     + 2: [1]Yanish, d | [2]Roman, d | [3]Carpenter, i | [4]Rounds, i | [5]Scatter
+     + 3: [0]Windham | [1]1881 | [2]2492 | [3]1563 | [4]1098 | [5]52
+     + 4: [empty]
+     + 5: [0]District No. 18 (2) | [1]Quaratiello, r | [2]DeSimone, r | [3]Duerr, d | [4]Delfino, d | [5]Scatter
+     + 6: [0]Atkinson | [1]2157 | [2]2310 | [3]1443 | [4]1620 | [5]6
+     + 7: [0]District No. 19 (1) | [1]Porcelli, r | [2]Pace, d | [3]Scatter
+     + 8: [0]Hampton Falls | [1]809 | [2]616 | [3]1
+     + 9: [0]Kensington | [1]604 | [2]635 | [3]1
+     +10: [0]Totals | [1]1413 | [2]1251 | [3]2
+
+Row  61: District No. 18 (2)
+     + 1: [0]Atkinson | [1]2157 | [2]2310 | [3]1443 | [4]1620 | [5]6
+     + 2: [0]District No. 19 (1) | [1]Porcelli, r | [2]Pace, d | [3]Scatter
+     + 3: [0]Hampton Falls | [1]809 | [2]616 | [3]1
+     + 4: [0]Kensington | [1]604 | [2]635 | [3]1
+     + 5: [0]Totals | [1]1413 | [2]1251 | [3]2
+     + 6: [0]District No. 20 (3) | [1]Harb, r | [2]Melvin, Sr., r | [3]Summers, r | [4]Bartlett, d | [5]Bishop, d
+     + 7: [0]Newton | [1]1043 | [2]1118 | [3]1042 | [4]797 | [5]840
+     + 8: [0]Plaistow | [1]1945 | [2]1668 | [3]1582 | [4]1147 | [5]1268
+     + 9: [0]South Hampton | [1]229 | [2]246 | [3]226 | [4]204 | [5]214
+     +10: [0]Totals | [1]3217 | [2]3032 | [3]2850 | [4]2148 | [5]2322
+
+Row  63: District No. 19 (1)
+     + 1: [0]Hampton Falls | [1]809 | [2]616 | [3]1
+     + 2: [0]Kensington | [1]604 | [2]635 | [3]1
+     + 3: [0]Totals | [1]1413 | [2]1251 | [3]2
+     + 4: [0]District No. 20 (3) | [1]Harb, r | [2]Melvin, Sr., r | [3]Summers, r | [4]Bartlett, d | [5]Bishop, d
+     + 5: [0]Newton | [1]1043 | [2]1118 | [3]1042 | [4]797 | [5]840
+     + 6: [0]Plaistow | [1]1945 | [2]1668 | [3]1582 | [4]1147 | [5]1268
+     + 7: [0]South Hampton | [1]229 | [2]246 | [3]226 | [4]204 | [5]214
+     + 8: [0]Totals | [1]3217 | [2]3032 | [3]2850 | [4]2148 | [5]2322
+     + 9: [0]District No. 21 (1) | [1]Vogt, d | [2]Scatter
+     +10: [0]Newington | [1]257 | [2]1
+
+Row  67: District No. 20 (3)
+     + 1: [0]Newton | [1]1043 | [2]1118 | [3]1042 | [4]797 | [5]840
+     + 2: [0]Plaistow | [1]1945 | [2]1668 | [3]1582 | [4]1147 | [5]1268
+     + 3: [0]South Hampton | [1]229 | [2]246 | [3]226 | [4]204 | [5]214
+     + 4: [0]Totals | [1]3217 | [2]3032 | [3]2850 | [4]2148 | [5]2322
+     + 5: [0]District No. 21 (1) | [1]Vogt, d | [2]Scatter
+     + 6: [0]Newington | [1]257 | [2]1
+     + 7: [0]Portsmouth Ward 1 | [1]1723 | [2]10
+     + 8: [0]Totals | [1]1980 | [2]11
+     + 9: [0]District No. 22 (1) | [1]Murray, d | [2]Scatter
+     +10: [0]New Castle | [1]513 | [2]7
+
+Row  72: District No. 21 (1)
+     + 1: [0]Newington | [1]257 | [2]1
+     + 2: [0]Portsmouth Ward 1 | [1]1723 | [2]10
+     + 3: [0]Totals | [1]1980 | [2]11
+     + 4: [0]District No. 22 (1) | [1]Murray, d | [2]Scatter
+     + 5: [0]New Castle | [1]513 | [2]7
+     + 6: [0]Portsmouth Ward 5 | [1]1820 | [2]22
+     + 7: [0]Totals | [1]2333 | [2]29
+     + 8: [0]District No. 23 (1) | [1]Schultz, r | [2]Maggiore, d | [3]Scatter
+     + 9: [0]North Hampton | [1]1218 | [2]1587 | [3]5
+     +10: [0]District No. 24 (2) | [1]Page, r | [2]Jones, r | [3]Malloy, d | [4]Grote, d | [5]Scatter
+
+Row  76: District No. 22 (1)
+     + 1: [0]New Castle | [1]513 | [2]7
+     + 2: [0]Portsmouth Ward 5 | [1]1820 | [2]22
+     + 3: [0]Totals | [1]2333 | [2]29
+     + 4: [0]District No. 23 (1) | [1]Schultz, r | [2]Maggiore, d | [3]Scatter
+     + 5: [0]North Hampton | [1]1218 | [2]1587 | [3]5
+     + 6: [0]District No. 24 (2) | [1]Page, r | [2]Jones, r | [3]Malloy, d | [4]Grote, d | [5]Scatter
+     + 7: [0]Greenland | [1]1002 | [2]922 | [3]1316 | [4]1153 | [5]1
+     + 8: [0]Rye | [1]1539 | [2]1418 | [3]1927 | [4]2016 | [5]2
+     + 9: [0]Totals | [1]2541 | [2]2340 | [3]3243 | [4]3169 | [5]3
+     +10: [0]District No. 25 (9) | [1]Donnelly, r | [2]Doucette, r | [3]Janigian, r | [4]Mannion, r | [5]McDonnell, r
+
+Row  80: District No. 23 (1)
+     + 1: [0]North Hampton | [1]1218 | [2]1587 | [3]5
+     + 2: [0]District No. 24 (2) | [1]Page, r | [2]Jones, r | [3]Malloy, d | [4]Grote, d | [5]Scatter
+     + 3: [0]Greenland | [1]1002 | [2]922 | [3]1316 | [4]1153 | [5]1
+     + 4: [0]Rye | [1]1539 | [2]1418 | [3]1927 | [4]2016 | [5]2
+     + 5: [0]Totals | [1]2541 | [2]2340 | [3]3243 | [4]3169 | [5]3
+     + 6: [0]District No. 25 (9) | [1]Donnelly, r | [2]Doucette, r | [3]Janigian, r | [4]Mannion, r | [5]McDonnell, r
+     + 7: [0]Salem | [1]6668 | [2]6900 | [3]6679 | [4]6032 | [5]6347
+     + 8: [1]Vandecasteele, r | [2]Ball, r | [3]Dillingham, d | [4]Disenhof, d | [5]Garon, d | [6]Karibian, d
+     + 9: [0]Salem | [1]6307 | [2]7105 | [3]4300 | [4]3577 | [5]3907
+     +10: [1]Misra, d | [2]Thibault, d | [3]Wright, d | [4]Davis, d
+
+Row  82: District No. 24 (2)
+     + 1: [0]Greenland | [1]1002 | [2]922 | [3]1316 | [4]1153 | [5]1
+     + 2: [0]Rye | [1]1539 | [2]1418 | [3]1927 | [4]2016 | [5]2
+     + 3: [0]Totals | [1]2541 | [2]2340 | [3]3243 | [4]3169 | [5]3
+     + 4: [0]District No. 25 (9) | [1]Donnelly, r | [2]Doucette, r | [3]Janigian, r | [4]Mannion, r | [5]McDonnell, r
+     + 5: [0]Salem | [1]6668 | [2]6900 | [3]6679 | [4]6032 | [5]6347
+     + 6: [1]Vandecasteele, r | [2]Ball, r | [3]Dillingham, d | [4]Disenhof, d | [5]Garon, d | [6]Karibian, d
+     + 7: [0]Salem | [1]6307 | [2]7105 | [3]4300 | [4]3577 | [5]3907
+     + 8: [1]Misra, d | [2]Thibault, d | [3]Wright, d | [4]Davis, d
+     + 9: [0]Salem | [1]4101 | [2]4090 | [3]4743 | [4]3819
+     +10: [empty]
+
+Row  86: District No. 25 (9)
+     + 1: [0]Salem | [1]6668 | [2]6900 | [3]6679 | [4]6032 | [5]6347
+     + 2: [1]Vandecasteele, r | [2]Ball, r | [3]Dillingham, d | [4]Disenhof, d | [5]Garon, d | [6]Karibian, d
+     + 3: [0]Salem | [1]6307 | [2]7105 | [3]4300 | [4]3577 | [5]3907
+     + 4: [1]Misra, d | [2]Thibault, d | [3]Wright, d | [4]Davis, d
+     + 5: [0]Salem | [1]4101 | [2]4090 | [3]4743 | [4]3819
+     + 6: [empty]
+     + 7: [0]District No. 26 (1) | [1]Hamblet, d | [2]Forte, sgi
+     + 8: [0]Portsmouth Ward 3 | [1]1387 | [2]505 | [3]7
+     + 9: [0]District No. 27 (1) | [1]Forbes, r | [2]Ward, d | [3]Scatter
+     +10: [0]Portsmouth Ward 4 | [1]720 | [2]1230 | [3]4
+
+Row  93: District No. 26 (1)
+     + 1: [0]Portsmouth Ward 3 | [1]1387 | [2]505 | [3]7
+     + 2: [0]District No. 27 (1) | [1]Forbes, r | [2]Ward, d | [3]Scatter
+     + 3: [0]Portsmouth Ward 4 | [1]720 | [2]1230 | [3]4
+     + 4: [0]District No. 28 (1) | [1]McBeath, d | [2]Scatter
+     + 5: [0]Portsmouth Ward 2 | [1]2112 | [2]12
+     + 6: [0]District No. 29 (4) | [1]Jackson, r | [2]Sheffert, r | [3]Theriault, r | [4]Emerick, r | [5]Muns, d
+     + 7: [0]Hampton | [1]3842 | [2]3964 | [3]3881 | [4]4282 | [5]4512
+     + 8: [0]District No. 30 (2) | [1]Khan, r | [2]Harley, r | [3]Daly, d | [4]Albright, d | [5]Scatter
+     + 9: [0]Seabrook | [1]2069 | [2]1822 | [3]1080 | [4]1165 | [5]9
+     +10: [0]District No. 31 (2)FL | [1]Roy, r | [2]Edwards, r | [3]Thomas, d | [4]Lister, d | [5]Scatter
+
+Row  95: District No. 27 (1)
+     + 1: [0]Portsmouth Ward 4 | [1]720 | [2]1230 | [3]4
+     + 2: [0]District No. 28 (1) | [1]McBeath, d | [2]Scatter
+     + 3: [0]Portsmouth Ward 2 | [1]2112 | [2]12
+     + 4: [0]District No. 29 (4) | [1]Jackson, r | [2]Sheffert, r | [3]Theriault, r | [4]Emerick, r | [5]Muns, d
+     + 5: [0]Hampton | [1]3842 | [2]3964 | [3]3881 | [4]4282 | [5]4512
+     + 6: [0]District No. 30 (2) | [1]Khan, r | [2]Harley, r | [3]Daly, d | [4]Albright, d | [5]Scatter
+     + 7: [0]Seabrook | [1]2069 | [2]1822 | [3]1080 | [4]1165 | [5]9
+     + 8: [0]District No. 31 (2)FL | [1]Roy, r | [2]Edwards, r | [3]Thomas, d | [4]Lister, d | [5]Scatter
+     + 9: [0]Auburn | [1]1693 | [2]1848 | [3]1053 | [4]1090 | [5]1
+     +10: [0]Candia | [1]1355 | [2]1319 | [3]719 | [4]743 | [5]1
+
+Row  97: District No. 28 (1)
+     + 1: [0]Portsmouth Ward 2 | [1]2112 | [2]12
+     + 2: [0]District No. 29 (4) | [1]Jackson, r | [2]Sheffert, r | [3]Theriault, r | [4]Emerick, r | [5]Muns, d
+     + 3: [0]Hampton | [1]3842 | [2]3964 | [3]3881 | [4]4282 | [5]4512
+     + 4: [0]District No. 30 (2) | [1]Khan, r | [2]Harley, r | [3]Daly, d | [4]Albright, d | [5]Scatter
+     + 5: [0]Seabrook | [1]2069 | [2]1822 | [3]1080 | [4]1165 | [5]9
+     + 6: [0]District No. 31 (2)FL | [1]Roy, r | [2]Edwards, r | [3]Thomas, d | [4]Lister, d | [5]Scatter
+     + 7: [0]Auburn | [1]1693 | [2]1848 | [3]1053 | [4]1090 | [5]1
+     + 8: [0]Candia | [1]1355 | [2]1319 | [3]719 | [4]743 | [5]1
+     + 9: [0]Chester | [1]1485 | [2]1553 | [3]953 | [4]1022 | [5]2
+     +10: [0]Deerfield | [1]1366 | [2]1367 | [3]1034 | [4]1029
+
+Row  99: District No. 29 (4)
+     + 1: [0]Hampton | [1]3842 | [2]3964 | [3]3881 | [4]4282 | [5]4512
+     + 2: [0]District No. 30 (2) | [1]Khan, r | [2]Harley, r | [3]Daly, d | [4]Albright, d | [5]Scatter
+     + 3: [0]Seabrook | [1]2069 | [2]1822 | [3]1080 | [4]1165 | [5]9
+     + 4: [0]District No. 31 (2)FL | [1]Roy, r | [2]Edwards, r | [3]Thomas, d | [4]Lister, d | [5]Scatter
+     + 5: [0]Auburn | [1]1693 | [2]1848 | [3]1053 | [4]1090 | [5]1
+     + 6: [0]Candia | [1]1355 | [2]1319 | [3]719 | [4]743 | [5]1
+     + 7: [0]Chester | [1]1485 | [2]1553 | [3]953 | [4]1022 | [5]2
+     + 8: [0]Deerfield | [1]1366 | [2]1367 | [3]1034 | [4]1029
+     + 9: [0]Totals | [1]5899 | [2]6087 | [3]3759 | [4]3884 | [5]4
+     +10: [0]District No. 32 (1)FL | [1]Yokela, r | [2]Kelly, i | [3]Scatter
+
+Row 101: District No. 30 (2)
+     + 1: [0]Seabrook | [1]2069 | [2]1822 | [3]1080 | [4]1165 | [5]9
+     + 2: [0]District No. 31 (2)FL | [1]Roy, r | [2]Edwards, r | [3]Thomas, d | [4]Lister, d | [5]Scatter
+     + 3: [0]Auburn | [1]1693 | [2]1848 | [3]1053 | [4]1090 | [5]1
+     + 4: [0]Candia | [1]1355 | [2]1319 | [3]719 | [4]743 | [5]1
+     + 5: [0]Chester | [1]1485 | [2]1553 | [3]953 | [4]1022 | [5]2
+     + 6: [0]Deerfield | [1]1366 | [2]1367 | [3]1034 | [4]1029
+     + 7: [0]Totals | [1]5899 | [2]6087 | [3]3759 | [4]3884 | [5]4
+     + 8: [0]District No. 32 (1)FL | [1]Yokela, r | [2]Kelly, i | [3]Scatter
+     + 9: [0]Brentwood | [1]1069 | [2]1177 | [3]2
+     +10: [0]Danville | [1]1159 | [2]844
+
+Row 103: District No. 31 (2)FL
+     + 1: [0]Auburn | [1]1693 | [2]1848 | [3]1053 | [4]1090 | [5]1
+     + 2: [0]Candia | [1]1355 | [2]1319 | [3]719 | [4]743 | [5]1
+     + 3: [0]Chester | [1]1485 | [2]1553 | [3]953 | [4]1022 | [5]2
+     + 4: [0]Deerfield | [1]1366 | [2]1367 | [3]1034 | [4]1029
+     + 5: [0]Totals | [1]5899 | [2]6087 | [3]3759 | [4]3884 | [5]4
+     + 6: [0]District No. 32 (1)FL | [1]Yokela, r | [2]Kelly, i | [3]Scatter
+     + 7: [0]Brentwood | [1]1069 | [2]1177 | [3]2
+     + 8: [0]Danville | [1]1159 | [2]844
+     + 9: [0]Fremont | [1]1245 | [2]1002 | [3]3
+     +10: [0]Totals | [1]3473 | [2]3023 | [3]3
+
+Row 109: District No. 32 (1)FL
+     + 1: [0]Brentwood | [1]1069 | [2]1177 | [3]2
+     + 2: [0]Danville | [1]1159 | [2]844
+     + 3: [0]Fremont | [1]1245 | [2]1002 | [3]3
+     + 4: [0]Totals | [1]3473 | [2]3023 | [3]3
+     + 5: [0]District No. 33 (1)FL | [1]Sacco, r | [2]Simpson, d | [3]Scatter
+     + 6: [0]Exeter | [1]2790 | [2]5383
+     + 7: [0]Newfields | [1]456 | [2]582 | [3]1
+     + 8: [0]Newmarket | [1]1573 | [2]2991 | [3]3
+     + 9: [0]Stratham | [1]1896 | [2]2598 | [3]4
+     +10: [0]Totals | [1]6715 | [2]11554 | [3]8
+
+Row 114: District No. 33 (1)FL
+     + 1: [0]Exeter | [1]2790 | [2]5383
+     + 2: [0]Newfields | [1]456 | [2]582 | [3]1
+     + 3: [0]Newmarket | [1]1573 | [2]2991 | [3]3
+     + 4: [0]Stratham | [1]1896 | [2]2598 | [3]4
+     + 5: [0]Totals | [1]6715 | [2]11554 | [3]8
+     + 6: [0]District No. 34 (1)FL | [1]Pearson, r | [2]Tilton, d | [3]Scatter
+     + 7: [0]East Kingston | [1]774 | [2]594 | [3]1
+     + 8: [0]Hampstead | [1]2839 | [2]1678 | [3]1
+     + 9: [0]Kingston | [1]1863 | [2]1237 | [3]1
+     +10: [0]Totals | [1]5476 | [2]3509 | [3]3
+
+Row 120: District No. 34 (1)FL
+     + 1: [0]East Kingston | [1]774 | [2]594 | [3]1
+     + 2: [0]Hampstead | [1]2839 | [2]1678 | [3]1
+     + 3: [0]Kingston | [1]1863 | [2]1237 | [3]1
+     + 4: [0]Totals | [1]5476 | [2]3509 | [3]3
+     + 5: [0]District No. 35 (1)FL | [1]Soti, r | [2]Gehling, d | [3]Scatter
+     + 6: [0]Londonderry | [1]6109 | [2]5279 | [3]6
+     + 7: [0]Windham | [1]4257 | [2]2987 | [3]10
+     + 8: [0]Totals | [1]10366 | [2]8266 | [3]16
+     + 9: [0]District No. 36 (1)FL | [1]Bernardy, r | [2]Kosta, d | [3]Scatter
+     +10: [0]Hampton Falls | [1]785 | [2]612
+
+Row 125: District No. 35 (1)FL
+     + 1: [0]Londonderry | [1]6109 | [2]5279 | [3]6
+     + 2: [0]Windham | [1]4257 | [2]2987 | [3]10
+     + 3: [0]Totals | [1]10366 | [2]8266 | [3]16
+     + 4: [0]District No. 36 (1)FL | [1]Bernardy, r | [2]Kosta, d | [3]Scatter
+     + 5: [0]Hampton Falls | [1]785 | [2]612
+     + 6: [0]Kensington | [1]614 | [2]604 | [3]1
+     + 7: [0]Newton | [1]1328 | [2]898
+     + 8: [0]Plaistow | [1]1902 | [2]1393 | [3]2
+     + 9: [0]South Hampton | [1]291 | [2]216
+     +10: [0]Totals | [1]4920 | [2]3723 | [3]3
+
+Row 129: District No. 36 (1)FL
+     + 1: [0]Hampton Falls | [1]785 | [2]612
+     + 2: [0]Kensington | [1]614 | [2]604 | [3]1
+     + 3: [0]Newton | [1]1328 | [2]898
+     + 4: [0]Plaistow | [1]1902 | [2]1393 | [3]2
+     + 5: [0]South Hampton | [1]291 | [2]216
+     + 6: [0]Totals | [1]4920 | [2]3723 | [3]3
+     + 7: [0]District No. 37 (1)FL | [1]Meuse, d | [2]Scatter
+     + 8: [0]New Castle | [1]483 | [2]5
+     + 9: [0]Newington | [1]259 | [2]2
+     +10: [0]Portsmouth Ward 1 | [1]1714 | [2]12
+
+Row 136: District No. 37 (1)FL
+     + 1: [0]New Castle | [1]483 | [2]5
+     + 2: [0]Newington | [1]259 | [2]2
+     + 3: [0]Portsmouth Ward 1 | [1]1714 | [2]12
+     + 4: [0]Portsmouth Ward 5 | [1]1809 | [2]37
+     + 5: [0]Totals | [1]4265 | [2]56
+     + 6: [0]District No. 38 (1) FL | [1]Lincoln, r | [2]Balboni, d | [3]Borne, i | [4]Scatter
+     + 7: [0]Greenland | [1]952 | [2]1193 | [3]202 | [4]1
+     + 8: [0]North Hampton | [1]1126 | [2]1426 | [3]213 | [4]3
+     + 9: [0]Rye | [1]1395 | [2]1867 | [3]407 | [4]1
+     +10: [0]Totals | [1]3473 | [2]4486 | [3]822 | [4]5
+
+Row 142: District No. 38 (1) FL
+     + 1: [0]Greenland | [1]952 | [2]1193 | [3]202 | [4]1
+     + 2: [0]North Hampton | [1]1126 | [2]1426 | [3]213 | [4]3
+     + 3: [0]Rye | [1]1395 | [2]1867 | [3]407 | [4]1
+     + 4: [0]Totals | [1]3473 | [2]4486 | [3]822 | [4]5
+     + 5: [0]District No. 39 (1) FL | [1]Polidura, r | [2]Raynolds, d | [3]Scatter
+     + 6: [0]Portsmouth Ward 2 | [1]590 | [2]1992 | [3]1
+     + 7: [0]Portsmouth Ward 3 | [1]717 | [2]1453 | [3]4
+     + 8: [0]Portsmouth Ward 4 | [1]723 | [2]1215 | [3]4
+     + 9: [0]Totals | [1]2030 | [2]4660 | [3]9
+     +10: [0]District No. 40 (1) FL | [1]Janvrin, r | [2]de Vries, d | [3]Scatter
+
+Row 147: District No. 39 (1) FL
+     + 1: [0]Portsmouth Ward 2 | [1]590 | [2]1992 | [3]1
+     + 2: [0]Portsmouth Ward 3 | [1]717 | [2]1453 | [3]4
+     + 3: [0]Portsmouth Ward 4 | [1]723 | [2]1215 | [3]4
+     + 4: [0]Totals | [1]2030 | [2]4660 | [3]9
+     + 5: [0]District No. 40 (1) FL | [1]Janvrin, r | [2]de Vries, d | [3]Scatter
+     + 6: [0]Hampton | [1]4360 | [2]4628 | [3]6
+     + 7: [0]Seabrook | [1]2112 | [2]1317 | [3]8
+     + 8: [0]Totals | [1]6472 | [2]5945 | [3]14
+
+Row 152: District No. 40 (1) FL
+     + 1: [0]Hampton | [1]4360 | [2]4628 | [3]6
+     + 2: [0]Seabrook | [1]2112 | [2]1317 | [3]8
+     + 3: [0]Totals | [1]6472 | [2]5945 | [3]14
+
+SUMMARY FOR Rockingham:
+Districts found: 40
+Total seats: 91
+District details:
+  District 1: 3 seats
+  District 2: 3 seats
+  District 3: 1 seats
+  District 4: 3 seats
+  District 5: 2 seats
+  District 6: 1 seats
+  District 7: 1 seats
+  District 8: 1 seats
+  District 9: 2 seats
+  District 10: 3 seats
+  District 11: 4 seats
+  District 12: 2 seats
+  District 13: 10 seats
+  District 14: 2 seats
+  District 15: 2 seats
+  District 16: 7 seats
+  District 17: 4 seats
+  District 18: 2 seats
+  District 19: 1 seats
+  District 20: 3 seats
+  District 21: 1 seats
+  District 22: 1 seats
+  District 23: 1 seats
+  District 24: 2 seats
+  District 25: 9 seats
+  District 26: 1 seats
+  District 27: 1 seats
+  District 28: 1 seats
+  District 29: 4 seats
+  District 30: 2 seats
+  District 31: 2 seats
+  District 32: 1 seats
+  District 33: 1 seats
+  District 34: 1 seats
+  District 35: 1 seats
+  District 36: 1 seats
+  District 37: 1 seats
+  District 38: 1 seats
+  District 39: 1 seats
+  District 40: 1 seats
+
+================================================================================
+EXAMINING STRAFFORD COUNTY
+File: nh_election_data/2022-ge-house-strafford_0.xls
+Shape: (83, 10)
+================================================================================
+
+Row   1: District No. 1 (2)
+     + 1: [0]Farmington | [1]1253 | [2]1259 | [3]1142 | [4]925 | [5]2
+     + 2: [0]District No. 2 (3) | [1]Bailey, r | [2]Burnham, r | [3]Granger, r | [4]Brown, d | [5]Foster, d
+     + 3: [0]Milton | [1]1093 | [2]1061 | [3]1010 | [4]678 | [5]615
+     + 4: [0]Rochester Ward 5 | [1]1023 | [2]996 | [3]1031 | [4]846 | [5]873
+     + 5: [0]Totals | [1]2116 | [2]2057 | [3]2041 | [4]1524 | [5]1488
+     + 6: [0]District No. 3 (1) | [1]Bickford, r | [2]Wessel, d | [3]Scatter
+     + 7: [0]Middleton | [1]557 | [2]234 | [3]1
+     + 8: [0]New Durham | [1]912 | [2]580 | [3]6
+     + 9: [0]Totals | [1]1469 | [2]814 | [3]7
+     +10: [0]District No. 4 (3) | [1]Miller, r | [2]Recount | [3]Turcotte, r | [4]Recount | [5]Wuelper, r
+
+Row   3: District No. 2 (3)
+     + 1: [0]Milton | [1]1093 | [2]1061 | [3]1010 | [4]678 | [5]615
+     + 2: [0]Rochester Ward 5 | [1]1023 | [2]996 | [3]1031 | [4]846 | [5]873
+     + 3: [0]Totals | [1]2116 | [2]2057 | [3]2041 | [4]1524 | [5]1488
+     + 4: [0]District No. 3 (1) | [1]Bickford, r | [2]Wessel, d | [3]Scatter
+     + 5: [0]Middleton | [1]557 | [2]234 | [3]1
+     + 6: [0]New Durham | [1]912 | [2]580 | [3]6
+     + 7: [0]Totals | [1]1469 | [2]814 | [3]7
+     + 8: [0]District No. 4 (3) | [1]Miller, r | [2]Recount | [3]Turcotte, r | [4]Recount | [5]Wuelper, r
+     + 9: [0]Barrington | [1]2007 | [2]2007 | [3]2204 | [4]2205 | [5]1966
+     +10: [0]Strafford | [1]1047 | [2]1045 | [3]1077 | [4]1078 | [5]1161
+
+Row   7: District No. 3 (1)
+     + 1: [0]Middleton | [1]557 | [2]234 | [3]1
+     + 2: [0]New Durham | [1]912 | [2]580 | [3]6
+     + 3: [0]Totals | [1]1469 | [2]814 | [3]7
+     + 4: [0]District No. 4 (3) | [1]Miller, r | [2]Recount | [3]Turcotte, r | [4]Recount | [5]Wuelper, r
+     + 5: [0]Barrington | [1]2007 | [2]2007 | [3]2204 | [4]2205 | [5]1966
+     + 6: [0]Strafford | [1]1047 | [2]1045 | [3]1077 | [4]1078 | [5]1161
+     + 7: [0]Totals | [1]3054 | [2]3052 | [3]3281 | [4]3283 | [5]3127
+     + 8: [1]Howard, d | [2]Recount | [3]Levesque, d | [4]Recount | [5]Towne, d | [6]Recount
+     + 9: [0]Barrington | [1]2229 | [2]2232 | [3]2356 | [4]2357 | [5]2277
+     +10: [0]Strafford | [1]1011 | [2]1011 | [3]1006 | [4]1006 | [5]958
+
+Row  11: District No. 4 (3)
+     + 1: [0]Barrington | [1]2007 | [2]2007 | [3]2204 | [4]2205 | [5]1966
+     + 2: [0]Strafford | [1]1047 | [2]1045 | [3]1077 | [4]1078 | [5]1161
+     + 3: [0]Totals | [1]3054 | [2]3052 | [3]3281 | [4]3283 | [5]3127
+     + 4: [1]Howard, d | [2]Recount | [3]Levesque, d | [4]Recount | [5]Towne, d | [6]Recount
+     + 5: [0]Barrington | [1]2229 | [2]2232 | [3]2356 | [4]2357 | [5]2277
+     + 6: [0]Strafford | [1]1011 | [2]1011 | [3]1006 | [4]1006 | [5]958
+     + 7: [0]Totals | [1]3240 | [2]3243 | [3]3362 | [4]3363 | [5]3235
+     + 8: [empty]
+     + 9: [0]District No. 5 (1) | [1]Kaczynski, Jr., r | [2]Turner, d | [3]Scatter
+     +10: [0]Rochester Ward 1 | [1]1197 | [2]1123 | [3]2
+
+Row  20: District No. 5 (1)
+     + 1: [0]Rochester Ward 1 | [1]1197 | [2]1123 | [3]2
+     + 2: [0]District No. 6 (1) | [1]Newton, r | [2]Cavalaro, d | [3]Scatter
+     + 3: [0]Rochester Ward 2 | [1]1111 | [2]1033 | [3]2
+     + 4: [0]District No. 7 (1) | [1]Ankarberg, r | [2]Sorenson, d | [3]Scatter
+     + 5: [0]Rochester Ward 3 | [1]1131 | [2]896 | [3]1
+     + 6: [0]District No. 8 (1) | [1]Walker, r | [2]Grassie, d | [3]Scatter
+     + 7: [0]Rochester Ward 4 | [1]971 | [2]970
+     + 8: [0]Recount | [1]970 | [2]970
+     + 9: [0]District No. 9 (1) | [1]Phinney, r | [2]Dexter, d | [3]Scatter
+     +10: [0]Rochester Ward 6 | [1]887 | [2]871 | [3]1
+
+Row  22: District No. 6 (1)
+     + 1: [0]Rochester Ward 2 | [1]1111 | [2]1033 | [3]2
+     + 2: [0]District No. 7 (1) | [1]Ankarberg, r | [2]Sorenson, d | [3]Scatter
+     + 3: [0]Rochester Ward 3 | [1]1131 | [2]896 | [3]1
+     + 4: [0]District No. 8 (1) | [1]Walker, r | [2]Grassie, d | [3]Scatter
+     + 5: [0]Rochester Ward 4 | [1]971 | [2]970
+     + 6: [0]Recount | [1]970 | [2]970
+     + 7: [0]District No. 9 (1) | [1]Phinney, r | [2]Dexter, d | [3]Scatter
+     + 8: [0]Rochester Ward 6 | [1]887 | [2]871 | [3]1
+     + 9: [0]Recount | [1]887 | [2]872
+     +10: [0]District No. 10 (4) | [1]Olszewski, r | [2]Sylvestre, r | [3]Zetterstrom, r | [4]McDermott, r | [5]Kenney, d
+
+Row  24: District No. 7 (1)
+     + 1: [0]Rochester Ward 3 | [1]1131 | [2]896 | [3]1
+     + 2: [0]District No. 8 (1) | [1]Walker, r | [2]Grassie, d | [3]Scatter
+     + 3: [0]Rochester Ward 4 | [1]971 | [2]970
+     + 4: [0]Recount | [1]970 | [2]970
+     + 5: [0]District No. 9 (1) | [1]Phinney, r | [2]Dexter, d | [3]Scatter
+     + 6: [0]Rochester Ward 6 | [1]887 | [2]871 | [3]1
+     + 7: [0]Recount | [1]887 | [2]872
+     + 8: [0]District No. 10 (4) | [1]Olszewski, r | [2]Sylvestre, r | [3]Zetterstrom, r | [4]McDermott, r | [5]Kenney, d
+     + 9: [0]Durham | [1]1088 | [2]993 | [3]1032 | [4]1101 | [5]4332
+     +10: [0]District No. 11 (3) | [1]Lehman, r | [2]Menear, d | [3]Southworth, d | [4]Wall, d | [5]Scatter
+
+Row  26: District No. 8 (1)
+     + 1: [0]Rochester Ward 4 | [1]971 | [2]970
+     + 2: [0]Recount | [1]970 | [2]970
+     + 3: [0]District No. 9 (1) | [1]Phinney, r | [2]Dexter, d | [3]Scatter
+     + 4: [0]Rochester Ward 6 | [1]887 | [2]871 | [3]1
+     + 5: [0]Recount | [1]887 | [2]872
+     + 6: [0]District No. 10 (4) | [1]Olszewski, r | [2]Sylvestre, r | [3]Zetterstrom, r | [4]McDermott, r | [5]Kenney, d
+     + 7: [0]Durham | [1]1088 | [2]993 | [3]1032 | [4]1101 | [5]4332
+     + 8: [0]District No. 11 (3) | [1]Lehman, r | [2]Menear, d | [3]Southworth, d | [4]Wall, d | [5]Scatter
+     + 9: [0]Dover Ward 4 | [1]936 | [2]1488 | [3]1589 | [4]1624 | [5]12
+     +10: [0]Lee | [1]858 | [2]1313 | [3]1350 | [4]1502 | [5]1
+
+Row  29: District No. 9 (1)
+     + 1: [0]Rochester Ward 6 | [1]887 | [2]871 | [3]1
+     + 2: [0]Recount | [1]887 | [2]872
+     + 3: [0]District No. 10 (4) | [1]Olszewski, r | [2]Sylvestre, r | [3]Zetterstrom, r | [4]McDermott, r | [5]Kenney, d
+     + 4: [0]Durham | [1]1088 | [2]993 | [3]1032 | [4]1101 | [5]4332
+     + 5: [0]District No. 11 (3) | [1]Lehman, r | [2]Menear, d | [3]Southworth, d | [4]Wall, d | [5]Scatter
+     + 6: [0]Dover Ward 4 | [1]936 | [2]1488 | [3]1589 | [4]1624 | [5]12
+     + 7: [0]Lee | [1]858 | [2]1313 | [3]1350 | [4]1502 | [5]1
+     + 8: [0]Madbury | [1]400 | [2]538 | [3]574 | [4]667
+     + 9: [0]Totals | [1]2194 | [2]3339 | [3]3513 | [4]3793 | [5]13
+     +10: [0]District No. 12 (4) | [1]Hilton, r | [2]McMahon, r | [3]Spencer, r | [4]Boyle, r | [5]Rich, C., d
+
+Row  32: District No. 10 (4)
+     + 1: [0]Durham | [1]1088 | [2]993 | [3]1032 | [4]1101 | [5]4332
+     + 2: [0]District No. 11 (3) | [1]Lehman, r | [2]Menear, d | [3]Southworth, d | [4]Wall, d | [5]Scatter
+     + 3: [0]Dover Ward 4 | [1]936 | [2]1488 | [3]1589 | [4]1624 | [5]12
+     + 4: [0]Lee | [1]858 | [2]1313 | [3]1350 | [4]1502 | [5]1
+     + 5: [0]Madbury | [1]400 | [2]538 | [3]574 | [4]667
+     + 6: [0]Totals | [1]2194 | [2]3339 | [3]3513 | [4]3793 | [5]13
+     + 7: [0]District No. 12 (4) | [1]Hilton, r | [2]McMahon, r | [3]Spencer, r | [4]Boyle, r | [5]Rich, C., d
+     + 8: [0]Rollinsford | [1]570 | [2]535 | [3]550 | [4]569 | [5]728
+     + 9: [0]Somersworth Ward 1 | [1]507 | [2]426 | [3]472 | [4]432 | [5]578
+     +10: [0]Somersworth Ward 2 | [1]386 | [2]343 | [3]335 | [4]338 | [5]412
+
+Row  34: District No. 11 (3)
+     + 1: [0]Dover Ward 4 | [1]936 | [2]1488 | [3]1589 | [4]1624 | [5]12
+     + 2: [0]Lee | [1]858 | [2]1313 | [3]1350 | [4]1502 | [5]1
+     + 3: [0]Madbury | [1]400 | [2]538 | [3]574 | [4]667
+     + 4: [0]Totals | [1]2194 | [2]3339 | [3]3513 | [4]3793 | [5]13
+     + 5: [0]District No. 12 (4) | [1]Hilton, r | [2]McMahon, r | [3]Spencer, r | [4]Boyle, r | [5]Rich, C., d
+     + 6: [0]Rollinsford | [1]570 | [2]535 | [3]550 | [4]569 | [5]728
+     + 7: [0]Somersworth Ward 1 | [1]507 | [2]426 | [3]472 | [4]432 | [5]578
+     + 8: [0]Somersworth Ward 2 | [1]386 | [2]343 | [3]335 | [4]338 | [5]412
+     + 9: [0]Somersworth Ward 3 | [1]367 | [2]347 | [3]362 | [4]350 | [5]408
+     +10: [0]Somersworth Ward 4 | [1]407 | [2]338 | [3]387 | [4]351 | [5]618
+
+Row  39: District No. 12 (4)
+     + 1: [0]Rollinsford | [1]570 | [2]535 | [3]550 | [4]569 | [5]728
+     + 2: [0]Somersworth Ward 1 | [1]507 | [2]426 | [3]472 | [4]432 | [5]578
+     + 3: [0]Somersworth Ward 2 | [1]386 | [2]343 | [3]335 | [4]338 | [5]412
+     + 4: [0]Somersworth Ward 3 | [1]367 | [2]347 | [3]362 | [4]350 | [5]408
+     + 5: [0]Somersworth Ward 4 | [1]407 | [2]338 | [3]387 | [4]351 | [5]618
+     + 6: [0]Somersworth Ward 5 | [1]233 | [2]201 | [3]203 | [4]205 | [5]351
+     + 7: [0]Totals | [1]2470 | [2]2190 | [3]2309 | [4]2245 | [5]3095
+     + 8: [0]District No. 13 (1) | [1]Blaisdell, r | [2]Bixby, d | [3]Scatter
+     + 9: [0]Dover Ward 6 | [1]964 | [2]1321 | [3]3
+     +10: [0]District No. 14 (1) | [1]Schmidt, d | [2]Scatter
+
+Row  47: District No. 13 (1)
+     + 1: [0]Dover Ward 6 | [1]964 | [2]1321 | [3]3
+     + 2: [0]District No. 14 (1) | [1]Schmidt, d | [2]Scatter
+     + 3: [0]Dover Ward 1 | [1]1894 | [2]16
+     + 4: [0]District No. 15 (1) | [1]Conlin, d | [2]Scatter
+     + 5: [0]Dover Ward 2 | [1]1791 | [2]21
+     + 6: [0]District No. 16 (1) | [1]Staude, r | [2]Pare, d | [3]Scatter
+     + 7: [0]Dover Ward 3 | [1]1123 | [2]1766 | [3]2
+     + 8: [0]District No. 17 (1) | [1]LaMontagne, d | [2]Scatter
+     + 9: [0]Dover Ward 5 | [1]1547 | [2]24
+     +10: [0]District No. 18 (1) | [1]Harrington, r | [2]Cilley, d | [3]Scatter
+
+Row  49: District No. 14 (1)
+     + 1: [0]Dover Ward 1 | [1]1894 | [2]16
+     + 2: [0]District No. 15 (1) | [1]Conlin, d | [2]Scatter
+     + 3: [0]Dover Ward 2 | [1]1791 | [2]21
+     + 4: [0]District No. 16 (1) | [1]Staude, r | [2]Pare, d | [3]Scatter
+     + 5: [0]Dover Ward 3 | [1]1123 | [2]1766 | [3]2
+     + 6: [0]District No. 17 (1) | [1]LaMontagne, d | [2]Scatter
+     + 7: [0]Dover Ward 5 | [1]1547 | [2]24
+     + 8: [0]District No. 18 (1) | [1]Harrington, r | [2]Cilley, d | [3]Scatter
+     + 9: [0]Barrington | [1]2172 | [2]2453
+     +10: [0]Middleton | [1]529 | [2]264
+
+Row  51: District No. 15 (1)
+     + 1: [0]Dover Ward 2 | [1]1791 | [2]21
+     + 2: [0]District No. 16 (1) | [1]Staude, r | [2]Pare, d | [3]Scatter
+     + 3: [0]Dover Ward 3 | [1]1123 | [2]1766 | [3]2
+     + 4: [0]District No. 17 (1) | [1]LaMontagne, d | [2]Scatter
+     + 5: [0]Dover Ward 5 | [1]1547 | [2]24
+     + 6: [0]District No. 18 (1) | [1]Harrington, r | [2]Cilley, d | [3]Scatter
+     + 7: [0]Barrington | [1]2172 | [2]2453
+     + 8: [0]Middleton | [1]529 | [2]264
+     + 9: [0]New Durham | [1]969 | [2]545 | [3]2
+     +10: [0]Strafford | [1]1255 | [2]1027
+
+Row  53: District No. 16 (1)
+     + 1: [0]Dover Ward 3 | [1]1123 | [2]1766 | [3]2
+     + 2: [0]District No. 17 (1) | [1]LaMontagne, d | [2]Scatter
+     + 3: [0]Dover Ward 5 | [1]1547 | [2]24
+     + 4: [0]District No. 18 (1) | [1]Harrington, r | [2]Cilley, d | [3]Scatter
+     + 5: [0]Barrington | [1]2172 | [2]2453
+     + 6: [0]Middleton | [1]529 | [2]264
+     + 7: [0]New Durham | [1]969 | [2]545 | [3]2
+     + 8: [0]Strafford | [1]1255 | [2]1027
+     + 9: [0]Totals | [1]4925 | [2]4289
+     +10: [0]District No. 19 (3) FL | [1]Connor, r | [2]Groen, r | [3]Potenza, r | [4]Fitzpatrick, d | [5]Herman, d
+
+Row  55: District No. 17 (1)
+     + 1: [0]Dover Ward 5 | [1]1547 | [2]24
+     + 2: [0]District No. 18 (1) | [1]Harrington, r | [2]Cilley, d | [3]Scatter
+     + 3: [0]Barrington | [1]2172 | [2]2453
+     + 4: [0]Middleton | [1]529 | [2]264
+     + 5: [0]New Durham | [1]969 | [2]545 | [3]2
+     + 6: [0]Strafford | [1]1255 | [2]1027
+     + 7: [0]Totals | [1]4925 | [2]4289
+     + 8: [0]District No. 19 (3) FL | [1]Connor, r | [2]Groen, r | [3]Potenza, r | [4]Fitzpatrick, d | [5]Herman, d
+     + 9: [0]Rochester Ward 1 | [1]1084 | [2]1019 | [3]1039 | [4]1103 | [5]1001
+     +10: [0]Rochester Ward 2 | [1]987 | [2]987 | [3]963 | [4]1020 | [5]921
+
+Row  57: District No. 18 (1)
+     + 1: [0]Barrington | [1]2172 | [2]2453
+     + 2: [0]Middleton | [1]529 | [2]264
+     + 3: [0]New Durham | [1]969 | [2]545 | [3]2
+     + 4: [0]Strafford | [1]1255 | [2]1027
+     + 5: [0]Totals | [1]4925 | [2]4289
+     + 6: [0]District No. 19 (3) FL | [1]Connor, r | [2]Groen, r | [3]Potenza, r | [4]Fitzpatrick, d | [5]Herman, d
+     + 7: [0]Rochester Ward 1 | [1]1084 | [2]1019 | [3]1039 | [4]1103 | [5]1001
+     + 8: [0]Rochester Ward 2 | [1]987 | [2]987 | [3]963 | [4]1020 | [5]921
+     + 9: [0]Rochester Ward 3 | [1]1046 | [2]1020 | [3]1044 | [4]850 | [5]812
+     +10: [0]Rochester Ward 4 | [1]880 | [2]869 | [3]869 | [4]923 | [5]871
+
+Row  63: District No. 19 (3) FL
+     + 1: [0]Rochester Ward 1 | [1]1084 | [2]1019 | [3]1039 | [4]1103 | [5]1001
+     + 2: [0]Rochester Ward 2 | [1]987 | [2]987 | [3]963 | [4]1020 | [5]921
+     + 3: [0]Rochester Ward 3 | [1]1046 | [2]1020 | [3]1044 | [4]850 | [5]812
+     + 4: [0]Rochester Ward 4 | [1]880 | [2]869 | [3]869 | [4]923 | [5]871
+     + 5: [0]Rochester Ward 6 | [1]794 | [2]744 | [3]786 | [4]864 | [5]797
+     + 6: [0]Totals | [1]4791 | [2]4639 | [3]4701 | [4]4760 | [5]4402
+     + 7: [0]District No. 20 (1) FL | [1]Racic, r | [2]Howland, d | [3]Scatter
+     + 8: [0]Dover Ward 4 | [1]921 | [2]1637 | [3]1
+     + 9: [0]Durham | [1]1146 | [2]4499 | [3]1
+     +10: [0]Lee | [1]825 | [2]1489 | [3]1
+
+Row  70: District No. 20 (1) FL
+     + 1: [0]Dover Ward 4 | [1]921 | [2]1637 | [3]1
+     + 2: [0]Durham | [1]1146 | [2]4499 | [3]1
+     + 3: [0]Lee | [1]825 | [2]1489 | [3]1
+     + 4: [0]Madbury | [1]391 | [2]618
+     + 5: [0]Totals | [1]3283 | [2]8243 | [3]3
+     + 6: [0]District No. 21 (3) FL | [1]Caggiano, r | [2]Castaldo, r | [3]Hastings, r | [4]Bay, d | [5]Smith, d
+     + 7: [0]Dover Ward 1 | [1]479 | [2]497 | [3]529 | [4]1709 | [5]1552
+     + 8: [0]Dover Ward 2 | [1]554 | [2]564 | [3]560 | [4]1628 | [5]1506
+     + 9: [0]Dover Ward 3 | [1]1012 | [2]1024 | [3]1049 | [4]1729 | [5]1584
+     +10: [0]Dover Ward 5 | [1]650 | [2]681 | [3]727 | [4]1292 | [5]1183
+
+Row  76: District No. 21 (3) FL
+     + 1: [0]Dover Ward 1 | [1]479 | [2]497 | [3]529 | [4]1709 | [5]1552
+     + 2: [0]Dover Ward 2 | [1]554 | [2]564 | [3]560 | [4]1628 | [5]1506
+     + 3: [0]Dover Ward 3 | [1]1012 | [2]1024 | [3]1049 | [4]1729 | [5]1584
+     + 4: [0]Dover Ward 5 | [1]650 | [2]681 | [3]727 | [4]1292 | [5]1183
+     + 5: [0]Dover Ward 6 | [1]831 | [2]876 | [3]888 | [4]1316 | [5]1151
+     + 6: [0]Totals | [1]3526 | [2]3642 | [3]3753 | [4]7674 | [5]6976
+
+SUMMARY FOR Strafford:
+Districts found: 21
+Total seats: 38
+District details:
+  District 1: 2 seats
+  District 2: 3 seats
+  District 3: 1 seats
+  District 4: 3 seats
+  District 5: 1 seats
+  District 6: 1 seats
+  District 7: 1 seats
+  District 8: 1 seats
+  District 9: 1 seats
+  District 10: 4 seats
+  District 11: 3 seats
+  District 12: 4 seats
+  District 13: 1 seats
+  District 14: 1 seats
+  District 15: 1 seats
+  District 16: 1 seats
+  District 17: 1 seats
+  District 18: 1 seats
+  District 19: 3 seats
+  District 20: 1 seats
+  District 21: 3 seats
+
+================================================================================
+EXAMINING SULLIVAN COUNTY
+File: nh_election_data/2022-ge-house-sullivan_1.xls
+Shape: (70, 8)
+================================================================================
+
+Row   1: District No. 1 (1)
+     + 1: [0]Grantham | [1]647 | [2]1417 | [3]1
+     + 2: [0]District No. 2 (1) | [1]Drye, r | [2]Palmer, d | [3]Scatter
+     + 3: [0]Cornish | [1]414 | [2]523 | [3]1
+     + 4: [0]Plainfield | [1]489 | [2]857 | [3]0
+     + 5: [0]Totals | [1]903 | [2]1380 | [3]1
+     + 6: [0]District No. 3 (3) | [1]Rollins, r | [2]Smith, r | [3]Spilsbury, r | [4]Irwin, d | [5]Streeter, d
+     + 7: [0]Charlestown | [1]854 | [2]979 | [3]897 | [4]688 | [5]716
+     + 8: [0]Newport | [1]1421 | [2]1211 | [3]997 | [4]973 | [5]726
+     + 9: [0]Unity | [1]409 | [2]342 | [3]305 | [4]213 | [5]186
+     +10: [0]Totals | [1]2684 | [2]2532 | [3]2199 | [4]1874 | [5]1628
+
+Row   3: District No. 2 (1)
+     + 1: [0]Cornish | [1]414 | [2]523 | [3]1
+     + 2: [0]Plainfield | [1]489 | [2]857 | [3]0
+     + 3: [0]Totals | [1]903 | [2]1380 | [3]1
+     + 4: [0]District No. 3 (3) | [1]Rollins, r | [2]Smith, r | [3]Spilsbury, r | [4]Irwin, d | [5]Streeter, d
+     + 5: [0]Charlestown | [1]854 | [2]979 | [3]897 | [4]688 | [5]716
+     + 6: [0]Newport | [1]1421 | [2]1211 | [3]997 | [4]973 | [5]726
+     + 7: [0]Unity | [1]409 | [2]342 | [3]305 | [4]213 | [5]186
+     + 8: [0]Totals | [1]2684 | [2]2532 | [3]2199 | [4]1874 | [5]1628
+     + 9: [0]District No. 4 (1) | [1]Aron, r | [2]Cragin, d | [3]Scatter
+     +10: [0]Acworth | [1]260 | [2]212 | [3]0
+
+Row   7: District No. 3 (3)
+     + 1: [0]Charlestown | [1]854 | [2]979 | [3]897 | [4]688 | [5]716
+     + 2: [0]Newport | [1]1421 | [2]1211 | [3]997 | [4]973 | [5]726
+     + 3: [0]Unity | [1]409 | [2]342 | [3]305 | [4]213 | [5]186
+     + 4: [0]Totals | [1]2684 | [2]2532 | [3]2199 | [4]1874 | [5]1628
+     + 5: [0]District No. 4 (1) | [1]Aron, r | [2]Cragin, d | [3]Scatter
+     + 6: [0]Acworth | [1]260 | [2]212 | [3]0
+     + 7: [0]Goshen | [1]251 | [2]106 | [3]3
+     + 8: [0]Langdon | [1]185 | [2]134 | [3]0
+     + 9: [0]Lempster | [1]367 | [2]199 | [3]0
+     +10: [0]Washington | [1]420 | [2]243
+
+Row  12: District No. 4 (1)
+     + 1: [0]Acworth | [1]260 | [2]212 | [3]0
+     + 2: [0]Goshen | [1]251 | [2]106 | [3]3
+     + 3: [0]Langdon | [1]185 | [2]134 | [3]0
+     + 4: [0]Lempster | [1]367 | [2]199 | [3]0
+     + 5: [0]Washington | [1]420 | [2]243
+     + 6: [0]Totals | [1]1483 | [2]894
+     + 7: [0]District No. 5 (1) | [1]Grant, r | [2]Recount | [3]Tanner, d | [4]Recount
+     + 8: [0]Springfield | [1]369 | [2]371 | [3]371 | [4]372
+     + 9: [0]Sunapee | [1]993 | [2]995 | [3]1021 | [4]1025
+     +10: [0]Totals | [1]1362 | [2]1366 | [3]1392 | [4]1397
+
+Row  19: District No. 5 (1)
+     + 1: [0]Springfield | [1]369 | [2]371 | [3]371 | [4]372
+     + 2: [0]Sunapee | [1]993 | [2]995 | [3]1021 | [4]1025
+     + 3: [0]Totals | [1]1362 | [2]1366 | [3]1392 | [4]1397
+     + 4: [0]District No. 6 (3) | [1]Herrell, r | [2]Recount | [3]McCarthy, r | [4]Recount | [5]Stapleton, r
+     + 5: [0]Claremont Ward 1 | [1]451 | [2]451 | [3]436 | [4]437 | [5]454
+     + 6: [0]Claremont Ward 2 | [1]684 | [2]682 | [3]665 | [4]667 | [5]714
+     + 7: [0]Claremont Ward 3 | [1]579 | [2]578 | [3]597 | [4]597 | [5]661
+     + 8: [0]Croydon | [1]225 | [2]225 | [3]256 | [4]256 | [5]252
+     + 9: [0]Totals | [1]1939 | [2]1936 | [3]1954 | [4]1957 | [5]2081
+     +10: [1]Cloutier, d | [2]Recount | [3]Merchant, d | [4]Recount | [5]O'Hearne, d | [6]Recount
+
+Row  23: District No. 6 (3)
+     + 1: [0]Claremont Ward 1 | [1]451 | [2]451 | [3]436 | [4]437 | [5]454
+     + 2: [0]Claremont Ward 2 | [1]684 | [2]682 | [3]665 | [4]667 | [5]714
+     + 3: [0]Claremont Ward 3 | [1]579 | [2]578 | [3]597 | [4]597 | [5]661
+     + 4: [0]Croydon | [1]225 | [2]225 | [3]256 | [4]256 | [5]252
+     + 5: [0]Totals | [1]1939 | [2]1936 | [3]1954 | [4]1957 | [5]2081
+     + 6: [1]Cloutier, d | [2]Recount | [3]Merchant, d | [4]Recount | [5]O'Hearne, d | [6]Recount
+     + 7: [0]Claremont Ward 1 | [1]590 | [2]591 | [3]548 | [4]548 | [5]538
+     + 8: [0]Claremont Ward 2 | [1]835 | [2]836 | [3]805 | [4]805 | [5]762
+     + 9: [0]Claremont Ward 3 | [1]674 | [2]675 | [3]623 | [4]625 | [5]604
+     +10: [0]Croydon | [1]141 | [2]141 | [3]132 | [4]132 | [5]128
+
+Row  35: District No. 7 (1) FL
+     + 1: [0]Charlestown | [1]985 | [2]815 | [3]1
+     + 2: [0]Cornish | [1]404 | [2]543 | [3]1
+     + 3: [0]Newport | [1]1341 | [2]949 | [3]2
+     + 4: [0]Plainfield | [1]472 | [2]899 | [3]0
+     + 5: [0]Unity | [1]401 | [2]232 | [3]0
+     + 6: [0]Totals | [1]3603 | [2]3438 | [3]4
+     + 7: [empty]
+     + 8: [0]District No. 8 (2) FL | [1]Stone, r | [2]Recount | [3]Bettencourt, r | [4]Recount | [5]Scatter
+     + 9: [0]Acworth | [1]207 | [2]207 | [3]197 | [4]197 | [5]0
+     +10: [0]Claremont Ward 1 | [1]470 | [2]471 | [3]441 | [4]442 | [5]0
+
+Row  43: District No. 8 (2) FL
+     + 1: [0]Acworth | [1]207 | [2]207 | [3]197 | [4]197 | [5]0
+     + 2: [0]Claremont Ward 1 | [1]470 | [2]471 | [3]441 | [4]442 | [5]0
+     + 3: [0]Claremont Ward 2 | [1]731 | [2]734 | [3]693 | [4]694 | [5]0
+     + 4: [0]Claremont Ward 3 | [1]662 | [2]665 | [3]606 | [4]607 | [5]3
+     + 5: [0]Croydon | [1]225 | [2]224 | [3]235 | [4]237 | [5]0
+     + 6: [0]Goshen | [1]198 | [2]197 | [3]209 | [4]210 | [5]1
+     + 7: [0]Langdon | [1]156 | [2]156 | [3]148 | [4]148 | [5]0
+     + 8: [0]Lempster | [1]310 | [2]309 | [3]296 | [4]294 | [5]0
+     + 9: [0]Springfield | [1]327 | [2]327 | [3]350 | [4]351 | [5]0
+     +10: [0]Sunapee | [1]831 | [2]831 | [3]906 | [4]908 | [5]2
+
+SUMMARY FOR Sullivan:
+Districts found: 8
+Total seats: 13
+District details:
+  District 1: 1 seats
+  District 2: 1 seats
+  District 3: 3 seats
+  District 4: 1 seats
+  District 5: 1 seats
+  District 6: 3 seats
+  District 7: 1 seats
+  District 8: 2 seats
+
+================================================================================
+OVERALL SUMMARY
+================================================================================
+Total files examined: 10
+Total districts found: 203
+Total seats found: 400
+Expected: 203 districts, 400 seats
+Missing: 0 districts, 0 seats

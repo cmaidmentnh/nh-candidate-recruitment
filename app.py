@@ -183,7 +183,7 @@ def send_welcome_email(email, name, user_type, user_id):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #c41e3a; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <div style="background: #d91720; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
             <h1 style="color: white; margin: 0; font-size: 24px;">NH GOP Candidate Recruitment</h1>
         </div>
 
@@ -193,7 +193,7 @@ def send_welcome_email(email, name, user_type, user_id):
             <p>You've been invited to join the NH GOP Candidate Recruitment system. Click the button below to set up your account and create your password.</p>
 
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{setup_link}" style="background: #c41e3a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                <a href="{setup_link}" style="background: #d91720; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                     Set Up Your Account
                 </a>
             </div>
@@ -1178,12 +1178,12 @@ def send_password_reset_email(email, name, user_type, user_id):
     html_body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #c41e3a;">Password Reset Request</h2>
+        <h2 style="color: #d91720;">Password Reset Request</h2>
         <p>Hi {name},</p>
         <p>We received a request to reset your password for the NH Candidate Recruitment system.</p>
         <p>Click the button below to reset your password:</p>
         <p style="margin: 30px 0;">
-            <a href="{reset_url}" style="background-color: #c41e3a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
+            <a href="{reset_url}" style="background-color: #d91720; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
         </p>
         <p style="color: #666; font-size: 14px;">This link will expire in 1 hour.</p>
         <p style="color: #666; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
