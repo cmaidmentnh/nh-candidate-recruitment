@@ -2152,7 +2152,7 @@ def update_candidates():
     return render_template('admin_dashboard.html')
 
 @app.route('/admin/export/<export_type>')
-@admin_required
+@super_admin_required
 def export_csv(export_type):
     """Export data to CSV"""
     import io
