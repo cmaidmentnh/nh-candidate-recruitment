@@ -263,12 +263,16 @@ def view_campaign(campaign_id):
 
         # Get targets with incumbent info from candidates table
         cur.execute("""
-            SELECT t.*,
+            SELECT t.id, t.campaign_id, t.district_code, t.incumbent_candidate_id,
+                   t.challenger_name, t.challenger_status, t.challenger_contact,
+                   t.notes, t.priority, t.created_by, t.created_at, t.updated_at,
                    c.first_name as incumbent_first,
                    c.last_name as incumbent_last,
                    c.party as incumbent_party,
                    c.email as incumbent_email,
-                   c.phone1 as incumbent_phone
+                   c.phone1 as incumbent_phone,
+                   t.assigned_caller,
+                   (SELECT COUNT(*) FROM secret_primary_contacts WHERE target_id = t.id) as contact_count
             FROM secret_primary_targets t
             LEFT JOIN candidates c ON t.incumbent_candidate_id = c.candidate_id
             WHERE t.campaign_id = %s
@@ -289,10 +293,21 @@ def view_campaign(campaign_id):
         """)
         incumbents = cur.fetchall()
 
+        # Get users who have access to this feature for caller assignment
+        cur.execute("""
+            SELECT u.user_id, u.username, u.email
+            FROM users u
+            JOIN private_feature_access pfa ON u.user_id = pfa.user_id
+            WHERE pfa.feature_slug = 'secret_primaries'
+            ORDER BY u.username
+        """)
+        callers = cur.fetchall()
+
         return render_template('private/primaries_view.html',
                              campaign=campaign,
                              targets=targets,
-                             incumbents=incumbents)
+                             incumbents=incumbents,
+                             callers=callers)
     finally:
         cur.close()
         release_db_connection(conn)
@@ -355,11 +370,14 @@ def update_target(target_id):
     """Update a target's status."""
     conn = get_db_connection()
     cur = conn.cursor()
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+              'application/json' in request.headers.get('Accept', '')
+
     try:
         cur.execute("""
             UPDATE secret_primary_targets
             SET challenger_name = %s, challenger_status = %s, challenger_contact = %s,
-                notes = %s, priority = %s, updated_at = CURRENT_TIMESTAMP
+                notes = %s, priority = %s, assigned_caller = %s, updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
             RETURNING campaign_id
         """, (
@@ -368,19 +386,106 @@ def update_target(target_id):
             request.form.get('challenger_contact'),
             request.form.get('notes'),
             request.form.get('priority', 5),
+            request.form.get('assigned_caller'),
             target_id
         ))
         result = cur.fetchone()
         conn.commit()
+
+        if is_ajax:
+            return jsonify({'success': True})
+
         flash('Target updated.', 'success')
         return redirect(url_for('private.view_campaign', campaign_id=result[0]))
     except Exception as e:
         conn.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'error': str(e)}), 500
         flash(f'Error updating target: {e}', 'error')
         return redirect(url_for('private.secret_primaries'))
     finally:
         cur.close()
         release_db_connection(conn)
+
+
+@private_bp.route('/primaries/target/<int:target_id>/contact', methods=['POST'])
+@require_feature_access('secret_primaries')
+def log_primary_contact(target_id):
+    """Log a contact with an incumbent about primary challenge."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Get current status
+        cur.execute("""
+            SELECT challenger_status, campaign_id FROM secret_primary_targets WHERE id = %s
+        """, (target_id,))
+        current = cur.fetchone()
+        if not current:
+            flash('Target not found.', 'error')
+            return redirect(url_for('private.secret_primaries'))
+
+        status_before = current[0] or 'recruiting'
+        campaign_id = current[1]
+        status_after = request.form.get('new_status', status_before)
+
+        # Log the contact
+        cur.execute("""
+            INSERT INTO secret_primary_contacts
+            (target_id, contacted_by, contact_method, outcome, notes, status_before, status_after)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            target_id,
+            current_user.email,
+            request.form.get('contact_method'),
+            request.form.get('outcome'),
+            request.form.get('notes'),
+            status_before,
+            status_after
+        ))
+
+        # Update the target status if changed
+        if status_after != status_before:
+            cur.execute("""
+                UPDATE secret_primary_targets
+                SET challenger_status = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (status_after, target_id))
+
+        conn.commit()
+        flash('Contact logged.', 'success')
+        return redirect(url_for('private.view_campaign', campaign_id=campaign_id))
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error logging contact: {e}', 'error')
+        return redirect(url_for('private.secret_primaries'))
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@private_bp.route('/primaries/target/<int:target_id>/delete', methods=['POST'])
+@require_feature_access('secret_primaries')
+def delete_target(target_id):
+    """Delete a target from a campaign."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            DELETE FROM secret_primary_targets WHERE id = %s RETURNING campaign_id
+        """, (target_id,))
+        result = cur.fetchone()
+        conn.commit()
+        flash('Target removed.', 'success')
+        if result:
+            return redirect(url_for('private.view_campaign', campaign_id=result[0]))
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error deleting target: {e}', 'error')
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    return redirect(url_for('private.secret_primaries'))
 
 
 # =============================================================================
@@ -393,13 +498,18 @@ def speaker_votes():
     """Speaker vote tracking dashboard - pulls from confirmed R candidates."""
     conn = get_db_connection()
     cur = conn.cursor()
+
+    # Get filter parameters
+    caller_filter = request.args.get('caller', '')
+    status_filter = request.args.get('status', '')
+
     try:
-        # Get all R incumbents for 2026 (except Declined) with their speaker vote status
-        cur.execute("""
+        # Build query with optional filters
+        query = """
             SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.phone1,
                    ces.district_code, c.incumbent,
                    svt.id as tracking_id, svt.commitment_status, svt.confidence_level,
-                   svt.notes, svt.last_contact_at
+                   svt.notes, svt.last_contact_at, svt.assigned_caller
             FROM candidates c
             JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
@@ -407,6 +517,21 @@ def speaker_votes():
               AND ces.status != 'Declined'
               AND c.party = 'R'
               AND c.incumbent = TRUE
+        """
+        params = []
+
+        if caller_filter:
+            if caller_filter == 'unassigned':
+                query += " AND (svt.assigned_caller IS NULL OR svt.assigned_caller = '')"
+            else:
+                query += " AND svt.assigned_caller = %s"
+                params.append(caller_filter)
+
+        if status_filter:
+            query += " AND COALESCE(svt.commitment_status, 'unknown') = %s"
+            params.append(status_filter)
+
+        query += """
             ORDER BY
                 CASE COALESCE(svt.commitment_status, 'unknown')
                     WHEN 'committed' THEN 1
@@ -416,10 +541,12 @@ def speaker_votes():
                     WHEN 'opposed' THEN 5
                 END,
                 c.last_name
-        """)
+        """
+
+        cur.execute(query, params)
         legislators = cur.fetchall()
 
-        # Get summary counts
+        # Get summary counts (unfiltered for dashboard cards)
         cur.execute("""
             SELECT COALESCE(svt.commitment_status, 'unknown') as status, COUNT(*)
             FROM candidates c
@@ -433,9 +560,22 @@ def speaker_votes():
         """)
         status_counts = dict(cur.fetchall())
 
+        # Get users who have access to this feature for caller assignment
+        cur.execute("""
+            SELECT u.user_id, u.username, u.email
+            FROM users u
+            JOIN private_feature_access pfa ON u.user_id = pfa.user_id
+            WHERE pfa.feature_slug = 'speaker_votes'
+            ORDER BY u.username
+        """)
+        callers = cur.fetchall()
+
         return render_template('private/speaker_dashboard.html',
                              legislators=legislators,
-                             status_counts=status_counts)
+                             status_counts=status_counts,
+                             callers=callers,
+                             caller_filter=caller_filter,
+                             status_filter=status_filter)
     finally:
         cur.close()
         release_db_connection(conn)
@@ -455,27 +595,34 @@ def update_speaker_vote(candidate_id):
         confidence_level = request.form.get('confidence_level', 5)
         notes = request.form.get('notes')
 
-        # Get existing notes if not provided (preserve notes on inline updates)
+        assigned_caller = request.form.get('assigned_caller')
+
+        # Get existing notes and assigned_caller if not provided (preserve on inline updates)
+        cur.execute("""
+            SELECT notes, assigned_caller FROM speaker_vote_tracking WHERE candidate_id = %s
+        """, (candidate_id,))
+        existing = cur.fetchone()
+
         if notes is None or notes == '':
-            cur.execute("""
-                SELECT notes FROM speaker_vote_tracking WHERE candidate_id = %s
-            """, (candidate_id,))
-            existing = cur.fetchone()
             notes = existing[0] if existing and existing[0] else ''
+
+        if assigned_caller is None:
+            assigned_caller = existing[1] if existing else None
 
         # Upsert the tracking record
         cur.execute("""
             INSERT INTO speaker_vote_tracking
-            (candidate_id, commitment_status, confidence_level, notes, created_by, last_contact_at)
-            VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            (candidate_id, commitment_status, confidence_level, notes, assigned_caller, created_by, last_contact_at)
+            VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
             ON CONFLICT (candidate_id) DO UPDATE SET
                 commitment_status = EXCLUDED.commitment_status,
                 confidence_level = EXCLUDED.confidence_level,
                 notes = EXCLUDED.notes,
+                assigned_caller = EXCLUDED.assigned_caller,
                 last_contact_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP
             RETURNING id
-        """, (candidate_id, commitment_status, confidence_level, notes, current_user.email))
+        """, (candidate_id, commitment_status, confidence_level, notes, assigned_caller, current_user.email))
         conn.commit()
 
         if is_ajax:

@@ -14,162 +14,268 @@
 </div>
 
 {% if campaign[2] %}
-<p class="text-muted">{{ campaign[2] }}</p>
+<p class="text-muted mb-4">{{ campaign[2] }}</p>
 {% endif %}
 
 <!-- Dashboard Cards -->
 <div class="dashboard-row mb-4">
     <div class="dash-card dash-card-size" style="border-left: 4px solid #ffc107;">
-        <div class="card-header">Recruiting</div>
+        <div class="card-header" style="background:#ffc107; color:#000;">Recruiting</div>
         <div class="card-body">
             <h4>{{ targets|selectattr(5, 'equalto', 'recruiting')|list|length }}</h4>
         </div>
     </div>
     <div class="dash-card dash-card-size" style="border-left: 4px solid #28a745;">
-        <div class="card-header">Confirmed</div>
+        <div class="card-header" style="background:#28a745;">Confirmed</div>
         <div class="card-body">
             <h4>{{ targets|selectattr(5, 'equalto', 'confirmed')|list|length }}</h4>
         </div>
     </div>
     <div class="dash-card dash-card-size" style="border-left: 4px solid #17a2b8;">
-        <div class="card-header">Filed</div>
+        <div class="card-header" style="background:#17a2b8;">Filed</div>
         <div class="card-body">
             <h4>{{ targets|selectattr(5, 'equalto', 'filed')|list|length }}</h4>
         </div>
     </div>
+    <div class="dash-card dash-card-size" style="border-left: 4px solid #dc3545;">
+        <div class="card-header" style="background:#dc3545;">Declined</div>
+        <div class="card-body">
+            <h4>{{ targets|selectattr(5, 'equalto', 'declined')|list|length }}</h4>
+        </div>
+    </div>
     <div class="dash-card dash-card-size" style="border-left: 4px solid #6c757d;">
-        <div class="card-header">Total</div>
+        <div class="card-header" style="background:#6c757d;">Total</div>
         <div class="card-body">
             <h4>{{ targets|length }}</h4>
         </div>
     </div>
 </div>
 
-<!-- Targets Table -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-bullseye"></i> Primary Targets</span>
+<!-- Search -->
+<div class="search-box mb-4">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search by district or incumbent name..." onkeyup="filterTargets()">
+</div>
+
+<!-- Targets -->
+{% if targets %}
+<div class="targets-grid">
+    {% for target in targets %}
+    {# target: 0=id, 1=campaign_id, 2=district_code, 3=incumbent_candidate_id, 4=challenger_name, 5=challenger_status, 6=challenger_contact, 7=notes, 8=priority, 9=created_by, 10=created_at, 11=updated_at, 12=incumbent_first, 13=incumbent_last, 14=incumbent_party, 15=incumbent_email, 16=incumbent_phone, 17=assigned_caller, 18=contact_count #}
+    <div class="target-card" data-district="{{ target[2]|lower }}" data-incumbent="{{ (target[12]|lower ~ ' ' ~ target[13]|lower) if target[12] else '' }}">
+        <div class="target-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="mb-1">{{ target[2] }}</h5>
+                    <span class="badge badge-{% if target[8] <= 3 %}danger{% elif target[8] <= 6 %}warning{% else %}secondary{% endif %}">P{{ target[8] }}</span>
+                    {% if target[18] > 0 %}<span class="badge badge-info">{{ target[18] }} contacts</span>{% endif %}
+                </div>
+                <div class="target-status">
+                    <span class="badge badge-{% if target[5] == 'filed' %}info{% elif target[5] == 'confirmed' %}success{% elif target[5] == 'declined' %}danger{% else %}warning{% endif %}">
+                        {{ target[5]|title }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="target-body">
+            <!-- Incumbent Section -->
+            <div class="incumbent-section">
+                <label>Incumbent</label>
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong>{{ target[12] }} {{ target[13] }}</strong>
+                    <div class="action-buttons">
+                        {% if target[16] %}
+                        <a href="tel:{{ target[16] }}" class="action-btn" title="Call {{ target[16] }}"><i class="fas fa-phone"></i></a>
+                        <a href="sms:{{ target[16] }}" class="action-btn" title="Text"><i class="fas fa-comment"></i></a>
+                        {% endif %}
+                        {% if target[15] %}
+                        <a href="mailto:{{ target[15] }}" class="action-btn" title="Email"><i class="fas fa-envelope"></i></a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Challenger Section -->
+            <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}" class="challenger-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="priority" value="{{ target[8] }}">
+                <input type="hidden" name="challenger_contact" value="{{ target[6] or '' }}">
+
+                <div class="form-row">
+                    <div class="col-7">
+                        <label>Challenger</label>
+                        <input type="text" name="challenger_name" class="form-control form-control-sm"
+                               value="{{ target[4] or '' }}" placeholder="Name..."
+                               onchange="this.form.submit()">
+                    </div>
+                    <div class="col-5">
+                        <label>Status</label>
+                        <select name="challenger_status" class="form-control form-control-sm" onchange="this.form.submit()">
+                            <option value="recruiting" {% if target[5] == 'recruiting' %}selected{% endif %}>Recruiting</option>
+                            <option value="confirmed" {% if target[5] == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                            <option value="filed" {% if target[5] == 'filed' %}selected{% endif %}>Filed</option>
+                            <option value="declined" {% if target[5] == 'declined' %}selected{% endif %}>Declined</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group mt-2 mb-0">
+                    <label>Notes</label>
+                    <input type="text" name="notes" class="form-control form-control-sm"
+                           value="{{ target[7] or '' }}" placeholder="Notes..."
+                           onchange="this.form.submit()">
+                </div>
+            </form>
+        </div>
+
+        <div class="target-footer">
+            <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#contactModal{{ target[0] }}">
+                <i class="fas fa-plus"></i> Log Contact
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#detailModal{{ target[0] }}">
+                <i class="fas fa-edit"></i> Edit
+            </button>
+        </div>
     </div>
-    {% if targets %}
-    <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>District</th>
-                    <th>Incumbent</th>
-                    <th>Challenger</th>
-                    <th style="width:130px;">Status</th>
-                    <th>Notes</th>
-                    <th style="width:50px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for target in targets %}
-                {# target: id, campaign_id, district_code, incumbent_candidate_id, challenger_name, challenger_status, challenger_contact, notes, priority, created_by, created_at, updated_at, incumbent_first, incumbent_last, incumbent_party, incumbent_email, incumbent_phone #}
-                <tr>
-                    <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="priority" value="{{ target[8] }}">
-                        <td>
-                            <strong>{{ target[2] }}</strong>
-                        </td>
-                        <td>
-                            {{ target[12] }} {{ target[13] }}
-                            {% if target[16] %}
-                            <a href="tel:{{ target[16] }}" class="contact-btn" title="Call"><i class="fas fa-phone"></i></a>
-                            <a href="sms:{{ target[16] }}" class="contact-btn" title="Text"><i class="fas fa-comment"></i></a>
-                            {% endif %}
-                            {% if target[15] %}
-                            <a href="mailto:{{ target[15] }}" class="contact-btn" title="Email"><i class="fas fa-envelope"></i></a>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <input type="text" name="challenger_name" class="form-control form-control-sm" value="{{ target[4] or '' }}" placeholder="Challenger name..." onchange="this.form.submit()">
-                        </td>
-                        <td>
-                            <select name="challenger_status" class="form-control form-control-sm" onchange="this.form.submit()">
+
+    <!-- Contact Modal -->
+    <div class="modal fade" id="contactModal{{ target[0] }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('private.log_primary_contact', target_id=target[0]) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-header py-2">
+                        <h5 class="modal-title">Log Contact - {{ target[2] }}</h5>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-light mb-3">
+                            <strong>Incumbent:</strong> {{ target[12] }} {{ target[13] }}
+                            {% if target[4] %}<br><strong>Challenger:</strong> {{ target[4] }}{% endif %}
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Method</label>
+                                    <select name="contact_method" class="form-control">
+                                        <option value="phone">Phone</option>
+                                        <option value="in_person">In Person</option>
+                                        <option value="text">Text</option>
+                                        <option value="email">Email</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Outcome</label>
+                                    <select name="outcome" class="form-control">
+                                        <option value="positive">Positive</option>
+                                        <option value="neutral">Neutral</option>
+                                        <option value="negative">Negative</option>
+                                        <option value="no_answer">No Answer</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>New Status</label>
+                            <select name="new_status" class="form-control">
                                 <option value="recruiting" {% if target[5] == 'recruiting' %}selected{% endif %}>Recruiting</option>
                                 <option value="confirmed" {% if target[5] == 'confirmed' %}selected{% endif %}>Confirmed</option>
                                 <option value="filed" {% if target[5] == 'filed' %}selected{% endif %}>Filed</option>
                                 <option value="declined" {% if target[5] == 'declined' %}selected{% endif %}>Declined</option>
                             </select>
-                        </td>
-                        <td>
-                            <input type="text" name="notes" class="form-control form-control-sm" value="{{ target[7] or '' }}" placeholder="Notes..." onchange="this.form.submit()">
-                            <input type="hidden" name="challenger_contact" value="{{ target[6] or '' }}">
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#detailModal{{ target[0] }}" title="Details">
-                                <i class="fas fa-info-circle"></i>
-                            </button>
-                        </td>
-                    </form>
-                </tr>
-
-                <!-- Detail Modal -->
-                <div class="modal fade" id="detailModal{{ target[0] }}" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <div class="modal-header py-2">
-                                    <h5 class="modal-title">{{ target[2] }} - {{ target[12] }} {{ target[13] }}</h5>
-                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="alert alert-light mb-3">
-                                        <strong>Incumbent:</strong> {{ target[12] }} {{ target[13] }}<br>
-                                        {% if target[15] %}<small><i class="fas fa-envelope"></i> {{ target[15] }}</small><br>{% endif %}
-                                        {% if target[16] %}<small><i class="fas fa-phone"></i> {{ target[16] }}</small>{% endif %}
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Challenger</label>
-                                        <input type="text" name="challenger_name" class="form-control" value="{{ target[4] or '' }}">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Status</label>
-                                        <select name="challenger_status" class="form-control">
-                                            <option value="recruiting" {% if target[5] == 'recruiting' %}selected{% endif %}>Recruiting</option>
-                                            <option value="confirmed" {% if target[5] == 'confirmed' %}selected{% endif %}>Confirmed</option>
-                                            <option value="filed" {% if target[5] == 'filed' %}selected{% endif %}>Filed</option>
-                                            <option value="declined" {% if target[5] == 'declined' %}selected{% endif %}>Declined</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Challenger Contact</label>
-                                        <textarea name="challenger_contact" class="form-control" rows="2">{{ target[6] or '' }}</textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Notes</label>
-                                        <textarea name="notes" class="form-control" rows="2">{{ target[7] or '' }}</textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Priority (1=highest)</label>
-                                        <select name="priority" class="form-control">
-                                            {% for i in range(1, 11) %}
-                                            <option value="{{ i }}" {% if target[8] == i %}selected{% endif %}>{{ i }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="modal-footer py-2">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-warning">Save</button>
-                                </div>
-                            </form>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label>Notes</label>
+                            <textarea name="notes" class="form-control" rows="3" placeholder="What was discussed..."></textarea>
                         </div>
                     </div>
-                </div>
-                {% endfor %}
-            </tbody>
-        </table>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Log Contact</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-    {% else %}
-    <div class="card-body text-center text-muted">
-        No targets yet. Click "Add Target" to select an incumbent to primary.
+
+    <!-- Detail/Edit Modal -->
+    <div class="modal fade" id="detailModal{{ target[0] }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-header py-2">
+                        <h5 class="modal-title">{{ target[2] }} - {{ target[12] }} {{ target[13] }}</h5>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-light mb-3">
+                            <strong>Incumbent:</strong> {{ target[12] }} {{ target[13] }}<br>
+                            {% if target[15] %}<small><i class="fas fa-envelope"></i> {{ target[15] }}</small><br>{% endif %}
+                            {% if target[16] %}<small><i class="fas fa-phone"></i> {{ target[16] }}</small>{% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label>Challenger Name</label>
+                            <input type="text" name="challenger_name" class="form-control" value="{{ target[4] or '' }}">
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select name="challenger_status" class="form-control">
+                                        <option value="recruiting" {% if target[5] == 'recruiting' %}selected{% endif %}>Recruiting</option>
+                                        <option value="confirmed" {% if target[5] == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                        <option value="filed" {% if target[5] == 'filed' %}selected{% endif %}>Filed</option>
+                                        <option value="declined" {% if target[5] == 'declined' %}selected{% endif %}>Declined</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Priority (1=highest)</label>
+                                    <select name="priority" class="form-control">
+                                        {% for i in range(1, 11) %}
+                                        <option value="{{ i }}" {% if target[8] == i %}selected{% endif %}>{{ i }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Challenger Contact Info</label>
+                            <textarea name="challenger_contact" class="form-control" rows="2" placeholder="Phone, email, etc.">{{ target[6] or '' }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <textarea name="notes" class="form-control" rows="2">{{ target[7] or '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2 justify-content-between">
+                        <form method="POST" action="{{ url_for('private.delete_target', target_id=target[0]) }}" class="d-inline" onsubmit="return confirm('Remove this target?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Remove</button>
+                        </form>
+                        <div>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-warning">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
-    {% endif %}
+    {% endfor %}
 </div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="fas fa-bullseye fa-3x mb-3"></i>
+        <p>No targets yet. Click "Add Target" to select an incumbent to primary.</p>
+    </div>
+</div>
+{% endif %}
 
 <!-- Add Target Modal -->
 <div class="modal fade" id="addTargetModal" tabindex="-1">
@@ -195,21 +301,27 @@
                         <label>Challenger (if known)</label>
                         <input type="text" name="challenger_name" class="form-control" placeholder="Leave blank if still recruiting">
                     </div>
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select name="challenger_status" class="form-control">
-                            <option value="recruiting" selected>Recruiting</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="filed">Filed</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Priority (1=highest)</label>
-                        <select name="priority" class="form-control">
-                            {% for i in range(1, 11) %}
-                            <option value="{{ i }}" {% if i == 5 %}selected{% endif %}>{{ i }}</option>
-                            {% endfor %}
-                        </select>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select name="challenger_status" class="form-control">
+                                    <option value="recruiting" selected>Recruiting</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="filed">Filed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>Priority (1=highest)</label>
+                                <select name="priority" class="form-control">
+                                    {% for i in range(1, 11) %}
+                                    <option value="{{ i }}" {% if i == 5 %}selected{% endif %}>{{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer py-2">
@@ -222,25 +334,130 @@
 </div>
 
 <style>
-.contact-btn {
+.targets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.target-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.target-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+}
+
+.target-header {
+    background: #f8f9fa;
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.target-header h5 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.target-body {
+    padding: 15px;
+}
+
+.incumbent-section {
+    background: #fff3cd;
+    margin: -15px -15px 15px -15px;
+    padding: 12px 15px;
+    border-bottom: 1px solid #ffeeba;
+}
+
+.incumbent-section label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #856404;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.challenger-form label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.target-footer {
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 8px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: #e9ecef;
+    background: #fff;
     color: #495057;
-    border: none;
-    margin-left: 4px;
+    border: 1px solid #dee2e6;
     text-decoration: none;
-    transition: background 0.15s;
+    transition: all 0.15s;
 }
-.contact-btn:hover {
-    background: #dee2e6;
-    color: #212529;
+
+.action-btn:hover {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
     text-decoration: none;
 }
-.contact-btn i { font-size: 12px; }
+
+.action-btn i { font-size: 12px; }
+
+/* Mobile responsiveness */
+@media (max-width: 576px) {
+    .targets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .target-card {
+        margin: 0 -10px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+}
 </style>
+
+<script>
+function filterTargets() {
+    var input = document.getElementById('searchInput').value.toLowerCase();
+    var cards = document.querySelectorAll('.target-card');
+
+    cards.forEach(function(card) {
+        var district = card.getAttribute('data-district');
+        var incumbent = card.getAttribute('data-incumbent');
+        if (district.includes(input) || incumbent.includes(input)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+</script>
 {% endblock %}

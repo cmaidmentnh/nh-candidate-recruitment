@@ -6,67 +6,87 @@
 
 <!-- Dashboard Cards -->
 <div class="dashboard-row mb-4">
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #28a745;">
+    <a href="{{ url_for('private.speaker_votes', status='committed') }}" class="dash-card dash-card-size {% if status_filter == 'committed' %}dash-card-active{% endif %}" style="border-left: 4px solid #28a745;">
         <div class="card-header" style="background:#28a745;">Committed</div>
         <div class="card-body">
             <h4>{{ status_counts.get('committed', 0) }}</h4>
         </div>
-    </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #17a2b8;">
+    </a>
+    <a href="{{ url_for('private.speaker_votes', status='leaning_yes') }}" class="dash-card dash-card-size {% if status_filter == 'leaning_yes' %}dash-card-active{% endif %}" style="border-left: 4px solid #17a2b8;">
         <div class="card-header" style="background:#17a2b8;">Leaning Yes</div>
         <div class="card-body">
             <h4>{{ status_counts.get('leaning_yes', 0) }}</h4>
         </div>
-    </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #6c757d;">
+    </a>
+    <a href="{{ url_for('private.speaker_votes', status='unknown') }}" class="dash-card dash-card-size {% if status_filter == 'unknown' %}dash-card-active{% endif %}" style="border-left: 4px solid #6c757d;">
         <div class="card-header" style="background:#6c757d;">Unknown</div>
         <div class="card-body">
             <h4>{{ status_counts.get('unknown', 0) }}</h4>
         </div>
-    </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #ffc107;">
+    </a>
+    <a href="{{ url_for('private.speaker_votes', status='leaning_no') }}" class="dash-card dash-card-size {% if status_filter == 'leaning_no' %}dash-card-active{% endif %}" style="border-left: 4px solid #ffc107;">
         <div class="card-header" style="background:#ffc107; color:#000;">Leaning No</div>
         <div class="card-body">
             <h4>{{ status_counts.get('leaning_no', 0) }}</h4>
         </div>
-    </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #dc3545;">
+    </a>
+    <a href="{{ url_for('private.speaker_votes', status='opposed') }}" class="dash-card dash-card-size {% if status_filter == 'opposed' %}dash-card-active{% endif %}" style="border-left: 4px solid #dc3545;">
         <div class="card-header" style="background:#dc3545;">Opposed</div>
         <div class="card-body">
             <h4>{{ status_counts.get('opposed', 0) }}</h4>
         </div>
-    </div>
+    </a>
 </div>
 
-<!-- Search -->
-<div class="search-box mb-4">
-    <input type="text" id="searchInput" class="form-control" placeholder="Search by name or district..." onkeyup="filterLegislators()">
+<!-- Filters -->
+<div class="filter-bar mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-4">
+            <div class="search-box mb-0">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by name or district..." onkeyup="filterLegislators()">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select id="callerFilter" class="form-control" onchange="applyCallerFilter()">
+                <option value="">All Call Lists</option>
+                <option value="unassigned" {% if caller_filter == 'unassigned' %}selected{% endif %}>Unassigned</option>
+                {% for caller in callers %}
+                <option value="{{ caller[2] }}" {% if caller_filter == caller[2] %}selected{% endif %}>{{ caller[1] or caller[2] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            {% if caller_filter or status_filter %}
+            <a href="{{ url_for('private.speaker_votes') }}" class="btn btn-outline-secondary">Clear Filters</a>
+            {% endif %}
+        </div>
+        <div class="col-md-2 text-right">
+            <span class="text-muted">{{ legislators|length }} legislators</span>
+        </div>
+    </div>
 </div>
 
 <!-- Legislators Table -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span>All Legislators</span>
-        <div>
-            <button type="button" class="btn btn-sm btn-outline-light" onclick="expandAll()">Expand All</button>
-            <button type="button" class="btn btn-sm btn-outline-light" onclick="collapseAll()">Collapse All</button>
-        </div>
+        <span>{% if caller_filter %}{{ caller_filter }}{% elif status_filter %}{{ status_filter|replace('_', ' ')|title }}{% else %}All{% endif %} Legislators</span>
     </div>
     <div class="table-responsive">
         <table class="table table-hover mb-0" id="legislatorTable">
             <thead>
                 <tr>
-                    <th style="width:25%">Name</th>
-                    <th style="width:12%">District</th>
-                    <th style="width:140px">Status</th>
-                    <th style="width:80px">Conf</th>
+                    <th style="width:22%">Name</th>
+                    <th style="width:10%">District</th>
+                    <th style="width:130px">Status</th>
+                    <th style="width:70px">Conf</th>
+                    <th style="width:130px">Assigned To</th>
                     <th>Notes</th>
                     <th style="width:140px">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for leg in legislators %}
-                {# leg: 0=candidate_id, 1=first_name, 2=last_name, 3=email, 4=phone1, 5=district_code, 6=incumbent, 7=tracking_id, 8=commitment_status, 9=confidence_level, 10=notes, 11=last_contact_at #}
+                {# leg: 0=candidate_id, 1=first_name, 2=last_name, 3=email, 4=phone1, 5=district_code, 6=incumbent, 7=tracking_id, 8=commitment_status, 9=confidence_level, 10=notes, 11=last_contact_at, 12=assigned_caller #}
                 {% set leg_status = leg[8] or 'unknown' %}
                 <tr class="legislator-row"
                     data-candidate-id="{{ leg[0] }}"
@@ -100,12 +120,22 @@
                         </select>
                     </td>
                     <td>
-                        <small class="text-muted notes-display">{{ leg[10]|truncate(50) if leg[10] else '' }}</small>
+                        <select class="form-control form-control-sm caller-select"
+                                data-candidate-id="{{ leg[0] }}"
+                                data-field="assigned_caller">
+                            <option value="">—</option>
+                            {% for caller in callers %}
+                            <option value="{{ caller[2] }}" {% if leg[12] == caller[2] %}selected{% endif %}>{{ caller[1] or caller[2].split('@')[0] }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <small class="text-muted notes-display">{{ leg[10]|truncate(40) if leg[10] else '' }}</small>
                     </td>
                     <td>
                         <div class="action-buttons">
                             {% if leg[4] %}
-                            <a href="tel:{{ leg[4] }}" class="action-btn" title="Call"><i class="fas fa-phone"></i></a>
+                            <a href="tel:{{ leg[4] }}" class="action-btn" title="Call {{ leg[4] }}"><i class="fas fa-phone"></i></a>
                             <a href="sms:{{ leg[4] }}" class="action-btn" title="Text"><i class="fas fa-comment"></i></a>
                             {% endif %}
                             {% if leg[3] %}
@@ -198,6 +228,22 @@
 {% endfor %}
 
 <style>
+.filter-bar {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.filter-bar .search-box {
+    max-width: 100%;
+    margin: 0;
+}
+
+.dash-card-active {
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.5);
+    transform: translateY(-2px);
+}
+
 .action-buttons {
     display: flex;
     gap: 6px;
@@ -238,7 +284,7 @@
     color: #fff;
 }
 
-.status-select, .confidence-select {
+.status-select, .confidence-select, .caller-select {
     min-width: auto;
     padding: 4px 8px;
     font-size: 13px;
@@ -260,6 +306,12 @@
 }
 
 /* Mobile responsiveness */
+@media (max-width: 992px) {
+    .filter-bar .row > div {
+        margin-bottom: 10px;
+    }
+}
+
 @media (max-width: 768px) {
     .action-buttons {
         flex-wrap: wrap;
@@ -273,20 +325,24 @@
 
     .action-btn i { font-size: 12px; }
 
-    .status-select, .confidence-select {
+    .status-select, .confidence-select, .caller-select {
         font-size: 12px;
         padding: 2px 4px;
     }
-}
 
-@media (max-width: 576px) {
+    /* Hide less important columns on mobile */
     #legislatorTable th:nth-child(4),
     #legislatorTable td:nth-child(4) {
         display: none;
     }
+}
 
+@media (max-width: 576px) {
+    /* Hide more columns on small screens */
     #legislatorTable th:nth-child(5),
-    #legislatorTable td:nth-child(5) {
+    #legislatorTable td:nth-child(5),
+    #legislatorTable th:nth-child(6),
+    #legislatorTable td:nth-child(6) {
         display: none;
     }
 }
@@ -313,7 +369,19 @@ function filterLegislators() {
     });
 }
 
-// AJAX update for status and confidence
+// Apply caller filter via URL
+function applyCallerFilter() {
+    var caller = document.getElementById('callerFilter').value;
+    var url = new URL(window.location.href);
+    if (caller) {
+        url.searchParams.set('caller', caller);
+    } else {
+        url.searchParams.delete('caller');
+    }
+    window.location.href = url.toString();
+}
+
+// AJAX update for status, confidence, and caller assignment
 document.addEventListener('DOMContentLoaded', function() {
     // Status selects
     document.querySelectorAll('.status-select').forEach(function(select) {
@@ -328,6 +396,13 @@ document.addEventListener('DOMContentLoaded', function() {
             updateSpeakerVote(this);
         });
     });
+
+    // Caller assignment selects
+    document.querySelectorAll('.caller-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            updateSpeakerVote(this);
+        });
+    });
 });
 
 function updateSpeakerVote(element) {
@@ -335,10 +410,12 @@ function updateSpeakerVote(element) {
     var row = element.closest('.legislator-row');
     var statusSelect = row.querySelector('.status-select');
     var confidenceSelect = row.querySelector('.confidence-select');
+    var callerSelect = row.querySelector('.caller-select');
 
     // Get current values
     var status = statusSelect.value;
     var confidence = confidenceSelect.value;
+    var caller = callerSelect.value;
 
     // Show updating state
     row.classList.add('updating');
@@ -348,7 +425,7 @@ function updateSpeakerVote(element) {
     formData.append('csrf_token', csrfToken);
     formData.append('commitment_status', status);
     formData.append('confidence_level', confidence);
-    formData.append('notes', '');  // Preserve empty for inline updates
+    formData.append('assigned_caller', caller);
 
     // Submit via AJAX
     fetch('/private/speaker/update/' + candidateId, {
@@ -372,10 +449,12 @@ function updateSpeakerVote(element) {
                 row.classList.remove('success');
             }, 500);
 
-            // Reload to update counts
-            setTimeout(function() {
-                location.reload();
-            }, 600);
+            // Only reload if status changed (to update counts)
+            if (element.classList.contains('status-select')) {
+                setTimeout(function() {
+                    location.reload();
+                }, 600);
+            }
         } else {
             alert('Failed to update: ' + (data.error || 'Unknown error'));
         }
@@ -384,18 +463,6 @@ function updateSpeakerVote(element) {
         console.error('Error:', error);
         row.classList.remove('updating');
         alert('Failed to update. Please try again.');
-    });
-}
-
-function expandAll() {
-    document.querySelectorAll('.collapse').forEach(function(el) {
-        $(el).collapse('show');
-    });
-}
-
-function collapseAll() {
-    document.querySelectorAll('.collapse').forEach(function(el) {
-        $(el).collapse('hide');
     });
 }
 </script>
