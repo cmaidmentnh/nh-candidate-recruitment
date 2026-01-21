@@ -194,23 +194,55 @@ def revoke_access(access_id):
 @private_bp.route('/primaries')
 @require_feature_access('secret_primaries')
 def secret_primaries():
-    """List all secret primary campaigns."""
+    """List all primary targets (flat list, no campaigns)."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Get all targets with incumbent info
         cur.execute("""
-            SELECT c.*,
-                   COUNT(t.id) as target_count,
-                   COUNT(CASE WHEN t.challenger_status = 'confirmed' THEN 1 END) as confirmed_count
-            FROM secret_primary_campaigns c
-            LEFT JOIN secret_primary_targets t ON c.id = t.campaign_id
-            WHERE c.is_active = TRUE
-            GROUP BY c.id
-            ORDER BY c.created_at DESC
+            SELECT t.id, t.campaign_id, t.district_code, t.incumbent_candidate_id,
+                   t.challenger_name, t.challenger_status, t.challenger_contact,
+                   t.notes, t.priority, t.created_by, t.created_at, t.updated_at,
+                   c.first_name as incumbent_first,
+                   c.last_name as incumbent_last,
+                   c.party as incumbent_party,
+                   c.email as incumbent_email,
+                   c.phone1 as incumbent_phone,
+                   t.assigned_caller,
+                   (SELECT COUNT(*) FROM secret_primary_contacts WHERE target_id = t.id) as contact_count
+            FROM secret_primary_targets t
+            LEFT JOIN candidates c ON t.incumbent_candidate_id = c.candidate_id
+            ORDER BY t.priority, t.district_code
         """)
-        campaigns = cur.fetchall()
+        targets = cur.fetchall()
 
-        return render_template('private/primaries_list.html', campaigns=campaigns)
+        # Get all R incumbents for the add target dropdown
+        cur.execute("""
+            SELECT c.candidate_id, c.first_name, c.last_name, c.party,
+                   ces.district_code, ces.status
+            FROM candidates c
+            JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+            WHERE c.incumbent = TRUE
+              AND ces.election_year = 2026
+              AND c.party = 'R'
+            ORDER BY ces.district_code, c.last_name
+        """)
+        incumbents = cur.fetchall()
+
+        # Get users for caller assignment
+        cur.execute("""
+            SELECT u.user_id, u.username, u.email
+            FROM users u
+            JOIN private_feature_access pfa ON u.user_id = pfa.user_id
+            WHERE pfa.feature_slug = 'secret_primaries'
+            ORDER BY u.username
+        """)
+        callers = cur.fetchall()
+
+        return render_template('private/primaries.html',
+                             targets=targets,
+                             incumbents=incumbents,
+                             callers=callers)
     finally:
         cur.close()
         release_db_connection(conn)
@@ -313,10 +345,10 @@ def view_campaign(campaign_id):
         release_db_connection(conn)
 
 
-@private_bp.route('/primaries/<int:campaign_id>/add-target', methods=['POST'])
+@private_bp.route('/primaries/add', methods=['POST'])
 @require_feature_access('secret_primaries')
-def add_target(campaign_id):
-    """Add a target to a campaign."""
+def add_target():
+    """Add a primary target."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
@@ -334,15 +366,14 @@ def add_target(campaign_id):
 
         if not incumbent:
             flash('Incumbent not found.', 'error')
-            return redirect(url_for('private.view_campaign', campaign_id=campaign_id))
+            return redirect(url_for('private.secret_primaries'))
 
         cur.execute("""
             INSERT INTO secret_primary_targets
-            (campaign_id, district_code, incumbent_candidate_id, challenger_name,
+            (district_code, incumbent_candidate_id, challenger_name,
              challenger_status, challenger_contact, notes, priority, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            campaign_id,
             incumbent[4],  # district_code
             incumbent[0],  # candidate_id
             request.form.get('challenger_name'),
@@ -361,7 +392,7 @@ def add_target(campaign_id):
         cur.close()
         release_db_connection(conn)
 
-    return redirect(url_for('private.view_campaign', campaign_id=campaign_id))
+    return redirect(url_for('private.secret_primaries'))
 
 
 @private_bp.route('/primaries/target/<int:target_id>/update', methods=['POST'])
@@ -379,7 +410,6 @@ def update_target(target_id):
             SET challenger_name = %s, challenger_status = %s, challenger_contact = %s,
                 notes = %s, priority = %s, assigned_caller = %s, updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
-            RETURNING campaign_id
         """, (
             request.form.get('challenger_name'),
             request.form.get('challenger_status'),
@@ -389,23 +419,22 @@ def update_target(target_id):
             request.form.get('assigned_caller'),
             target_id
         ))
-        result = cur.fetchone()
         conn.commit()
 
         if is_ajax:
             return jsonify({'success': True})
 
         flash('Target updated.', 'success')
-        return redirect(url_for('private.view_campaign', campaign_id=result[0]))
     except Exception as e:
         conn.rollback()
         if is_ajax:
             return jsonify({'success': False, 'error': str(e)}), 500
         flash(f'Error updating target: {e}', 'error')
-        return redirect(url_for('private.secret_primaries'))
     finally:
         cur.close()
         release_db_connection(conn)
+
+    return redirect(url_for('private.secret_primaries'))
 
 
 @private_bp.route('/primaries/target/<int:target_id>/contact', methods=['POST'])
@@ -453,7 +482,7 @@ def log_primary_contact(target_id):
 
         conn.commit()
         flash('Contact logged.', 'success')
-        return redirect(url_for('private.view_campaign', campaign_id=campaign_id))
+        return redirect(url_for('private.secret_primaries'))
     except Exception as e:
         conn.rollback()
         flash(f'Error logging contact: {e}', 'error')
@@ -534,11 +563,11 @@ def speaker_votes():
         query += """
             ORDER BY
                 CASE COALESCE(svt.commitment_status, 'unknown')
-                    WHEN 'committed' THEN 1
+                    WHEN 'unknown' THEN 1
                     WHEN 'leaning_yes' THEN 2
-                    WHEN 'unknown' THEN 3
-                    WHEN 'leaning_no' THEN 4
-                    WHEN 'opposed' THEN 5
+                    WHEN 'leaning_no' THEN 3
+                    WHEN 'opposed' THEN 4
+                    WHEN 'committed' THEN 5
                 END,
                 c.last_name
         """
