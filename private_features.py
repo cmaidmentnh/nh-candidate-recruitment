@@ -1019,6 +1019,7 @@ def make_challenger_public(challenger_id):
 def search_voter_file():
     """Search voter file for potential challengers."""
     import requests
+    import os
 
     first_name = request.args.get('first_name', '')
     last_name = request.args.get('last_name', '')
@@ -1029,7 +1030,8 @@ def search_voter_file():
 
     try:
         # Call the voter file API on the secondary server
-        params = {'last_name': last_name}
+        api_key = os.environ.get('VOTER_FILE_API_KEY', '')
+        params = {'last_name': last_name, 'api_key': api_key}
         if first_name:
             params['first_name'] = first_name
         if city:
@@ -1040,7 +1042,7 @@ def search_voter_file():
             data = resp.json()
             return jsonify({'results': data.get('voters', [])[:20]})  # Limit to 20
         else:
-            return jsonify({'error': 'Voter file search failed', 'results': []})
+            return jsonify({'error': 'Voter file search failed: ' + resp.text, 'results': []})
     except Exception as e:
         return jsonify({'error': str(e), 'results': []})
 
