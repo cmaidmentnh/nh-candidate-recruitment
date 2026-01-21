@@ -595,18 +595,13 @@ def log_primary_contact(target_id):
 @private_bp.route('/primaries/target/<int:target_id>/delete', methods=['POST'])
 @require_feature_access('secret_primaries')
 def delete_target(target_id):
-    """Delete a target from a campaign."""
+    """Delete a primary target."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
-            DELETE FROM secret_primary_targets WHERE id = %s RETURNING campaign_id
-        """, (target_id,))
-        result = cur.fetchone()
+        cur.execute("DELETE FROM secret_primary_targets WHERE id = %s", (target_id,))
         conn.commit()
         flash('Target removed.', 'success')
-        if result:
-            return redirect(url_for('private.view_campaign', campaign_id=result[0]))
     except Exception as e:
         conn.rollback()
         flash(f'Error deleting target: {e}', 'error')
