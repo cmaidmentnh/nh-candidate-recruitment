@@ -6,32 +6,32 @@
 
 <!-- Dashboard Cards -->
 <div class="dashboard-row mb-4">
-    <a href="{{ url_for('private.speaker_votes', status='committed') }}" class="dash-card dash-card-size {% if status_filter == 'committed' %}dash-card-active{% endif %}" style="border-left: 4px solid #28a745;">
-        <div class="card-header" style="background:#28a745;">Committed</div>
+    <a href="{{ url_for('private.speaker_votes', status='committed') }}" class="dash-card dash-card-size dash-card-link {% if status_filter == 'committed' %}dash-card-active{% endif %}">
+        <div class="card-header">Committed</div>
         <div class="card-body">
             <h4>{{ status_counts.get('committed', 0) }}</h4>
         </div>
     </a>
-    <a href="{{ url_for('private.speaker_votes', status='leaning_yes') }}" class="dash-card dash-card-size {% if status_filter == 'leaning_yes' %}dash-card-active{% endif %}" style="border-left: 4px solid #17a2b8;">
-        <div class="card-header" style="background:#17a2b8;">Leaning Yes</div>
+    <a href="{{ url_for('private.speaker_votes', status='leaning_yes') }}" class="dash-card dash-card-size dash-card-link {% if status_filter == 'leaning_yes' %}dash-card-active{% endif %}">
+        <div class="card-header">Leaning Yes</div>
         <div class="card-body">
             <h4>{{ status_counts.get('leaning_yes', 0) }}</h4>
         </div>
     </a>
-    <a href="{{ url_for('private.speaker_votes', status='unknown') }}" class="dash-card dash-card-size {% if status_filter == 'unknown' %}dash-card-active{% endif %}" style="border-left: 4px solid #6c757d;">
-        <div class="card-header" style="background:#6c757d;">Unknown</div>
+    <a href="{{ url_for('private.speaker_votes', status='unknown') }}" class="dash-card dash-card-size dash-card-link {% if status_filter == 'unknown' %}dash-card-active{% endif %}">
+        <div class="card-header">Unknown</div>
         <div class="card-body">
             <h4>{{ status_counts.get('unknown', 0) }}</h4>
         </div>
     </a>
-    <a href="{{ url_for('private.speaker_votes', status='leaning_no') }}" class="dash-card dash-card-size {% if status_filter == 'leaning_no' %}dash-card-active{% endif %}" style="border-left: 4px solid #ffc107;">
-        <div class="card-header" style="background:#ffc107; color:#000;">Leaning No</div>
+    <a href="{{ url_for('private.speaker_votes', status='leaning_no') }}" class="dash-card dash-card-size dash-card-link {% if status_filter == 'leaning_no' %}dash-card-active{% endif %}">
+        <div class="card-header">Leaning No</div>
         <div class="card-body">
             <h4>{{ status_counts.get('leaning_no', 0) }}</h4>
         </div>
     </a>
-    <a href="{{ url_for('private.speaker_votes', status='opposed') }}" class="dash-card dash-card-size {% if status_filter == 'opposed' %}dash-card-active{% endif %}" style="border-left: 4px solid #dc3545;">
-        <div class="card-header" style="background:#dc3545;">Opposed</div>
+    <a href="{{ url_for('private.speaker_votes', status='opposed') }}" class="dash-card dash-card-size dash-card-link {% if status_filter == 'opposed' %}dash-card-active{% endif %}">
+        <div class="card-header">Opposed</div>
         <div class="card-body">
             <h4>{{ status_counts.get('opposed', 0) }}</h4>
         </div>

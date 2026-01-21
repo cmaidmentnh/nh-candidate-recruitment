@@ -19,32 +19,32 @@
 
 <!-- Dashboard Cards -->
 <div class="dashboard-row mb-4">
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #ffc107;">
-        <div class="card-header" style="background:#ffc107; color:#000;">Recruiting</div>
+    <div class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Recruiting</div>
         <div class="card-body">
             <h4>{{ targets|selectattr(5, 'equalto', 'recruiting')|list|length }}</h4>
         </div>
     </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #28a745;">
-        <div class="card-header" style="background:#28a745;">Confirmed</div>
+    <div class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Confirmed</div>
         <div class="card-body">
             <h4>{{ targets|selectattr(5, 'equalto', 'confirmed')|list|length }}</h4>
         </div>
     </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #17a2b8;">
-        <div class="card-header" style="background:#17a2b8;">Filed</div>
+    <div class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Filed</div>
         <div class="card-body">
             <h4>{{ targets|selectattr(5, 'equalto', 'filed')|list|length }}</h4>
         </div>
     </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #dc3545;">
-        <div class="card-header" style="background:#dc3545;">Declined</div>
+    <div class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Declined</div>
         <div class="card-body">
             <h4>{{ targets|selectattr(5, 'equalto', 'declined')|list|length }}</h4>
         </div>
     </div>
-    <div class="dash-card dash-card-size" style="border-left: 4px solid #6c757d;">
-        <div class="card-header" style="background:#6c757d;">Total</div>
+    <div class="dash-card dash-card-size dash-card-static">
+        <div class="card-header">Total</div>
         <div class="card-body">
             <h4>{{ targets|length }}</h4>
         </div>
@@ -66,11 +66,11 @@
             <div class="d-flex justify-content-between align-items-start">
                 <div>
                     <h5 class="mb-1">{{ target[2] }}</h5>
-                    <span class="badge badge-{% if target[8] <= 3 %}danger{% elif target[8] <= 6 %}warning{% else %}secondary{% endif %}">P{{ target[8] }}</span>
-                    {% if target[18] > 0 %}<span class="badge badge-info">{{ target[18] }} contacts</span>{% endif %}
+                    <span class="badge badge-{% if target[8] <= 3 %}dark{% elif target[8] <= 6 %}secondary{% else %}light text-muted{% endif %}">P{{ target[8] }}</span>
+                    {% if target[18] > 0 %}<span class="badge badge-light text-muted">{{ target[18] }} contacts</span>{% endif %}
                 </div>
                 <div class="target-status">
-                    <span class="badge badge-{% if target[5] == 'filed' %}info{% elif target[5] == 'confirmed' %}success{% elif target[5] == 'declined' %}danger{% else %}warning{% endif %}">
+                    <span class="badge badge-{% if target[5] == 'filed' %}dark{% elif target[5] == 'confirmed' %}dark{% elif target[5] == 'declined' %}secondary{% else %}secondary{% endif %}">
                         {{ target[5]|title }}
                     </span>
                 </div>
@@ -371,16 +371,16 @@
 }
 
 .incumbent-section {
-    background: #fff3cd;
+    background: #f8f9fa;
     margin: -15px -15px 15px -15px;
     padding: 12px 15px;
-    border-bottom: 1px solid #ffeeba;
+    border-bottom: 1px solid #e9ecef;
 }
 
 .incumbent-section label {
     font-size: 11px;
     text-transform: uppercase;
-    color: #856404;
+    color: #6c757d;
     margin-bottom: 4px;
     display: block;
 }
