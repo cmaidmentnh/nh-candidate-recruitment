@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('private.secret_primaries') }}" class="text-muted">
+        <i class="fas fa-arrow-left"></i> Back to Campaigns
+    </a>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">{{ campaign[1] }}</h1>
+        <p class="text-muted mb-0">{{ campaign[2] or 'No description' }}</p>
+    </div>
+    <span class="badge badge-warning badge-lg" style="font-size: 1rem; padding: 0.5rem 1rem;">
+        {{ campaign[3] }} Election
+    </span>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="mb-0">{{ targets|length }}</h3>
+                <small class="text-muted">Total Targets</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <h3 class="mb-0">{{ targets|selectattr(4, 'equalto', 'confirmed')|list|length if targets else 0 }}</h3>
+                <small>Confirmed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-warning">
+            <div class="card-body">
+                <h3 class="mb-0">{{ targets|selectattr(4, 'equalto', 'recruiting')|list|length if targets else 0 }}</h3>
+                <small>Recruiting</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <h3 class="mb-0">{{ targets|selectattr(4, 'equalto', 'filed')|list|length if targets else 0 }}</h3>
+                <small>Filed</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-plus"></i> Add Target
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('private.add_target', campaign_id=campaign[0]) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>District</label>
+                        <input type="text" name="district_code" class="form-control" placeholder="ROCK-01" required>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Incumbent</label>
+                        <input type="text" name="incumbent_name" class="form-control" placeholder="John Doe">
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <div class="form-group">
+                        <label>Party</label>
+                        <select name="incumbent_party" class="form-control">
+                            <option value="R">R</option>
+                            <option value="D">D</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Challenger</label>
+                        <input type="text" name="challenger_name" class="form-control" placeholder="Jane Smith">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="challenger_status" class="form-control">
+                            <option value="recruiting">Recruiting</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="declined">Declined</option>
+                            <option value="filed">Filed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select name="priority" class="form-control">
+                            {% for i in range(1, 11) %}
+                            <option value="{{ i }}" {% if i == 5 %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-warning btn-block">Add</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-bullseye"></i> Targets ({{ targets|length }})
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Priority</th>
+                    <th>District</th>
+                    <th>Incumbent</th>
+                    <th>Challenger</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for target in targets %}
+                <tr>
+                    <td><span class="badge badge-secondary">{{ target[9] }}</span></td>
+                    <td><strong>{{ target[2] }}</strong></td>
+                    <td>
+                        {% if target[3] %}
+                        {{ target[3] }}
+                        <span class="badge badge-{% if target[4] == 'R' %}danger{% else %}primary{% endif %}">{{ target[4] }}</span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ target[5] or '—' }}</td>
+                    <td>
+                        <span class="badge badge-{% if target[6] == 'confirmed' %}success{% elif target[6] == 'filed' %}info{% elif target[6] == 'declined' %}danger{% else %}warning{% endif %}">
+                            {{ target[6]|title }}
+                        </span>
+                    </td>
+                    <td><small class="text-muted">{{ target[8]|truncate(50) if target[8] else '' }}</small></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#editModal{{ target[0] }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>
+
+                <!-- Edit Modal -->
+                <div class="modal fade" id="editModal{{ target[0] }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Edit {{ target[2] }}</h5>
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label>Challenger Name</label>
+                                        <input type="text" name="challenger_name" class="form-control" value="{{ target[5] or '' }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select name="challenger_status" class="form-control">
+                                            <option value="recruiting" {% if target[6] == 'recruiting' %}selected{% endif %}>Recruiting</option>
+                                            <option value="confirmed" {% if target[6] == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                            <option value="declined" {% if target[6] == 'declined' %}selected{% endif %}>Declined</option>
+                                            <option value="filed" {% if target[6] == 'filed' %}selected{% endif %}>Filed</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Contact Info</label>
+                                        <textarea name="challenger_contact" class="form-control" rows="2">{{ target[7] or '' }}</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Notes</label>
+                                        <textarea name="notes" class="form-control" rows="3">{{ target[8] or '' }}</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Priority (1-10, lower = higher)</label>
+                                        <select name="priority" class="form-control">
+                                            {% for i in range(1, 11) %}
+                                            <option value="{{ i }}" {% if target[9] == i %}selected{% endif %}>{{ i }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-warning">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

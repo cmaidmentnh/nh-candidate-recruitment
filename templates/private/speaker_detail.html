@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('private.speaker_votes') }}" class="text-muted">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ legislator[1] }}</h5>
+                <span class="badge badge-{% if legislator[4] == 'committed' %}success{% elif legislator[4] == 'leaning_yes' %}info{% elif legislator[4] == 'opposed' %}danger{% elif legislator[4] == 'leaning_no' %}warning{% else %}secondary{% endif %}" style="font-size: 1rem;">
+                    {{ legislator[4]|replace('_', ' ')|title }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>District:</strong><br>
+                        {{ legislator[2] or 'Unknown' }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Employee #:</strong><br>
+                        {{ legislator[3] or 'Unknown' }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Confidence:</strong><br>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-{% if legislator[9] >= 7 %}success{% elif legislator[9] >= 4 %}warning{% else %}danger{% endif %}"
+                                 style="width: {{ legislator[9] * 10 }}%">{{ legislator[9] }}/10</div>
+                        </div>
+                    </div>
+                </div>
+                {% if legislator[8] %}
+                <div class="alert alert-light">
+                    <strong>Notes:</strong> {{ legislator[8] }}
+                </div>
+                {% endif %}
+                <p class="text-muted mb-0">
+                    <small>Last contact: {{ legislator[7].strftime('%m/%d/%Y %I:%M %p') if legislator[7] else 'Never' }}</small>
+                </p>
+            </div>
+        </div>
+
+        <!-- Log Contact -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-phone"></i> Log Contact
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('private.log_speaker_contact', tracking_id=legislator[0]) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Contact Method</label>
+                                <select name="contact_method" class="form-control">
+                                    <option value="phone">Phone Call</option>
+                                    <option value="in_person">In Person</option>
+                                    <option value="text">Text Message</option>
+                                    <option value="email">Email</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Outcome</label>
+                                <select name="outcome" class="form-control">
+                                    <option value="positive">Positive</option>
+                                    <option value="neutral">Neutral</option>
+                                    <option value="negative">Negative</option>
+                                    <option value="no_answer">No Answer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>New Status</label>
+                                <select name="new_status" class="form-control">
+                                    <option value="unknown" {% if legislator[4] == 'unknown' %}selected{% endif %}>Unknown</option>
+                                    <option value="committed" {% if legislator[4] == 'committed' %}selected{% endif %}>Committed</option>
+                                    <option value="leaning_yes" {% if legislator[4] == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
+                                    <option value="leaning_no" {% if legislator[4] == 'leaning_no' %}selected{% endif %}>Leaning No</option>
+                                    <option value="opposed" {% if legislator[4] == 'opposed' %}selected{% endif %}>Opposed</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label>Notes</label>
+                                <textarea name="notes" class="form-control" rows="2" placeholder="What was discussed..."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Confidence (1-10)</label>
+                                <select name="confidence_level" class="form-control">
+                                    {% for i in range(1, 11) %}
+                                    <option value="{{ i }}" {% if legislator[9] == i %}selected{% endif %}>{{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Log Contact
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Contact History -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> Contact History
+            </div>
+            {% if contacts %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Method</th>
+                            <th>Outcome</th>
+                            <th>Status Change</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contact in contacts %}
+                        <tr>
+                            <td>{{ contact[3].strftime('%m/%d/%y %I:%M%p') if contact[3] else '' }}</td>
+                            <td>{{ contact[4]|title if contact[4] else '' }}</td>
+                            <td>
+                                <span class="badge badge-{% if contact[5] == 'positive' %}success{% elif contact[5] == 'negative' %}danger{% else %}secondary{% endif %}">
+                                    {{ contact[5]|title if contact[5] else '' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if contact[7] != contact[8] %}
+                                {{ contact[7]|replace('_', ' ')|title }} → {{ contact[8]|replace('_', ' ')|title }}
+                                {% else %}
+                                <span class="text-muted">No change</span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ contact[6] or '' }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body text-center text-muted">
+                <p>No contact history yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Quick Update
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('private.add_speaker_vote') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="legislator_name" value="{{ legislator[1] }}">
+                    <input type="hidden" name="district_code" value="{{ legislator[2] }}">
+                    <input type="hidden" name="employee_number" value="{{ legislator[3] }}">
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="commitment_status" class="form-control">
+                            <option value="unknown" {% if legislator[4] == 'unknown' %}selected{% endif %}>Unknown</option>
+                            <option value="committed" {% if legislator[4] == 'committed' %}selected{% endif %}>Committed</option>
+                            <option value="leaning_yes" {% if legislator[4] == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
+                            <option value="leaning_no" {% if legislator[4] == 'leaning_no' %}selected{% endif %}>Leaning No</option>
+                            <option value="opposed" {% if legislator[4] == 'opposed' %}selected{% endif %}>Opposed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Confidence</label>
+                        <select name="confidence_level" class="form-control">
+                            {% for i in range(1, 11) %}
+                            <option value="{{ i }}" {% if legislator[9] == i %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea name="notes" class="form-control" rows="3">{{ legislator[8] or '' }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-block btn-primary">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('private.secret_primaries') }}" class="text-muted">
+        <i class="fas fa-arrow-left"></i> Back to Campaigns
+    </a>
+</div>
+
+<h1 class="mb-4"><i class="fas fa-plus"></i> New Secret Primary Campaign</h1>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="form-group">
+                        <label for="name">Campaign Name *</label>
+                        <input type="text" name="name" id="name" class="form-control" required
+                               placeholder="e.g., Freedom Caucus Primary Targets">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea name="description" id="description" class="form-control" rows="3"
+                                  placeholder="Describe the purpose and goals of this campaign..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="target_year">Target Election Year</label>
+                        <select name="target_year" id="target_year" class="form-control">
+                            <option value="2026" selected>2026</option>
+                            <option value="2028">2028</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check"></i> Create Campaign
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> About Secret Campaigns</h5>
+            <p>Secret primary campaigns allow you to track recruitment efforts for primary challengers without the information being publicly visible.</p>
+            <ul class="mb-0">
+                <li>Only users with access can see this data</li>
+                <li>Track target districts and incumbents</li>
+                <li>Monitor challenger recruitment status</li>
+                <li>Add notes and contact information</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0"><i class="fas fa-gavel"></i> Speaker Vote Tracking</h1>
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addModal">
+        <i class="fas fa-plus"></i> Add Legislator
+    </button>
+</div>
+
+<div class="alert alert-secondary">
+    <i class="fas fa-lock"></i>
+    <strong>Private:</strong> Tracking commitments for Jason Osborne for Speaker.
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body py-3">
+                <h2 class="mb-0">{{ status_counts.get('committed', 0) }}</h2>
+                <small>Committed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body py-3">
+                <h2 class="mb-0">{{ status_counts.get('leaning_yes', 0) }}</h2>
+                <small>Leaning Yes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center bg-secondary text-white">
+            <div class="card-body py-3">
+                <h2 class="mb-0">{{ status_counts.get('unknown', 0) }}</h2>
+                <small>Unknown</small>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center bg-warning">
+            <div class="card-body py-3">
+                <h2 class="mb-0">{{ status_counts.get('leaning_no', 0) }}</h2>
+                <small>Leaning No</small>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center bg-danger text-white">
+            <div class="card-body py-3">
+                <h2 class="mb-0">{{ status_counts.get('opposed', 0) }}</h2>
+                <small>Opposed</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vote Count Summary -->
+<div class="card mb-4">
+    <div class="card-body text-center">
+        <h4>
+            {% set total_yes = (status_counts.get('committed', 0) + status_counts.get('leaning_yes', 0)) %}
+            {% set total_no = (status_counts.get('opposed', 0) + status_counts.get('leaning_no', 0)) %}
+            <span class="text-success">{{ total_yes }} Yes</span>
+            /
+            <span class="text-danger">{{ total_no }} No</span>
+            /
+            <span class="text-secondary">{{ status_counts.get('unknown', 0) }} Unknown</span>
+        </h4>
+        <p class="text-muted mb-0">Need 201 votes for majority (400 House members)</p>
+    </div>
+</div>
+
+<!-- Legislators Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between">
+        <span><i class="fas fa-users"></i> Legislators ({{ legislators|length }})</span>
+        <a href="{{ url_for('private.import_legislators') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-file-import"></i> Import
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>District</th>
+                    <th>Status</th>
+                    <th>Confidence</th>
+                    <th>Last Contact</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for leg in legislators %}
+                <tr>
+                    <td><strong>{{ leg[1] }}</strong></td>
+                    <td>{{ leg[2] or '—' }}</td>
+                    <td>
+                        <span class="badge badge-{% if leg[4] == 'committed' %}success{% elif leg[4] == 'leaning_yes' %}info{% elif leg[4] == 'opposed' %}danger{% elif leg[4] == 'leaning_no' %}warning{% else %}secondary{% endif %}">
+                            {{ leg[4]|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="progress" style="width: 60px; height: 8px;">
+                            <div class="progress-bar bg-{% if leg[9] >= 7 %}success{% elif leg[9] >= 4 %}warning{% else %}danger{% endif %}"
+                                 style="width: {{ leg[9] * 10 }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ leg[9] }}/10</small>
+                    </td>
+                    <td><small>{{ leg[7].strftime('%m/%d') if leg[7] else '—' }}</small></td>
+                    <td><small class="text-muted">{{ leg[8]|truncate(40) if leg[8] else '' }}</small></td>
+                    <td>
+                        <a href="{{ url_for('private.speaker_vote_detail', tracking_id=leg[0]) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('private.add_speaker_vote') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Legislator</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Legislator Name *</label>
+                        <input type="text" name="legislator_name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>District</label>
+                        <input type="text" name="district_code" class="form-control" placeholder="e.g., ROCK-01">
+                    </div>
+                    <div class="form-group">
+                        <label>Employee Number</label>
+                        <input type="text" name="employee_number" class="form-control" placeholder="For official linking">
+                    </div>
+                    <div class="form-group">
+                        <label>Commitment Status</label>
+                        <select name="commitment_status" class="form-control">
+                            <option value="unknown">Unknown</option>
+                            <option value="committed">Committed</option>
+                            <option value="leaning_yes">Leaning Yes</option>
+                            <option value="leaning_no">Leaning No</option>
+                            <option value="opposed">Opposed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Confidence Level (1-10)</label>
+                        <select name="confidence_level" class="form-control">
+                            {% for i in range(1, 11) %}
+                            <option value="{{ i }}" {% if i == 5 %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
