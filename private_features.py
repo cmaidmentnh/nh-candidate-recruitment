@@ -447,10 +447,21 @@ def update_speaker_vote(candidate_id):
     """Update a candidate's speaker vote status."""
     conn = get_db_connection()
     cur = conn.cursor()
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+              'application/json' in request.headers.get('Accept', '')
+
     try:
         commitment_status = request.form.get('commitment_status', 'unknown')
         confidence_level = request.form.get('confidence_level', 5)
-        notes = request.form.get('notes', '')
+        notes = request.form.get('notes')
+
+        # Get existing notes if not provided (preserve notes on inline updates)
+        if notes is None or notes == '':
+            cur.execute("""
+                SELECT notes FROM speaker_vote_tracking WHERE candidate_id = %s
+            """, (candidate_id,))
+            existing = cur.fetchone()
+            notes = existing[0] if existing and existing[0] else ''
 
         # Upsert the tracking record
         cur.execute("""
@@ -466,9 +477,15 @@ def update_speaker_vote(candidate_id):
             RETURNING id
         """, (candidate_id, commitment_status, confidence_level, notes, current_user.email))
         conn.commit()
+
+        if is_ajax:
+            return jsonify({'success': True, 'status': commitment_status, 'confidence': confidence_level})
+
         flash('Vote tracking updated.', 'success')
     except Exception as e:
         conn.rollback()
+        if is_ajax:
+            return jsonify({'success': False, 'error': str(e)}), 500
         flash(f'Error updating: {e}', 'error')
     finally:
         cur.close()

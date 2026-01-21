@@ -1,207 +1,403 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0"><i class="fas fa-gavel"></i> Speaker Votes</h1>
+    <h1 class="mb-0">Speaker Vote Tracker</h1>
 </div>
 
-<div class="alert alert-secondary py-2 mb-3">
-    <i class="fas fa-lock"></i> <strong>Private:</strong> Jason Osborne for Speaker
-</div>
-
-<!-- Summary Cards -->
+<!-- Dashboard Cards -->
 <div class="dashboard-row mb-4">
     <div class="dash-card dash-card-size" style="border-left: 4px solid #28a745;">
-        <div class="card-header">Committed</div>
-        <div class="card-body"><h4>{{ status_counts.get('committed', 0) }}</h4></div>
+        <div class="card-header" style="background:#28a745;">Committed</div>
+        <div class="card-body">
+            <h4>{{ status_counts.get('committed', 0) }}</h4>
+        </div>
     </div>
     <div class="dash-card dash-card-size" style="border-left: 4px solid #17a2b8;">
-        <div class="card-header">Leaning Yes</div>
-        <div class="card-body"><h4>{{ status_counts.get('leaning_yes', 0) }}</h4></div>
+        <div class="card-header" style="background:#17a2b8;">Leaning Yes</div>
+        <div class="card-body">
+            <h4>{{ status_counts.get('leaning_yes', 0) }}</h4>
+        </div>
     </div>
     <div class="dash-card dash-card-size" style="border-left: 4px solid #6c757d;">
-        <div class="card-header">Unknown</div>
-        <div class="card-body"><h4>{{ status_counts.get('unknown', 0) }}</h4></div>
+        <div class="card-header" style="background:#6c757d;">Unknown</div>
+        <div class="card-body">
+            <h4>{{ status_counts.get('unknown', 0) }}</h4>
+        </div>
     </div>
     <div class="dash-card dash-card-size" style="border-left: 4px solid #ffc107;">
-        <div class="card-header">Leaning No</div>
-        <div class="card-body"><h4>{{ status_counts.get('leaning_no', 0) }}</h4></div>
+        <div class="card-header" style="background:#ffc107; color:#000;">Leaning No</div>
+        <div class="card-body">
+            <h4>{{ status_counts.get('leaning_no', 0) }}</h4>
+        </div>
     </div>
     <div class="dash-card dash-card-size" style="border-left: 4px solid #dc3545;">
-        <div class="card-header">Opposed</div>
-        <div class="card-body"><h4>{{ status_counts.get('opposed', 0) }}</h4></div>
+        <div class="card-header" style="background:#dc3545;">Opposed</div>
+        <div class="card-body">
+            <h4>{{ status_counts.get('opposed', 0) }}</h4>
+        </div>
     </div>
 </div>
 
-<!-- Legislators List -->
+<!-- Search -->
+<div class="search-box mb-4">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search by name or district..." onkeyup="filterLegislators()">
+</div>
+
+<!-- Legislators Table -->
 <div class="card">
-    <div class="card-header py-2">
-        <strong>{{ legislators|length }}</strong> R Incumbents
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>All Legislators</span>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-light" onclick="expandAll()">Expand All</button>
+            <button type="button" class="btn btn-sm btn-outline-light" onclick="collapseAll()">Collapse All</button>
+        </div>
     </div>
-    <div class="list-group list-group-flush">
-        {% for leg in legislators %}
-        {# leg: candidate_id, first_name, last_name, email, phone1, district_code, incumbent, tracking_id, commitment_status, confidence_level, notes, last_contact_at #}
-        {% set status = leg[8] or 'unknown' %}
-        <div class="list-group-item leg-item" data-status="{{ status }}">
-            <form method="POST" action="{{ url_for('private.update_speaker_vote', candidate_id=leg[0]) }}" id="form-{{ leg[0] }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                <div class="row align-items-center">
-                    <!-- Name & Contact -->
-                    <div class="col-12 col-md-3 mb-2 mb-md-0">
-                        <a href="{{ url_for('private.speaker_vote_detail', candidate_id=leg[0]) }}" class="leg-name">
-                            <strong>{{ leg[1] }} {{ leg[2] }}</strong>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0" id="legislatorTable">
+            <thead>
+                <tr>
+                    <th style="width:25%">Name</th>
+                    <th style="width:12%">District</th>
+                    <th style="width:140px">Status</th>
+                    <th style="width:80px">Conf</th>
+                    <th>Notes</th>
+                    <th style="width:140px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for leg in legislators %}
+                {# leg: 0=candidate_id, 1=first_name, 2=last_name, 3=email, 4=phone1, 5=district_code, 6=incumbent, 7=tracking_id, 8=commitment_status, 9=confidence_level, 10=notes, 11=last_contact_at #}
+                {% set leg_status = leg[8] or 'unknown' %}
+                <tr class="legislator-row"
+                    data-candidate-id="{{ leg[0] }}"
+                    data-name="{{ leg[1]|lower }} {{ leg[2]|lower }}"
+                    data-district="{{ leg[5]|lower if leg[5] else '' }}"
+                    data-status="{{ leg_status }}">
+                    <td>
+                        <a href="{{ url_for('private.speaker_vote_detail', candidate_id=leg[0]) }}" class="font-weight-bold text-dark">
+                            {{ leg[1] }} {{ leg[2] }}
                         </a>
-                        <span class="text-muted d-none d-md-inline ml-2">{{ leg[5] }}</span>
-                        <div class="d-md-none text-muted small">{{ leg[5] }}</div>
-                        <div class="mt-1">
-                            {% if leg[4] %}
-                            <a href="tel:{{ leg[4] }}" class="contact-btn" title="Call {{ leg[4] }}"><i class="fas fa-phone"></i></a>
-                            <a href="sms:{{ leg[4] }}" class="contact-btn" title="Text {{ leg[4] }}"><i class="fas fa-comment"></i></a>
-                            {% endif %}
-                            {% if leg[3] %}
-                            <a href="mailto:{{ leg[3] }}" class="contact-btn" title="Email {{ leg[3] }}"><i class="fas fa-envelope"></i></a>
-                            {% endif %}
-                            <button type="button" class="contact-btn" title="Log Contact" data-toggle="modal" data-target="#logModal{{ leg[0] }}"><i class="fas fa-plus"></i></button>
-                        </div>
-                    </div>
-
-                    <!-- Status -->
-                    <div class="col-6 col-md-2 mb-2 mb-md-0">
-                        <select name="commitment_status" class="form-control form-control-sm" onchange="document.getElementById('form-{{ leg[0] }}').submit()">
-                            <option value="committed" {% if status == 'committed' %}selected{% endif %}>Committed</option>
-                            <option value="leaning_yes" {% if status == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
-                            <option value="unknown" {% if status == 'unknown' %}selected{% endif %}>Unknown</option>
-                            <option value="leaning_no" {% if status == 'leaning_no' %}selected{% endif %}>Leaning No</option>
-                            <option value="opposed" {% if status == 'opposed' %}selected{% endif %}>Opposed</option>
+                    </td>
+                    <td><span class="text-muted">{{ leg[5] or '—' }}</span></td>
+                    <td>
+                        <select class="form-control form-control-sm status-select"
+                                data-candidate-id="{{ leg[0] }}"
+                                data-field="commitment_status">
+                            <option value="committed" {% if leg_status == 'committed' %}selected{% endif %}>Committed</option>
+                            <option value="leaning_yes" {% if leg_status == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
+                            <option value="unknown" {% if leg_status == 'unknown' %}selected{% endif %}>Unknown</option>
+                            <option value="leaning_no" {% if leg_status == 'leaning_no' %}selected{% endif %}>Leaning No</option>
+                            <option value="opposed" {% if leg_status == 'opposed' %}selected{% endif %}>Opposed</option>
                         </select>
-                    </div>
-
-                    <!-- Confidence -->
-                    <div class="col-6 col-md-1 mb-2 mb-md-0">
-                        <select name="confidence_level" class="form-control form-control-sm" onchange="document.getElementById('form-{{ leg[0] }}').submit()">
+                    </td>
+                    <td>
+                        <select class="form-control form-control-sm confidence-select"
+                                data-candidate-id="{{ leg[0] }}"
+                                data-field="confidence_level">
                             {% for i in range(1, 11) %}
                             <option value="{{ i }}" {% if (leg[9] or 5) == i %}selected{% endif %}>{{ i }}</option>
                             {% endfor %}
                         </select>
-                    </div>
-
-                    <!-- Notes -->
-                    <div class="col-12 col-md-6">
-                        <div class="input-group input-group-sm">
-                            <input type="text" name="notes" class="form-control" value="{{ leg[10] or '' }}" placeholder="Notes...">
-                            <div class="input-group-append">
-                                <button type="submit" class="btn btn-outline-secondary"><i class="fas fa-save"></i></button>
-                            </div>
+                    </td>
+                    <td>
+                        <small class="text-muted notes-display">{{ leg[10]|truncate(50) if leg[10] else '' }}</small>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            {% if leg[4] %}
+                            <a href="tel:{{ leg[4] }}" class="action-btn" title="Call"><i class="fas fa-phone"></i></a>
+                            <a href="sms:{{ leg[4] }}" class="action-btn" title="Text"><i class="fas fa-comment"></i></a>
+                            {% endif %}
+                            {% if leg[3] %}
+                            <a href="mailto:{{ leg[3] }}" class="action-btn" title="Email"><i class="fas fa-envelope"></i></a>
+                            {% endif %}
+                            <button type="button" class="action-btn action-btn-primary" data-toggle="modal" data-target="#logModal{{ leg[0] }}" title="Log Contact"><i class="fas fa-plus"></i></button>
                         </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Log Contact Modal -->
-        <div class="modal fade" id="logModal{{ leg[0] }}" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <form method="POST" action="{{ url_for('private.log_speaker_contact', candidate_id=leg[0]) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="modal-header py-2">
-                            <h5 class="modal-title">Log Contact - {{ leg[1] }} {{ leg[2] }}</h5>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="form-group">
-                                        <label>Method</label>
-                                        <select name="contact_method" class="form-control">
-                                            <option value="phone">Phone</option>
-                                            <option value="in_person">In Person</option>
-                                            <option value="text">Text</option>
-                                            <option value="email">Email</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-group">
-                                        <label>Outcome</label>
-                                        <select name="outcome" class="form-control">
-                                            <option value="positive">Positive</option>
-                                            <option value="neutral">Neutral</option>
-                                            <option value="negative">Negative</option>
-                                            <option value="no_answer">No Answer</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="form-group">
-                                        <label>New Status</label>
-                                        <select name="new_status" class="form-control">
-                                            <option value="committed" {% if status == 'committed' %}selected{% endif %}>Committed</option>
-                                            <option value="leaning_yes" {% if status == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
-                                            <option value="unknown" {% if status == 'unknown' %}selected{% endif %}>Unknown</option>
-                                            <option value="leaning_no" {% if status == 'leaning_no' %}selected{% endif %}>Leaning No</option>
-                                            <option value="opposed" {% if status == 'opposed' %}selected{% endif %}>Opposed</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-group">
-                                        <label>Confidence</label>
-                                        <select name="confidence_level" class="form-control">
-                                            {% for i in range(1, 11) %}
-                                            <option value="{{ i }}" {% if (leg[9] or 5) == i %}selected{% endif %}>{{ i }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Notes</label>
-                                <textarea name="notes" class="form-control" rows="2" placeholder="What was discussed..."></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer py-2">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Log Contact</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
+<!-- Log Contact Modals -->
+{% for leg in legislators %}
+<div class="modal fade" id="logModal{{ leg[0] }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('private.log_speaker_contact', candidate_id=leg[0]) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title">Log Contact - {{ leg[1] }} {{ leg[2] }}</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>Method</label>
+                                <select name="contact_method" class="form-control">
+                                    <option value="phone">Phone</option>
+                                    <option value="in_person">In Person</option>
+                                    <option value="text">Text</option>
+                                    <option value="email">Email</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>Outcome</label>
+                                <select name="outcome" class="form-control">
+                                    <option value="positive">Positive</option>
+                                    <option value="neutral">Neutral</option>
+                                    <option value="negative">Negative</option>
+                                    <option value="no_answer">No Answer</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>New Status</label>
+                                {% set leg_status = leg[8] or 'unknown' %}
+                                <select name="new_status" class="form-control">
+                                    <option value="committed" {% if leg_status == 'committed' %}selected{% endif %}>Committed</option>
+                                    <option value="leaning_yes" {% if leg_status == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
+                                    <option value="unknown" {% if leg_status == 'unknown' %}selected{% endif %}>Unknown</option>
+                                    <option value="leaning_no" {% if leg_status == 'leaning_no' %}selected{% endif %}>Leaning No</option>
+                                    <option value="opposed" {% if leg_status == 'opposed' %}selected{% endif %}>Opposed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label>Confidence</label>
+                                <select name="confidence_level" class="form-control">
+                                    {% for i in range(1, 11) %}
+                                    <option value="{{ i }}" {% if (leg[9] or 5) == i %}selected{% endif %}>{{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="What was discussed..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Log Contact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 <style>
-.contact-btn {
+.action-buttons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #e9ecef;
     color: #495057;
     border: none;
-    margin-right: 4px;
     text-decoration: none;
-    transition: background 0.15s;
+    transition: all 0.15s;
     cursor: pointer;
 }
-.contact-btn:hover {
+
+.action-btn:hover {
     background: #dee2e6;
     color: #212529;
     text-decoration: none;
+    transform: scale(1.05);
 }
-.contact-btn i { font-size: 12px; }
-.leg-name { color: inherit; text-decoration: none; }
-.leg-name:hover { color: #007bff; text-decoration: none; }
-.leg-item { border-left: 3px solid #6c757d; }
-.leg-item[data-status="committed"] { border-left-color: #28a745; }
-.leg-item[data-status="leaning_yes"] { border-left-color: #17a2b8; }
-.leg-item[data-status="leaning_no"] { border-left-color: #ffc107; }
-.leg-item[data-status="opposed"] { border-left-color: #dc3545; }
+
+.action-btn i { font-size: 14px; }
+
+.action-btn-primary {
+    background: #007bff;
+    color: #fff;
+}
+
+.action-btn-primary:hover {
+    background: #0056b3;
+    color: #fff;
+}
+
+.status-select, .confidence-select {
+    min-width: auto;
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
+.legislator-row.updating {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.legislator-row.success {
+    animation: flashGreen 0.5s ease;
+}
+
+@keyframes flashGreen {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(40, 167, 69, 0.2); }
+    100% { background-color: transparent; }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .action-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .action-btn i { font-size: 12px; }
+
+    .status-select, .confidence-select {
+        font-size: 12px;
+        padding: 2px 4px;
+    }
+}
+
+@media (max-width: 576px) {
+    #legislatorTable th:nth-child(4),
+    #legislatorTable td:nth-child(4) {
+        display: none;
+    }
+
+    #legislatorTable th:nth-child(5),
+    #legislatorTable td:nth-child(5) {
+        display: none;
+    }
+}
 </style>
+
+{% block scripts %}
+{{ super() }}
+<script>
+var csrfToken = '{{ csrf_token() }}';
+
+// Filter legislators by search
+function filterLegislators() {
+    var input = document.getElementById('searchInput').value.toLowerCase();
+    var rows = document.querySelectorAll('.legislator-row');
+
+    rows.forEach(function(row) {
+        var name = row.getAttribute('data-name');
+        var district = row.getAttribute('data-district');
+        if (name.includes(input) || district.includes(input)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// AJAX update for status and confidence
+document.addEventListener('DOMContentLoaded', function() {
+    // Status selects
+    document.querySelectorAll('.status-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            updateSpeakerVote(this);
+        });
+    });
+
+    // Confidence selects
+    document.querySelectorAll('.confidence-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            updateSpeakerVote(this);
+        });
+    });
+});
+
+function updateSpeakerVote(element) {
+    var candidateId = element.getAttribute('data-candidate-id');
+    var row = element.closest('.legislator-row');
+    var statusSelect = row.querySelector('.status-select');
+    var confidenceSelect = row.querySelector('.confidence-select');
+
+    // Get current values
+    var status = statusSelect.value;
+    var confidence = confidenceSelect.value;
+
+    // Show updating state
+    row.classList.add('updating');
+
+    // Create form data
+    var formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    formData.append('commitment_status', status);
+    formData.append('confidence_level', confidence);
+    formData.append('notes', '');  // Preserve empty for inline updates
+
+    // Submit via AJAX
+    fetch('/private/speaker/update/' + candidateId, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        row.classList.remove('updating');
+        if (data.success) {
+            row.classList.add('success');
+            row.setAttribute('data-status', status);
+
+            // Remove success class after animation
+            setTimeout(function() {
+                row.classList.remove('success');
+            }, 500);
+
+            // Reload to update counts
+            setTimeout(function() {
+                location.reload();
+            }, 600);
+        } else {
+            alert('Failed to update: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(function(error) {
+        console.error('Error:', error);
+        row.classList.remove('updating');
+        alert('Failed to update. Please try again.');
+    });
+}
+
+function expandAll() {
+    document.querySelectorAll('.collapse').forEach(function(el) {
+        $(el).collapse('show');
+    });
+}
+
+function collapseAll() {
+    document.querySelectorAll('.collapse').forEach(function(el) {
+        $(el).collapse('hide');
+    });
+}
+</script>
+{% endblock %}
 {% endblock %}
