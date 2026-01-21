@@ -216,15 +216,15 @@
                         </div>
                     </div>
                     <div class="modal-footer py-2 justify-content-between">
-                        <form method="POST" action="{{ url_for('private.delete_target', target_id=target[0]) }}" class="d-inline" onsubmit="return confirm('Remove this target?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-outline-danger btn-sm">Remove</button>
-                        </form>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteTarget({{ target[0] }})">Remove</button>
                         <div>
                             <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
                             <button type="submit" class="btn btn-primary btn-sm">Save</button>
                         </div>
                     </div>
+                </form>
+                <form id="deleteTargetForm{{ target[0] }}" method="POST" action="{{ url_for('private.delete_target', target_id=target[0]) }}" style="display:none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 </form>
             </div>
         </div>
@@ -439,15 +439,9 @@
                     </div>
                     <div class="modal-footer py-2 justify-content-between">
                         <div>
-                            <form method="POST" action="{{ url_for('private.delete_challenger', challenger_id=ch[0]) }}" class="d-inline" onsubmit="return confirm('Remove this challenger?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
-                            </form>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteChallenger({{ ch[0] }})">Delete</button>
                             {% if not ch[9] %}
-                            <form method="POST" action="{{ url_for('private.make_challenger_public', challenger_id=ch[0]) }}" class="d-inline" onsubmit="return confirm('Make this challenger visible to all users?');">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-outline-success btn-sm">Make Public</button>
-                            </form>
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="makePublic({{ ch[0] }})">Make Public</button>
                             {% endif %}
                         </div>
                         <div>
@@ -455,6 +449,12 @@
                             <button type="submit" class="btn btn-primary btn-sm">Save</button>
                         </div>
                     </div>
+                </form>
+                <form id="deleteChallengerForm{{ ch[0] }}" method="POST" action="{{ url_for('private.delete_challenger', challenger_id=ch[0]) }}" style="display:none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                </form>
+                <form id="makePublicForm{{ ch[0] }}" method="POST" action="{{ url_for('private.make_challenger_public', challenger_id=ch[0]) }}" style="display:none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 </form>
             </div>
         </div>
@@ -863,6 +863,24 @@ function selectVoter(el, targetId, voterId, firstName, lastName, city, address) 
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function deleteTarget(targetId) {
+    if (confirm('Remove this target?')) {
+        document.getElementById('deleteTargetForm' + targetId).submit();
+    }
+}
+
+function deleteChallenger(challengerId) {
+    if (confirm('Remove this challenger?')) {
+        document.getElementById('deleteChallengerForm' + challengerId).submit();
+    }
+}
+
+function makePublic(challengerId) {
+    if (confirm('Make this challenger visible to all users?')) {
+        document.getElementById('makePublicForm' + challengerId).submit();
+    }
 }
 </script>
 {% endblock %}
