@@ -65,8 +65,8 @@
                         <select name="incumbent_candidate_id" class="form-control" required>
                             <option value="">-- Select Incumbent --</option>
                             {% for inc in incumbents %}
-                            {# inc: candidate_id, first_name, last_name, party, district_code #}
-                            <option value="{{ inc[0] }}">{{ inc[4] }} - {{ inc[1] }} {{ inc[2] }} ({{ inc[3] }})</option>
+                            {# inc: candidate_id, first_name, last_name, party, district_code, status #}
+                            <option value="{{ inc[0] }}">{{ inc[4] }} - {{ inc[1] }} {{ inc[2] }} [{{ inc[5] }}]</option>
                             {% endfor %}
                         </select>
                     </div>

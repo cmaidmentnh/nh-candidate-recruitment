@@ -276,15 +276,14 @@ def view_campaign(campaign_id):
         """, (campaign_id,))
         targets = cur.fetchall()
 
-        # Get incumbents for the add target dropdown (confirmed R incumbents for 2026)
+        # Get all R incumbents for the add target dropdown (any 2026 status)
         cur.execute("""
             SELECT c.candidate_id, c.first_name, c.last_name, c.party,
-                   ces.district_code
+                   ces.district_code, ces.status
             FROM candidates c
             JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
             WHERE c.incumbent = TRUE
               AND ces.election_year = 2026
-              AND ces.status = 'Confirmed'
               AND c.party = 'R'
             ORDER BY ces.district_code, c.last_name
         """)
