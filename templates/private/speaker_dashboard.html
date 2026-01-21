@@ -313,6 +313,16 @@
 }
 
 @media (max-width: 768px) {
+    .filter-bar {
+        margin: 0 -15px;
+        border-radius: 0;
+        padding: 12px;
+    }
+
+    .filter-bar .row > div {
+        padding: 0 8px;
+    }
+
     .action-buttons {
         flex-wrap: wrap;
         gap: 4px;
@@ -335,6 +345,13 @@
     #legislatorTable td:nth-child(4) {
         display: none;
     }
+
+    .card {
+        margin: 0 -15px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
 }
 
 @media (max-width: 576px) {
@@ -344,6 +361,18 @@
     #legislatorTable th:nth-child(6),
     #legislatorTable td:nth-child(6) {
         display: none;
+    }
+
+    .filter-bar .col-md-4,
+    .filter-bar .col-md-3,
+    .filter-bar .col-md-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .filter-bar .col-md-2 {
+        text-align: left !important;
     }
 }
 </style>
