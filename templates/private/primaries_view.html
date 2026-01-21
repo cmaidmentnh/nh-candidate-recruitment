@@ -28,7 +28,7 @@
     <div class="col-md-3">
         <div class="card text-center bg-success text-white">
             <div class="card-body">
-                <h3 class="mb-0">{{ targets|selectattr(4, 'equalto', 'confirmed')|list|length if targets else 0 }}</h3>
+                <h3 class="mb-0">{{ targets|selectattr(5, 'equalto', 'confirmed')|list|length if targets else 0 }}</h3>
                 <small>Confirmed</small>
             </div>
         </div>
@@ -36,7 +36,7 @@
     <div class="col-md-3">
         <div class="card text-center bg-warning">
             <div class="card-body">
-                <h3 class="mb-0">{{ targets|selectattr(4, 'equalto', 'recruiting')|list|length if targets else 0 }}</h3>
+                <h3 class="mb-0">{{ targets|selectattr(5, 'equalto', 'recruiting')|list|length if targets else 0 }}</h3>
                 <small>Recruiting</small>
             </div>
         </div>
@@ -44,7 +44,7 @@
     <div class="col-md-3">
         <div class="card text-center bg-info text-white">
             <div class="card-body">
-                <h3 class="mb-0">{{ targets|selectattr(4, 'equalto', 'filed')|list|length if targets else 0 }}</h3>
+                <h3 class="mb-0">{{ targets|selectattr(5, 'equalto', 'filed')|list|length if targets else 0 }}</h3>
                 <small>Filed</small>
             </div>
         </div>
@@ -53,36 +53,27 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        <i class="fas fa-plus"></i> Add Target
+        <i class="fas fa-plus"></i> Add Primary Target
     </div>
     <div class="card-body">
         <form method="POST" action="{{ url_for('private.add_target', campaign_id=campaign[0]) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="row">
-                <div class="col-md-2">
+                <div class="col-md-4">
                     <div class="form-group">
-                        <label>District</label>
-                        <input type="text" name="district_code" class="form-control" placeholder="ROCK-01" required>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label>Incumbent</label>
-                        <input type="text" name="incumbent_name" class="form-control" placeholder="John Doe">
-                    </div>
-                </div>
-                <div class="col-md-1">
-                    <div class="form-group">
-                        <label>Party</label>
-                        <select name="incumbent_party" class="form-control">
-                            <option value="R">R</option>
-                            <option value="D">D</option>
+                        <label>Select Incumbent to Primary</label>
+                        <select name="incumbent_candidate_id" class="form-control" required>
+                            <option value="">-- Select Incumbent --</option>
+                            {% for inc in incumbents %}
+                            {# inc: candidate_id, first_name, last_name, party, district_code #}
+                            <option value="{{ inc[0] }}">{{ inc[4] }} - {{ inc[1] }} {{ inc[2] }} ({{ inc[3] }})</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <div class="form-group">
-                        <label>Challenger</label>
+                        <label>Challenger Name (if known)</label>
                         <input type="text" name="challenger_name" class="form-control" placeholder="Jane Smith">
                     </div>
                 </div>
@@ -110,7 +101,7 @@
                 <div class="col-md-2">
                     <div class="form-group">
                         <label>&nbsp;</label>
-                        <button type="submit" class="btn btn-warning btn-block">Add</button>
+                        <button type="submit" class="btn btn-warning btn-block">Add Target</button>
                     </div>
                 </div>
             </div>
@@ -120,7 +111,7 @@
 
 <div class="card">
     <div class="card-header">
-        <i class="fas fa-bullseye"></i> Targets ({{ targets|length }})
+        <i class="fas fa-bullseye"></i> Primary Targets ({{ targets|length }})
     </div>
     <div class="table-responsive">
         <table class="table table-hover mb-0">
@@ -137,24 +128,25 @@
             </thead>
             <tbody>
                 {% for target in targets %}
+                {# target: id, campaign_id, district_code, incumbent_candidate_id, challenger_name, challenger_status, challenger_contact, notes, priority, created_by, created_at, updated_at, incumbent_first, incumbent_last, incumbent_party, incumbent_email, incumbent_phone #}
                 <tr>
-                    <td><span class="badge badge-secondary">{{ target[9] }}</span></td>
+                    <td><span class="badge badge-secondary">{{ target[8] }}</span></td>
                     <td><strong>{{ target[2] }}</strong></td>
                     <td>
-                        {% if target[3] %}
-                        {{ target[3] }}
-                        <span class="badge badge-{% if target[4] == 'R' %}danger{% else %}primary{% endif %}">{{ target[4] }}</span>
+                        {% if target[12] %}
+                        {{ target[12] }} {{ target[13] }}
+                        <span class="badge badge-{% if target[14] == 'R' %}danger{% else %}primary{% endif %}">{{ target[14] }}</span>
                         {% else %}
                         <span class="text-muted">—</span>
                         {% endif %}
                     </td>
-                    <td>{{ target[5] or '—' }}</td>
+                    <td>{{ target[4] or '—' }}</td>
                     <td>
-                        <span class="badge badge-{% if target[6] == 'confirmed' %}success{% elif target[6] == 'filed' %}info{% elif target[6] == 'declined' %}danger{% else %}warning{% endif %}">
-                            {{ target[6]|title }}
+                        <span class="badge badge-{% if target[5] == 'confirmed' %}success{% elif target[5] == 'filed' %}info{% elif target[5] == 'declined' %}danger{% else %}warning{% endif %}">
+                            {{ target[5]|title }}
                         </span>
                     </td>
-                    <td><small class="text-muted">{{ target[8]|truncate(50) if target[8] else '' }}</small></td>
+                    <td><small class="text-muted">{{ target[7]|truncate(50) if target[7] else '' }}</small></td>
                     <td>
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#editModal{{ target[0] }}">
                             <i class="fas fa-edit"></i>
@@ -169,36 +161,41 @@
                             <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <div class="modal-header">
-                                    <h5 class="modal-title">Edit {{ target[2] }}</h5>
+                                    <h5 class="modal-title">Edit {{ target[2] }} - {{ target[12] }} {{ target[13] }}</h5>
                                     <button type="button" class="close" data-dismiss="modal">&times;</button>
                                 </div>
                                 <div class="modal-body">
+                                    <div class="alert alert-info">
+                                        <strong>Incumbent:</strong> {{ target[12] }} {{ target[13] }} ({{ target[14] }})<br>
+                                        {% if target[15] %}<small>Email: {{ target[15] }}</small><br>{% endif %}
+                                        {% if target[16] %}<small>Phone: {{ target[16] }}</small>{% endif %}
+                                    </div>
                                     <div class="form-group">
                                         <label>Challenger Name</label>
-                                        <input type="text" name="challenger_name" class="form-control" value="{{ target[5] or '' }}">
+                                        <input type="text" name="challenger_name" class="form-control" value="{{ target[4] or '' }}">
                                     </div>
                                     <div class="form-group">
                                         <label>Status</label>
                                         <select name="challenger_status" class="form-control">
-                                            <option value="recruiting" {% if target[6] == 'recruiting' %}selected{% endif %}>Recruiting</option>
-                                            <option value="confirmed" {% if target[6] == 'confirmed' %}selected{% endif %}>Confirmed</option>
-                                            <option value="declined" {% if target[6] == 'declined' %}selected{% endif %}>Declined</option>
-                                            <option value="filed" {% if target[6] == 'filed' %}selected{% endif %}>Filed</option>
+                                            <option value="recruiting" {% if target[5] == 'recruiting' %}selected{% endif %}>Recruiting</option>
+                                            <option value="confirmed" {% if target[5] == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                            <option value="declined" {% if target[5] == 'declined' %}selected{% endif %}>Declined</option>
+                                            <option value="filed" {% if target[5] == 'filed' %}selected{% endif %}>Filed</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Contact Info</label>
-                                        <textarea name="challenger_contact" class="form-control" rows="2">{{ target[7] or '' }}</textarea>
+                                        <label>Challenger Contact Info</label>
+                                        <textarea name="challenger_contact" class="form-control" rows="2">{{ target[6] or '' }}</textarea>
                                     </div>
                                     <div class="form-group">
                                         <label>Notes</label>
-                                        <textarea name="notes" class="form-control" rows="3">{{ target[8] or '' }}</textarea>
+                                        <textarea name="notes" class="form-control" rows="3">{{ target[7] or '' }}</textarea>
                                     </div>
                                     <div class="form-group">
                                         <label>Priority (1-10, lower = higher)</label>
                                         <select name="priority" class="form-control">
                                             {% for i in range(1, 11) %}
-                                            <option value="{{ i }}" {% if target[9] == i %}selected{% endif %}>{{ i }}</option>
+                                            <option value="{{ i }}" {% if target[8] == i %}selected{% endif %}>{{ i }}</option>
                                             {% endfor %}
                                         </select>
                                     </div>

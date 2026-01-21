@@ -404,6 +404,37 @@
     <button id="backToTop" class="btn btn-primary" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000; border-radius:50%; width:50px; height:50px;">
         <i class="fas fa-arrow-up"></i>
     </button>
+
+    <!-- Private Features Icon (bottom-left, only shown to users with access) -->
+    {% if user_private_features %}
+    <div class="dropup" style="position:fixed; bottom:20px; left:20px; z-index:1000;">
+        <button class="btn btn-sm" type="button" id="privateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="background:rgba(0,0,0,0.1); border:none; padding:8px; border-radius:8px; opacity:0.4; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#666;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+        </button>
+        <div class="dropdown-menu dropdown-menu-left" aria-labelledby="privateDropdown">
+            <h6 class="dropdown-header"><i class="fas fa-lock"></i> Private</h6>
+            {% if 'speaker_votes' in user_private_features %}
+            <a class="dropdown-item" href="{{ url_for('private.speaker_votes') }}">
+                <i class="fas fa-gavel text-muted"></i> Speaker Votes
+            </a>
+            {% endif %}
+            {% if 'secret_primaries' in user_private_features %}
+            <a class="dropdown-item" href="{{ url_for('private.secret_primaries') }}">
+                <i class="fas fa-bullseye text-muted"></i> Primary Tracking
+            </a>
+            {% endif %}
+            {% if is_super_admin %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="{{ url_for('private.manage_access') }}">
+                <i class="fas fa-key text-muted"></i> Manage Access
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
     <script>
     // Auto-add CSRF token to all forms
     document.addEventListener('DOMContentLoaded', function() {

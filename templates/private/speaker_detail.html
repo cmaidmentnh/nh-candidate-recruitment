@@ -6,40 +6,56 @@
     </a>
 </div>
 
+{# candidate: candidate_id, first_name, last_name, email, phone1, address, city, zip, district_code, incumbent, tracking_id, commitment_status, confidence_level, notes, last_contact_at #}
+
 <div class="row">
     <div class="col-lg-8">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ legislator[1] }}</h5>
-                <span class="badge badge-{% if legislator[4] == 'committed' %}success{% elif legislator[4] == 'leaning_yes' %}info{% elif legislator[4] == 'opposed' %}danger{% elif legislator[4] == 'leaning_no' %}warning{% else %}secondary{% endif %}" style="font-size: 1rem;">
-                    {{ legislator[4]|replace('_', ' ')|title }}
+                <h5 class="mb-0">
+                    {{ candidate[1] }} {{ candidate[2] }}
+                    {% if candidate[9] %}<span class="badge badge-dark ml-2">Incumbent</span>{% endif %}
+                </h5>
+                {% set status = candidate[11] or 'unknown' %}
+                <span class="badge badge-{% if status == 'committed' %}success{% elif status == 'leaning_yes' %}info{% elif status == 'opposed' %}danger{% elif status == 'leaning_no' %}warning{% else %}secondary{% endif %}" style="font-size: 1rem;">
+                    {{ status|replace('_', ' ')|title }}
                 </span>
             </div>
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <strong>District:</strong><br>
-                        {{ legislator[2] or 'Unknown' }}
+                        {{ candidate[8] or 'Unknown' }}
                     </div>
                     <div class="col-md-4">
-                        <strong>Employee #:</strong><br>
-                        {{ legislator[3] or 'Unknown' }}
+                        <strong>Contact:</strong><br>
+                        {% if candidate[3] %}<a href="mailto:{{ candidate[3] }}">{{ candidate[3] }}</a><br>{% endif %}
+                        {% if candidate[4] %}{{ candidate[4] }}{% endif %}
                     </div>
                     <div class="col-md-4">
                         <strong>Confidence:</strong><br>
+                        {% set conf = candidate[12] or 5 %}
                         <div class="progress" style="height: 20px;">
-                            <div class="progress-bar bg-{% if legislator[9] >= 7 %}success{% elif legislator[9] >= 4 %}warning{% else %}danger{% endif %}"
-                                 style="width: {{ legislator[9] * 10 }}%">{{ legislator[9] }}/10</div>
+                            <div class="progress-bar bg-{% if conf >= 7 %}success{% elif conf >= 4 %}warning{% else %}danger{% endif %}"
+                                 style="width: {{ conf * 10 }}%">{{ conf }}/10</div>
                         </div>
                     </div>
                 </div>
-                {% if legislator[8] %}
+                {% if candidate[5] or candidate[6] %}
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <strong>Address:</strong><br>
+                        {{ candidate[5] }}{% if candidate[6] %}, {{ candidate[6] }}{% endif %}{% if candidate[7] %} {{ candidate[7] }}{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if candidate[13] %}
                 <div class="alert alert-light">
-                    <strong>Notes:</strong> {{ legislator[8] }}
+                    <strong>Notes:</strong> {{ candidate[13] }}
                 </div>
                 {% endif %}
                 <p class="text-muted mb-0">
-                    <small>Last contact: {{ legislator[7].strftime('%m/%d/%Y %I:%M %p') if legislator[7] else 'Never' }}</small>
+                    <small>Last contact: {{ candidate[14].strftime('%m/%d/%Y %I:%M %p') if candidate[14] else 'Never' }}</small>
                 </p>
             </div>
         </div>
@@ -50,7 +66,7 @@
                 <i class="fas fa-phone"></i> Log Contact
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('private.log_speaker_contact', tracking_id=legislator[0]) }}">
+                <form method="POST" action="{{ url_for('private.log_speaker_contact', candidate_id=candidate[0]) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="row">
                         <div class="col-md-4">
@@ -78,12 +94,13 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>New Status</label>
+                                {% set current_status = candidate[11] or 'unknown' %}
                                 <select name="new_status" class="form-control">
-                                    <option value="unknown" {% if legislator[4] == 'unknown' %}selected{% endif %}>Unknown</option>
-                                    <option value="committed" {% if legislator[4] == 'committed' %}selected{% endif %}>Committed</option>
-                                    <option value="leaning_yes" {% if legislator[4] == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
-                                    <option value="leaning_no" {% if legislator[4] == 'leaning_no' %}selected{% endif %}>Leaning No</option>
-                                    <option value="opposed" {% if legislator[4] == 'opposed' %}selected{% endif %}>Opposed</option>
+                                    <option value="unknown" {% if current_status == 'unknown' %}selected{% endif %}>Unknown</option>
+                                    <option value="committed" {% if current_status == 'committed' %}selected{% endif %}>Committed</option>
+                                    <option value="leaning_yes" {% if current_status == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
+                                    <option value="leaning_no" {% if current_status == 'leaning_no' %}selected{% endif %}>Leaning No</option>
+                                    <option value="opposed" {% if current_status == 'opposed' %}selected{% endif %}>Opposed</option>
                                 </select>
                             </div>
                         </div>
@@ -98,9 +115,10 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Confidence (1-10)</label>
+                                {% set conf = candidate[12] or 5 %}
                                 <select name="confidence_level" class="form-control">
                                     {% for i in range(1, 11) %}
-                                    <option value="{{ i }}" {% if legislator[9] == i %}selected{% endif %}>{{ i }}</option>
+                                    <option value="{{ i }}" {% if conf == i %}selected{% endif %}>{{ i }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -167,33 +185,32 @@
                 <i class="fas fa-info-circle"></i> Quick Update
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('private.add_speaker_vote') }}">
+                <form method="POST" action="{{ url_for('private.update_speaker_vote', candidate_id=candidate[0]) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="legislator_name" value="{{ legislator[1] }}">
-                    <input type="hidden" name="district_code" value="{{ legislator[2] }}">
-                    <input type="hidden" name="employee_number" value="{{ legislator[3] }}">
 
                     <div class="form-group">
                         <label>Status</label>
+                        {% set current_status = candidate[11] or 'unknown' %}
                         <select name="commitment_status" class="form-control">
-                            <option value="unknown" {% if legislator[4] == 'unknown' %}selected{% endif %}>Unknown</option>
-                            <option value="committed" {% if legislator[4] == 'committed' %}selected{% endif %}>Committed</option>
-                            <option value="leaning_yes" {% if legislator[4] == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
-                            <option value="leaning_no" {% if legislator[4] == 'leaning_no' %}selected{% endif %}>Leaning No</option>
-                            <option value="opposed" {% if legislator[4] == 'opposed' %}selected{% endif %}>Opposed</option>
+                            <option value="unknown" {% if current_status == 'unknown' %}selected{% endif %}>Unknown</option>
+                            <option value="committed" {% if current_status == 'committed' %}selected{% endif %}>Committed</option>
+                            <option value="leaning_yes" {% if current_status == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
+                            <option value="leaning_no" {% if current_status == 'leaning_no' %}selected{% endif %}>Leaning No</option>
+                            <option value="opposed" {% if current_status == 'opposed' %}selected{% endif %}>Opposed</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Confidence</label>
+                        {% set conf = candidate[12] or 5 %}
                         <select name="confidence_level" class="form-control">
                             {% for i in range(1, 11) %}
-                            <option value="{{ i }}" {% if legislator[9] == i %}selected{% endif %}>{{ i }}</option>
+                            <option value="{{ i }}" {% if conf == i %}selected{% endif %}>{{ i }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Notes</label>
-                        <textarea name="notes" class="form-control" rows="3">{{ legislator[8] or '' }}</textarea>
+                        <textarea name="notes" class="form-control" rows="3">{{ candidate[13] or '' }}</textarea>
                     </div>
                     <button type="submit" class="btn btn-block btn-primary">Update</button>
                 </form>
