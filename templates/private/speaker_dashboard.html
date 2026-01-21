@@ -306,33 +306,174 @@
     100% { background-color: transparent; }
 }
 
-/* Mobile responsiveness */
+/* Mobile - iOS style */
 @media (max-width: 768px) {
+    .dashboard-row {
+        gap: 8px;
+        margin: 0 -5px 15px -5px;
+    }
+
+    .dash-card-size {
+        min-width: 0;
+        width: calc(33.33% - 6px);
+        min-height: 80px;
+    }
+
+    .dash-card .card-header {
+        font-size: 9px;
+        padding: 8px 4px;
+        min-height: 36px;
+    }
+
+    .dash-card .card-body {
+        padding: 8px;
+    }
+
+    .dash-card .card-body h4 {
+        font-size: 22px;
+    }
+
+    .filter-bar {
+        background: transparent;
+        padding: 0;
+        margin-bottom: 10px;
+    }
+
+    .filter-row {
+        gap: 8px;
+    }
+
+    .filter-row input,
+    .filter-row select {
+        min-width: 0;
+        font-size: 16px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #f2f2f7;
+        border: none;
+    }
+
+    .filter-row .btn {
+        padding: 10px 16px;
+        border-radius: 10px;
+    }
+
+    /* Hide table, show mobile list */
+    .card {
+        border: none;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .card > .card-header {
+        display: none;
+    }
+
+    .table-responsive {
+        overflow: visible;
+    }
+
+    #legislatorTable {
+        display: block;
+    }
+
+    #legislatorTable thead {
+        display: none;
+    }
+
+    #legislatorTable tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: #c6c6c8;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    #legislatorTable tr {
+        display: flex;
+        flex-wrap: wrap;
+        background: #fff;
+        padding: 12px 15px;
+        align-items: center;
+        gap: 8px;
+    }
+
+    #legislatorTable td {
+        padding: 0;
+        border: none;
+    }
+
+    /* Name - full width top row */
+    #legislatorTable td:nth-child(1) {
+        flex: 1;
+        font-size: 17px;
+    }
+
+    #legislatorTable td:nth-child(1) a {
+        font-weight: 600;
+    }
+
+    /* District */
+    #legislatorTable td:nth-child(2) {
+        font-size: 15px;
+        color: #8e8e93;
+    }
+
+    /* Status select */
+    #legislatorTable td:nth-child(3) {
+        order: 10;
+        width: 50%;
+    }
+
+    /* Confidence - hide */
+    #legislatorTable td:nth-child(4) {
+        display: none;
+    }
+
+    /* Caller - hide */
+    #legislatorTable td:nth-child(5) {
+        display: none;
+    }
+
+    /* Notes - hide */
+    #legislatorTable td:nth-child(6) {
+        display: none;
+    }
+
+    /* Actions */
+    #legislatorTable td:nth-child(7) {
+        order: 11;
+        width: calc(50% - 8px);
+        justify-content: flex-end;
+    }
+
+    .status-select {
+        font-size: 15px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: #f2f2f7;
+        border: none;
+        width: 100%;
+    }
+
     .action-buttons {
-        flex-wrap: nowrap;
-        gap: 4px;
+        gap: 8px;
+        justify-content: flex-end;
     }
 
     .action-btn {
-        width: 28px;
-        height: 28px;
+        width: 36px;
+        height: 36px;
+        background: #f2f2f7;
     }
 
-    .action-btn i { font-size: 12px; }
-
-    .status-select, .confidence-select, .caller-select {
-        font-size: 12px;
-        padding: 2px 4px;
+    .action-btn i {
+        font-size: 15px;
     }
 
-    /* Hide columns on mobile */
-    #legislatorTable th:nth-child(4),
-    #legislatorTable td:nth-child(4),
-    #legislatorTable th:nth-child(5),
-    #legislatorTable td:nth-child(5),
-    #legislatorTable th:nth-child(6),
-    #legislatorTable td:nth-child(6) {
-        display: none;
+    .action-btn-primary {
+        background: #007aff;
     }
 }
 </style>
