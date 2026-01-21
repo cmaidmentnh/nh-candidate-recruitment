@@ -534,7 +534,7 @@ def speaker_votes():
 
     try:
         # Build query with optional filters
-        # Include all R incumbents, using 2026 status if available, otherwise 2024
+        # R incumbents who ran in 2024, excluding 2026 Declined
         query = """
             SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.phone1,
                    COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
@@ -542,12 +542,12 @@ def speaker_votes():
                    svt.id as tracking_id, svt.commitment_status, svt.confidence_level,
                    svt.notes, svt.last_contact_at, svt.assigned_caller
             FROM candidates c
+            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
+                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
             LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
-            LEFT JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id AND ces2024.election_year = 2024
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE c.party = 'R'
               AND c.incumbent = TRUE
-              AND (ces2026.district_code IS NOT NULL OR ces2024.district_code IS NOT NULL)
               AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
         """
         params = []
@@ -582,12 +582,12 @@ def speaker_votes():
         cur.execute("""
             SELECT COALESCE(svt.commitment_status, 'unknown') as status, COUNT(*)
             FROM candidates c
+            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
+                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
             LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
-            LEFT JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id AND ces2024.election_year = 2024
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE c.party = 'R'
               AND c.incumbent = TRUE
-              AND (ces2026.district_code IS NOT NULL OR ces2024.district_code IS NOT NULL)
               AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
             GROUP BY COALESCE(svt.commitment_status, 'unknown')
         """)
