@@ -394,7 +394,7 @@ def speaker_votes():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Get all confirmed R candidates for 2026 with their speaker vote status
+        # Get all R incumbents for 2026 (except Declined) with their speaker vote status
         cur.execute("""
             SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.phone1,
                    ces.district_code, c.incumbent,
@@ -404,8 +404,9 @@ def speaker_votes():
             JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE ces.election_year = 2026
-              AND ces.status = 'Confirmed'
+              AND ces.status != 'Declined'
               AND c.party = 'R'
+              AND c.incumbent = TRUE
             ORDER BY
                 CASE COALESCE(svt.commitment_status, 'unknown')
                     WHEN 'committed' THEN 1
@@ -425,8 +426,9 @@ def speaker_votes():
             JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE ces.election_year = 2026
-              AND ces.status = 'Confirmed'
+              AND ces.status != 'Declined'
               AND c.party = 'R'
+              AND c.incumbent = TRUE
             GROUP BY COALESCE(svt.commitment_status, 'unknown')
         """)
         status_counts = dict(cur.fetchall())

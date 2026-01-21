@@ -4,126 +4,132 @@
     <h1 class="mb-0"><i class="fas fa-gavel"></i> Speaker Vote Tracking</h1>
 </div>
 
-<div class="alert alert-secondary">
-    <i class="fas fa-lock"></i>
-    <strong>Private:</strong> Tracking commitments for Jason Osborne for Speaker among confirmed 2026 R candidates.
+<div class="alert alert-secondary py-2">
+    <i class="fas fa-lock"></i> <strong>Private:</strong> Jason Osborne for Speaker
 </div>
 
 <!-- Summary Cards -->
 <div class="row mb-4">
     <div class="col">
         <div class="card text-center bg-success text-white">
-            <div class="card-body py-3">
-                <h2 class="mb-0">{{ status_counts.get('committed', 0) }}</h2>
+            <div class="card-body py-2">
+                <h3 class="mb-0">{{ status_counts.get('committed', 0) }}</h3>
                 <small>Committed</small>
             </div>
         </div>
     </div>
     <div class="col">
         <div class="card text-center bg-info text-white">
-            <div class="card-body py-3">
-                <h2 class="mb-0">{{ status_counts.get('leaning_yes', 0) }}</h2>
+            <div class="card-body py-2">
+                <h3 class="mb-0">{{ status_counts.get('leaning_yes', 0) }}</h3>
                 <small>Leaning Yes</small>
             </div>
         </div>
     </div>
     <div class="col">
         <div class="card text-center bg-secondary text-white">
-            <div class="card-body py-3">
-                <h2 class="mb-0">{{ status_counts.get('unknown', 0) }}</h2>
+            <div class="card-body py-2">
+                <h3 class="mb-0">{{ status_counts.get('unknown', 0) }}</h3>
                 <small>Unknown</small>
             </div>
         </div>
     </div>
     <div class="col">
         <div class="card text-center bg-warning">
-            <div class="card-body py-3">
-                <h2 class="mb-0">{{ status_counts.get('leaning_no', 0) }}</h2>
+            <div class="card-body py-2">
+                <h3 class="mb-0">{{ status_counts.get('leaning_no', 0) }}</h3>
                 <small>Leaning No</small>
             </div>
         </div>
     </div>
     <div class="col">
         <div class="card text-center bg-danger text-white">
-            <div class="card-body py-3">
-                <h2 class="mb-0">{{ status_counts.get('opposed', 0) }}</h2>
+            <div class="card-body py-2">
+                <h3 class="mb-0">{{ status_counts.get('opposed', 0) }}</h3>
                 <small>Opposed</small>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Vote Count Summary -->
-<div class="card mb-4">
-    <div class="card-body text-center">
-        <h4>
-            {% set total_yes = (status_counts.get('committed', 0) + status_counts.get('leaning_yes', 0)) %}
-            {% set total_no = (status_counts.get('opposed', 0) + status_counts.get('leaning_no', 0)) %}
-            {% set total_unknown = status_counts.get('unknown', 0) %}
-            <span class="text-success">{{ total_yes }} Yes</span>
-            /
-            <span class="text-danger">{{ total_no }} No</span>
-            /
-            <span class="text-secondary">{{ total_unknown }} Unknown</span>
-        </h4>
-        <p class="text-muted mb-0">
-            {{ legislators|length }} confirmed R candidates | Need majority for Speaker
-        </p>
-    </div>
-</div>
-
-<!-- Candidates Table -->
+<!-- Candidates Table with Inline Editing -->
 <div class="card">
-    <div class="card-header">
-        <i class="fas fa-users"></i> Confirmed Republican Candidates ({{ legislators|length }})
+    <div class="card-header py-2">
+        <strong>{{ legislators|length }}</strong> R Incumbents
     </div>
     <div class="table-responsive">
-        <table class="table table-hover mb-0">
+        <table class="table table-sm table-hover mb-0">
             <thead>
                 <tr>
                     <th>Name</th>
                     <th>District</th>
-                    <th>Status</th>
-                    <th>Confidence</th>
-                    <th>Last Contact</th>
+                    <th style="width:140px;">Status</th>
+                    <th style="width:80px;">Conf.</th>
                     <th>Notes</th>
-                    <th></th>
+                    <th style="width:60px;"></th>
                 </tr>
             </thead>
             <tbody>
                 {% for leg in legislators %}
                 {# leg: candidate_id, first_name, last_name, email, phone1, district_code, incumbent, tracking_id, commitment_status, confidence_level, notes, last_contact_at #}
                 <tr>
-                    <td>
-                        <strong>{{ leg[1] }} {{ leg[2] }}</strong>
-                        {% if leg[6] %}<span class="badge badge-dark ml-1">Inc</span>{% endif %}
-                    </td>
-                    <td>{{ leg[5] or '—' }}</td>
-                    <td>
-                        {% set status = leg[8] or 'unknown' %}
-                        <span class="badge badge-{% if status == 'committed' %}success{% elif status == 'leaning_yes' %}info{% elif status == 'opposed' %}danger{% elif status == 'leaning_no' %}warning{% else %}secondary{% endif %}">
-                            {{ status|replace('_', ' ')|title }}
-                        </span>
-                    </td>
-                    <td>
-                        {% set conf = leg[9] or 5 %}
-                        <div class="progress" style="width: 60px; height: 8px;">
-                            <div class="progress-bar bg-{% if conf >= 7 %}success{% elif conf >= 4 %}warning{% else %}danger{% endif %}"
-                                 style="width: {{ conf * 10 }}%"></div>
-                        </div>
-                        <small class="text-muted">{{ conf }}/10</small>
-                    </td>
-                    <td><small>{{ leg[11].strftime('%m/%d') if leg[11] else '—' }}</small></td>
-                    <td><small class="text-muted">{{ leg[10]|truncate(40) if leg[10] else '' }}</small></td>
-                    <td>
-                        <a href="{{ url_for('private.speaker_vote_detail', candidate_id=leg[0]) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    </td>
+                    <form method="POST" action="{{ url_for('private.update_speaker_vote', candidate_id=leg[0]) }}" class="inline-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <td>
+                            <strong>{{ leg[1] }} {{ leg[2] }}</strong>
+                            {% if leg[6] %}<span class="badge badge-dark">Inc</span>{% endif %}
+                            <div class="btn-group btn-group-sm mt-1">
+                                {% if leg[4] %}
+                                <a href="tel:{{ leg[4] }}" class="btn btn-outline-success btn-xs" title="Call {{ leg[4] }}"><i class="fas fa-phone"></i></a>
+                                <a href="sms:{{ leg[4] }}" class="btn btn-outline-info btn-xs" title="Text {{ leg[4] }}"><i class="fas fa-sms"></i></a>
+                                {% endif %}
+                                {% if leg[3] %}
+                                <a href="mailto:{{ leg[3] }}" class="btn btn-outline-primary btn-xs" title="Email {{ leg[3] }}"><i class="fas fa-envelope"></i></a>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td><small>{{ leg[5] or '—' }}</small></td>
+                        <td>
+                            {% set status = leg[8] or 'unknown' %}
+                            <select name="commitment_status" class="form-control form-control-sm status-select" onchange="this.form.submit()">
+                                <option value="committed" {% if status == 'committed' %}selected{% endif %}>Committed</option>
+                                <option value="leaning_yes" {% if status == 'leaning_yes' %}selected{% endif %}>Leaning Yes</option>
+                                <option value="unknown" {% if status == 'unknown' %}selected{% endif %}>Unknown</option>
+                                <option value="leaning_no" {% if status == 'leaning_no' %}selected{% endif %}>Leaning No</option>
+                                <option value="opposed" {% if status == 'opposed' %}selected{% endif %}>Opposed</option>
+                            </select>
+                        </td>
+                        <td>
+                            {% set conf = leg[9] or 5 %}
+                            <select name="confidence_level" class="form-control form-control-sm" onchange="this.form.submit()">
+                                {% for i in range(1, 11) %}
+                                <option value="{{ i }}" {% if conf == i %}selected{% endif %}>{{ i }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" name="notes" class="form-control form-control-sm" value="{{ leg[10] or '' }}" placeholder="Notes..." onchange="this.form.submit()">
+                        </td>
+                        <td>
+                            <a href="{{ url_for('private.speaker_vote_detail', candidate_id=leg[0]) }}" class="btn btn-sm btn-outline-secondary" title="Contact History">
+                                <i class="fas fa-history"></i>
+                            </a>
+                        </td>
+                    </form>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<style>
+.status-select option[value="committed"] { background-color: #28a745; color: white; }
+.status-select option[value="leaning_yes"] { background-color: #17a2b8; color: white; }
+.status-select option[value="unknown"] { background-color: #6c757d; color: white; }
+.status-select option[value="leaning_no"] { background-color: #ffc107; color: black; }
+.status-select option[value="opposed"] { background-color: #dc3545; color: white; }
+.btn-xs { padding: 0.1rem 0.3rem; font-size: 0.7rem; }
+.btn-group-sm .btn-xs { line-height: 1; }
+</style>
 {% endblock %}
