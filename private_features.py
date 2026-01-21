@@ -548,7 +548,7 @@ def speaker_votes():
             WHERE c.party = 'R'
               AND c.incumbent = TRUE
               AND (ces2026.district_code IS NOT NULL OR ces2024.district_code IS NOT NULL)
-              AND COALESCE(ces2026.status, '') != 'Declined'
+              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
         """
         params = []
 
@@ -588,7 +588,7 @@ def speaker_votes():
             WHERE c.party = 'R'
               AND c.incumbent = TRUE
               AND (ces2026.district_code IS NOT NULL OR ces2024.district_code IS NOT NULL)
-              AND COALESCE(ces2026.status, '') != 'Declined'
+              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
             GROUP BY COALESCE(svt.commitment_status, 'unknown')
         """)
         status_counts = dict(cur.fetchall())
