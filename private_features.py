@@ -630,11 +630,14 @@ def update_speaker_vote(candidate_id):
 
         assigned_caller = request.form.get('assigned_caller')
 
-        # Get candidate name and existing tracking data
+        # Get candidate name and existing tracking data (use 2026 district if available, else 2024)
         cur.execute("""
-            SELECT c.first_name, c.last_name, ces.district_code, svt.notes, svt.assigned_caller
+            SELECT c.first_name, c.last_name,
+                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
+                   svt.notes, svt.assigned_caller
             FROM candidates c
-            JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id AND ces.election_year = 2026
+            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
+            LEFT JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id AND ces2024.election_year = 2024
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE c.candidate_id = %s
         """, (candidate_id,))
