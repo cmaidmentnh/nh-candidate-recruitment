@@ -35,6 +35,49 @@
     </div>
 </div>
 
+<!-- Opposed Legislators (from Speaker Vote Tracking) -->
+{% if opposed_legislators %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-exclamation-triangle text-warning mr-2"></i> Suggested Targets (Opposed to Speaker)</span>
+        <span class="badge badge-warning">{{ opposed_legislators|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>District</th>
+                        <th>Notes</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leg in opposed_legislators %}
+                    {# leg: 0=candidate_id, 1=first_name, 2=last_name, 3=email, 4=phone1, 5=district_code, 6=commitment_status, 7=confidence_level, 8=notes #}
+                    <tr>
+                        <td><strong>{{ leg[1] }} {{ leg[2] }}</strong></td>
+                        <td>{{ leg[5] }}</td>
+                        <td><small class="text-muted">{{ leg[8]|truncate(50) if leg[8] else '' }}</small></td>
+                        <td class="text-right">
+                            <form method="POST" action="{{ url_for('private.add_target_from_opposed') }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="candidate_id" value="{{ leg[0] }}">
+                                <button type="submit" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Search -->
 <div class="search-box mb-4">
     <input type="text" id="searchInput" class="form-control" placeholder="Search by district or incumbent..." onkeyup="filterTargets()">

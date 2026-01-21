@@ -216,6 +216,27 @@ def secret_primaries():
         """)
         targets = cur.fetchall()
 
+        # Get IDs of candidates already in targets
+        target_candidate_ids = [t[3] for t in targets if t[3]]
+
+        # Get "opposed" legislators from speaker vote tracking who aren't already targets
+        cur.execute("""
+            SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.phone1,
+                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
+                   svt.commitment_status, svt.confidence_level, svt.notes
+            FROM candidates c
+            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
+                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
+            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
+            JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
+            WHERE c.party = 'R'
+              AND c.incumbent = TRUE
+              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
+              AND svt.commitment_status = 'opposed'
+            ORDER BY c.last_name
+        """)
+        opposed_legislators = [leg for leg in cur.fetchall() if leg[0] not in target_candidate_ids]
+
         # Get all R incumbents for the add target dropdown
         cur.execute("""
             SELECT c.candidate_id, c.first_name, c.last_name, c.party,
@@ -242,7 +263,8 @@ def secret_primaries():
         return render_template('private/primaries.html',
                              targets=targets,
                              incumbents=incumbents,
-                             callers=callers)
+                             callers=callers,
+                             opposed_legislators=opposed_legislators)
     finally:
         cur.close()
         release_db_connection(conn)
@@ -343,6 +365,59 @@ def view_campaign(campaign_id):
     finally:
         cur.close()
         release_db_connection(conn)
+
+
+@private_bp.route('/primaries/add-from-opposed', methods=['POST'])
+@require_feature_access('secret_primaries')
+def add_target_from_opposed():
+    """Add a primary target from an opposed speaker vote legislator."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        candidate_id = request.form.get('candidate_id')
+
+        # Get candidate info (with 2024 fallback for district)
+        cur.execute("""
+            SELECT c.candidate_id, c.first_name, c.last_name, c.party,
+                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code
+            FROM candidates c
+            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
+            LEFT JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id AND ces2024.election_year = 2024
+            WHERE c.candidate_id = %s
+        """, (candidate_id,))
+        candidate = cur.fetchone()
+
+        if not candidate:
+            flash('Candidate not found.', 'error')
+            return redirect(url_for('private.secret_primaries'))
+
+        # Check if already a target
+        cur.execute("SELECT 1 FROM secret_primary_targets WHERE incumbent_candidate_id = %s", (candidate_id,))
+        if cur.fetchone():
+            flash('Already a primary target.', 'warning')
+            return redirect(url_for('private.secret_primaries'))
+
+        cur.execute("""
+            INSERT INTO secret_primary_targets
+            (district_code, incumbent_candidate_id, challenger_status, priority, created_by)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            candidate[4],  # district_code
+            candidate[0],  # candidate_id
+            'recruiting',
+            5,
+            current_user.email
+        ))
+        conn.commit()
+        flash(f'Added {candidate[1]} {candidate[2]} as primary target.', 'success')
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error adding target: {e}', 'error')
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    return redirect(url_for('private.secret_primaries'))
 
 
 @private_bp.route('/primaries/add', methods=['POST'])
