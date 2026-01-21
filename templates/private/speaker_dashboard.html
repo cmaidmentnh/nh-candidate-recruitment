@@ -401,20 +401,22 @@
     }
 
     #legislatorTable tr {
-        display: block;
+        display: flex;
+        flex-wrap: wrap;
         background: #fff;
         padding: 14px 18px;
+        gap: 4px 0;
     }
 
     #legislatorTable td {
-        display: block;
         padding: 0;
         border: none;
     }
 
-    /* Row 1: Name */
+    /* Row 1: Name - full width */
     #legislatorTable td:nth-child(1) {
-        margin-bottom: 4px;
+        width: 100%;
+        order: 1;
     }
 
     #legislatorTable td:nth-child(1) a {
@@ -422,25 +424,31 @@
         font-size: 17px;
     }
 
-    /* Row 2: District */
+    /* Row 2: District - full width */
     #legislatorTable td:nth-child(2) {
+        width: 100%;
+        order: 2;
         font-size: 14px;
         color: #8e8e93;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }
 
-    /* Row 3: Status + Actions side by side */
+    /* Row 3: Status (left) + Actions (right) */
     #legislatorTable td:nth-child(3) {
-        display: inline-block;
-        width: calc(100% - 160px);
-        vertical-align: middle;
+        order: 3;
+        flex: 1;
+        min-width: 0;
+        padding-right: 12px;
     }
 
     #legislatorTable td:nth-child(7) {
-        display: inline-flex;
-        width: 150px;
-        justify-content: flex-end;
-        vertical-align: middle;
+        order: 4;
+        display: flex;
+        align-items: center;
+    }
+
+    .status-select {
+        width: 100%;
     }
 
     /* Hide unused columns */
