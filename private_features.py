@@ -597,23 +597,36 @@ def update_speaker_vote(candidate_id):
 
         assigned_caller = request.form.get('assigned_caller')
 
-        # Get existing notes and assigned_caller if not provided (preserve on inline updates)
+        # Get candidate name and existing tracking data
         cur.execute("""
-            SELECT notes, assigned_caller FROM speaker_vote_tracking WHERE candidate_id = %s
+            SELECT c.first_name, c.last_name, ces.district_code, svt.notes, svt.assigned_caller
+            FROM candidates c
+            JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id AND ces.election_year = 2026
+            LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
+            WHERE c.candidate_id = %s
         """, (candidate_id,))
-        existing = cur.fetchone()
+        candidate_info = cur.fetchone()
+
+        if not candidate_info:
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'Candidate not found'}), 404
+            flash('Candidate not found.', 'error')
+            return redirect(url_for('private.speaker_votes'))
+
+        legislator_name = f"{candidate_info[0]} {candidate_info[1]}"
+        district_code = candidate_info[2]
 
         if notes is None or notes == '':
-            notes = existing[0] if existing and existing[0] else ''
+            notes = candidate_info[3] if candidate_info[3] else ''
 
         if assigned_caller is None:
-            assigned_caller = existing[1] if existing else None
+            assigned_caller = candidate_info[4] if candidate_info[4] else None
 
         # Upsert the tracking record
         cur.execute("""
             INSERT INTO speaker_vote_tracking
-            (candidate_id, commitment_status, confidence_level, notes, assigned_caller, created_by, last_contact_at)
-            VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            (candidate_id, legislator_name, district_code, commitment_status, confidence_level, notes, assigned_caller, created_by, last_contact_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
             ON CONFLICT (candidate_id) DO UPDATE SET
                 commitment_status = EXCLUDED.commitment_status,
                 confidence_level = EXCLUDED.confidence_level,
@@ -622,7 +635,7 @@ def update_speaker_vote(candidate_id):
                 last_contact_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP
             RETURNING id
-        """, (candidate_id, commitment_status, confidence_level, notes, assigned_caller, current_user.email))
+        """, (candidate_id, legislator_name, district_code, commitment_status, confidence_level, notes, assigned_caller, current_user.email))
         conn.commit()
 
         if is_ajax:

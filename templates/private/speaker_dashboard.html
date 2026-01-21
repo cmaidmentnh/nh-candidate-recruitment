@@ -40,29 +40,18 @@
 
 <!-- Filters -->
 <div class="filter-bar mb-4">
-    <div class="row align-items-center">
-        <div class="col-md-4">
-            <div class="search-box mb-0">
-                <input type="text" id="searchInput" class="form-control" placeholder="Search by name or district..." onkeyup="filterLegislators()">
-            </div>
-        </div>
-        <div class="col-md-3">
-            <select id="callerFilter" class="form-control" onchange="applyCallerFilter()">
-                <option value="">All Call Lists</option>
-                <option value="unassigned" {% if caller_filter == 'unassigned' %}selected{% endif %}>Unassigned</option>
-                {% for caller in callers %}
-                <option value="{{ caller[2] }}" {% if caller_filter == caller[2] %}selected{% endif %}>{{ caller[1] or caller[2] }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-3">
-            {% if caller_filter or status_filter %}
-            <a href="{{ url_for('private.speaker_votes') }}" class="btn btn-outline-secondary">Clear Filters</a>
-            {% endif %}
-        </div>
-        <div class="col-md-2 text-right">
-            <span class="text-muted">{{ legislators|length }} legislators</span>
-        </div>
+    <div class="filter-row">
+        <input type="text" id="searchInput" class="form-control" placeholder="Search..." onkeyup="filterLegislators()">
+        <select id="callerFilter" class="form-control" onchange="applyCallerFilter()">
+            <option value="">All Callers</option>
+            <option value="unassigned" {% if caller_filter == 'unassigned' %}selected{% endif %}>Unassigned</option>
+            {% for caller in callers %}
+            <option value="{{ caller[2] }}" {% if caller_filter == caller[2] %}selected{% endif %}>{{ caller[1] or caller[2] }}</option>
+            {% endfor %}
+        </select>
+        {% if caller_filter or status_filter %}
+        <a href="{{ url_for('private.speaker_votes') }}" class="btn btn-outline-secondary">Clear</a>
+        {% endif %}
     </div>
 </div>
 
@@ -230,13 +219,25 @@
 <style>
 .filter-bar {
     background: #f8f9fa;
-    padding: 15px;
+    padding: 12px;
     border-radius: 8px;
 }
 
-.filter-bar .search-box {
-    max-width: 100%;
-    margin: 0;
+.filter-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-row input,
+.filter-row select {
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-row .btn {
+    white-space: nowrap;
 }
 
 .dash-card-active {
@@ -306,25 +307,9 @@
 }
 
 /* Mobile responsiveness */
-@media (max-width: 992px) {
-    .filter-bar .row > div {
-        margin-bottom: 10px;
-    }
-}
-
 @media (max-width: 768px) {
-    .filter-bar {
-        margin: 0 -15px;
-        border-radius: 0;
-        padding: 12px;
-    }
-
-    .filter-bar .row > div {
-        padding: 0 8px;
-    }
-
     .action-buttons {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 4px;
     }
 
@@ -340,39 +325,14 @@
         padding: 2px 4px;
     }
 
-    /* Hide less important columns on mobile */
+    /* Hide columns on mobile */
     #legislatorTable th:nth-child(4),
-    #legislatorTable td:nth-child(4) {
-        display: none;
-    }
-
-    .card {
-        margin: 0 -15px;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
-}
-
-@media (max-width: 576px) {
-    /* Hide more columns on small screens */
+    #legislatorTable td:nth-child(4),
     #legislatorTable th:nth-child(5),
     #legislatorTable td:nth-child(5),
     #legislatorTable th:nth-child(6),
     #legislatorTable td:nth-child(6) {
         display: none;
-    }
-
-    .filter-bar .col-md-4,
-    .filter-bar .col-md-3,
-    .filter-bar .col-md-2 {
-        flex: 0 0 100%;
-        max-width: 100%;
-        margin-bottom: 8px;
-    }
-
-    .filter-bar .col-md-2 {
-        text-align: left !important;
     }
 }
 </style>
