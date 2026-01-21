@@ -6,7 +6,7 @@
     </a>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="mb-0">{{ campaign[1] }}</h1>
     <button class="btn btn-warning" data-toggle="modal" data-target="#addTargetModal">
         <i class="fas fa-plus"></i> Add Target
@@ -17,134 +17,159 @@
 <p class="text-muted">{{ campaign[2] }}</p>
 {% endif %}
 
-<!-- Summary -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-center bg-warning">
-            <div class="card-body py-2">
-                <h4 class="mb-0">{{ targets|selectattr(5, 'equalto', 'recruiting')|list|length }}</h4>
-                <small>Recruiting</small>
-            </div>
+<!-- Dashboard Cards -->
+<div class="dashboard-row mb-4">
+    <div class="dash-card dash-card-size" style="border-left: 4px solid #ffc107;">
+        <div class="card-header">Recruiting</div>
+        <div class="card-body">
+            <h4>{{ targets|selectattr(5, 'equalto', 'recruiting')|list|length }}</h4>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center bg-success text-white">
-            <div class="card-body py-2">
-                <h4 class="mb-0">{{ targets|selectattr(5, 'equalto', 'confirmed')|list|length }}</h4>
-                <small>Confirmed</small>
-            </div>
+    <div class="dash-card dash-card-size" style="border-left: 4px solid #28a745;">
+        <div class="card-header">Confirmed</div>
+        <div class="card-body">
+            <h4>{{ targets|selectattr(5, 'equalto', 'confirmed')|list|length }}</h4>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center bg-info text-white">
-            <div class="card-body py-2">
-                <h4 class="mb-0">{{ targets|selectattr(5, 'equalto', 'filed')|list|length }}</h4>
-                <small>Filed</small>
-            </div>
+    <div class="dash-card dash-card-size" style="border-left: 4px solid #17a2b8;">
+        <div class="card-header">Filed</div>
+        <div class="card-body">
+            <h4>{{ targets|selectattr(5, 'equalto', 'filed')|list|length }}</h4>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card text-center bg-secondary text-white">
-            <div class="card-body py-2">
-                <h4 class="mb-0">{{ targets|length }}</h4>
-                <small>Total</small>
-            </div>
+    <div class="dash-card dash-card-size" style="border-left: 4px solid #6c757d;">
+        <div class="card-header">Total</div>
+        <div class="card-body">
+            <h4>{{ targets|length }}</h4>
         </div>
     </div>
 </div>
 
-<!-- Targets List -->
-{% if targets %}
-<div class="row">
-    {% for target in targets %}
-    {# target: id, campaign_id, district_code, incumbent_candidate_id, challenger_name, challenger_status, challenger_contact, notes, priority, created_by, created_at, updated_at, incumbent_first, incumbent_last, incumbent_party, incumbent_email, incumbent_phone #}
-    <div class="col-md-6 col-lg-4 mb-3">
-        <div class="card h-100 border-{% if target[5] == 'confirmed' %}success{% elif target[5] == 'filed' %}info{% elif target[5] == 'declined' %}danger{% else %}warning{% endif %}">
-            <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                <strong>{{ target[2] }}</strong>
-                <span class="badge badge-{% if target[5] == 'confirmed' %}success{% elif target[5] == 'filed' %}info{% elif target[5] == 'declined' %}danger{% else %}warning{% endif %}">
-                    {{ target[5]|title }}
-                </span>
-            </div>
-            <div class="card-body py-2">
-                <p class="mb-1">
-                    <small class="text-muted">Target:</small><br>
-                    <strong>{{ target[12] }} {{ target[13] }}</strong>
-                </p>
-                {% if target[4] %}
-                <p class="mb-1">
-                    <small class="text-muted">Challenger:</small><br>
-                    {{ target[4] }}
-                </p>
-                {% endif %}
-                {% if target[7] %}
-                <p class="mb-0"><small class="text-muted">{{ target[7]|truncate(60) }}</small></p>
-                {% endif %}
-            </div>
-            <div class="card-footer py-2 bg-transparent">
-                <button type="button" class="btn btn-sm btn-outline-secondary btn-block" data-toggle="modal" data-target="#editModal{{ target[0] }}">
-                    <i class="fas fa-edit"></i> Update
-                </button>
-            </div>
-        </div>
+<!-- Targets Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-bullseye"></i> Primary Targets</span>
     </div>
-
-    <!-- Edit Modal -->
-    <div class="modal fade" id="editModal{{ target[0] }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="modal-header py-2">
-                        <h5 class="modal-title">{{ target[2] }} - {{ target[12] }} {{ target[13] }}</h5>
-                        <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Challenger</label>
-                            <input type="text" name="challenger_name" class="form-control" value="{{ target[4] or '' }}" placeholder="Who's running against them?">
-                        </div>
-                        <div class="form-group">
-                            <label>Status</label>
-                            <select name="challenger_status" class="form-control">
+    {% if targets %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>District</th>
+                    <th>Incumbent</th>
+                    <th>Challenger</th>
+                    <th style="width:130px;">Status</th>
+                    <th>Notes</th>
+                    <th style="width:50px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for target in targets %}
+                {# target: id, campaign_id, district_code, incumbent_candidate_id, challenger_name, challenger_status, challenger_contact, notes, priority, created_by, created_at, updated_at, incumbent_first, incumbent_last, incumbent_party, incumbent_email, incumbent_phone #}
+                <tr>
+                    <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="priority" value="{{ target[8] }}">
+                        <td>
+                            <strong>{{ target[2] }}</strong>
+                        </td>
+                        <td>
+                            {{ target[12] }} {{ target[13] }}
+                            {% if target[16] %}
+                            <a href="tel:{{ target[16] }}" class="contact-btn" title="Call"><i class="fas fa-phone"></i></a>
+                            <a href="sms:{{ target[16] }}" class="contact-btn" title="Text"><i class="fas fa-comment"></i></a>
+                            {% endif %}
+                            {% if target[15] %}
+                            <a href="mailto:{{ target[15] }}" class="contact-btn" title="Email"><i class="fas fa-envelope"></i></a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <input type="text" name="challenger_name" class="form-control form-control-sm" value="{{ target[4] or '' }}" placeholder="Challenger name..." onchange="this.form.submit()">
+                        </td>
+                        <td>
+                            <select name="challenger_status" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="recruiting" {% if target[5] == 'recruiting' %}selected{% endif %}>Recruiting</option>
                                 <option value="confirmed" {% if target[5] == 'confirmed' %}selected{% endif %}>Confirmed</option>
                                 <option value="filed" {% if target[5] == 'filed' %}selected{% endif %}>Filed</option>
                                 <option value="declined" {% if target[5] == 'declined' %}selected{% endif %}>Declined</option>
                             </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Contact Info</label>
-                            <textarea name="challenger_contact" class="form-control" rows="2" placeholder="Phone, email, etc.">{{ target[6] or '' }}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Notes</label>
-                            <textarea name="notes" class="form-control" rows="2">{{ target[7] or '' }}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Priority (1=highest)</label>
-                            <select name="priority" class="form-control">
-                                {% for i in range(1, 11) %}
-                                <option value="{{ i }}" {% if target[8] == i %}selected{% endif %}>{{ i }}</option>
-                                {% endfor %}
-                            </select>
+                        </td>
+                        <td>
+                            <input type="text" name="notes" class="form-control form-control-sm" value="{{ target[7] or '' }}" placeholder="Notes..." onchange="this.form.submit()">
+                            <input type="hidden" name="challenger_contact" value="{{ target[6] or '' }}">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#detailModal{{ target[0] }}" title="Details">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                        </td>
+                    </form>
+                </tr>
+
+                <!-- Detail Modal -->
+                <div class="modal fade" id="detailModal{{ target[0] }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ url_for('private.update_target', target_id=target[0]) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="modal-header py-2">
+                                    <h5 class="modal-title">{{ target[2] }} - {{ target[12] }} {{ target[13] }}</h5>
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-light mb-3">
+                                        <strong>Incumbent:</strong> {{ target[12] }} {{ target[13] }}<br>
+                                        {% if target[15] %}<small><i class="fas fa-envelope"></i> {{ target[15] }}</small><br>{% endif %}
+                                        {% if target[16] %}<small><i class="fas fa-phone"></i> {{ target[16] }}</small>{% endif %}
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Challenger</label>
+                                        <input type="text" name="challenger_name" class="form-control" value="{{ target[4] or '' }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <select name="challenger_status" class="form-control">
+                                            <option value="recruiting" {% if target[5] == 'recruiting' %}selected{% endif %}>Recruiting</option>
+                                            <option value="confirmed" {% if target[5] == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                            <option value="filed" {% if target[5] == 'filed' %}selected{% endif %}>Filed</option>
+                                            <option value="declined" {% if target[5] == 'declined' %}selected{% endif %}>Declined</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Challenger Contact</label>
+                                        <textarea name="challenger_contact" class="form-control" rows="2">{{ target[6] or '' }}</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Notes</label>
+                                        <textarea name="notes" class="form-control" rows="2">{{ target[7] or '' }}</textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Priority (1=highest)</label>
+                                        <select name="priority" class="form-control">
+                                            {% for i in range(1, 11) %}
+                                            <option value="{{ i }}" {% if target[8] == i %}selected{% endif %}>{{ i }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer py-2">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-warning">Save</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
-                    <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-warning">Save</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                </div>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    {% endfor %}
+    {% else %}
+    <div class="card-body text-center text-muted">
+        No targets yet. Click "Add Target" to select an incumbent to primary.
+    </div>
+    {% endif %}
 </div>
-{% else %}
-<div class="alert alert-info">
-    No targets yet. Click "Add Target" to select an incumbent to primary.
-</div>
-{% endif %}
 
 <!-- Add Target Modal -->
 <div class="modal fade" id="addTargetModal" tabindex="-1">
@@ -160,7 +185,7 @@
                     <div class="form-group">
                         <label>Incumbent to Primary</label>
                         <select name="incumbent_candidate_id" class="form-control" required>
-                            <option value="">-- Select --</option>
+                            <option value="">-- Select Incumbent --</option>
                             {% for inc in incumbents %}
                             <option value="{{ inc[0] }}">{{ inc[4] }} - {{ inc[1] }} {{ inc[2] }} [{{ inc[5] }}]</option>
                             {% endfor %}
@@ -195,4 +220,27 @@
         </div>
     </div>
 </div>
+
+<style>
+.contact-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #495057;
+    border: none;
+    margin-left: 4px;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.contact-btn:hover {
+    background: #dee2e6;
+    color: #212529;
+    text-decoration: none;
+}
+.contact-btn i { font-size: 12px; }
+</style>
 {% endblock %}
