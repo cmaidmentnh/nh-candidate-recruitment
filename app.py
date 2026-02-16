@@ -1906,15 +1906,17 @@ def add_user():
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # Check if email already exists
-            cur.execute("SELECT 1 FROM candidates WHERE email ILIKE %s", (email,))
-            if cur.fetchone():
-                flash("Email already exists in candidates.", "danger")
-                return redirect(url_for('add_user'))
-            cur.execute("SELECT 1 FROM users WHERE email ILIKE %s", (email,))
-            if cur.fetchone():
-                flash("Email already exists in admin users.", "danger")
-                return redirect(url_for('add_user'))
+            # Check if email already exists in the same user type
+            if user_type == 'candidate':
+                cur.execute("SELECT 1 FROM candidates WHERE email ILIKE %s", (email,))
+                if cur.fetchone():
+                    flash("Email already exists in candidates.", "danger")
+                    return redirect(url_for('add_user'))
+            else:
+                cur.execute("SELECT 1 FROM users WHERE email ILIKE %s", (email,))
+                if cur.fetchone():
+                    flash("Email already exists in admin users.", "danger")
+                    return redirect(url_for('add_user'))
 
             if user_type == 'candidate':
                 if not (first_name and last_name and party):
