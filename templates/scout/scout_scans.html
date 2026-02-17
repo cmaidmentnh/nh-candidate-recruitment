@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="fas fa-history text-muted"></i> Scan History</h1>
+    <a href="{{ url_for('scout.dashboard') }}" class="btn btn-sm btn-outline-secondary">Back</a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                    <th>Type</th><th>Status</th><th>Found</th><th>New</th>
+                    <th>Signals</th><th>Started</th><th>Duration</th><th>Run By</th><th>Error</th>
+                </tr></thead>
+                <tbody>
+                {% for s in scans %}
+                <tr>
+                    <td>
+                        <span class="badge badge-{% if s[1] == 'fec' %}success{% elif s[1] == 'voter_profile' %}primary{% elif s[1] == 'news_rss' %}info{% else %}secondary{% endif %}">
+                            {{ s[1]|replace('_',' ') }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{% if s[2] == 'completed' %}success{% elif s[2] == 'failed' %}danger{% else %}warning{% endif %}">{{ s[2] }}</span>
+                    </td>
+                    <td>{{ s[4] or 0 }}</td>
+                    <td>{{ s[5] or 0 }}</td>
+                    <td>{{ s[6] or 0 }}</td>
+                    <td class="text-muted" style="font-size:0.85em;">{{ s[8].strftime('%b %d %I:%M%p') if s[8] else '' }}</td>
+                    <td class="text-muted" style="font-size:0.85em;">
+                        {% if s[9] and s[8] %}
+                            {{ ((s[9] - s[8]).total_seconds()|int) }}s
+                        {% elif s[2] == 'running' %}
+                            <i class="fas fa-spinner fa-spin"></i>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted" style="font-size:0.85em;">{{ s[10] or '' }}</td>
+                    <td class="text-danger" style="font-size:0.8em; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ s[7] or '' }}">{{ s[7] or '' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not scans %}
+                <tr><td colspan="9" class="text-center text-muted p-4">No scans run yet.</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

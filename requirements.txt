@@ -12,3 +12,5 @@ itsdangerous==2.1.2
 pyotp==2.9.0
 qrcode==7.4.2
 Pillow==10.2.0
+requests==2.31.0
+feedparser==6.0.11

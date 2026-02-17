@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="fas fa-newspaper text-muted"></i> News / LTE Scan</h1>
+    <a href="{{ url_for('scout.dashboard') }}" class="btn btn-sm btn-outline-secondary">Back</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><strong>Run News Scan</strong></div>
+            <div class="card-body">
+                <p class="text-muted">Scans NH newspaper RSS feeds for Letters to the Editor and opinion pieces. Extracts author names, matches against the voter file, and creates prospects for Republicans and Undeclared voters who are civically engaged.</p>
+                <h6>RSS Feeds:</h6>
+                <ul>
+                    {% for name, url in feeds %}
+                    <li>{{ name }} <a href="{{ url }}" target="_blank" class="small text-muted"><i class="fas fa-external-link-alt"></i></a></li>
+                    {% endfor %}
+                </ul>
+                <form method="POST" action="{{ url_for('scout.scan_news') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary" onclick="this.disabled=true; this.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Scanning feeds...'; this.form.submit();">
+                        <i class="fas fa-rss"></i> Run News Scan
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><strong>What Gets Picked Up</strong></div>
+            <div class="card-body">
+                <ul>
+                    <li>Letters to the Editor with identifiable author + city</li>
+                    <li>Opinion pieces with NH-based authors</li>
+                    <li>Authors matched to voter file for party identification</li>
+                    <li>Democrats are automatically excluded</li>
+                </ul>
+                <p class="text-muted small">Each LTE signal adds +8 to the prospect's composite score. Someone who writes multiple letters will accumulate a high score. Best results when combined with FEC and voter file data.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

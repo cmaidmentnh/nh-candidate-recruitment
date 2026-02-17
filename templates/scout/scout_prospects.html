@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="fas fa-users text-muted"></i> All Prospects</h1>
+    <div>
+        <a href="{{ url_for('scout.export_prospects') }}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-download"></i> Export</a>
+        <a href="{{ url_for('scout.dashboard') }}" class="btn btn-sm btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<!-- Status Filter Cards -->
+<div class="dashboard-row mb-3">
+    <a href="{{ url_for('scout.prospects') }}" class="dash-card dash-card-size dash-card-link {% if not status_filter %}dash-card-active{% endif %}" style="min-width:80px;">
+        <div class="card-header" style="font-size:0.8em;">Active</div>
+        <div class="card-body"><h5>{{ (status_counts.get('new',0) + status_counts.get('reviewing',0) + status_counts.get('contacted',0) + status_counts.get('interested',0)) }}</h5></div>
+    </a>
+    {% for st, label, badge in [('new','New','primary'),('reviewing','Reviewing','info'),('contacted','Contacted','info'),('interested','Interested','success'),('promoted','Promoted','dark'),('dismissed','Dismissed','secondary')] %}
+    <a href="{{ url_for('scout.prospects', status=st) }}" class="dash-card dash-card-size dash-card-link {% if status_filter == st %}dash-card-active{% endif %}" style="min-width:80px;">
+        <div class="card-header" style="font-size:0.8em;">{{ label }}</div>
+        <div class="card-body"><h5>{{ status_counts.get(st, 0) }}</h5></div>
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Search & Filter -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="form-inline">
+            <input type="text" name="q" class="form-control form-control-sm mr-2" placeholder="Search name or city..." value="{{ search }}" style="width:200px;">
+            <select name="district" class="form-control form-control-sm mr-2">
+                <option value="">All Districts</option>
+                {% for d in district_list %}
+                <option value="{{ d }}" {% if district_filter == d %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            <button type="submit" class="btn btn-sm btn-primary mr-2"><i class="fas fa-search"></i></button>
+            {% if search or district_filter %}
+            <a href="{{ url_for('scout.prospects', status=status_filter) }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Prospects Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                    <th>Name</th><th>City</th><th>District</th>
+                    <th class="text-center">Score</th><th class="text-center">Party</th>
+                    <th class="text-center">Signals</th><th>Status</th><th>Priority</th>
+                    <th class="text-muted" style="font-size:0.8em;">Added</th>
+                </tr></thead>
+                <tbody>
+                {% for p in prospects %}
+                <tr>
+                    <td><a href="{{ url_for('scout.prospect_detail', prospect_id=p[0]) }}"><strong>{{ p[1] }} {{ p[2] }}</strong></a></td>
+                    <td class="text-muted">{{ p[3] or '' }}</td>
+                    <td>{% if p[4] %}<a href="{{ url_for('scout.district_detail', district_code=p[4]) }}">{{ p[4] }}</a>{% else %}-{% endif %}</td>
+                    <td class="text-center"><span class="badge badge-{% if p[5] >= 30 %}danger{% elif p[5] >= 15 %}warning{% else %}secondary{% endif %}">{{ p[5] }}</span></td>
+                    <td class="text-center">{{ p[7] or '?' }}</td>
+                    <td class="text-center">{{ p[9] }}</td>
+                    <td><span class="badge badge-{% if p[6] == 'new' %}primary{% elif p[6] == 'contacted' %}info{% elif p[6] == 'interested' %}success{% elif p[6] == 'promoted' %}dark{% else %}secondary{% endif %}">{{ p[6] }}</span></td>
+                    <td>{% if p[8] == 'high' %}<span class="badge badge-danger">high</span>{% elif p[8] == 'low' %}<span class="badge badge-secondary">low</span>{% endif %}</td>
+                    <td class="text-muted" style="font-size:0.8em;">{{ p[10].strftime('%b %d') if p[10] else '' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not prospects %}
+                <tr><td colspan="9" class="text-center text-muted p-4">No prospects found.</td></tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

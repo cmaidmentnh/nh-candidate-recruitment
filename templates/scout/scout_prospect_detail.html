@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">
+        {{ p.first_name }} {{ p.last_name }}
+        <span class="badge badge-{% if p.composite_score >= 30 %}danger{% elif p.composite_score >= 15 %}warning{% else %}secondary{% endif %}" style="font-size:0.5em; vertical-align:middle;">Score: {{ p.composite_score }}</span>
+        <span class="badge badge-{% if p.review_status == 'new' %}primary{% elif p.review_status == 'contacted' %}info{% elif p.review_status == 'interested' %}success{% elif p.review_status == 'promoted' %}dark{% else %}secondary{% endif %}" style="font-size:0.5em; vertical-align:middle;">{{ p.review_status }}</span>
+    </h1>
+    <div>
+        {% if p.review_status != 'promoted' %}
+        <form method="POST" action="{{ url_for('scout.dismiss_prospect', prospect_id=p.id) }}" class="d-inline" onsubmit="return confirm('Dismiss this prospect?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i> Dismiss</button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('scout.prospects') }}" class="btn btn-sm btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Column: Info + Voter Data -->
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header"><strong>Profile</strong></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>City:</strong> {{ p.city or '-' }}</p>
+                        <p><strong>Address:</strong> {{ p.address or '-' }}</p>
+                        <p><strong>ZIP:</strong> {{ p.zip or '-' }}</p>
+                        <p><strong>County:</strong> {{ p.county or '-' }}</p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Party:</strong> <span class="badge badge-{% if p.voter_party == 'REP' %}danger{% elif p.voter_party == 'DEM' %}primary{% else %}secondary{% endif %}">{{ p.voter_party or 'Unknown' }}</span></p>
+                        <p><strong>Voter ID:</strong> {{ p.voter_id or 'Not matched' }}</p>
+                        <p><strong>Occupation:</strong> {{ p.occupation or '-' }}</p>
+                        <p><strong>Employer:</strong> {{ p.employer or '-' }}</p>
+                    </div>
+                </div>
+                {% if p.email or p.phone %}
+                <hr>
+                <p><strong>Email:</strong> {{ p.email or '-' }} &nbsp; <strong>Phone:</strong> {{ p.phone or '-' }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if district_info %}
+        <div class="card mb-3">
+            <div class="card-header"><strong>District: <a href="{{ url_for('scout.district_detail', district_code=p.district_code) }}">{{ p.district_code }}</a></strong></div>
+            <div class="card-body">
+                <p><strong>Towns:</strong> {{ district_info[2] }}</p>
+                <p><strong>PVI:</strong> R+{{ "%.1f"|format(district_info[6]) }} ({{ district_info[7] }}) &nbsp; <strong>Empty Seats:</strong> <span class="text-danger">{{ district_info[5] }}</span></p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Update Form -->
+        <div class="card mb-3">
+            <div class="card-header"><strong>Update Prospect</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('scout.update_prospect', prospect_id=p.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label>Status</label>
+                            <select name="review_status" class="form-control form-control-sm">
+                                {% for s in ['new','reviewing','contacted','interested','declined'] %}
+                                <option value="{{ s }}" {% if p.review_status == s %}selected{% endif %}>{{ s|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Priority</label>
+                            <select name="priority" class="form-control form-control-sm">
+                                {% for pr in ['high','medium','low'] %}
+                                <option value="{{ pr }}" {% if p.priority == pr %}selected{% endif %}>{{ pr|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>District</label>
+                        <select name="district_code" class="form-control form-control-sm">
+                            <option value="">-- Select --</option>
+                            {% for d in available_districts %}
+                            <option value="{{ d[0] }}" {% if p.district_code == d[0] %}selected{% endif %}>{{ d[0] }} ({{ d[1] }}, {{ d[3] }} empty, R+{{ "%.1f"|format(d[4]) }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea name="notes" class="form-control form-control-sm" rows="2">{{ p.notes or '' }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Promote -->
+        {% if p.review_status != 'promoted' %}
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white"><strong>Promote to Candidate</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('scout.promote_prospect', prospect_id=p.id) }}" onsubmit="return confirm('Promote {{ p.first_name }} {{ p.last_name }} to a real candidate?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label>District</label>
+                            <select name="district_code" class="form-control form-control-sm" required>
+                                <option value="">-- Select --</option>
+                                {% for d in available_districts %}
+                                <option value="{{ d[0] }}" {% if p.district_code == d[0] %}selected{% endif %}>{{ d[0] }} ({{ d[1] }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group col-6">
+                            <label>Status</label>
+                            <select name="status" class="form-control form-control-sm">
+                                <option value="New Recruit">New Recruit</option>
+                                <option value="Potential">Potential</option>
+                                <option value="Considering">Considering</option>
+                                <option value="Confirmed">Confirmed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-arrow-up"></i> Promote to Candidate</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> Promoted to candidate on {{ p.promoted_at.strftime('%b %d, %Y') if p.promoted_at else 'unknown' }} by {{ p.promoted_by or 'unknown' }}.
+            <a href="{{ url_for('edit_candidate', candidate_id=p.promoted_candidate_id, election_year=2026) }}">View candidate record &rarr;</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Signals + Contacts -->
+    <div class="col-lg-6">
+        <!-- Signals -->
+        <div class="card mb-3">
+            <div class="card-header"><strong>Signals ({{ signals|length }})</strong></div>
+            <div class="card-body p-0">
+                {% if signals %}
+                <div class="list-group list-group-flush">
+                    {% for s in signals %}
+                    <div class="list-group-item py-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="badge badge-{% if s[1] == 'fec_donation' %}success{% elif s[1] == 'voter_profile' %}primary{% elif s[1] == 'news_lte' %}info{% else %}secondary{% endif %}">{{ s[1]|replace('_',' ') }}</span>
+                                <strong>{{ s[3] or '' }}</strong>
+                            </div>
+                            <div>
+                                <span class="badge badge-dark">+{{ s[8] }}</span>
+                                <small class="text-muted">{{ s[2] if s[2] else '' }}</small>
+                            </div>
+                        </div>
+                        {% if s[4] %}<small class="text-muted">{{ s[4][:200] }}</small>{% endif %}
+                        {% if s[5] %}<br><a href="{{ s[5] }}" target="_blank" class="small">Source &rarr;</a>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-3 text-center text-muted">No signals yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Log Contact -->
+        <div class="card mb-3">
+            <div class="card-header"><strong>Log Contact</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('scout.log_contact', prospect_id=p.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-row">
+                        <div class="form-group col-4">
+                            <select name="contact_method" class="form-control form-control-sm" required>
+                                <option value="">Method...</option>
+                                <option value="phone">Phone</option>
+                                <option value="email">Email</option>
+                                <option value="text">Text</option>
+                                <option value="in_person">In Person</option>
+                                <option value="social">Social Media</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-4">
+                            <select name="outcome" class="form-control form-control-sm" required>
+                                <option value="">Outcome...</option>
+                                <option value="positive">Positive</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="negative">Negative</option>
+                                <option value="no_answer">No Answer</option>
+                                <option value="left_message">Left Message</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-4">
+                            <select name="new_status" class="form-control form-control-sm">
+                                <option value="">No status change</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="interested">Interested</option>
+                                <option value="declined">Declined</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Contact notes..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-phone"></i> Log Contact</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Contact History -->
+        {% if contacts %}
+        <div class="card mb-3">
+            <div class="card-header"><strong>Contact History ({{ contacts|length }})</strong></div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for c in contacts %}
+                    <div class="list-group-item py-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="badge badge-outline-primary">{{ c[3] or '' }}</span>
+                                <span class="badge badge-{% if c[4] == 'positive' %}success{% elif c[4] == 'negative' %}danger{% else %}secondary{% endif %}">{{ c[4] or '' }}</span>
+                            </div>
+                            <small class="text-muted">{{ c[2].strftime('%b %d, %Y %I:%M%p') if c[2] else '' }}</small>
+                        </div>
+                        {% if c[5] %}<small>{{ c[5] }}</small>{% endif %}
+                        <br><small class="text-muted">by {{ c[1] }}{% if c[6] != c[7] %} | {{ c[6] }} &rarr; {{ c[7] }}{% endif %}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

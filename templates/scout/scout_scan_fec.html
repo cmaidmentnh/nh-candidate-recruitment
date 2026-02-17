@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="fas fa-dollar-sign text-muted"></i> FEC Donor Scan</h1>
+    <a href="{{ url_for('scout.dashboard') }}" class="btn btn-sm btn-outline-secondary">Back</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><strong>Configure FEC Scan</strong></div>
+            <div class="card-body">
+                <p class="text-muted">Queries the FEC OpenFEC API for individual political donors in NH. Itemized contributions over the minimum amount. Results are cross-referenced against the voter file to identify Republicans and Undeclared voters in target districts.</p>
+                <form method="POST" action="{{ url_for('scout.scan_fec') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label>Election Cycle</label>
+                        <select name="cycle" class="form-control">
+                            <option value="2026">2025-2026</option>
+                            <option value="2024" selected>2023-2024</option>
+                            <option value="2022">2021-2022</option>
+                            <option value="2020">2019-2020</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Minimum Donation Amount ($)</label>
+                        <input type="number" name="min_amount" class="form-control" value="200" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Max API Pages (100 results each)</label>
+                        <input type="number" name="max_pages" class="form-control" value="20" min="1" max="100">
+                        <small class="text-muted">20 pages = up to 2,000 donors. Increase for a more comprehensive scan.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" onclick="this.disabled=true; this.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i> Scanning FEC...'; this.form.submit();">
+                        <i class="fas fa-search"></i> Run FEC Scan
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header"><strong>How Scoring Works</strong></div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead><tr><th>Signal</th><th class="text-center">Score</th></tr></thead>
+                    <tbody>
+                        <tr><td>Donation to RNC / NRCC / NRSC</td><td class="text-center">+12-15</td></tr>
+                        <tr><td>Donation to any Republican committee</td><td class="text-center">+10</td></tr>
+                        <tr><td>Donation to conservative PAC</td><td class="text-center">+8</td></tr>
+                        <tr><td>Any political donation</td><td class="text-center">+3</td></tr>
+                        <tr><td>Donation amount &ge; $1,000</td><td class="text-center">+5 bonus</td></tr>
+                        <tr><td>Donation amount &ge; $500</td><td class="text-center">+3 bonus</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small">Scores accumulate across multiple donations. A donor who gave $1,000 to the RNC and $500 to a Republican candidate would score 15 + 5 + 10 + 3 = 33.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

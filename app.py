@@ -405,6 +405,11 @@ from private_features import private_bp, init_private_features
 init_private_features(get_db_connection, release_db_connection, is_super_admin, SUPER_ADMIN_EMAIL)
 app.register_blueprint(private_bp)
 
+# Register candidate scout blueprint
+from candidate_scout import scout_bp, init_candidate_scout
+init_candidate_scout(get_db_connection, release_db_connection, get_voter_db_connection, release_voter_db_connection, is_super_admin, SUPER_ADMIN_EMAIL)
+app.register_blueprint(scout_bp)
+
 def candidate_restricted(f):
     @wraps(f)
     @login_required

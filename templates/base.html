@@ -428,6 +428,9 @@
             {% endif %}
             {% if is_super_admin %}
             <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="{{ url_for('scout.dashboard') }}">
+                <i class="fas fa-binoculars text-muted"></i> Candidate Scout
+            </a>
             <a class="dropdown-item" href="{{ url_for('private.manage_access') }}">
                 <i class="fas fa-key text-muted"></i> Manage Access
             </a>

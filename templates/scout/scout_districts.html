@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="fas fa-map-marked-alt text-muted"></i> Target Districts</h1>
+    <div>
+        <form method="POST" action="{{ url_for('scout.refresh_districts') }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </form>
+        <a href="{{ url_for('scout.dashboard') }}" class="btn btn-sm btn-outline-secondary">Back</a>
+    </div>
+</div>
+
+<p class="text-muted">{{ total }} districts with open Republican seats. Tier 1 = Must-Fill (PVI R+5+), Tier 2 = Competitive (PVI R+0 to R+5).</p>
+
+{% for tier_num, tier_name, tier_badge in [(1, 'TIER 1: Must-Fill Districts', 'danger'), (2, 'TIER 2: Competitive Districts', 'warning'), (3, 'TIER 3: Other', 'secondary')] %}
+{% if tiers.get(tier_num) %}
+<div class="card mb-4">
+    <div class="card-header">
+        <strong><span class="badge badge-{{ tier_badge }}">{{ tier_name }}</span></strong>
+        <span class="text-muted ml-2">{{ tiers[tier_num]|length }} districts, {{ tiers[tier_num]|sum(attribute=5) if tiers[tier_num][0] is iterable else '' }} empty seats</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                    <th>District</th><th>County</th><th>Towns</th>
+                    <th class="text-center">Seats</th><th class="text-center">Confirmed</th>
+                    <th class="text-center">Empty</th><th class="text-center">PVI</th>
+                    <th class="text-center">Prospects</th><th class="text-center">Last Scan</th>
+                </tr></thead>
+                <tbody>
+                {% for d in tiers[tier_num] %}
+                <tr{% if d[4] == 0 %} class="table-danger"{% endif %}>
+                    <td><a href="{{ url_for('scout.district_detail', district_code=d[0]) }}"><strong>{{ d[0] }}</strong></a></td>
+                    <td>{{ d[1] }}</td>
+                    <td class="text-muted" style="font-size:0.85em; max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ d[2] }}">{{ d[2] }}</td>
+                    <td class="text-center">{{ d[3] }}</td>
+                    <td class="text-center">{{ d[4] }}</td>
+                    <td class="text-center"><strong class="text-danger">{{ d[5] }}</strong></td>
+                    <td class="text-center">R+{{ "%.1f"|format(d[6]) }}</td>
+                    <td class="text-center">{{ d[9] or 0 }}</td>
+                    <td class="text-center text-muted" style="font-size:0.8em;">{{ d[10].strftime('%b %d') if d[10] else '-' }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

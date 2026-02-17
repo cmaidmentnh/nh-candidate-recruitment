@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">{{ district_code }}</h1>
+    <a href="{{ url_for('scout.districts') }}" class="btn btn-sm btn-outline-secondary">Back to Districts</a>
+</div>
+
+{% if district %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><strong>District Info</strong></div>
+            <div class="card-body">
+                <p><strong>County:</strong> {{ district[1] }}</p>
+                <p><strong>Towns:</strong> {{ district[2] }}</p>
+                <p><strong>Seats:</strong> {{ district[3] }} &nbsp; <strong>Confirmed:</strong> {{ district[4] }} &nbsp; <strong class="text-danger">Empty: {{ district[5] }}</strong></p>
+                <p><strong>PVI:</strong> R+{{ "%.1f"|format(district[6]) }} ({{ district[7] }})</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><strong>Current Candidates (2026)</strong></div>
+            <div class="card-body">
+                {% if candidates %}
+                <ul class="list-unstyled mb-0">
+                    {% for c in candidates %}
+                    <li>
+                        <a href="{{ url_for('edit_candidate', candidate_id=c[0], election_year=2026) }}">{{ c[1] }} {{ c[2] }}</a>
+                        <span class="badge badge-{% if c[3] == 'Confirmed' %}success{% elif c[3] == 'Potential' %}warning{% else %}secondary{% endif %}">{{ c[3] }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-danger mb-0"><strong>No candidates for this district.</strong></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Prospects -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Scout Prospects ({{ prospects|length }})</strong>
+        <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addProspectModal"><i class="fas fa-plus"></i> Add</button>
+    </div>
+    <div class="card-body p-0">
+        {% if prospects %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                    <th>Name</th><th>City</th><th class="text-center">Score</th>
+                    <th class="text-center">Party</th><th>Occupation</th>
+                    <th class="text-center">Signals</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+                {% for p in prospects %}
+                <tr>
+                    <td><a href="{{ url_for('scout.prospect_detail', prospect_id=p[0]) }}"><strong>{{ p[1] }} {{ p[2] }}</strong></a></td>
+                    <td class="text-muted">{{ p[3] or '' }}</td>
+                    <td class="text-center"><span class="badge badge-{% if p[4] >= 30 %}danger{% elif p[4] >= 15 %}warning{% else %}secondary{% endif %}">{{ p[4] }}</span></td>
+                    <td class="text-center">{{ p[6] or '?' }}</td>
+                    <td class="text-muted" style="font-size:0.85em;">{{ p[7] or '' }}</td>
+                    <td class="text-center">{{ p[8] }}</td>
+                    <td><span class="badge badge-{% if p[5] == 'new' %}primary{% elif p[5] == 'contacted' %}info{% elif p[5] == 'interested' %}success{% else %}secondary{% endif %}">{{ p[5] }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">No prospects found for this district yet. Run a scan or add manually.</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Prospect Modal -->
+<div class="modal fade" id="addProspectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('scout.add_prospect') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header"><h5 class="modal-title">Add Prospect to {{ district_code }}</h5></div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group col-6"><input type="text" name="first_name" class="form-control" placeholder="First Name" required></div>
+                        <div class="form-group col-6"><input type="text" name="last_name" class="form-control" placeholder="Last Name" required></div>
+                    </div>
+                    <div class="form-group"><input type="text" name="city" class="form-control" placeholder="City/Town" value="{{ district[2].split(',')[0].strip() if district else '' }}"></div>
+                    <div class="form-group"><textarea name="notes" class="form-control" rows="2" placeholder="Notes / how you found them"></textarea></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Prospect</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

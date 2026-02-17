@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="fas fa-binoculars text-muted"></i> Candidate Scout</h1>
+    <div>
+        <a href="{{ url_for('scout.export_prospects') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-download"></i> Export CSV</a>
+    </div>
+</div>
+
+<!-- Dashboard Cards -->
+<div class="dashboard-row mb-4">
+    <a href="{{ url_for('scout.districts') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Target Districts</div>
+        <div class="card-body"><h4>{{ target_districts }}</h4></div>
+    </a>
+    <a href="{{ url_for('scout.prospects') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Prospects</div>
+        <div class="card-body"><h4>{{ total_prospects }}</h4></div>
+    </a>
+    <a href="{{ url_for('scout.prospects', status='contacted') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Contacted</div>
+        <div class="card-body"><h4>{{ contacted }}</h4></div>
+    </a>
+    <a href="{{ url_for('scout.prospects', status='interested') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Interested</div>
+        <div class="card-body"><h4>{{ interested }}</h4></div>
+    </a>
+    <a href="{{ url_for('scout.prospects', status='promoted') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header">Promoted</div>
+        <div class="card-body"><h4>{{ promoted }}</h4></div>
+    </a>
+</div>
+
+<div class="row">
+    <!-- Priority Districts -->
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Priority Districts</strong>
+                <form method="POST" action="{{ url_for('scout.refresh_districts') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </form>
+            </div>
+            <div class="card-body p-0">
+                {% if priority_districts %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr>
+                            <th>District</th><th>Towns</th><th class="text-center">Empty</th>
+                            <th class="text-center">PVI</th><th class="text-center">Prospects</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for d in priority_districts %}
+                        <tr>
+                            <td><a href="{{ url_for('scout.district_detail', district_code=d[0]) }}"><strong>{{ d[0] }}</strong></a></td>
+                            <td class="text-muted" style="font-size:0.85em; max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ d[2] }}</td>
+                            <td class="text-center"><span class="badge badge-danger">{{ d[5] }}</span></td>
+                            <td class="text-center">R+{{ "%.1f"|format(d[6]) }}</td>
+                            <td class="text-center">{{ d[8] or 0 }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{{ url_for('scout.districts') }}">View all {{ target_districts }} districts &rarr;</a>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <p>No district targets loaded yet.</p>
+                    <form method="POST" action="{{ url_for('scout.refresh_districts') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Load District Targets</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-5">
+        <!-- Quick Add -->
+        <div class="card mb-4">
+            <div class="card-header"><strong>Quick Add Prospect</strong></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('scout.add_prospect') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <input type="text" name="first_name" class="form-control form-control-sm" placeholder="First Name" required>
+                        </div>
+                        <div class="form-group col-6">
+                            <input type="text" name="last_name" class="form-control form-control-sm" placeholder="Last Name" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <input type="text" name="city" class="form-control form-control-sm" placeholder="City/Town">
+                        </div>
+                        <div class="form-group col-6">
+                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Notes">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i> Add</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Data Scans -->
+        <div class="card mb-4">
+            <div class="card-header"><strong>Data Scans</strong></div>
+            <div class="card-body">
+                <div class="d-flex flex-column">
+                    <a href="{{ url_for('scout.scan_fec') }}" class="btn btn-outline-dark btn-sm mb-2"><i class="fas fa-dollar-sign"></i> FEC Donor Scan</a>
+                    <a href="{{ url_for('scout.scan_voter') }}" class="btn btn-outline-dark btn-sm mb-2"><i class="fas fa-vote-yea"></i> Voter File Scan</a>
+                    <a href="{{ url_for('scout.scan_news') }}" class="btn btn-outline-dark btn-sm mb-2"><i class="fas fa-newspaper"></i> News/LTE Scan</a>
+                    <a href="{{ url_for('scout.scans') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-history"></i> Scan History</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scans -->
+        {% if recent_scans %}
+        <div class="card mb-4">
+            <div class="card-header"><strong>Recent Scans</strong></div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                    {% for s in recent_scans %}
+                    <tr>
+                        <td>
+                            <span class="badge badge-{% if s[2] == 'completed' %}success{% elif s[2] == 'failed' %}danger{% else %}warning{% endif %}">{{ s[1] }}</span>
+                        </td>
+                        <td class="text-muted" style="font-size:0.85em;">{{ s[6].strftime('%b %d') if s[6] else '' }}</td>
+                        <td class="text-right" style="font-size:0.85em;">{{ s[4] or 0 }} new</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Top Prospects -->
+{% if top_prospects %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Top Prospects by Score</strong>
+        <a href="{{ url_for('scout.prospects') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                    <th>Name</th><th>City</th><th>District</th>
+                    <th class="text-center">Score</th><th class="text-center">Party</th>
+                    <th class="text-center">Signals</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+                {% for p in top_prospects %}
+                <tr>
+                    <td><a href="{{ url_for('scout.prospect_detail', prospect_id=p[0]) }}"><strong>{{ p[1] }} {{ p[2] }}</strong></a></td>
+                    <td class="text-muted">{{ p[3] or '' }}</td>
+                    <td>{{ p[4] or '-' }}</td>
+                    <td class="text-center"><span class="badge badge-{% if p[5] >= 30 %}danger{% elif p[5] >= 15 %}warning{% else %}secondary{% endif %}">{{ p[5] }}</span></td>
+                    <td class="text-center">{{ p[7] or '?' }}</td>
+                    <td class="text-center">{{ p[8] }}</td>
+                    <td><span class="badge badge-{% if p[6] == 'new' %}primary{% elif p[6] == 'contacted' %}info{% elif p[6] == 'interested' %}success{% else %}secondary{% endif %}">{{ p[6] }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
