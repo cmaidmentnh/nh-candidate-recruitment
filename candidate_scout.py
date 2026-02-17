@@ -241,10 +241,11 @@ def refresh_districts():
             LEFT JOIN prospect_counts pc ON ds.full_district_code = pc.district_code
             WHERE ds.seats - COALESCE(cf.cnt, 0) > 0
         """)
+        rows = cur.fetchall()
 
         # Clear and rebuild
         cur.execute("DELETE FROM scout_district_targets")
-        for row in cur.fetchall():
+        for row in rows:
             district_code, county, towns, seats, confirmed, empty, pvi, rating, prospects = row
             pvi_float = float(pvi) if pvi else 0
             if pvi_float >= 5:
