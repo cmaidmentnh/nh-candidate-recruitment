@@ -38,7 +38,7 @@
                     <td class="text-center">{{ d[3] }}</td>
                     <td class="text-center">{{ d[4] }}</td>
                     <td class="text-center"><strong class="text-danger">{{ d[5] }}</strong></td>
-                    <td class="text-center">R+{{ "%.1f"|format(d[6]) }}</td>
+                    <td class="text-center">{% if d[6] >= 0 %}R+{{ "%.1f"|format(d[6]) }}{% else %}D+{{ "%.1f"|format(d[6]|abs) }}{% endif %}</td>
                     <td class="text-center">{{ d[9] or 0 }}</td>
                     <td class="text-center text-muted" style="font-size:0.8em;">{{ d[10].strftime('%b %d') if d[10] else '-' }}</td>
                 </tr>

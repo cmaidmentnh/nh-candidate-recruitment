@@ -14,7 +14,7 @@
                 <p><strong>County:</strong> {{ district[1] }}</p>
                 <p><strong>Towns:</strong> {{ district[2] }}</p>
                 <p><strong>Seats:</strong> {{ district[3] }} &nbsp; <strong>Confirmed:</strong> {{ district[4] }} &nbsp; <strong class="text-danger">Empty: {{ district[5] }}</strong></p>
-                <p><strong>PVI:</strong> R+{{ "%.1f"|format(district[6]) }} ({{ district[7] }})</p>
+                <p><strong>PVI:</strong> {% if district[6] >= 0 %}R+{{ "%.1f"|format(district[6]) }}{% else %}D+{{ "%.1f"|format(district[6]|abs) }}{% endif %} ({{ district[7] }})</p>
             </div>
         </div>
     </div>

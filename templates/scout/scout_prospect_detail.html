@@ -49,7 +49,7 @@
             <div class="card-header"><strong>District: <a href="{{ url_for('scout.district_detail', district_code=p.district_code) }}">{{ p.district_code }}</a></strong></div>
             <div class="card-body">
                 <p><strong>Towns:</strong> {{ district_info[2] }}</p>
-                <p><strong>PVI:</strong> R+{{ "%.1f"|format(district_info[6]) }} ({{ district_info[7] }}) &nbsp; <strong>Empty Seats:</strong> <span class="text-danger">{{ district_info[5] }}</span></p>
+                <p><strong>PVI:</strong> {% if district_info[6] >= 0 %}R+{{ "%.1f"|format(district_info[6]) }}{% else %}D+{{ "%.1f"|format(district_info[6]|abs) }}{% endif %} ({{ district_info[7] }}) &nbsp; <strong>Empty Seats:</strong> <span class="text-danger">{{ district_info[5] }}</span></p>
             </div>
         </div>
         {% endif %}
@@ -83,7 +83,7 @@
                         <select name="district_code" class="form-control form-control-sm">
                             <option value="">-- Select --</option>
                             {% for d in available_districts %}
-                            <option value="{{ d[0] }}" {% if p.district_code == d[0] %}selected{% endif %}>{{ d[0] }} ({{ d[1] }}, {{ d[3] }} empty, R+{{ "%.1f"|format(d[4]) }})</option>
+                            <option value="{{ d[0] }}" {% if p.district_code == d[0] %}selected{% endif %}>{{ d[0] }} ({{ d[1] }}, {{ d[3] }} empty, {% if d[4] >= 0 %}R+{{ "%.1f"|format(d[4]) }}{% else %}D+{{ "%.1f"|format(d[4]|abs) }}{% endif %})</option>
                             {% endfor %}
                         </select>
                     </div>
