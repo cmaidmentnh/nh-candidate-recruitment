@@ -78,26 +78,60 @@ def lookup_district_for_city(cur, city):
     return row[0] if row else None
 
 
+def _clean_fec_name(name):
+    """Strip middle initials, suffixes, and titles from FEC names.
+    'Steven M' -> 'Steven', 'James Mr.' -> 'James', 'W. Gregory Dr. Md' -> 'W.'
+    """
+    name = re.sub(r'\b(Mr|Mrs|Ms|Dr|Jr|Sr|Ii|Iii|Iv|Esq|Md|Mba|Phd|Dds|Cpa)\b\.?', '', name, flags=re.IGNORECASE).strip()
+    name = re.sub(r',.*$', '', name).strip()  # drop everything after comma
+    parts = name.split()
+    return parts[0] if parts else name
+
+
 def match_voter_file(voter_cur, first_name, last_name, city=None):
-    """Try to find a person in the statewide checklist. Returns dict or None."""
+    """Try to find a person in the statewide checklist. Returns dict or None.
+    Tries exact first name, then first-word-only, then without city constraint."""
+    first_clean = _clean_fec_name(first_name)
+
+    _select = "SELECT id_voter, nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5, county, ward FROM statewidechecklist"
+
+    # Try 1: exact first name + city
     if city:
-        voter_cur.execute("""
-            SELECT id_voter, nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5, county, ward
-            FROM statewidechecklist
-            WHERE UPPER(nm_last) = UPPER(%s) AND UPPER(nm_first) = UPPER(%s)
-              AND UPPER(ad_city) = UPPER(%s)
-            LIMIT 1
-        """, (last_name, first_name, city))
-    else:
-        voter_cur.execute("""
-            SELECT id_voter, nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5, county, ward
-            FROM statewidechecklist
-            WHERE UPPER(nm_last) = UPPER(%s) AND UPPER(nm_first) = UPPER(%s)
-            LIMIT 1
-        """, (last_name, first_name))
-    row = voter_cur.fetchone()
-    if not row:
-        return None
+        voter_cur.execute(f"{_select} WHERE UPPER(nm_last) = UPPER(%s) AND UPPER(nm_first) = UPPER(%s) AND UPPER(ad_city) = UPPER(%s) LIMIT 1",
+                          (last_name, first_name, city))
+        row = voter_cur.fetchone()
+        if row:
+            return _voter_row_to_dict(row)
+
+    # Try 2: cleaned first name + city
+    if city and first_clean != first_name:
+        voter_cur.execute(f"{_select} WHERE UPPER(nm_last) = UPPER(%s) AND UPPER(nm_first) = UPPER(%s) AND UPPER(ad_city) = UPPER(%s) LIMIT 1",
+                          (last_name, first_clean, city))
+        row = voter_cur.fetchone()
+        if row:
+            return _voter_row_to_dict(row)
+
+    # Try 3: cleaned first name + LIKE on city (handles "Gilmanton Iron Works" vs "Gilmanton")
+    if city:
+        city_base = city.split()[0] if city else ''
+        if city_base and city_base != city:
+            voter_cur.execute(f"{_select} WHERE UPPER(nm_last) = UPPER(%s) AND UPPER(nm_first) = UPPER(%s) AND UPPER(ad_city) LIKE UPPER(%s) LIMIT 1",
+                              (last_name, first_clean, f"{city_base}%"))
+            row = voter_cur.fetchone()
+            if row:
+                return _voter_row_to_dict(row)
+
+    # Try 4: no city, but only if there's exactly 1 match in NH
+    voter_cur.execute(f"{_select} WHERE UPPER(nm_last) = UPPER(%s) AND UPPER(nm_first) = UPPER(%s) LIMIT 2",
+                      (last_name, first_clean))
+    rows = voter_cur.fetchall()
+    if len(rows) == 1:
+        return _voter_row_to_dict(rows[0])
+
+    return None
+
+
+def _voter_row_to_dict(row):
     return {
         'voter_id': row[0], 'first_name': row[1], 'last_name': row[2],
         'party': row[3], 'address': row[4], 'city': row[5],
@@ -778,16 +812,23 @@ def _run_fec_scan_background(scan_id, api_key, min_amount, cycle, max_pages):
             if page_num > 0:
                 time.sleep(2)
 
-            # Rate limit handling with retry
+            # Rate limit + timeout handling with retry
             resp = None
             for attempt in range(3):
-                resp = http_requests.get(f'{FEC_API_BASE}/schedules/schedule_a/', params=params, timeout=30)
+                try:
+                    resp = http_requests.get(f'{FEC_API_BASE}/schedules/schedule_a/', params=params, timeout=60)
+                except http_requests.exceptions.Timeout:
+                    logger.warning(f"FEC API timeout, retrying (attempt {attempt+1}/3)")
+                    time.sleep(5)
+                    continue
                 if resp.status_code == 429:
                     wait = 15 * (attempt + 1)
                     logger.warning(f"FEC rate limit hit, waiting {wait}s (attempt {attempt+1}/3)")
                     time.sleep(wait)
                     continue
                 break
+            if resp is None:
+                raise Exception("FEC API timed out after 3 retries")
             if resp.status_code != 200:
                 raise Exception(f"FEC API returned {resp.status_code}: {resp.text[:200]}")
 
