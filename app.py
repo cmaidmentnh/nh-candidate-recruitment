@@ -814,21 +814,37 @@ def add_candidate_inline():
         """, (first_name, last_name))
         existing = cur.fetchone()
         if existing:
-            flash("Candidate already exists.", "warning")
-            return redirect(url_for("index"))
-        cur.execute("""
-            INSERT INTO candidates (first_name, last_name, party, created_by)
-            VALUES (%s, %s, %s, %s)
-            RETURNING candidate_id;
-        """, (first_name, last_name, party, current_user.email))
-        candidate_id = cur.fetchone()[0]
-        cur.execute("""
-            INSERT INTO candidate_election_status (candidate_id, election_year, status, is_running, added_by, district_code)
-            VALUES (%s, %s, %s, %s, %s, %s);
-        """, (candidate_id, int(election_year), status, True, current_user.email, district_code))
-        conn.commit()
-        log_activity('candidate_added', f"Added {first_name} {last_name} to {district_code} ({status})", candidate_id)
-        flash(f"Added {first_name} {last_name} for {election_year} in {district_code}.", "success")
+            candidate_id = existing[0]
+            # Check if they already have a record for this election year
+            cur.execute("""
+                SELECT status_id FROM candidate_election_status
+                WHERE candidate_id = %s AND election_year = %s;
+            """, (candidate_id, int(election_year)))
+            if cur.fetchone():
+                flash("Candidate already exists for this election year.", "warning")
+                return redirect(url_for("index"))
+            # Candidate exists but not for this year — add the election status
+            cur.execute("""
+                INSERT INTO candidate_election_status (candidate_id, election_year, status, is_running, added_by, district_code)
+                VALUES (%s, %s, %s, %s, %s, %s);
+            """, (candidate_id, int(election_year), status, True, current_user.email, district_code))
+            conn.commit()
+            log_activity('candidate_added', f"Added {first_name} {last_name} to {district_code} ({status}) for {election_year}", candidate_id)
+            flash(f"Added {first_name} {last_name} for {election_year} in {district_code} (existing candidate).", "success")
+        else:
+            cur.execute("""
+                INSERT INTO candidates (first_name, last_name, party, created_by)
+                VALUES (%s, %s, %s, %s)
+                RETURNING candidate_id;
+            """, (first_name, last_name, party, current_user.email))
+            candidate_id = cur.fetchone()[0]
+            cur.execute("""
+                INSERT INTO candidate_election_status (candidate_id, election_year, status, is_running, added_by, district_code)
+                VALUES (%s, %s, %s, %s, %s, %s);
+            """, (candidate_id, int(election_year), status, True, current_user.email, district_code))
+            conn.commit()
+            log_activity('candidate_added', f"Added {first_name} {last_name} to {district_code} ({status})", candidate_id)
+            flash(f"Added {first_name} {last_name} for {election_year} in {district_code}.", "success")
     except Exception as e:
         conn.rollback()
         logger.error(e)
