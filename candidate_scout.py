@@ -1246,15 +1246,22 @@ def scan_news():
                         """, (first_name, last_name, city))
                         prospect_id = cur.fetchone()[0]
 
-                # Add signal
-                pub_date = entry.get('published', '')
+                # Add signal — parse RSS date properly
+                parsed_date = entry.get('published_parsed')
+                if parsed_date:
+                    try:
+                        signal_date = date(parsed_date.tm_year, parsed_date.tm_mon, parsed_date.tm_mday).isoformat()
+                    except Exception:
+                        signal_date = None
+                else:
+                    signal_date = None
                 cur.execute("""
                     INSERT INTO scout_signals
                         (prospect_id, source_type, signal_date, title, detail, url, signal_score)
                     VALUES (%s, 'news_lte', %s, %s, %s, %s, 8)
                 """, (
                     prospect_id,
-                    pub_date[:10] if pub_date else None,
+                    signal_date,
                     f"Letter to Editor in {feed_name}",
                     f"Title: {title[:200]}",
                     link
