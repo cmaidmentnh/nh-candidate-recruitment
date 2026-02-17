@@ -4,6 +4,14 @@
     <h1 class="mb-0"><i class="fas fa-history text-muted"></i> Scan History</h1>
     <a href="{{ url_for('scout.dashboard') }}" class="btn btn-sm btn-outline-secondary">Back</a>
 </div>
+{% set ns = namespace(has_running=false) %}
+{% for s in scans %}{% if s[2] == 'running' %}{% set ns.has_running = true %}{% endif %}{% endfor %}
+{% if ns.has_running %}
+<div class="alert alert-info py-2">
+    <i class="fas fa-spinner fa-spin"></i> A scan is running in the background. This page will auto-refresh.
+</div>
+<script>setTimeout(function(){ location.reload(); }, 10000);</script>
+{% endif %}
 
 <div class="card">
     <div class="card-body p-0">

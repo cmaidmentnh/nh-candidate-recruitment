@@ -8,6 +8,8 @@ import os
 import json
 import logging
 import re
+import time
+import threading
 from functools import wraps
 from datetime import datetime, date
 from decimal import Decimal
@@ -743,30 +745,12 @@ def score_fec_donation(committee_name, committee_id, amount):
     return min(score, 25)  # cap at 25
 
 
-@scout_bp.route('/scan/fec', methods=['GET', 'POST'])
-@scout_admin_required
-def scan_fec():
-    if request.method == 'GET':
-        return render_template('scout/scout_scan_fec.html')
-
+def _run_fec_scan_background(scan_id, api_key, min_amount, cycle, max_pages):
+    """Run FEC scan in background thread. Gets its own DB connections."""
     import requests as http_requests
-
-    api_key = os.environ.get('FEC_API_KEY', 'DEMO_KEY')
-    min_amount = int(request.form.get('min_amount', 200))
-    cycle = request.form.get('cycle', '2024')
-    max_pages = int(request.form.get('max_pages', 20))
 
     conn = get_db_connection()
     cur = conn.cursor()
-
-    # Create scan record
-    cur.execute("""
-        INSERT INTO scout_scans (scan_type, status, parameters, run_by)
-        VALUES ('fec', 'running', %s, %s) RETURNING id
-    """, (json.dumps({'min_amount': min_amount, 'cycle': cycle, 'max_pages': max_pages}),
-          current_user.email))
-    scan_id = cur.fetchone()[0]
-    conn.commit()
 
     prospects_found = 0
     prospects_new = 0
@@ -790,7 +774,20 @@ def scan_fec():
                 params['last_index'] = last_index
                 params['last_contribution_receipt_date'] = last_date
 
-            resp = http_requests.get(f'{FEC_API_BASE}/schedules/schedule_a/', params=params, timeout=30)
+            # Delay between pages to avoid rate limits (skip first page)
+            if page_num > 0:
+                time.sleep(2)
+
+            # Rate limit handling with retry
+            resp = None
+            for attempt in range(3):
+                resp = http_requests.get(f'{FEC_API_BASE}/schedules/schedule_a/', params=params, timeout=30)
+                if resp.status_code == 429:
+                    wait = 15 * (attempt + 1)
+                    logger.warning(f"FEC rate limit hit, waiting {wait}s (attempt {attempt+1}/3)")
+                    time.sleep(wait)
+                    continue
+                break
             if resp.status_code != 200:
                 raise Exception(f"FEC API returned {resp.status_code}: {resp.text[:200]}")
 
@@ -919,8 +916,7 @@ def scan_fec():
                    signals_added = %s, completed_at = CURRENT_TIMESTAMP WHERE id = %s
         """, (prospects_found, prospects_new, signals_added, scan_id))
         conn.commit()
-
-        flash(f'FEC scan complete: {prospects_found} donors found, {prospects_new} new prospects, {signals_added} signals added.', 'success')
+        logger.info(f"FEC scan {scan_id} complete: {prospects_found} found, {prospects_new} new, {signals_added} signals")
 
     except Exception as e:
         conn.rollback()
@@ -929,12 +925,46 @@ def scan_fec():
             WHERE id = %s
         """, (str(e)[:500], scan_id))
         conn.commit()
-        logger.error(f"FEC scan error: {e}")
-        flash(f'FEC scan error: {e}', 'danger')
+        logger.error(f"FEC scan {scan_id} error: {e}")
     finally:
         cur.close()
         release_db_connection(conn)
 
+
+@scout_bp.route('/scan/fec', methods=['GET', 'POST'])
+@scout_admin_required
+def scan_fec():
+    if request.method == 'GET':
+        return render_template('scout/scout_scan_fec.html')
+
+    api_key = os.environ.get('FEC_API_KEY', 'DEMO_KEY')
+    min_amount = int(request.form.get('min_amount', 200))
+    cycle = request.form.get('cycle', '2024')
+    max_pages = int(request.form.get('max_pages', 20))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Create scan record
+    cur.execute("""
+        INSERT INTO scout_scans (scan_type, status, parameters, run_by)
+        VALUES ('fec', 'running', %s, %s) RETURNING id
+    """, (json.dumps({'min_amount': min_amount, 'cycle': cycle, 'max_pages': max_pages}),
+          current_user.email))
+    scan_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    release_db_connection(conn)
+
+    # Run scan in background thread so gunicorn doesn't timeout
+    t = threading.Thread(
+        target=_run_fec_scan_background,
+        args=(scan_id, api_key, min_amount, cycle, max_pages),
+        daemon=True
+    )
+    t.start()
+
+    flash(f'FEC scan started (ID #{scan_id}). It will run in the background — check Scan History for progress.', 'info')
     return redirect(url_for('scout.scans'))
 
 
