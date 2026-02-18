@@ -1856,15 +1856,25 @@ def history(candidate_id):
 @limiter.limit("5 per minute")
 def admin_login():
     if request.method == 'POST':
-        email = request.form.get('email').strip()
+        email = request.form.get('email').strip().lower()
         password = request.form.get('password').strip()
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""
-            SELECT user_id, username, email, password_hash, role
-            FROM users
-            WHERE email = %s
-        """, (email,))
+        # Normalize Gmail dots: strip dots from local part for matching
+        if email.endswith('@gmail.com'):
+            local = email.split('@')[0].replace('.', '')
+            normalized = f"{local}@gmail.com"
+            cur.execute("""
+                SELECT user_id, username, email, password_hash, role
+                FROM users
+                WHERE LOWER(email) = %s OR (LOWER(email) LIKE '%%@gmail.com' AND REPLACE(LOWER(SPLIT_PART(email, '@', 1)), '.', '') || '@gmail.com' = %s)
+            """, (email, normalized))
+        else:
+            cur.execute("""
+                SELECT user_id, username, email, password_hash, role
+                FROM users
+                WHERE LOWER(email) = %s
+            """, (email,))
         user_row = cur.fetchone()
         cur.close()
         release_db_connection(conn)
