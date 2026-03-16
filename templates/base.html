@@ -213,12 +213,88 @@
         var currentDistrictCode = '';
         var currentElectionYear = 2026;
 
+        // Inline status update dropdown
+        function showStatusDropdown(el, event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Remove any existing dropdown
+            $('.status-dropdown').remove();
+
+            var candidateId = $(el).data('candidate-id');
+            var electionYear = $(el).data('election-year') || 2026;
+            var currentStatus = $(el).text().trim();
+            var statuses = ['Confirmed', 'Considering', 'Potential', 'New Recruit', 'Declined'];
+
+            var dropdown = $('<div class="status-dropdown"></div>');
+            statuses.forEach(function(status) {
+                var opt = $('<div class="status-option"></div>').text(status);
+                if (status === currentStatus) {
+                    opt.addClass('active');
+                }
+                opt.on('click', function(e) {
+                    e.stopPropagation();
+                    updateCandidateStatus(candidateId, electionYear, status, el);
+                    dropdown.remove();
+                });
+                dropdown.append(opt);
+            });
+
+            // Position the dropdown near the clicked element
+            var offset = $(el).offset();
+            dropdown.css({
+                top: offset.top + $(el).outerHeight() + 2,
+                left: offset.left
+            });
+            $('body').append(dropdown);
+
+            // Close on click outside
+            setTimeout(function() {
+                $(document).one('click', function() { dropdown.remove(); });
+            }, 10);
+        }
+
+        function updateCandidateStatus(candidateId, electionYear, newStatus, badgeEl) {
+            fetch('/api/update_status/' + candidateId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus, election_year: electionYear })
+            })
+            .then(function(resp) { return resp.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    $(badgeEl).text(newStatus);
+                    // Update badge class
+                    $(badgeEl).removeClass('badge-success badge-warning badge-primary badge-secondary badge-light');
+                    if (newStatus === 'Confirmed') $(badgeEl).addClass('badge-success');
+                    else if (newStatus === 'Considering' || newStatus === 'Potential') $(badgeEl).addClass('badge-warning');
+                    else if (newStatus === 'New Recruit') $(badgeEl).addClass('badge-primary');
+                    else if (newStatus === 'Declined') $(badgeEl).addClass('badge-secondary');
+                    else $(badgeEl).addClass('badge-light');
+                    // Also update the candidate link color if on dashboard
+                    var link = $(badgeEl).siblings('.candidate-link');
+                    if (link.length) {
+                        link.removeClass('text-success text-warning text-primary text-secondary');
+                        if (newStatus === 'Confirmed') link.addClass('text-success');
+                        else if (newStatus === 'Considering' || newStatus === 'Potential') link.addClass('text-warning');
+                        else if (newStatus === 'New Recruit') link.addClass('text-primary');
+                        else link.addClass('text-secondary');
+                    }
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to update status'));
+                }
+            })
+            .catch(function(err) {
+                alert('Error updating status: ' + err);
+            });
+        }
+
         function expandAll() {
-            $('.collapse').addClass('show');
+            $('#countyAccordion > .county-card > .collapse').addClass('show');
         }
 
         function collapseAll() {
-            $('.collapse').removeClass('show');
+            $('#countyAccordion > .county-card > .collapse').removeClass('show');
         }
 
         function openAddCandidateModal(districtCode, electionYear) {

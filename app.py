@@ -3021,6 +3021,53 @@ def update_candidate_district(candidate_id):
         cur.close()
         release_db_connection(conn)
 
+@app.route('/api/update_status/<int:candidate_id>', methods=['POST'])
+@login_required
+@admin_required
+@csrf.exempt
+def update_status(candidate_id):
+    """Update a candidate's status for a given election year"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    new_status = data.get('status', '').strip()
+    election_year = data.get('election_year', 2026)
+
+    valid_statuses = ['Confirmed', 'Considering', 'Potential', 'Declined', 'New Recruit']
+    if new_status not in valid_statuses:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    is_running = (new_status.upper() != 'DECLINED')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE candidate_election_status
+            SET status = %s, is_running = %s
+            WHERE candidate_id = %s AND election_year = %s
+        """, (new_status, is_running, candidate_id, election_year))
+
+        if cur.rowcount == 0:
+            return jsonify({'error': 'Candidate not found for this election year'}), 404
+
+        cur.execute("SELECT first_name, last_name FROM candidates WHERE candidate_id = %s", (candidate_id,))
+        row = cur.fetchone()
+        name = f"{row[0]} {row[1]}" if row else "Unknown"
+
+        conn.commit()
+        log_activity('status_updated', f"Changed {name} status to {new_status}", candidate_id)
+        return jsonify({'success': True, 'status': new_status})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error updating status: {e}")
+        return jsonify({'error': 'Failed to update status'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
 @app.route('/api/districts')
 @login_required
 @csrf.exempt

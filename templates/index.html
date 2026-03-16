@@ -152,33 +152,34 @@
     </div>
 </div>
 
-<!-- Search Box -->
-<form method="GET" action="{{ url_for('index') }}" class="search-box mb-4">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query or '' }}">
-    <button type="submit" class="btn btn-dark">
-        <i class="fas fa-search"></i>
-    </button>
+<!-- Sticky Search + Controls -->
+<div class="sticky-search-wrapper">
+    <form method="GET" action="{{ url_for('index') }}" class="search-box mb-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query or '' }}">
+        <button type="submit" class="btn btn-dark">
+            <i class="fas fa-search"></i>
+        </button>
+        {% if search_query %}
+        <a href="{{ url_for('index') }}" class="btn btn-outline-dark">Clear</a>
+        {% endif %}
+    </form>
+
     {% if search_query %}
-    <a href="{{ url_for('index') }}" class="btn btn-outline-dark">Clear</a>
+    <div class="alert alert-info mb-2 py-2">
+        Showing results for "<strong>{{ search_query }}</strong>"
+        <a href="{{ url_for('index') }}" class="float-right">Clear search</a>
+    </div>
     {% endif %}
-</form>
 
-{% if search_query %}
-<div class="alert alert-info">
-    Showing results for "<strong>{{ search_query }}</strong>" 
-    <a href="{{ url_for('index') }}" class="float-right">Clear search</a>
-</div>
-{% endif %}
-
-<!-- Expand/Collapse All Buttons -->
-<div class="mb-3">
-    <button type="button" class="btn btn-outline-dark btn-sm" onclick="expandAll()">
-        <i class="fas fa-expand-alt"></i> Expand All
-    </button>
-    <button type="button" class="btn btn-outline-dark btn-sm" onclick="collapseAll()">
-        <i class="fas fa-compress-alt"></i> Collapse All
-    </button>
+    <div class="mb-0">
+        <button type="button" class="btn btn-outline-dark btn-sm" onclick="expandAll()">
+            <i class="fas fa-expand-alt"></i> Expand All
+        </button>
+        <button type="button" class="btn btn-outline-dark btn-sm" onclick="collapseAll()">
+            <i class="fas fa-compress-alt"></i> Collapse All
+        </button>
+    </div>
 </div>
 
 <!-- County Accordion -->
@@ -206,7 +207,7 @@
                     {% set status = 'Full' %}
                 {% endif %}
 
-                <div class="card district-card">
+                <div class="card district-card{% if status == 'Empty' %} district-empty{% elif status == 'Partial' %} district-partial{% endif %}">
                     <div class="card-header" data-toggle="collapse" 
                          data-target="#collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}"
                          aria-expanded="{% if search_query %}true{% else %}false{% endif %}">
@@ -238,8 +239,20 @@
                                                         {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
                                                         {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
                                                         {% else %}text-secondary{% endif %}">
-                                                        {{ cand.name|title }} ({{ cand.status }})
+                                                        {{ cand.name|title }}
                                                     </a>
+                                                    <span class="status-badge badge badge-sm
+                                                        {% if cand.status|upper == 'CONFIRMED' %}badge-success
+                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}badge-warning
+                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary
+                                                        {% elif cand.status|upper == 'DECLINED' %}badge-secondary
+                                                        {% else %}badge-light{% endif %}"
+                                                        data-candidate-id="{{ cand.candidate_id }}"
+                                                        data-election-year="2026"
+                                                        onclick="showStatusDropdown(this, event)"
+                                                        title="Click to change status">
+                                                        {{ cand.status }}
+                                                    </span>
                                                     <button type="button" class="btn btn-outline-dark btn-sm ml-1 d-none d-md-inline-block"
                                                             data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}">
                                                         <i class="fas fa-info-circle"></i>

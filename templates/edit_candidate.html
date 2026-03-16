@@ -12,18 +12,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         #copy2026Form { display: none; }
-        .comment-box { margin-top: 20px; }
-        .comments-list { margin-top: 20px; }
-        .voter-match { 
-            padding: 10px; 
-            margin: 5px 0; 
-            background: #f8f9fa; 
-            border-radius: 5px; 
+        .voter-match {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
             cursor: pointer;
             border: 1px solid #dee2e6;
         }
-        .voter-match:hover { 
-            background: #e9ecef; 
+        .voter-match:hover {
+            background: #e9ecef;
             border-color: #007bff;
         }
         .district-section {
@@ -32,13 +30,36 @@
             border-radius: 8px;
             margin-bottom: 20px;
         }
+        .nav-tabs .nav-link {
+            font-weight: 500;
+            color: #555;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: 600;
+            color: #333;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .tab-pane .card {
+            border: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
     <div class="container mt-4">
-        <h1>Edit Candidate</h1>
-        
-        <!-- District Section -->
+        <div class="d-flex align-items-center mb-3">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm mr-3">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <h1 class="mb-0">{{ first_name }} {{ last_name }}</h1>
+            {% if incumbent %}
+            <span class="badge badge-warning ml-2" style="font-size: 0.7em;">Incumbent</span>
+            {% endif %}
+        </div>
+
+        <!-- District Section (always visible) -->
         <div class="district-section">
             <h5><i class="fas fa-map-marker-alt"></i> District Assignment</h5>
             <div class="row">
@@ -47,7 +68,7 @@
                     <div class="input-group">
                         <select id="districtSelect" class="form-control">
                             {% for dist in districts %}
-                                <option value="{{ dist }}" {{ 'selected' if dist == district_code else '' }}>{{ dist }}</option>                            
+                                <option value="{{ dist }}" {{ 'selected' if dist == district_code else '' }}>{{ dist }}</option>
                             {% endfor %}
                         </select>
                         <div class="input-group-append">
@@ -58,406 +79,446 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <label>Auto-Lookup:</label>
-                    {% if voter_info %}
-                    <button type="button" class="btn btn-success btn-block" disabled>
-                        <i class="fas fa-check"></i> Voter Matched
-                    </button>
-                    {% elif voter_id_exists %}
-                    <button type="button" class="btn btn-warning btn-block" onclick="location.reload()">
-                        <i class="fas fa-sync"></i> Reload Voter Data
-                    </button>
-                    {% else %}
-                    <button type="button" class="btn btn-info btn-block" onclick="lookupVoter()">
-                        <i class="fas fa-search"></i> Find in Voter File
-                    </button>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
                     <label>Based on Address:</label>
                     <button type="button" class="btn btn-secondary btn-block" onclick="lookupDistrictByAddress()">
                         <i class="fas fa-home"></i> Lookup District
                     </button>
                 </div>
-            </div>
-            <div id="voterResults" class="mt-3" style="display:none;">
-                <h6>Voter File Matches:</h6>
-                <div id="voterList"></div>
+                <div class="col-md-4 text-right pt-4">
+                    <small class="text-muted">Election Year: {{ election_year }}</small>
+                </div>
             </div>
             <div id="districtResult" class="mt-3" style="display:none;">
                 <div class="alert alert-info" id="districtInfo"></div>
             </div>
         </div>
 
-        <!-- Registered Voter Info (if matched) -->
-       {% if voter_info %}
-        <div class="card mb-4 border-success">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-check-circle"></i> Matched Voter Record</span>
-                <button type="button" class="btn btn-sm btn-outline-light" onclick="unmatchVoter()">
-                    <i class="fas fa-unlink"></i> Unmatch
-                </button>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>Voter ID:</strong> {{ voter_info.voter_id }}</p>
-                        <p class="mb-1"><strong>Legal Name:</strong> {{ voter_info.name }}</p>
-                        <p class="mb-1"><strong>Party:</strong> {{ voter_info.party }}</p>
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="candidateTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="info-tab" data-toggle="tab" href="#info" role="tab">
+                    <i class="fas fa-user"></i> <span class="d-none d-sm-inline">Info</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="voter-tab" data-toggle="tab" href="#voter" role="tab">
+                    <i class="fas fa-search"></i> <span class="d-none d-sm-inline">Voter Match</span>
+                </a>
+            </li>
+            {% if scores %}
+            <li class="nav-item">
+                <a class="nav-link" id="scores-tab" data-toggle="tab" href="#scores" role="tab">
+                    <i class="fas fa-chart-line"></i> <span class="d-none d-sm-inline">Scores</span>
+                </a>
+            </li>
+            {% endif %}
+            <li class="nav-item">
+                <a class="nav-link" id="comments-tab" data-toggle="tab" href="#comments" role="tab">
+                    <i class="fas fa-comments"></i> <span class="d-none d-sm-inline">Comments</span>
+                    {% if comments %}<span class="badge badge-secondary ml-1">{{ comments|length }}</span>{% endif %}
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="candidateTabContent">
+
+            <!-- TAB 1: Info -->
+            <div class="tab-pane fade show active" id="info" role="tabpanel">
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>First Name:</label>
+                                <input type="text" name="first_name" id="firstName" class="form-control" value="{{ first_name }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Last Name:</label>
+                                <input type="text" name="last_name" id="lastName" class="form-control" value="{{ last_name }}" required>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>Address:</strong> {{ voter_info.address }}</p>
-                        <p class="mb-1"><strong>City:</strong> {{ voter_info.city }}, NH {{ voter_info.zip }}</p>
-                        <p class="mb-1"><strong>Ward:</strong> {{ voter_info.ward }} | <strong>County:</strong> {{ voter_info.county }}</p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Party:</label>
+                                <select name="party" class="form-control">
+                                    <option value="R" {% if party == 'R' %}selected{% endif %}>Republican</option>
+                                    <option value="D" {% if party == 'D' %}selected{% endif %}>Democrat</option>
+                                    <option value="I" {% if party == 'I' %}selected{% endif %}>Independent</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Status (Election {{ election_year }}):</label>
+                                {% if election_year < 2026 %}
+                                <select name="status" class="form-control">
+                                    <option value="Ran" selected>Ran</option>
+                                </select>
+                                {% else %}
+                                <select name="status" class="form-control">
+                                    <option value="Considering" {% if status|upper == 'CONSIDERING' %}selected{% endif %}>Considering</option>
+                                    <option value="Potential" {% if status|upper == 'POTENTIAL' %}selected{% endif %}>Potential</option>
+                                    <option value="Confirmed" {% if status|upper == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
+                                    <option value="Declined" {% if status|upper == 'DECLINED' %}selected{% endif %}>Declined</option>
+                                    <option value="New Recruit" {% if status|upper == 'NEW RECRUIT' %}selected{% endif %}>New Recruit</option>
+                                </select>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mt-4 pt-2">
+                                <input class="form-check-input" type="checkbox" name="incumbent" id="incumbentCheck"
+                                       {% if incumbent %}checked{% endif %}>
+                                <label class="form-check-label" for="incumbentCheck">
+                                    Incumbent?
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Address:</label>
+                                <input type="text" name="address" id="address" class="form-control" value="{{ address if address else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>City:</label>
+                                <input type="text" name="city" id="city" class="form-control" value="{{ city if city else '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>ZIP:</label>
+                                <input type="text" name="zip" id="zip" class="form-control" value="{{ zip if zip else '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Update Candidate</button>
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+                </form>
+
+                {% if election_year == 2024 %}
+                <hr>
+                <h5 class="mt-3">Copy to 2026</h5>
+                <button class="btn btn-info btn-sm" onclick="document.getElementById('copy2026Form').style.display='block'">
+                    <i class="fas fa-copy"></i> Copy this Candidate to 2026
+                </button>
+                <div id="copy2026Form" class="mt-3">
+                    <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=candidate_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Status for 2026:</label>
+                                    <select name="status" class="form-control">
+                                        <option value="Considering">Considering</option>
+                                        <option value="Potential">Potential</option>
+                                        <option value="Confirmed">Confirmed</option>
+                                        <option value="Declined">Declined</option>
+                                        <option value="New Recruit" selected>New Recruit</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>District Code:</label>
+                                    <select name="district_code" class="form-control">
+                                        {% for dist in districts %}
+                                            <option value="{{ dist }}" {% if dist == district_code %}selected{% endif %}>{{ dist }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Comment:</label>
+                                    <textarea name="comment" class="form-control" rows="1" placeholder="Optional note"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-sm">Copy to 2026</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('copy2026Form').style.display='none'">Cancel</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- TAB 2: Voter Match -->
+            <div class="tab-pane fade" id="voter" role="tabpanel">
+                {% if voter_info %}
+                <div class="card mb-3 border-success">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-check-circle"></i> Matched Voter Record</span>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="unmatchVoter()">
+                            <i class="fas fa-unlink"></i> Unmatch
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Voter ID:</strong> {{ voter_info.voter_id }}</p>
+                                <p class="mb-1"><strong>Legal Name:</strong> {{ voter_info.name }}</p>
+                                <p class="mb-1"><strong>Party:</strong> {{ voter_info.party }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Address:</strong> {{ voter_info.address }}</p>
+                                <p class="mb-1"><strong>City:</strong> {{ voter_info.city }}, NH {{ voter_info.zip }}</p>
+                                <p class="mb-1"><strong>Ward:</strong> {{ voter_info.ward }} | <strong>County:</strong> {{ voter_info.county }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        {% elif voter_id_exists %}
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle"></i> <strong>Connection Error:</strong> 
-                Voter ID is saved but couldn't load details from voter database.
-                <button type="button" class="btn btn-sm btn-outline-danger ml-2" onclick="location.reload()">
-                    <i class="fas fa-sync"></i> Retry
-                </button>
-            </div>
-        {% else %}
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i> <strong>Not Matched:</strong> 
-                This candidate has not been matched to a voter record. Use "Find in Voter File" above to match.
-            </div>
-        {% endif %}
+                {% elif voter_id_exists %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Connection Error:</strong>
+                    Voter ID is saved but couldn't load details from voter database.
+                    <button type="button" class="btn btn-sm btn-outline-danger ml-2" onclick="location.reload()">
+                        <i class="fas fa-sync"></i> Retry
+                    </button>
+                </div>
+                {% else %}
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Not Matched:</strong>
+                    This candidate has not been matched to a voter record.
+                </div>
+                {% endif %}
 
-        <!-- Candidate Scores (NHLA/HRA) -->
-        {% if scores %}
-        <div class="card mb-4 border-info">
-            <div class="card-header bg-info text-white">
-                <i class="fas fa-chart-line"></i> Legislative Scores
+                <button type="button" class="btn btn-info" onclick="lookupVoter()">
+                    <i class="fas fa-search"></i> Search Voter File
+                </button>
+                <div id="voterResults" class="mt-3" style="display:none;">
+                    <h6>Voter File Matches:</h6>
+                    <div id="voterList"></div>
+                </div>
             </div>
-            <div class="card-body">
+
+            <!-- TAB 3: Scores -->
+            {% if scores %}
+            <div class="tab-pane fade" id="scores" role="tabpanel">
                 <div class="row">
                     {% for score in scores %}
-                    <div class="col-md-4 mb-2">
-                        <div class="border rounded p-2 text-center">
-                            <strong>{{ score.type }} {{ score.year }}</strong><br>
-                            <span class="h4">{{ "%.1f"|format(score.value if score.value is not none else 0) }}%</span>
-                            {% if score.letter %}<span class="badge badge-secondary">{{ score.letter }}</span>{% endif %}
+                    <div class="col-md-4 col-6 mb-3">
+                        <div class="border rounded p-3 text-center">
+                            <strong>{{ score.type }}</strong>
+                            <small class="text-muted">{{ score.year }}</small><br>
+                            <span class="h3">{{ "%.1f"|format(score.value if score.value is not none else 0) }}%</span>
+                            {% if score.letter %}<br><span class="badge badge-secondary">{{ score.letter }}</span>{% endif %}
                         </div>
                     </div>
                     {% endfor %}
                 </div>
             </div>
-        </div>
-        {% endif %}
-
-        <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>First Name:</label>
-                        <input type="text" name="first_name" id="firstName" class="form-control" value="{{ first_name }}" required>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Last Name:</label>
-                        <input type="text" name="last_name" id="lastName" class="form-control" value="{{ last_name }}" required>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label>Party:</label>
-                        <select name="party" class="form-control">
-                            <option value="R" {% if party == 'R' %}selected{% endif %}>Republican</option>
-                            <option value="D" {% if party == 'D' %}selected{% endif %}>Democrat</option>
-                            <option value="I" {% if party == 'I' %}selected{% endif %}>Independent</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label>Status (Election {{ election_year }}):</label>
-                        {% if election_year < 2026 %}
-                        <select name="status" class="form-control">
-                            <option value="Ran" selected>Ran</option>
-                        </select>
-                        {% else %}
-                        <select name="status" class="form-control">
-                            <option value="Considering" {% if status|upper == 'CONSIDERING' %}selected{% endif %}>Considering</option>
-                            <option value="Potential" {% if status|upper == 'POTENTIAL' %}selected{% endif %}>Potential</option>
-                            <option value="Confirmed" {% if status|upper == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
-                            <option value="Declined" {% if status|upper == 'DECLINED' %}selected{% endif %}>Declined</option>
-                            <option value="New Recruit" {% if status|upper == 'NEW RECRUIT' %}selected{% endif %}>New Recruit</option>
-                        </select>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-check mt-4 pt-2">
-                        <input class="form-check-input" type="checkbox" name="incumbent" id="incumbentCheck"
-                               {% if incumbent %}checked{% endif %}>
-                        <label class="form-check-label" for="incumbentCheck">
-                            Incumbent?
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Address Fields -->
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Address:</label>
-                        <input type="text" name="address" id="address" class="form-control" value="{{ address if address else '' }}">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>City:</label>
-                        <input type="text" name="city" id="city" class="form-control" value="{{ city if city else '' }}">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        <label>ZIP:</label>
-                        <input type="text" name="zip" id="zip" class="form-control" value="{{ zip if zip else '' }}">
-                    </div>
-                </div>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Update Candidate</button>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
-        </form>
-
-        <!-- Quick Add to 2026 Form -->
-        <div id="copy2026Form">
-            <h4 class="mt-4">Copy to 2026</h4>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=candidate_id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="form-group">
-                    <label>Status for 2026:</label>
-                    <select name="status" class="form-control">
-                        <option value="Considering">Considering</option>
-                        <option value="Potential">Potential</option>
-                        <option value="Confirmed">Confirmed</option>
-                        <option value="Declined">Declined</option>
-                        <option value="New Recruit" selected>New Recruit</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>District Code:</label>
-                    <select name="district_code" class="form-control">
-                        {% for dist in districts %}
-                            <option value="{{ dist }}" {% if dist == district_code %}selected{% endif %}>{{ dist }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group comment-box">
-                    <label>Comment:</label>
-                    <textarea name="comment" class="form-control" placeholder="Add a comment for 2026"></textarea>
-                </div>
-                <button type="submit" class="btn btn-success">Copy to 2026</button>
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('copy2026Form').style.display='none'">Cancel</button>
-            </form>
-        </div>
-
-        <!-- Comment Box for Current Edit -->
-        <div class="form-group comment-box">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <h4 class="mt-4">Add Comment</h4>
-            <form method="POST" action="{{ url_for('comments', candidate_id=candidate_id) }}">
-                <textarea name="comment_text" class="form-control" placeholder="Enter your comment"></textarea>
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="btn btn-primary mt-2">Submit Comment</button>
-            </form>
-        </div>
-
-        <!-- Recent Comments -->
-        <div class="comments-list">
-            <h4>Recent Comments (Last 5)</h4>
-            {% if comments %}
-                {% for comment in comments %}
-                    <p><strong>{{ comment[2] }}</strong> ({{ comment[3] }}): {{ comment[1] }}</p>
-                {% endfor %}
-            {% else %}
-                <p>No comments yet.</p>
             {% endif %}
-        </div>
 
-        {% if election_year == 2024 %}
-            <hr>
-            <h4 class="mt-4">Quick Add to 2026</h4>
-            <button class="btn btn-info" onclick="document.getElementById('copy2026Form').style.display='block'">Copy this Candidate to 2026</button>
-        {% endif %}
+            <!-- TAB 4: Comments -->
+            <div class="tab-pane fade" id="comments" role="tabpanel">
+                <form method="POST" action="{{ url_for('comments', candidate_id=candidate_id) }}" class="mb-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="form-group">
+                        <textarea name="comment_text" class="form-control" rows="2" placeholder="Add a comment..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Add Comment</button>
+                </form>
+
+                {% if comments %}
+                    {% for comment in comments %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <strong>{{ comment[2] }}</strong>
+                        <small class="text-muted">{{ comment[3] }}</small>
+                        <p class="mb-0 mt-1">{{ comment[1] }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No comments yet.</p>
+                {% endif %}
+            </div>
+
+        </div><!-- /tab-content -->
 
         <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-            <script>
-                const candidateId = {{ candidate_id }};
-                const electionYear = {{ election_year }};
-                var allVoters = [];
-                var displayedCount = 0;
-                const pageSize = 5;
+        <script>
+            const candidateId = {{ candidate_id }};
+            const electionYear = {{ election_year }};
+            var allVoters = [];
+            var displayedCount = 0;
+            const pageSize = 5;
 
-                function lookupVoter() {
-                    $('#voterResults').show();
-                    $('#voterList').html('<p><i class="fas fa-spinner fa-spin"></i> Searching voter file...</p>');
-                    allVoters = [];
-                    displayedCount = 0;
-                    
-                    fetch('/api/lookup_voter/' + candidateId)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.error) {
-                                $('#voterList').html('<p class="text-danger">' + data.error + '</p>');
-                                return;
-                            }
-                            
-                            if (data.voters.length === 0) {
-                                $('#voterList').html('<p class="text-muted">No matches found in voter file.</p>');
-                                return;
-                            }
-                            
-                            allVoters = data.voters;
-                            displayedCount = 0;
-                            $('#voterList').html('');
-                            showMoreVoters();
-                        })
-                        .catch(error => {
-                            $('#voterList').html('<p class="text-danger">Error searching voter file.</p>');
-                        });
-                }
+            // Tab persistence via URL hash
+            var hash = window.location.hash;
+            if (hash) { $('#candidateTabs a[href="' + hash + '"]').tab('show'); }
+            $('#candidateTabs a').on('shown.bs.tab', function(e) {
+                history.replaceState(null, null, e.target.hash);
+            });
 
-                function showMoreVoters() {
-                    var html = '';
-                    var end = Math.min(displayedCount + pageSize, allVoters.length);
-                    
-                    for (var i = displayedCount; i < end; i++) {
-                        var v = allVoters[i];
-                        html += '<div class="voter-match" onclick="selectVoter(\'' + v.id_voter + '\', \'' + v.city + '\', \'' + v.ward + '\')">';
-                        html += '<strong>' + v.name + '</strong> (' + v.party + ')<br>';
-                        html += '<small>' + v.address + ', ' + v.city + ' ' + v.zip + '</small><br>';
-                        html += '<small class="text-muted">Ward: ' + v.ward + ' | County: ' + v.county + '</small>';
-                        html += '</div>';
-                    }
-                    
-                    // Show pagination info
-                    html += '<div class="text-muted small mt-2 mb-2">Showing ' + (displayedCount + 1) + '-' + end + ' of ' + allVoters.length + '</div>';
-                    
-                    // Navigation buttons
-                    html += '<div class="btn-group btn-block">';
-                    if (displayedCount > 0) {
-                        html += '<button class="btn btn-outline-secondary btn-sm" onclick="showPrevVoters()"><i class="fas fa-arrow-left"></i> Previous</button>';
-                    }
-                    if (end < allVoters.length) {
-                        html += '<button class="btn btn-outline-primary btn-sm" onclick="showNextVoters()">Next <i class="fas fa-arrow-right"></i></button>';
-                    }
-                    html += '</div>';
-                    
-                    $('#voterList').html(html);
-                }
+            function unmatchVoter() {
+                if (!confirm('Remove voter file match?')) return;
+                fetch('/api/unmatch_voter/' + candidateId, { method: 'POST' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) { if (d.success) location.reload(); });
+            }
 
-                function showNextVoters() {
-                    displayedCount = Math.min(displayedCount + pageSize, allVoters.length - pageSize);
-                    if (displayedCount < 0) displayedCount = 0;
-                    showMoreVoters();
-                }
+            function lookupVoter() {
+                $('#voterResults').show();
+                $('#voterList').html('<p><i class="fas fa-spinner fa-spin"></i> Searching voter file...</p>');
+                allVoters = [];
+                displayedCount = 0;
 
-                function showPrevVoters() {
-                    displayedCount = Math.max(displayedCount - pageSize, 0);
-                    showMoreVoters();
-                }
-
-                function selectVoter(voterId, city, ward) {
-                    if (confirm('Sync address from voter file and lookup district?')) {
-                        fetch('/api/sync_from_voter/' + candidateId, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({voter_id: voterId})
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                $('#address').val(data.address);
-                                $('#city').val(data.city);
-                                $('#zip').val(data.zip);
-                                
-                                $('#voterResults').hide();
-                                $('#voterList').html('');
-                                
-                                lookupDistrictFor(data.city, data.ward);
-                            }
-                        });
-                    }
-                }
-
-                function lookupDistrictByAddress() {
-                    const city = $('#city').val();
-                    if (!city) {
-                        alert('Please enter a city first');
-                        return;
-                    }
-                    lookupDistrictFor(city, '0');
-                }
-
-                function lookupDistrictFor(city, ward) {
-                    $('#districtResult').show();
-                    $('#districtInfo').html('<i class="fas fa-spinner fa-spin"></i> Looking up district...');
-                    
-                    fetch('/api/lookup_district', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({city: city, ward: ward || '0'})
-                    })
+                fetch('/api/lookup_voter/' + candidateId)
                     .then(response => response.json())
                     .then(data => {
                         if (data.error) {
-                            $('#districtInfo').html('<span class="text-danger">' + data.error + '</span>');
+                            $('#voterList').html('<p class="text-danger">' + data.error + '</p>');
                             return;
                         }
-                        
-                        var html = '<strong>Districts Found:</strong><br>';
-                        data.districts.forEach(function(d) {
-                            html += d.district + ' (' + d.county + ' County, ' + d.seats + ' seats) ';
-                            html += '<button class="btn btn-sm btn-success ml-2 mb-1" onclick="applyDistrict(\'' + d.district + '\')">Apply</button><br>';
-                        });
-                        $('#districtInfo').html(html);
+
+                        if (data.voters.length === 0) {
+                            $('#voterList').html('<p class="text-muted">No matches found in voter file.</p>');
+                            return;
+                        }
+
+                        allVoters = data.voters;
+                        displayedCount = 0;
+                        $('#voterList').html('');
+                        showMoreVoters();
                     })
                     .catch(error => {
-                        $('#districtInfo').html('<span class="text-danger">Error looking up district.</span>');
+                        $('#voterList').html('<p class="text-danger">Error searching voter file.</p>');
                     });
+            }
+
+            function showMoreVoters() {
+                var html = '';
+                var end = Math.min(displayedCount + pageSize, allVoters.length);
+
+                for (var i = displayedCount; i < end; i++) {
+                    var v = allVoters[i];
+                    html += '<div class="voter-match" onclick="selectVoter(\'' + v.id_voter + '\', \'' + v.city + '\', \'' + v.ward + '\')">';
+                    html += '<strong>' + v.name + '</strong> (' + v.party + ')<br>';
+                    html += '<small>' + v.address + ', ' + v.city + ' ' + v.zip + '</small><br>';
+                    html += '<small class="text-muted">Ward: ' + v.ward + ' | County: ' + v.county + '</small>';
+                    html += '</div>';
                 }
 
-                function applyDistrict(district) {
-                    $('#districtSelect').val(district);
-                    saveDistrict();
-                }
+                html += '<div class="text-muted small mt-2 mb-2">Showing ' + (displayedCount + 1) + '-' + end + ' of ' + allVoters.length + '</div>';
 
-                function saveDistrict() {
-                    const district = $('#districtSelect').val();
-                    
-                    fetch('/api/update_candidate_district/' + candidateId, {
+                html += '<div class="btn-group btn-block">';
+                if (displayedCount > 0) {
+                    html += '<button class="btn btn-outline-secondary btn-sm" onclick="showPrevVoters()"><i class="fas fa-arrow-left"></i> Previous</button>';
+                }
+                if (end < allVoters.length) {
+                    html += '<button class="btn btn-outline-primary btn-sm" onclick="showNextVoters()">Next <i class="fas fa-arrow-right"></i></button>';
+                }
+                html += '</div>';
+
+                $('#voterList').html(html);
+            }
+
+            function showNextVoters() {
+                displayedCount = Math.min(displayedCount + pageSize, allVoters.length - pageSize);
+                if (displayedCount < 0) displayedCount = 0;
+                showMoreVoters();
+            }
+
+            function showPrevVoters() {
+                displayedCount = Math.max(displayedCount - pageSize, 0);
+                showMoreVoters();
+            }
+
+            function selectVoter(voterId, city, ward) {
+                if (confirm('Sync address from voter file and lookup district?')) {
+                    fetch('/api/sync_from_voter/' + candidateId, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({district: district, election_year: electionYear})
+                        body: JSON.stringify({voter_id: voterId})
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('District updated to: ' + data.district);
-                        } else {
-                            alert('Error: ' + data.error);
+                            $('#address').val(data.address);
+                            $('#city').val(data.city);
+                            $('#zip').val(data.zip);
+
+                            $('#voterResults').hide();
+                            $('#voterList').html('');
+
+                            lookupDistrictFor(data.city, data.ward);
                         }
-                    })
-                    .catch(error => {
-                        alert('Error saving district');
                     });
                 }
-            </script>
+            }
+
+            function lookupDistrictByAddress() {
+                const city = $('#city').val();
+                if (!city) {
+                    alert('Please enter a city first');
+                    return;
+                }
+                lookupDistrictFor(city, '0');
+            }
+
+            function lookupDistrictFor(city, ward) {
+                $('#districtResult').show();
+                $('#districtInfo').html('<i class="fas fa-spinner fa-spin"></i> Looking up district...');
+
+                fetch('/api/lookup_district', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({city: city, ward: ward || '0'})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        $('#districtInfo').html('<span class="text-danger">' + data.error + '</span>');
+                        return;
+                    }
+
+                    var html = '<strong>Districts Found:</strong><br>';
+                    data.districts.forEach(function(d) {
+                        html += d.district + ' (' + d.county + ' County, ' + d.seats + ' seats) ';
+                        html += '<button class="btn btn-sm btn-success ml-2 mb-1" onclick="applyDistrict(\'' + d.district + '\')">Apply</button><br>';
+                    });
+                    $('#districtInfo').html(html);
+                })
+                .catch(error => {
+                    $('#districtInfo').html('<span class="text-danger">Error looking up district.</span>');
+                });
+            }
+
+            function applyDistrict(district) {
+                $('#districtSelect').val(district);
+                saveDistrict();
+            }
+
+            function saveDistrict() {
+                const district = $('#districtSelect').val();
+
+                fetch('/api/update_candidate_district/' + candidateId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({district: district, election_year: electionYear})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('District updated to: ' + data.district);
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error saving district');
+                });
+            }
+        </script>
     </div>
 </body>
 </html>
