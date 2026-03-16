@@ -30,6 +30,19 @@ import base64
 # Load environment variables
 load_dotenv()
 
+# Load town population data for sorting
+TOWN_POPULATIONS = {}
+try:
+    pop_path = os.path.join(os.path.dirname(__file__), 'static', 'nh_town_populations.json')
+    with open(pop_path) as f:
+        TOWN_POPULATIONS = json.load(f)
+except Exception:
+    pass
+
+def town_population(display_name):
+    """Get population for a town display name like 'Manchester Ward 3' or 'Bedford'."""
+    return TOWN_POPULATIONS.get(display_name.upper(), 0)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -546,6 +559,11 @@ def get_data_and_dashboard():
             else:
                 final_groups[real_county][fdc]["towns"].extend(info["towns"])
     
+    # Sort towns within each district by population (largest first)
+    for county, dist_dict in final_groups.items():
+        for fdc, info in dist_dict.items():
+            info["towns"] = sorted(info["towns"], key=lambda t: town_population(t), reverse=True)
+
     sorted_county_groups = {}
     for county, dist_dict in final_groups.items():
         sorted_items = sorted(dist_dict.items(), key=lambda x: natural_district_sort_key(x[0]))
