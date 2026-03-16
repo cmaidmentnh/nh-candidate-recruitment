@@ -571,14 +571,9 @@
                 return false;
             });
 
-            // Restore scroll position and accordion states
+            // Restore accordion states first, then scroll position after reflow
             var savedScroll = sessionStorage.getItem('scrollPosition');
             var savedAccordions = sessionStorage.getItem('openAccordions');
-
-            if (savedScroll) {
-                setTimeout(function() { window.scrollTo(0, parseInt(savedScroll)); }, 100);
-                sessionStorage.removeItem('scrollPosition');
-            }
 
             if (savedAccordions) {
                 var open = JSON.parse(savedAccordions);
@@ -586,7 +581,19 @@
                 sessionStorage.removeItem('openAccordions');
             }
 
+            if (savedScroll) {
+                // Wait for accordions to expand and DOM to reflow before scrolling
+                requestAnimationFrame(function() {
+                    setTimeout(function() {
+                        window.scrollTo(0, parseInt(savedScroll));
+                        sessionStorage.removeItem('scrollPosition');
+                    }, 50);
+                });
+            }
+
             function savePageState() {
+                // Only save state when on a page that has the county accordion
+                if (!$('#countyAccordion').length) return;
                 sessionStorage.setItem('scrollPosition', window.scrollY);
                 var openAccordions = [];
                 $('.collapse.show').each(function() {
