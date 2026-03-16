@@ -891,7 +891,8 @@ def edit_candidate(candidate_id, election_year):
         finally:
             cur.close()
             release_db_connection(conn)
-        return redirect(url_for("index"))
+        next_url = request.form.get('next') or request.referrer or url_for("index")
+        return redirect(next_url)
     else:
         try:
             cur.execute("""
@@ -2455,14 +2456,27 @@ def get_candidate_data(candidate_id):
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info
+            SELECT candidate_id, first_name, last_name, email, address, city, zip, phone1, photo_url, other_info,
+                   incumbent, phone2, email1, email2
             FROM candidates
             WHERE candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
         if candidate:
-            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info']
+            columns = ['candidate_id', 'first_name', 'last_name', 'email', 'address', 'city', 'zip', 'phone1', 'photo_url', 'other_info',
+                        'incumbent', 'phone2', 'email1', 'email2']
             candidate_dict = dict(zip(columns, candidate))
+
+            # Get election status
+            cur.execute("""
+                SELECT election_year, status, district_code
+                FROM candidate_election_status
+                WHERE candidate_id = %s
+                ORDER BY election_year DESC
+            """, (candidate_id,))
+            candidate_dict['elections'] = [
+                {'year': e[0], 'status': e[1], 'district': e[2]} for e in cur.fetchall()
+            ]
             
             # Get recent comments
             cur.execute("""
@@ -3020,6 +3034,106 @@ def update_candidate_district(candidate_id):
     finally:
         cur.close()
         release_db_connection(conn)
+
+@app.route('/api/quick_comment/<int:candidate_id>', methods=['POST'])
+@login_required
+@admin_required
+@csrf.exempt
+def quick_comment(candidate_id):
+    """Add a comment to a candidate via AJAX"""
+    data = request.get_json()
+    if not data or not data.get('comment', '').strip():
+        return jsonify({'error': 'Comment text required'}), 400
+
+    comment_text = data['comment'].strip()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO comments (candidate_id, comment_text, added_by)
+            VALUES (%s, %s, %s)
+        """, (candidate_id, comment_text, current_user.email))
+        conn.commit()
+        log_activity('comment_added', f"Quick comment: {comment_text[:50]}", candidate_id)
+        return jsonify({'success': True, 'by': current_user.email})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error adding quick comment: {e}")
+        return jsonify({'error': 'Failed to add comment'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/api/update_contact/<int:candidate_id>', methods=['POST'])
+@login_required
+@admin_required
+@csrf.exempt
+def update_contact(candidate_id):
+    """Update candidate contact info via AJAX"""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Build dynamic update
+        fields = []
+        values = []
+        for field in ['email', 'phone1', 'phone2', 'address', 'city', 'zip']:
+            if field in data:
+                fields.append(f"{field} = %s")
+                values.append(data[field].strip() if data[field] else '')
+
+        if not fields:
+            return jsonify({'error': 'No fields to update'}), 400
+
+        values.append(candidate_id)
+        cur.execute(f"UPDATE candidates SET {', '.join(fields)} WHERE candidate_id = %s", values)
+
+        if cur.rowcount == 0:
+            return jsonify({'error': 'Candidate not found'}), 404
+
+        conn.commit()
+        log_activity('contact_updated', f"Updated contact info inline", candidate_id)
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error updating contact: {e}")
+        return jsonify({'error': 'Failed to update'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/api/toggle_incumbent/<int:candidate_id>', methods=['POST'])
+@login_required
+@admin_required
+@csrf.exempt
+def toggle_incumbent(candidate_id):
+    """Toggle incumbent flag via AJAX"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT incumbent FROM candidates WHERE candidate_id = %s", (candidate_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'error': 'Candidate not found'}), 404
+
+        new_val = not row[0]
+        cur.execute("UPDATE candidates SET incumbent = %s WHERE candidate_id = %s", (new_val, candidate_id))
+        conn.commit()
+        log_activity('incumbent_toggled', f"Set incumbent = {new_val}", candidate_id)
+        return jsonify({'success': True, 'incumbent': new_val})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error toggling incumbent: {e}")
+        return jsonify({'error': 'Failed to toggle'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
 
 @app.route('/api/update_status/<int:candidate_id>', methods=['POST'])
 @login_required

@@ -268,9 +268,9 @@
                                                         title="Click to change status">
                                                         {{ cand.status }}
                                                     </span>
-                                                    <button type="button" class="btn btn-outline-dark btn-sm ml-1 d-none d-md-inline-block"
-                                                            data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}">
-                                                        <i class="fas fa-info-circle"></i>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm ml-1 qe-trigger"
+                                                            data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}" title="Quick edit">
+                                                        <i class="fas fa-pen"></i>
                                                     </button>
                                                 {% else %}
                                                     <button class="btn btn-sm btn-outline-dark"
