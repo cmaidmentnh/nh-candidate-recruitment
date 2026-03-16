@@ -1,34 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row justify-content-center mt-5">
+<div class="row justify-content-center" style="margin-top: 8vh;">
   <div class="col-md-5 col-lg-4">
     <div class="text-center mb-4">
-      <img src="{{ url_for('static', filename='images/ctehr-logo-white.png') }}" alt="Committee to Elect House Republicans" style="max-width: 280px; background: #d91720; padding: 15px; border-radius: 8px;" class="mb-3">
-      <h4 class="mb-1">Candidate Tracker</h4>
+      <img src="{{ url_for('static', filename='images/ctehr-logo-white.png') }}" alt="Committee to Elect House Republicans" style="max-width: 260px; background: linear-gradient(135deg, #d91720 0%, #b8141b 100%); padding: 18px 24px; border-radius: 12px; box-shadow: 0 4px 16px rgba(217,23,32,0.3);" class="mb-3">
+      <p class="text-muted mb-0" style="font-size: 13px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600;">Candidate Tracker</p>
     </div>
-    <div class="card shadow-sm">
+    <div class="card" style="border: none; box-shadow: 0 8px 30px rgba(0,0,0,0.1); border-radius: 12px;">
       <div class="card-body p-4">
-        <h5 class="card-title mb-4">Sign In</h5>
+        <h5 class="mb-4" style="font-weight: 700; font-size: 18px;">Sign In</h5>
         <form method="POST" action="{{ url_for('login', next=request.args.get('next', '')) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="form-group">
-            <label>Email</label>
-            <input type="email" name="email" class="form-control" placeholder="you@example.com" required>
+            <label style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d;">Email</label>
+            <input type="email" name="email" class="form-control" placeholder="you@example.com" required autofocus style="padding: 12px 14px;">
           </div>
           <div class="form-group">
-            <label>Password</label>
-            <input type="password" name="password" class="form-control" placeholder="Your password" required>
+            <label style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d;">Password</label>
+            <input type="password" name="password" class="form-control" placeholder="Your password" required style="padding: 12px 14px;">
           </div>
-          <button type="submit" class="btn btn-primary btn-block">
-            <i class="fas fa-sign-in-alt"></i> Sign In
+          <button type="submit" class="btn btn-primary btn-block" style="padding: 12px; font-weight: 600; font-size: 15px;">
+            Sign In
           </button>
         </form>
         <div class="text-center mt-3">
-          <a href="{{ url_for('forgot_password') }}" class="text-muted small">Forgot your password?</a>
+          <a href="{{ url_for('forgot_password') }}" class="text-muted" style="font-size: 13px;">Forgot your password?</a>
         </div>
       </div>
     </div>
-    <p class="text-center text-muted small mt-4">
+    <p class="text-center text-muted mt-4" style="font-size: 12px;">
       Need an account? Contact your administrator.
     </p>
   </div>

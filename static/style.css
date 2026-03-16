@@ -8,7 +8,26 @@
     font-display: swap;
 }
 
-/* Base Styles - Force Inter on everything */
+/* CSS Variables */
+:root {
+    --ctehr-red: #d91720;
+    --ctehr-red-dark: #b8141b;
+    --ctehr-red-light: #e84049;
+    --bg-body: #eef1f5;
+    --bg-card: #fff;
+    --text-primary: #1a1a2e;
+    --text-secondary: #5a6070;
+    --text-muted: #8e95a5;
+    --border-light: #e2e6ed;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+}
+
+/* Base Styles */
 * {
     box-sizing: border-box;
     font-family: 'Inter', sans-serif;
@@ -35,141 +54,147 @@ article, section, header, footer, nav,
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Preserve Font Awesome icons */
 .fas, .far, .fab, .fa {
     font-family: "Font Awesome 5 Free", "Font Awesome 5 Brands" !important;
 }
 
 body {
-    background-color: #f4f6f9;
+    background-color: var(--bg-body);
     font-family: 'Inter', sans-serif !important;
-    font-size: 15px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-primary);
 }
 
-/* Headings use Norwester */
-h1, h2, h3, h4, h5, h6,
-.card-header,
-.modal-title,
-.modal-header,
-.page-title {
+/* Headings - Norwester but not all caps everywhere */
+h1, h2, h3 {
     font-family: 'Norwester', sans-serif !important;
     letter-spacing: 0.5px;
     text-transform: uppercase;
 }
 
+h4, h5, h6 {
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 700;
+}
+
+.card-header, .modal-title, .modal-header, .page-title {
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 600;
+}
+
 .btn {
     font-weight: 500;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s ease;
 }
 
 /* Container */
 .container {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    background: var(--bg-card);
+    padding: 24px 28px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
     max-width: 1400px;
 }
 
-/* Dashboard Cards */
+/* ========================================
+   DASHBOARD STAT CARDS
+   ======================================== */
 .dashboard-row {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 15px;
-    margin-bottom: 25px;
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
 .dash-card {
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-sm);
 }
 
 .dash-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
 }
 
-/* Dashboard card headers */
 .dash-card .card-header {
-    min-height: 50px;
-    padding: 12px 10px;
+    min-height: 0;
+    padding: 10px 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
 }
 
-/* Dashboard card body */
 .dash-card .card-body {
-    padding: 20px 15px;
+    padding: 16px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     flex-grow: 1;
-    background: #fff;
+    background: var(--bg-card);
 }
 
-/* Large numbers in cards */
 .dash-card .card-body h4 {
-    font-size: 36px;
+    font-family: 'Norwester', sans-serif !important;
+    font-size: 38px;
     font-weight: 700;
     margin: 0;
-    color: #212529;
+    color: var(--text-primary);
     line-height: 1;
 }
 
-/* Subtitle text under numbers */
 .dash-card .card-body small {
-    margin-top: 6px;
-    font-size: 11px;
-    color: #6c757d;
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--text-muted);
 }
 
 .dash-card-size {
-    width: calc(16.66% - 15px);
-    min-width: 140px;
+    width: calc(16.66% - 12px);
+    min-width: 130px;
     max-width: 170px;
-    min-height: 140px;
+    min-height: 130px;
 }
 
-/* Dashboard Card Link Styles */
+/* Card link/static variants */
 .dash-card-link {
     text-decoration: none;
     color: inherit;
-    background: #fff;
-    border: 1px solid #dee2e6;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
 }
 
 .dash-card-link:hover {
     text-decoration: none;
     color: inherit;
-    border-color: #adb5bd;
+    border-color: var(--ctehr-red);
 }
 
 .dash-card-link .card-header {
-    background: #343a40;
+    background: var(--ctehr-red);
     color: #fff;
 }
 
 .dash-card-link:hover .card-header {
-    background: #495057;
+    background: var(--ctehr-red-dark);
 }
 
 .dash-card-static {
-    background: #fff;
-    border: 1px solid #dee2e6;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
 }
 
 .dash-card-static .card-header {
@@ -178,502 +203,341 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .dash-card-static .card-body h4 {
-    color: #495057;
+    color: var(--text-secondary);
 }
 
-/* Gradient Backgrounds */
-.dash-gradient-green {
-    background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+/* Gradient Backgrounds (kept for compatibility) */
+.dash-gradient-green { background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); }
+.dash-gradient-orange { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
+.dash-gradient-red { background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%); }
+.dash-gradient-teal { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+.dash-gradient-purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.dash-gradient-gray { background: linear-gradient(135deg, #606c88 0%, #3f4c6b 100%); }
+.dash-gradient-dark { background: linear-gradient(135deg, #232526 0%, #414345 100%); }
+.dash-gradient-blue { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
+
+/* ========================================
+   COUNTY ACCORDION
+   ======================================== */
+.county-card {
+    border: none;
+    border-radius: var(--radius-md) !important;
+    overflow: hidden;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
 }
 
-.dash-gradient-orange {
-    background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
-}
-
-.dash-gradient-red {
-    background: linear-gradient(135deg, #cb2d3e 0%, #ef473a 100%);
-}
-
-.dash-gradient-teal {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-}
-
-.dash-gradient-purple {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.dash-gradient-gray {
-    background: linear-gradient(135deg, #606c88 0%, #3f4c6b 100%);
-}
-
-.dash-gradient-dark {
-    background: linear-gradient(135deg, #232526 0%, #414345 100%);
-}
-
-.dash-gradient-blue {
-    background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
-}
-
-/* County Navigation */
-.county-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-
-.county-pill {
-    display: inline-block;
-    padding: 8px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #495057;
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 20px;
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.county-pill:hover {
-    background: #007bff;
+.county-card > .card-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #3d5066 100%);
     color: #fff;
-    border-color: #007bff;
-    text-decoration: none;
-    transform: translateY(-1px);
+    padding: 14px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.15s;
 }
 
-/* Search Box */
+.county-card > .card-header:hover {
+    background: linear-gradient(135deg, #34495e 0%, #4a6380 100%);
+}
+
+.county-card > .card-header h4 {
+    font-family: 'Norwester', sans-serif !important;
+    text-transform: uppercase;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.county-card > .card-header small {
+    font-size: 13px;
+    opacity: 0.85;
+    font-weight: 500;
+}
+
+.county-card > .card-body {
+    padding: 16px;
+    background: #f8f9fb;
+}
+
+/* ========================================
+   DISTRICT CARDS
+   ======================================== */
+.district-card {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    transition: border-color 0.15s;
+}
+
+.district-card:hover {
+    border-color: #c5cad3;
+}
+
+.district-card > .card-header {
+    background: #f4f6f9;
+    color: var(--text-primary);
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.district-card > .card-header:hover {
+    background: #ebeef3;
+}
+
+.district-card > .card-header h5 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.district-card > .card-body {
+    padding: 12px 14px;
+}
+
+/* Empty/Partial district highlighting */
+.district-card.district-empty {
+    border-left: 4px solid var(--ctehr-red);
+    background: #fef7f7;
+}
+
+.district-card.district-empty > .card-header {
+    background: #fdf0f0;
+}
+
+.district-card.district-partial {
+    border-left: 4px solid #f0ad4e;
+}
+
+/* ========================================
+   SEARCH BAR
+   ======================================== */
 .search-box {
     display: flex;
-    gap: 10px;
-    margin: 0 auto 25px auto;
+    gap: 8px;
+    margin: 0 auto 20px auto;
     max-width: 600px;
     justify-content: center;
 }
 
 .search-box input {
     flex: 1;
-    padding: 12px 18px;
-    border: 1px solid #ced4da;
-    border-radius: 6px;
-    font-size: 16px;
+    padding: 10px 16px;
+    border: 2px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    background: #f8f9fb;
+    transition: border-color 0.15s, background 0.15s;
 }
 
 .search-box input:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+    border-color: var(--ctehr-red);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(217, 23, 32, 0.08);
 }
 
 .search-box button {
-    padding: 12px 24px;
+    padding: 10px 20px;
     white-space: nowrap;
 }
 
-/* County Accordion */
-.county-card {
-    border: none;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 15px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+/* Sticky Search Bar */
+.sticky-search-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-card);
+    padding: 12px 0 8px 0;
+    border-bottom: 1px solid var(--border-light);
+    margin-bottom: 12px;
 }
 
-.county-card > .card-header {
-    background: #495057;
-    color: #fff;
-    padding: 15px 20px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.county-card > .card-header:hover {
-    background: #5a6268;
-}
-
-.county-card > .card-header h4 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.county-card > .card-header small {
-    font-size: 14px;
-    opacity: 0.9;
-}
-
-/* District Cards */
-.district-card {
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    margin-bottom: 10px;
-}
-
-.district-card > .card-header {
-    background: #e9ecef;
-    color: #495057;
-    padding: 12px 15px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.district-card > .card-header:hover {
-    background: #dee2e6;
-}
-
-.district-card > .card-header h5 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-}
-
-/* Tables */
+/* ========================================
+   TABLES
+   ======================================== */
 .table {
     margin-bottom: 0;
 }
 
 .table thead th {
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    font-weight: 600;
-    font-size: 13px;
+    background: #f4f6f9;
+    border-bottom: 2px solid var(--border-light);
+    font-weight: 700;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    padding: 10px;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    padding: 8px 10px;
 }
 
 .table td {
-    padding: 12px 10px;
+    padding: 10px;
     vertical-align: middle;
+    border-top: 1px solid #f0f2f5;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
-    background-color: #f8f9fa;
+    background-color: #fafbfc;
 }
 
-/* Candidate Links */
+/* ========================================
+   CANDIDATE LINKS & STATUS BADGES
+   ======================================== */
 .candidate-link {
     text-decoration: none;
     font-weight: 600;
+    font-size: 13px;
 }
 
 .candidate-link:hover {
     text-decoration: underline;
 }
 
-/* Fix district dropdown text cutoff */
+/* Inline Status Badge */
+.status-badge {
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    vertical-align: middle;
+    margin-left: 4px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+}
+
+.status-badge:hover {
+    opacity: 0.75;
+    transform: scale(1.05);
+}
+
+/* Inline Status Dropdown */
+.status-dropdown {
+    position: absolute;
+    z-index: 1050;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    min-width: 160px;
+    overflow: hidden;
+}
+
+.status-dropdown .status-option {
+    padding: 9px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.1s;
+}
+
+.status-dropdown .status-option:last-child {
+    border-bottom: none;
+}
+
+.status-dropdown .status-option:hover {
+    background: #f0f2f5;
+}
+
+.status-dropdown .status-option.active {
+    background: #e8ecf1;
+    font-weight: 700;
+    color: var(--ctehr-red);
+}
+
+/* ========================================
+   COUNTY NAVIGATION
+   ======================================== */
+.county-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    padding: 12px;
+    background: #f4f6f9;
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+}
+
+.county-pill {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.county-pill:hover {
+    background: var(--ctehr-red);
+    color: #fff;
+    border-color: var(--ctehr-red);
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+/* County Progress Links */
+.county-progress-link {
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease;
+}
+
+.county-progress-link:hover {
+    background-color: #f4f6f9;
+}
+
+/* ========================================
+   FORMS
+   ======================================== */
 .form-control, select.form-control {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    padding: 8px 12px;
     line-height: 1.5;
     height: auto;
     min-height: 38px;
+    border: 1.5px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-/* Buttons */
+.form-control:focus {
+    border-color: var(--ctehr-red);
+    box-shadow: 0 0 0 3px rgba(217, 23, 32, 0.08);
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
 .btn {
     font-weight: 500;
-    border-radius: 5px;
-    transition: all 0.2s ease;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s ease;
 }
 
 .btn-sm {
     padding: 5px 10px;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .btn-outline-primary {
     border-width: 1.5px;
 }
 
-/* Popover */
-.custom-popover {
-    max-width: 400px !important;
-    max-height: 500px !important;
-    overflow-y: auto !important;
-}
-
-.info-section {
-    margin-bottom: 15px;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-left: 4px solid #007bff;
-}
-
-.info-section h4 {
-    margin-top: 0;
-    color: #007bff;
-}
-
-.info-section p {
-    margin: 5px 0;
-}
-
-pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-/* Alerts */
-.alert {
-    border-radius: 6px;
-    border: none;
-}
-
-/* Forms */
-.form-control {
-    border-radius: 5px;
-    border: 1px solid #ced4da;
-    padding: 10px 12px;
-}
-
-.form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 1200px) {
-    .dash-card-size {
-        width: calc(20% - 12px);
-        min-width: 120px;
-    }
-}
-
-@media (max-width: 992px) {
-    .dash-card-size {
-        width: calc(25% - 12px);
-        min-width: 110px;
-        min-height: 160px;
-    }
-
-    .dash-card .card-body h4 {
-        font-size: 28px;
-    }
-    
-    .dash-card .card-header {
-        min-height: 60px;
-        font-size: 10px;
-    }
-}
-
-@media (max-width: 768px) {
-    body {
-        font-size: 14px;
-    }
-    
-    .container {
-        padding: 15px;
-        margin: 0;
-        border-radius: 0;
-        max-width: 100%;
-    }
-    
-    h1 {
-        font-size: 24px;
-        margin-bottom: 20px;
-    }
-    
-    /* Dashboard cards - 3 per row on tablet */
-    .dashboard-row {
-        gap: 10px;
-    }
-    
-    .dash-card-size {
-        width: calc(33.33% - 10px);
-        min-width: 100px;
-        max-width: none;
-        min-height: 140px;
-    }
-    
-    .dash-card .card-header {
-        min-height: 50px;
-        max-height: 60px;
-        font-size: 9px;
-        padding: 8px 6px;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-    
-    .dash-card .card-body {
-        padding: 12px 8px;
-    }
-    
-    .dash-card .card-body h4 {
-        font-size: 24px;
-    }
-    
-    .dash-card .btn-sm {
-        font-size: 10px;
-        padding: 4px 8px;
-    }
-    
-    /* Search box */
-    .search-box {
-        flex-direction: column;
-        max-width: 100%;
-        padding: 0 10px;
-    }
-    
-    .search-box button {
-        width: 100%;
-    }
-    
-    /* County accordion */
-    .county-card > .card-header {
-        padding: 12px 15px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-    }
-    
-    .county-card > .card-header h4 {
-        font-size: 16px;
-    }
-    
-    /* Tables */
-    .table {
-        font-size: 13px;
-    }
-    
-    .table thead th {
-        font-size: 11px;
-        padding: 8px 5px;
-    }
-    
-    .table td {
-        padding: 8px 5px;
-    }
-    
-    .btn-sm {
-        padding: 4px 8px;
-        font-size: 11px;
-    }
-}
-
-@media (max-width: 576px) {
-    .container {
-        padding: 10px;
-    }
-    
-    h1 {
-        font-size: 22px;
-    }
-    
-    /* Dashboard cards - 2 per row on small mobile */
-    .dash-card-size {
-        width: calc(50% - 8px);
-        min-height: 130px;
-    }
-    
-    .dash-card .card-header {
-        min-height: 45px;
-        max-height: 55px;
-        font-size: 9px;
-        padding: 6px 5px;
-        font-weight: 600;
-        text-transform: uppercase;
-        line-height: 1.2;
-    }
-    
-    .dash-card .card-body h4 {
-        font-size: 22px;
-    }
-    
-    .dash-card .btn-sm {
-        font-size: 9px;
-        padding: 3px 6px;
-    }
-    
-    /* Tables - make scrollable */
-    .table-responsive {
-        margin: 0 -10px;
-    }
-    
-    .table {
-        font-size: 12px;
-    }
-    
-    .table thead th {
-        font-size: 10px;
-        padding: 6px 4px;
-    }
-    
-    .table td {
-        padding: 6px 4px;
-    }
-    
-    /* District card */
-    .district-card > .card-header {
-        padding: 10px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 3px;
-    }
-    
-    .district-card > .card-header h5 {
-        font-size: 13px;
-    }
-    
-    /* Forms */
-    .form-control {
-        font-size: 16px; /* Prevents iOS zoom */
-    }
-    
-    /* Buttons */
-    .btn {
-        font-size: 13px;
-    }
-    
-    .btn-sm {
-        font-size: 11px;
-        padding: 3px 6px;
-    }
-}
-
-/* Very small screens */
-@media (max-width: 400px) {
-    .dash-card-size {
-        width: calc(50% - 6px);
-    }
-
-    .dash-card .card-body h4 {
-        font-size: 20px;
-    }
-
-    .dash-card .card-header {
-        font-size: 8px;
-    }
-}
-
-/* CTEHR Brand Colors */
-:root {
-    --ctehr-red: #d91720;
-    --ctehr-red-dark: #b8141b;
-    --ctehr-red-light: #e84049;
-}
-
-/* County Progress Links */
-.county-progress-link {
-    padding: 8px;
-    border-radius: 6px;
-    transition: background-color 0.15s ease;
-}
-
-.county-progress-link:hover {
-    background-color: #f8f9fa;
-}
-
-/* Primary Button Override */
 .btn-primary {
     background-color: var(--ctehr-red);
     border-color: var(--ctehr-red);
@@ -690,27 +554,62 @@ pre {
     border-color: var(--ctehr-red-dark) !important;
 }
 
-/* Text Colors */
+/* ========================================
+   ALERTS
+   ======================================== */
+.alert {
+    border-radius: var(--radius-sm);
+    border: none;
+    font-size: 13px;
+}
+
+/* ========================================
+   POPOVERS
+   ======================================== */
+.custom-popover {
+    max-width: 400px !important;
+    max-height: 500px !important;
+    overflow-y: auto !important;
+}
+
+.info-section {
+    margin-bottom: 12px;
+    padding: 10px;
+    background-color: #f8f9fb;
+    border-left: 3px solid var(--ctehr-red);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.info-section h4 {
+    margin-top: 0;
+    color: var(--ctehr-red);
+    font-size: 13px;
+}
+
+.info-section p {
+    margin: 4px 0;
+    font-size: 13px;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* ========================================
+   TEXT & COLOR OVERRIDES
+   ======================================== */
 .text-primary {
     color: var(--ctehr-red) !important;
 }
 
-/* Background Colors */
 .bg-primary {
     background-color: var(--ctehr-red) !important;
 }
 
-/* County Card Headers - neutral dark */
-.county-card > .card-header {
-    background: #495057;
-    color: #fff;
-}
-
-.county-card > .card-header:hover {
-    background: #5a6268;
-}
-
-/* Navbar Styling */
+/* ========================================
+   NAVBAR
+   ======================================== */
 .navbar,
 .navbar .dropdown-menu,
 .navbar .nav-link,
@@ -725,82 +624,236 @@ pre {
 .navbar .nav-link,
 .navbar .dropdown-toggle,
 .navbar .dropdown-item {
-    font-size: 14px;
-}
-
-/* ====== Usability Improvements ====== */
-
-/* Sticky Search Bar */
-.sticky-search-wrapper {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: #fff;
-    padding: 12px 0 8px 0;
-    border-bottom: 1px solid #e9ecef;
-    margin-bottom: 12px;
-}
-
-/* Empty District Highlighting */
-.district-card.district-empty {
-    border-left: 4px solid #dc3545;
-}
-
-.district-card.district-empty > .card-header {
-    background: #fdf0f0;
-}
-
-.district-card.district-partial {
-    border-left: 4px solid #ffc107;
-}
-
-/* Inline Status Badge */
-.status-badge {
-    cursor: pointer;
-    font-size: 0.75em;
-    vertical-align: middle;
-    margin-left: 4px;
-    transition: opacity 0.15s;
-}
-
-.status-badge:hover {
-    opacity: 0.8;
-}
-
-/* Inline Status Dropdown */
-.status-dropdown {
-    position: absolute;
-    z-index: 1050;
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    min-width: 150px;
-    overflow: hidden;
-}
-
-.status-dropdown .status-option {
-    padding: 8px 14px;
-    cursor: pointer;
     font-size: 13px;
-    border-bottom: 1px solid #f0f0f0;
 }
 
-.status-dropdown .status-option:last-child {
-    border-bottom: none;
+.navbar {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-.status-dropdown .status-option:hover {
-    background: #f8f9fa;
+/* ========================================
+   PROGRESS BARS
+   ======================================== */
+.progress {
+    border-radius: 20px;
+    overflow: hidden;
+    background: #e8ecf1;
 }
 
-.status-dropdown .status-option.active {
-    background: #e9ecef;
+.progress-bar {
+    font-size: 11px;
     font-weight: 600;
+    letter-spacing: 0.3px;
 }
 
-/* Mobile: Touch targets & sticky adjustments */
+/* ========================================
+   LOGIN PAGE
+   ======================================== */
+.card.shadow-sm {
+    border: none;
+    box-shadow: var(--shadow-md);
+    border-radius: var(--radius-md);
+}
+
+/* ========================================
+   RESPONSIVE: 1200px
+   ======================================== */
+@media (max-width: 1200px) {
+    .dash-card-size {
+        width: calc(20% - 10px);
+        min-width: 120px;
+    }
+}
+
+/* ========================================
+   RESPONSIVE: 992px (Tablet landscape)
+   ======================================== */
+@media (max-width: 992px) {
+    .dash-card-size {
+        width: calc(25% - 10px);
+        min-width: 110px;
+        min-height: 140px;
+    }
+
+    .dash-card .card-body h4 {
+        font-size: 28px;
+    }
+
+    .dash-card .card-header {
+        min-height: 50px;
+        font-size: 9px;
+    }
+}
+
+/* ========================================
+   RESPONSIVE: 768px (Tablet portrait)
+   ======================================== */
+@media (max-width: 768px) {
+    body {
+        font-size: 13px;
+    }
+
+    .container {
+        padding: 14px;
+        margin: 0;
+        border-radius: 0;
+        max-width: 100%;
+        box-shadow: none;
+    }
+
+    h1 {
+        font-size: 22px;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-row {
+        gap: 8px;
+    }
+
+    .dash-card-size {
+        width: calc(33.33% - 8px);
+        min-width: 95px;
+        max-width: none;
+        min-height: 120px;
+    }
+
+    .dash-card .card-header {
+        min-height: 40px;
+        max-height: 50px;
+        font-size: 8px;
+        padding: 6px 5px;
+        font-weight: 700;
+    }
+
+    .dash-card .card-body {
+        padding: 10px 6px;
+    }
+
+    .dash-card .card-body h4 {
+        font-size: 24px;
+    }
+
+    .dash-card .btn-sm {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
+    .search-box {
+        flex-direction: column;
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .search-box button {
+        width: 100%;
+    }
+
+    .county-card > .card-header {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .county-card > .card-header h4 {
+        font-size: 15px;
+    }
+
+    .table {
+        font-size: 12px;
+    }
+
+    .table thead th {
+        font-size: 10px;
+        padding: 6px 4px;
+    }
+
+    .table td {
+        padding: 8px 5px;
+    }
+
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+}
+
+/* ========================================
+   RESPONSIVE: 576px (Mobile)
+   ======================================== */
 @media (max-width: 576px) {
+    .container {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 20px;
+    }
+
+    .dash-card-size {
+        width: calc(50% - 6px);
+        min-height: 110px;
+    }
+
+    .dash-card .card-header {
+        min-height: 38px;
+        max-height: 48px;
+        font-size: 8px;
+        padding: 5px 4px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .dash-card .card-body h4 {
+        font-size: 22px;
+    }
+
+    .dash-card .btn-sm {
+        font-size: 9px;
+        padding: 2px 5px;
+    }
+
+    .table-responsive {
+        margin: 0 -8px;
+    }
+
+    .table {
+        font-size: 11px;
+    }
+
+    .table thead th {
+        font-size: 9px;
+        padding: 5px 3px;
+    }
+
+    .table td {
+        padding: 6px 4px;
+    }
+
+    .district-card > .card-header {
+        padding: 8px 10px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .district-card > .card-header h5 {
+        font-size: 12px;
+    }
+
+    .form-control {
+        font-size: 16px; /* Prevents iOS zoom */
+    }
+
+    .btn {
+        font-size: 12px;
+    }
+
+    .btn-sm {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
     .sticky-search-wrapper {
         padding: 8px 0 6px 0;
     }
@@ -816,11 +869,28 @@ pre {
         display: inline-block;
         padding: 4px 8px;
         min-height: 28px;
-        font-size: 11px;
+        font-size: 10px;
     }
 
     .status-dropdown .status-option {
-        padding: 12px 14px;
+        padding: 12px 16px;
         font-size: 15px;
+    }
+}
+
+/* ========================================
+   RESPONSIVE: 400px (Very small)
+   ======================================== */
+@media (max-width: 400px) {
+    .dash-card-size {
+        width: calc(50% - 5px);
+    }
+
+    .dash-card .card-body h4 {
+        font-size: 20px;
+    }
+
+    .dash-card .card-header {
+        font-size: 7px;
     }
 }
