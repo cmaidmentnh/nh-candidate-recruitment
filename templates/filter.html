@@ -43,13 +43,13 @@
 
 {% macro district_row(d) %}
 <tr class="filter-row">
-    <td>
+    <td style="width:22%; white-space:nowrap;">
         <strong>{{ d.fdc }}</strong>
         <span class="badge ml-1" style="font-size:10px; {% if d.info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif d.info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif d.info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif d.info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif d.info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif d.info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif d.info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if d.info.pvi > 0 %}R+{% else %}D+{% endif %}{{ d.info.pvi|abs }}</span>
     </td>
-    <td class="text-muted">{{ d.info.towns|join(', ') }}</td>
-    <td>{{ d.info.seat_count }}</td>
-    <td>
+    <td style="width:55%;" class="text-muted">{{ d.info.towns|join(', ') }}</td>
+    <td style="width:8%; text-align:center;">{{ d.info.seat_count }}</td>
+    <td style="width:15%; text-align:right;">
         <button class="btn btn-sm btn-primary" onclick="openAddCandidateModal('{{ d.fdc }}', 2026)">
             <i class="fas fa-plus"></i> Add
         </button>
@@ -61,7 +61,7 @@
 <h5 class="mt-3 mb-2" style="color:var(--ctehr-red);"><i class="fas fa-flag"></i> Safe GOP — Easy Wins, Fill Now ({{ safe_gop|length }})</h5>
 <p class="text-muted small mb-2">R+8 or higher. These are free seats — just need a name on the ballot.</p>
 <div class="table-responsive mb-4">
-    <table class="table" id="filterTable1"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
+    <table class="table" id="filterTable1"><thead><tr><th style="width:22%;">District</th><th style="width:55%;">Towns</th><th style="width:8%; text-align:center;">Seats</th><th style="width:15%;"></th></tr></thead>
     <tbody>{% for d in safe_gop %}{{ district_row(d) }}{% endfor %}</tbody></table>
 </div>
 {% endif %}
@@ -70,7 +70,7 @@
 <h5 class="mt-3 mb-2"><i class="fas fa-balance-scale"></i> Lean GOP — Need Candidates ({{ lean_gop|length }})</h5>
 <p class="text-muted small mb-2">R+3 to R+8. Favorable territory, need solid candidates.</p>
 <div class="table-responsive mb-4">
-    <table class="table" id="filterTable2"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
+    <table class="table" id="filterTable2"><thead><tr><th style="width:22%;">District</th><th style="width:55%;">Towns</th><th style="width:8%; text-align:center;">Seats</th><th style="width:15%;"></th></tr></thead>
     <tbody>{% for d in lean_gop %}{{ district_row(d) }}{% endfor %}</tbody></table>
 </div>
 {% endif %}
@@ -79,7 +79,7 @@
 <h5 class="mt-3 mb-2"><i class="fas fa-bullseye"></i> Competitive — Need Strong Recruits ({{ competitive|length }})</h5>
 <p class="text-muted small mb-2">Swing or Dem-leaning. Tough recruiting but high impact — need the right candidates.</p>
 <div class="table-responsive mb-4">
-    <table class="table" id="filterTable3"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
+    <table class="table" id="filterTable3"><thead><tr><th style="width:22%;">District</th><th style="width:55%;">Towns</th><th style="width:8%; text-align:center;">Seats</th><th style="width:15%;"></th></tr></thead>
     <tbody>{% for d in competitive %}{{ district_row(d) }}{% endfor %}</tbody></table>
 </div>
 {% endif %}
@@ -88,7 +88,7 @@
 <h5 class="mt-3 mb-2" style="color:#6c757d;"><i class="fas fa-mountain"></i> Long Shots — D+5 or worse ({{ longshot|length }})</h5>
 <p class="text-muted small mb-2">Heavily Democratic. Fill if you have a willing candidate, but don't burn resources here.</p>
 <div class="table-responsive mb-4">
-    <table class="table" id="filterTable4"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
+    <table class="table" id="filterTable4"><thead><tr><th style="width:22%;">District</th><th style="width:55%;">Towns</th><th style="width:8%; text-align:center;">Seats</th><th style="width:15%;"></th></tr></thead>
     <tbody>{% for d in longshot %}{{ district_row(d) }}{% endfor %}</tbody></table>
 </div>
 {% endif %}
