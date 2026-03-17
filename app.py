@@ -1060,12 +1060,13 @@ def copy_candidate_to_2026(candidate_id):
             WHERE candidate_id = %s AND election_year = 2024
         """, (candidate_id,))
         row = cur.fetchone()
-        if not row:
-            flash("Candidate does not have a 2024 entry.", "warning")
-            return redirect(url_for("index"))
-        district_code = request.form.get("district_code", row[0]).strip()
+        default_district = row[0] if row else ''
+        district_code = request.form.get("district_code", default_district).strip()
         status = request.form.get("status", "New Recruit").strip()
         comment = request.form.get("comment", "").strip()
+        if not district_code:
+            flash("Please specify a district code for this candidate.", "warning")
+            return redirect(url_for("index"))
         cur.execute("""
             INSERT INTO candidate_election_status 
               (candidate_id, election_year, status, is_running, added_by, district_code)
