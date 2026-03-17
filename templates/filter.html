@@ -23,17 +23,17 @@
 
 {% if category == 'empty_districts' %}
 {# ===== EMPTY DISTRICTS: grouped by tier ===== #}
+{% set safe_gop = [] %}
+{% set lean_gop = [] %}
 {% set competitive = [] %}
-{% set lean = [] %}
-{% set safe = [] %}
 {% for county_name, dist_dict in county_groups.items()|sort %}
     {% for fdc, info in dist_dict.items() %}
-        {% if info.pvi is not none and info.pvi|float <= 3 %}
-            {% if competitive.append({'fdc': fdc, 'info': info}) %}{% endif %}
-        {% elif info.pvi is not none and info.pvi|float <= 8 %}
-            {% if lean.append({'fdc': fdc, 'info': info}) %}{% endif %}
+        {% if info.pvi is not none and info.pvi|float >= 8 %}
+            {% if safe_gop.append({'fdc': fdc, 'info': info}) %}{% endif %}
+        {% elif info.pvi is not none and info.pvi|float >= 3 %}
+            {% if lean_gop.append({'fdc': fdc, 'info': info}) %}{% endif %}
         {% else %}
-            {% if safe.append({'fdc': fdc, 'info': info}) %}{% endif %}
+            {% if competitive.append({'fdc': fdc, 'info': info}) %}{% endif %}
         {% endif %}
     {% endfor %}
 {% endfor %}
@@ -54,34 +54,34 @@
 </tr>
 {% endmacro %}
 
-{% if competitive %}
-<h5 class="mt-3 mb-2" style="color:var(--ctehr-red);"><i class="fas fa-bullseye"></i> Competitive — Must Fill ({{ competitive|length }})</h5>
-<p class="text-muted small mb-2">Swing or lean districts (PVI under R+3). Losing these costs us the majority.</p>
+{% if safe_gop %}
+<h5 class="mt-3 mb-2" style="color:var(--ctehr-red);"><i class="fas fa-flag"></i> Safe GOP — Easy Wins, Fill Now ({{ safe_gop|length }})</h5>
+<p class="text-muted small mb-2">R+8 or higher. These are free seats — just need a name on the ballot.</p>
 <div class="table-responsive mb-4">
     <table class="table" id="filterTable1"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
+    <tbody>{% for d in safe_gop %}{{ district_row(d) }}{% endfor %}</tbody></table>
+</div>
+{% endif %}
+
+{% if lean_gop %}
+<h5 class="mt-3 mb-2"><i class="fas fa-balance-scale"></i> Lean GOP — Need Candidates ({{ lean_gop|length }})</h5>
+<p class="text-muted small mb-2">R+3 to R+8. Favorable territory, need solid candidates.</p>
+<div class="table-responsive mb-4">
+    <table class="table" id="filterTable2"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
+    <tbody>{% for d in lean_gop %}{{ district_row(d) }}{% endfor %}</tbody></table>
+</div>
+{% endif %}
+
+{% if competitive %}
+<h5 class="mt-3 mb-2"><i class="fas fa-bullseye"></i> Competitive — Need Strong Recruits ({{ competitive|length }})</h5>
+<p class="text-muted small mb-2">Swing or Dem-leaning. Tough recruiting but high impact — need the right candidates.</p>
+<div class="table-responsive mb-4">
+    <table class="table" id="filterTable3"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
     <tbody>{% for d in competitive %}{{ district_row(d) }}{% endfor %}</tbody></table>
 </div>
 {% endif %}
 
-{% if lean %}
-<h5 class="mt-3 mb-2"><i class="fas fa-balance-scale"></i> Lean GOP — Should Fill ({{ lean|length }})</h5>
-<p class="text-muted small mb-2">R+3 to R+8. Winnable but need a candidate on the ballot.</p>
-<div class="table-responsive mb-4">
-    <table class="table" id="filterTable2"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
-    <tbody>{% for d in lean %}{{ district_row(d) }}{% endfor %}</tbody></table>
-</div>
-{% endif %}
-
-{% if safe %}
-<h5 class="mt-3 mb-2" style="color:#6c757d;"><i class="fas fa-shield-alt"></i> Safe GOP — Fill When Possible ({{ safe|length }})</h5>
-<p class="text-muted small mb-2">R+8 or higher. Should still have candidates but lower urgency.</p>
-<div class="table-responsive mb-4">
-    <table class="table" id="filterTable3"><thead><tr><th>District</th><th>Towns</th><th>Seats</th><th></th></tr></thead>
-    <tbody>{% for d in safe %}{{ district_row(d) }}{% endfor %}</tbody></table>
-</div>
-{% endif %}
-
-<p class="text-muted small">{{ competitive|length + lean|length + safe|length }} empty districts total</p>
+<p class="text-muted small">{{ safe_gop|length + lean_gop|length + competitive|length }} empty districts total</p>
 
 {% else %}
 {# ===== ALL OTHER CATEGORIES: standard table ===== #}
