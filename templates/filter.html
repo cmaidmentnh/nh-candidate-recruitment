@@ -1,25 +1,81 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="mb-3">{{ category|replace('_', ' ')|title }}</h1>
 
-<a href="{{ url_for('index') }}" class="btn btn-secondary mb-3"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+{% set category_labels = {
+    'confirmed': 'Confirmed Candidates',
+    'empty_districts': 'Empty Districts',
+    'empty_seats': 'Unfilled Seats',
+    'potentials': 'Potentials & Considering',
+    'primaries': 'Primary Districts',
+    'incumbents_running': 'Incumbents Running',
+    'incumbents_not_running': 'Incumbents Not Running',
+    'incumbents_undecided': 'Incumbents Undecided'
+} %}
 
+{% set category_icons = {
+    'confirmed': 'fa-check-circle',
+    'empty_districts': 'fa-exclamation-triangle',
+    'empty_seats': 'fa-chair',
+    'potentials': 'fa-user-clock',
+    'primaries': 'fa-users',
+    'incumbents_running': 'fa-running',
+    'incumbents_not_running': 'fa-times-circle',
+    'incumbents_undecided': 'fa-question-circle'
+} %}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap" style="gap:8px;">
+    <div class="d-flex align-items-center">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm mr-3">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+        <h1 class="mb-0"><i class="fas {{ category_icons.get(category, 'fa-list') }} mr-2" style="font-size:0.8em; opacity:0.7;"></i>{{ category_labels.get(category, category|replace('_', ' ')|title) }}</h1>
+    </div>
+    <div class="d-flex align-items-center" style="gap:8px;">
+        {% set row_count = namespace(n=0) %}
+        {% for county_name, dist_dict in county_groups.items() %}
+            {% for fdc, info in dist_dict.items() %}
+                {% if category == 'empty_districts' or category == 'empty_seats' %}
+                    {% set row_count.n = row_count.n + 1 %}
+                {% elif category == 'confirmed' %}
+                    {% set row_count.n = row_count.n + info.cand2026|selectattr("status","equalto","Confirmed")|list|length %}
+                {% elif category == 'potentials' %}
+                    {% set row_count.n = row_count.n + info.cand2026|rejectattr("status","equalto","Declined")|selectattr("status","in",["Considering","Potential"])|list|length %}
+                {% else %}
+                    {% set row_count.n = row_count.n + info.cand2026|rejectattr("status","equalto","Declined")|list|length %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+        <span class="badge badge-dark" style="font-size:14px; padding:8px 14px;">{{ row_count.n }} results</span>
+    </div>
+</div>
+
+<!-- Search/Filter Bar -->
+<div class="mb-3 d-flex" style="gap:8px; max-width:400px;">
+    <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Filter by district or name..." oninput="filterTable()">
+</div>
+
+<!-- Table -->
 <div class="table-responsive">
-    <table class="table table-striped">
+    <table class="table" id="filterTable">
         <thead>
             <tr>
-                <th>District</th>
+                <th style="cursor:pointer;" onclick="sortTable(0)">District <i class="fas fa-sort" style="opacity:0.3;"></i></th>
                 {% if category == 'empty_districts' %}
                 <th>Towns</th>
                 <th>Seats</th>
+                <th style="cursor:pointer;" onclick="sortTable(3)">PVI <i class="fas fa-sort" style="opacity:0.3;"></i></th>
+                <th>Action</th>
                 {% elif category == 'empty_seats' %}
-                <th>Seats</th>
+                <th>Fill Status</th>
+                <th>Towns</th>
                 <th>Action</th>
                 {% else %}
                 <th>Candidate</th>
                 <th>Status</th>
+                <th class="d-none d-sm-table-cell">PVI</th>
+                <th>Action</th>
                 {% endif %}
-                <th class="d-none d-md-table-cell">{% if category == 'empty_seats' %}Towns{% else %}Action{% endif %}</th>
             </tr>
         </thead>
         <tbody>
@@ -27,90 +83,105 @@
                 {% for fdc, info in dist_dict.items() %}
                     {% set active_2026 = info.cand2026|rejectattr("status","equalto","Declined")|list %}
                     {% set confirmed_count = info.cand2026|selectattr("status","equalto","Confirmed")|list|length %}
-                    {% set empty_seats = info.seat_count - confirmed_count %}
-                    
+                    {% set empty_seats_count = info.seat_count - confirmed_count %}
+
                     {% if category == 'confirmed' %}
-                        {# Only show confirmed candidates #}
                         {% for cand in active_2026 if cand.status|upper == 'CONFIRMED' %}
                         <tr>
-                            <td>{{ fdc }}</td>
+                            <td><strong>{{ fdc }}</strong><br><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-success">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-success">
                                     {{ cand.name|title }}
                                 </a>
+                                {% if cand.incumbent %}<i class="fas fa-star text-warning" title="Incumbent"></i>{% endif %}
                             </td>
-                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)" title="Click to change status">Confirmed</span></td>
-                            <td class="d-none d-md-table-cell">
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
+                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">Confirmed</span></td>
+                            <td class="d-none d-sm-table-cell">
+                                {% if info.pvi is not none %}
+                                <span class="badge" style="font-size:10px; {% if info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if info.pvi > 0 %}R+{% else %}D+{% endif %}{{ info.pvi|abs }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-outline-secondary btn-sm qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button>
                             </td>
                         </tr>
                         {% endfor %}
 
                     {% elif category == 'potentials' %}
-                        {# Only show considering/potential candidates #}
                         {% for cand in active_2026 if cand.status|upper in ['CONSIDERING', 'POTENTIAL'] %}
                         <tr>
-                            <td>{{ fdc }}</td>
+                            <td><strong>{{ fdc }}</strong><br><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-warning">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-warning">
                                     {{ cand.name|title }}
                                 </a>
+                                {% if cand.incumbent %}<i class="fas fa-star text-warning" title="Incumbent"></i>{% endif %}
                             </td>
-                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)" title="Click to change status">{{ cand.status }}</span></td>
-                            <td class="d-none d-md-table-cell">
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
+                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
+                            <td class="d-none d-sm-table-cell">
+                                {% if info.pvi is not none %}
+                                <span class="badge" style="font-size:10px; {% if info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if info.pvi > 0 %}R+{% else %}D+{% endif %}{{ info.pvi|abs }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-outline-secondary btn-sm qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button>
                             </td>
                         </tr>
                         {% endfor %}
-                    
+
                     {% elif category == 'empty_districts' %}
-                        <tr class="table-danger">
-                            <td>{{ fdc }}</td>
+                        <tr>
+                            <td><strong>{{ fdc }}</strong></td>
                             <td>{{ info.towns|join(', ') }}</td>
                             <td><span class="badge badge-danger">{{ info.seat_count }} seat{{ 's' if info.seat_count != 1 else '' }}</span></td>
-                            <td class="d-none d-md-table-cell">
-                                <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                            <td data-sort="{{ info.pvi if info.pvi is not none else 0 }}">
+                                {% if info.pvi is not none %}
+                                <span class="badge" style="font-size:10px; {% if info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if info.pvi > 0 %}R+{% else %}D+{% endif %}{{ info.pvi|abs }} {{ info.pvi_rating }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
                             </td>
                         </tr>
-                    
+
                     {% elif category == 'empty_seats' %}
-                        <tr class="table-warning">
-                            <td>{{ fdc }}</td>
+                        <tr>
+                            <td><strong>{{ fdc }}</strong></td>
                             <td>
-                                <span class="text-danger font-weight-bold">{{ empty_seats }}</span> unfilled / 
-                                <span class="text-success">{{ confirmed_count }}</span> filled
-                                <small class="text-muted">({{ info.seat_count }} total)</small>
+                                <div class="d-flex align-items-center" style="gap:8px;">
+                                    <div class="progress flex-grow-1" style="height:16px; min-width:80px;">
+                                        <div class="progress-bar {% if confirmed_count >= info.seat_count %}bg-success{% elif confirmed_count > 0 %}bg-warning{% else %}bg-danger{% endif %}" style="width:{{ (confirmed_count / info.seat_count * 100)|round }}%;"></div>
+                                    </div>
+                                    <small><span class="text-success font-weight-bold">{{ confirmed_count }}</span>/<span>{{ info.seat_count }}</span></small>
+                                </div>
                             </td>
+                            <td><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
-                                    <i class="fas fa-plus"></i> Add Candidate
+                                <button class="btn btn-sm btn-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                    <i class="fas fa-plus"></i> Add
                                 </button>
                             </td>
-                            <td class="d-none d-md-table-cell">
-                                <small class="text-muted">{{ info.towns|join(', ') }}</small>
-                            </td>
                         </tr>
-                    
+
                     {% elif category == 'incumbents_running' %}
-                      {% for cand in info.cand2026 if cand.incumbent and cand.status|upper == 'CONFIRMED' %}
+                        {% for cand in info.cand2026 if cand.incumbent and cand.status|upper == 'CONFIRMED' %}
                         <tr>
-                            <td>{{ fdc }}</td>
+                            <td><strong>{{ fdc }}</strong><br><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-success">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-success">
                                     {{ cand.name|title }} <i class="fas fa-star text-warning"></i>
                                 </a>
                             </td>
-                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)" title="Click to change status">{{ cand.status }}</span></td>
-                            <td class="d-none d-md-table-cell">
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
+                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
+                            <td class="d-none d-sm-table-cell">
+                                {% if info.pvi is not none %}
+                                <span class="badge" style="font-size:10px; {% if info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if info.pvi > 0 %}R+{% else %}D+{% endif %}{{ info.pvi|abs }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-outline-secondary btn-sm qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -118,51 +189,58 @@
                     {% elif category == 'incumbents_not_running' %}
                         {% for cand in info.cand2026 if cand.incumbent and cand.status|upper == 'DECLINED' %}
                         <tr>
-                            <td>{{ fdc }}</td>
+                            <td><strong>{{ fdc }}</strong><br><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-secondary">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-secondary">
                                     {{ cand.name|title }} <i class="fas fa-star text-warning"></i>
                                 </a>
                             </td>
-                            <td><span class="status-badge badge badge-secondary" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)" title="Click to change status">Declined</span></td>
-                            <td class="d-none d-md-table-cell">
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
+                            <td><span class="status-badge badge badge-secondary" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">Declined</span></td>
+                            <td class="d-none d-sm-table-cell">
+                                {% if info.pvi is not none %}
+                                <span class="badge" style="font-size:10px; {% if info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if info.pvi > 0 %}R+{% else %}D+{% endif %}{{ info.pvi|abs }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-outline-secondary btn-sm qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button>
                             </td>
                         </tr>
                         {% endfor %}
+
                     {% elif category == 'incumbents_undecided' %}
                         {% for cand in info.cand2026 if cand.incumbent and cand.status|upper not in ['CONFIRMED', 'DECLINED'] %}
                         <tr>
-                            <td>{{ fdc }}</td>
+                            <td><strong>{{ fdc }}</strong><br><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-warning">
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-warning">
                                     {{ cand.name|title }} <i class="fas fa-star text-warning"></i>
                                 </a>
                             </td>
-                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)" title="Click to change status">{{ cand.status }}</span></td>
-                            <td class="d-none d-md-table-cell">
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
+                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
+                            <td class="d-none d-sm-table-cell">
+                                {% if info.pvi is not none %}
+                                <span class="badge" style="font-size:10px; {% if info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if info.pvi > 0 %}R+{% else %}D+{% endif %}{{ info.pvi|abs }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-outline-secondary btn-sm qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button>
                             </td>
                         </tr>
                         {% endfor %}
 
                     {% else %}
-                        {# Default: show all candidates #}
                         {% for cand in active_2026 %}
                         <tr>
-                            <td>{{ fdc }}</td>
+                            <td><strong>{{ fdc }}</strong><br><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link
                                     {% if cand.status|upper == 'CONFIRMED' %}text-success
                                     {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
                                     {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
                                     {% else %}text-secondary{% endif %}">
                                     {{ cand.name|title }}
                                 </a>
+                                {% if cand.incumbent %}<i class="fas fa-star text-warning" title="Incumbent"></i>{% endif %}
                             </td>
                             <td>
                                 <span class="status-badge badge
@@ -171,14 +249,17 @@
                                     {% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary
                                     {% else %}badge-secondary{% endif %}"
                                     data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026"
-                                    onclick="showStatusDropdown(this, event)" title="Click to change status">
+                                    onclick="showStatusDropdown(this, event)">
                                     {{ cand.status }}
                                 </span>
                             </td>
-                            <td class="d-none d-md-table-cell">
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
+                            <td class="d-none d-sm-table-cell">
+                                {% if info.pvi is not none %}
+                                <span class="badge" style="font-size:10px; {% if info.pvi_rating == 'SAFE GOP' %}background:#8B0000;color:#fff;{% elif info.pvi_rating == 'LIKELY GOP' %}background:#DC143C;color:#fff;{% elif info.pvi_rating == 'LEAN GOP' %}background:#FF6B6B;color:#fff;{% elif info.pvi_rating == 'SWING' %}background:#FFD700;color:#000;{% elif info.pvi_rating == 'LEAN DEM' %}background:#87CEEB;color:#000;{% elif info.pvi_rating == 'LIKELY DEM' %}background:#4169E1;color:#fff;{% elif info.pvi_rating == 'SAFE DEM' %}background:#00008B;color:#fff;{% else %}background:#6c757d;color:#fff;{% endif %}">{% if info.pvi > 0 %}R+{% else %}D+{% endif %}{{ info.pvi|abs }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-outline-secondary btn-sm qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -189,5 +270,41 @@
     </table>
 </div>
 
-<p class="text-muted mt-3">Showing results for: {{ category|replace('_', ' ')|title }}</p>
+{% block scripts %}
+{{ super() }}
+<script>
+function filterTable() {
+    var q = document.getElementById('filterSearch').value.toUpperCase();
+    var rows = document.querySelectorAll('#filterTable tbody tr');
+    rows.forEach(function(row) {
+        var text = row.textContent.toUpperCase();
+        row.style.display = text.indexOf(q) > -1 ? '' : 'none';
+    });
+}
+
+var sortDir = {};
+function sortTable(colIdx) {
+    var table = document.getElementById('filterTable');
+    var tbody = table.querySelector('tbody');
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    sortDir[colIdx] = !sortDir[colIdx];
+
+    rows.sort(function(a, b) {
+        var aCell = a.cells[colIdx];
+        var bCell = b.cells[colIdx];
+        var aVal = (aCell.dataset.sort || aCell.textContent).trim();
+        var bVal = (bCell.dataset.sort || bCell.textContent).trim();
+        var aNum = parseFloat(aVal);
+        var bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return sortDir[colIdx] ? aNum - bNum : bNum - aNum;
+        }
+        return sortDir[colIdx] ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+
+    rows.forEach(function(row) { tbody.appendChild(row); });
+}
+</script>
+{% endblock %}
+
 {% endblock %}
