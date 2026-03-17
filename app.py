@@ -1055,13 +1055,16 @@ def copy_candidate_to_2026(candidate_id):
         if cur.fetchone():
             flash("Candidate already has a 2026 entry.", "warning")
             return redirect(url_for("index"))
+        # Get 2024 district as default — always prefer it over the form value
+        # (form value comes from whichever district the modal was opened from,
+        # which may not be the candidate's actual district)
         cur.execute("""
             SELECT district_code, status FROM candidate_election_status
             WHERE candidate_id = %s AND election_year = 2024
         """, (candidate_id,))
         row = cur.fetchone()
-        default_district = row[0] if row else ''
-        district_code = request.form.get("district_code", default_district).strip()
+        form_district = request.form.get("district_code", "").strip()
+        district_code = row[0] if row else form_district
         status = request.form.get("status", "New Recruit").strip()
         comment = request.form.get("comment", "").strip()
         if not district_code:
