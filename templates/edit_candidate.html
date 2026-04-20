@@ -118,6 +118,12 @@
                     {% if comments %}<span class="badge badge-secondary ml-1">{{ comments|length }}</span>{% endif %}
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" id="history-tab" data-toggle="tab" href="#history" role="tab">
+                    <i class="fas fa-history"></i> <span class="d-none d-sm-inline">History</span>
+                    {% if history_activities %}<span class="badge badge-secondary ml-1">{{ history_activities|length }}</span>{% endif %}
+                </a>
+            </li>
         </ul>
 
         <div class="tab-content" id="candidateTabContent">
@@ -338,6 +344,58 @@
                     {% endfor %}
                 {% else %}
                     <p class="text-muted">No comments yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- TAB 5: History -->
+            <div class="tab-pane fade" id="history" role="tabpanel">
+                {% if history_activities %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width: 130px;">Action</th>
+                                <th>Description</th>
+                                <th style="width: 160px;">By</th>
+                                <th style="width: 170px;">When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in history_activities %}
+                            <tr>
+                                <td>
+                                    {% if a.action_type == 'candidate_added' %}
+                                        <span class="badge badge-success">Added</span>
+                                    {% elif a.action_type == 'candidate_updated' %}
+                                        <span class="badge badge-info">Updated</span>
+                                    {% elif a.action_type == 'candidate_copied' %}
+                                        <span class="badge badge-primary">Copied</span>
+                                    {% elif a.action_type == 'voter_matched' %}
+                                        <span class="badge badge-success">Matched</span>
+                                    {% elif a.action_type == 'voter_unmatched' %}
+                                        <span class="badge badge-warning">Unmatched</span>
+                                    {% elif a.action_type == 'status_changed' or a.action_type == 'status_updated' %}
+                                        <span class="badge badge-info">Status</span>
+                                    {% elif a.action_type == 'incumbent_toggled' %}
+                                        <span class="badge badge-secondary">Incumbent</span>
+                                    {% elif a.action_type == 'contact_updated' %}
+                                        <span class="badge badge-info">Contact</span>
+                                    {% elif a.action_type == 'comment_added' %}
+                                        <span class="badge badge-light">Comment</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">{{ a.action_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ a.description }}</small></td>
+                                <td><small>{{ a.user_email.split('@')[0] if a.user_email else 'system' }}</small></td>
+                                <td><small>{{ (a.created_at - timedelta(hours=5)).strftime('%m/%d/%Y %I:%M %p') }} ET</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="text-muted">No history recorded for this candidate yet.</p>
                 {% endif %}
             </div>
 

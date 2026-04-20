@@ -1014,6 +1014,20 @@ def edit_candidate(candidate_id, election_year):
                 {'type': s[0], 'year': s[1], 'value': float(s[2]) if s[2] is not None else None, 'letter': s[3]} for s in scores
             ]
 
+            # Get change history for this candidate (from activity_log)
+            cur.execute("""
+                SELECT action_type, description, user_email, created_at
+                FROM activity_log
+                WHERE candidate_id = %s
+                ORDER BY created_at DESC
+                LIMIT 100
+            """, (candidate_id,))
+            history_rows = cur.fetchall()
+            history_activities = [
+                {'action_type': h[0], 'description': h[1], 'user_email': h[2], 'created_at': h[3]}
+                for h in history_rows
+            ]
+
         except Exception as e:
             logger.error(f"Error loading candidate {candidate_id}: {e}")
             flash("Error loading candidate data.", "danger")
@@ -1039,7 +1053,9 @@ def edit_candidate(candidate_id, election_year):
                                 comments=comments,
                                 voter_info=voter_info,
                                 voter_id_exists=bool(voter_id),
-                                scores=candidate_scores)
+                                scores=candidate_scores,
+                                history_activities=history_activities,
+                                timedelta=timedelta)
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
 @candidate_restricted
