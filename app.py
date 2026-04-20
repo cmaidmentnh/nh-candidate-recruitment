@@ -630,6 +630,10 @@ def get_data_and_dashboard():
             if len(active_2026) == 0:
                 dashboard["empty_districts"]["total"] += 1
                 dashboard["empty_districts"]["districts"].append((county_name, fdc))
+            # Primary: more confirmed (same-party) candidates than seats
+            if confirmed_count > seat_count:
+                dashboard["primaries"]["total"] += 1
+                dashboard["primaries"]["districts"].append((county_name, fdc))
             pot_count = sum(1 for c in c2026 if c["status"].upper() in ("CONSIDERING", "POTENTIAL"))
             if pot_count > 0:
                 dashboard["potentials"]["total"] += pot_count
