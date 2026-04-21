@@ -2717,7 +2717,8 @@ def confirm_match(candidate_id):
             voter_cur.execute("""
                 SELECT nm_first, nm_last, cd_party, ad_str1, ad_city, ad_zip5
                 FROM statewidechecklist
-                WHERE UPPER(nm_first) = UPPER(%s) AND UPPER(nm_last) = UPPER(%s)
+                WHERE UPPER(nm_first) = UPPER(%s)
+                  AND UPPER(REGEXP_REPLACE(nm_last, '\\s+(JR|SR|II|III|IV|V)\\.?$', '', 'i')) = UPPER(%s)
                 LIMIT 1
             """, (cand_first, cand_last))
             checklist_data = voter_cur.fetchone()
@@ -2871,8 +2872,8 @@ def lookup_voter(candidate_id):
         voter_cur.execute("""
             SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
             FROM statewidechecklist
-            WHERE UPPER(nm_last) = UPPER(%s)
-            ORDER BY 
+            WHERE UPPER(REGEXP_REPLACE(nm_last, '\\s+(JR|SR|II|III|IV|V)\\.?$', '', 'i')) = UPPER(%s)
+            ORDER BY
                 CASE 
                     WHEN UPPER(nm_first) = ANY(%s) THEN 0
                     WHEN UPPER(SUBSTRING(nm_first, 1, 3)) = UPPER(SUBSTRING(%s, 1, 3)) THEN 1
