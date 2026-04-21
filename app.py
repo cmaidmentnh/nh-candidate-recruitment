@@ -919,7 +919,9 @@ def edit_candidate(candidate_id, election_year):
         try:
             cur.execute("""
                 SELECT c.first_name, c.last_name, c.party, c.incumbent,
-                       ces.status, ces.district_code, c.address, c.city, c.zip
+                       ces.status, ces.district_code, c.address, c.city, c.zip,
+                       c.email1, c.email2, c.phone1, c.phone2, c.signal,
+                       c.twitter_x, c.facebook, c.instagram
                 FROM candidates c
                 LEFT JOIN candidate_election_status ces
                   ON c.candidate_id=ces.candidate_id AND ces.election_year=%s
@@ -929,7 +931,10 @@ def edit_candidate(candidate_id, election_year):
             if not row:
                 flash("Candidate not found.", "warning")
                 return redirect(url_for("index"))
-            first_name, last_name, party, incumbent, status, district_code, address, city, zip_code = row
+            (first_name, last_name, party, incumbent, status, district_code,
+             address, city, zip_code,
+             email1, email2, phone1, phone2, signal_handle,
+             twitter_x, facebook, instagram) = row
             
             # Get voter info if voter_id exists
             voter_info = None
@@ -1053,6 +1058,14 @@ def edit_candidate(candidate_id, election_year):
                                 address=address,
                                 city=city,
                                 zip=zip_code,
+                                email1=email1,
+                                email2=email2,
+                                phone1=phone1,
+                                phone2=phone2,
+                                signal=signal_handle,
+                                twitter_x=twitter_x,
+                                facebook=facebook,
+                                instagram=instagram,
                                 districts=districts,
                                 comments=comments,
                                 voter_info=voter_info,
@@ -1060,6 +1073,44 @@ def edit_candidate(candidate_id, election_year):
                                 scores=candidate_scores,
                                 history_activities=history_activities,
                                 timedelta=timedelta)
+
+@app.route('/update_candidate_contact/<int:candidate_id>', methods=['POST'])
+@candidate_restricted
+@admin_required
+def update_candidate_contact(candidate_id):
+    email1 = (request.form.get("email1", "") or "").strip() or None
+    email2 = (request.form.get("email2", "") or "").strip() or None
+    phone1 = (request.form.get("phone1", "") or "").strip() or None
+    phone2 = (request.form.get("phone2", "") or "").strip() or None
+    signal_handle = (request.form.get("signal", "") or "").strip() or None
+    twitter_x = (request.form.get("twitter_x", "") or "").strip() or None
+    facebook = (request.form.get("facebook", "") or "").strip() or None
+    instagram = (request.form.get("instagram", "") or "").strip() or None
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE candidates
+            SET email1=%s, email2=%s, phone1=%s, phone2=%s, signal=%s,
+                twitter_x=%s, facebook=%s, instagram=%s,
+                modified_by=%s, modified_at=NOW()
+            WHERE candidate_id=%s;
+        """, (email1, email2, phone1, phone2, signal_handle,
+              twitter_x, facebook, instagram,
+              current_user.email if current_user.is_authenticated else 'system',
+              candidate_id))
+        conn.commit()
+        log_activity('contact_updated', f"Updated contact info", candidate_id)
+        flash("Contact info saved.", "success")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error updating contact for {candidate_id}: {e}")
+        flash("Error saving contact info.", "danger")
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    election_year = request.form.get('election_year', '2026')
+    return redirect(url_for('edit_candidate', candidate_id=candidate_id, election_year=int(election_year)) + '#contact')
 
 @app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
 @candidate_restricted

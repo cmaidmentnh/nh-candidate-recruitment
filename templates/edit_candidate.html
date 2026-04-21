@@ -101,6 +101,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" id="contact-tab" data-toggle="tab" href="#contact" role="tab">
+                    <i class="fas fa-address-card"></i> <span class="d-none d-sm-inline">Contact</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" id="voter-tab" data-toggle="tab" href="#voter" role="tab">
                     <i class="fas fa-search"></i> <span class="d-none d-sm-inline">Voter Match</span>
                 </a>
@@ -255,6 +260,78 @@
                     </form>
                 </div>
                 {% endif %}
+            </div>
+
+            <!-- TAB: Contact -->
+            <div class="tab-pane fade" id="contact" role="tabpanel">
+                <form method="POST" action="{{ url_for('update_candidate_contact', candidate_id=candidate_id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="election_year" value="{{ election_year }}"/>
+
+                    <h6 class="text-muted mt-2 mb-2"><i class="fas fa-envelope"></i> Email</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Primary Email:</label>
+                                <input type="email" name="email1" class="form-control" value="{{ email1 or '' }}" placeholder="name@example.com">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Secondary Email:</label>
+                                <input type="email" name="email2" class="form-control" value="{{ email2 or '' }}" placeholder="optional alt email">
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="text-muted mt-3 mb-2"><i class="fas fa-phone"></i> Phone</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Primary Phone:</label>
+                                <input type="tel" name="phone1" class="form-control" value="{{ phone1 or '' }}" placeholder="(603) 555-1234">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Secondary Phone:</label>
+                                <input type="tel" name="phone2" class="form-control" value="{{ phone2 or '' }}" placeholder="optional alt phone">
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="text-muted mt-3 mb-2"><i class="fas fa-share-alt"></i> Social / Messaging</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Signal:</label>
+                                <input type="text" name="signal" class="form-control" value="{{ signal or '' }}" placeholder="signal username or phone">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Twitter / X:</label>
+                                <input type="text" name="twitter_x" class="form-control" value="{{ twitter_x or '' }}" placeholder="@handle or URL">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Facebook:</label>
+                                <input type="text" name="facebook" class="form-control" value="{{ facebook or '' }}" placeholder="handle or URL">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Instagram:</label>
+                                <input type="text" name="instagram" class="form-control" value="{{ instagram or '' }}" placeholder="@handle or URL">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-2"><i class="fas fa-save"></i> Save Contact Info</button>
+                </form>
             </div>
 
             <!-- TAB 2: Voter Match -->
