@@ -33,7 +33,8 @@ def has_feature_access(feature_slug):
         return False
 
     # Superadmin always has access
-    if current_user.email.lower() == SUPER_ADMIN_EMAIL.lower():
+    email = getattr(current_user, 'email', None)
+    if email and email.lower() == SUPER_ADMIN_EMAIL.lower():
         return True
 
     # Check if user is an admin with access
@@ -59,7 +60,8 @@ def get_user_private_features():
         return []
 
     # Superadmin has access to all
-    if current_user.email.lower() == SUPER_ADMIN_EMAIL.lower():
+    email = getattr(current_user, 'email', None)
+    if email and email.lower() == SUPER_ADMIN_EMAIL.lower():
         return ['secret_primaries', 'speaker_votes']
 
     if not hasattr(current_user, 'user_id'):

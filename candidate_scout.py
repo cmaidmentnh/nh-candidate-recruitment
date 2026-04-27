@@ -50,7 +50,8 @@ def scout_admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('login'))
-        if current_user.email.lower() != SUPER_ADMIN_EMAIL.lower():
+        email = getattr(current_user, 'email', None)
+        if not email or email.lower() != SUPER_ADMIN_EMAIL.lower():
             flash('Access denied.', 'danger')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
