@@ -122,6 +122,17 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+# Google OAuth (Authlib) — set GOOGLE_OAUTH_CLIENT_ID + GOOGLE_OAUTH_CLIENT_SECRET in .env
+from authlib.integrations.flask_client import OAuth
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_OAUTH_CLIENT_ID', ''),
+    client_secret=os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', ''),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'},
+)
+
 # Security helper: validate redirect URLs to prevent open redirect attacks
 def is_safe_url(target):
     """Check if URL is safe for redirect (same host or relative)"""
@@ -1331,6 +1342,110 @@ def logout():
     session.pop('pending_2fa_user', None)
     flash("Logged out.", "success")
     return redirect(url_for('login'))
+
+
+# ============== GOOGLE OAUTH ==============
+
+@app.route('/auth/google')
+def google_oauth_start():
+    """Initiate Google OAuth flow.
+    Optional ?next= param preserves a post-login redirect.
+    Optional ?type=admin sends the user to the admin landing page on success."""
+    if not os.environ.get('GOOGLE_OAUTH_CLIENT_ID'):
+        flash("Google sign-in is not configured. Use email and password.", "warning")
+        return redirect(url_for('login'))
+    session['oauth_next'] = request.args.get('next') or ''
+    session['oauth_intent'] = request.args.get('type', 'candidate')
+    redirect_uri = url_for('google_oauth_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/auth/google/callback')
+@csrf.exempt
+def google_oauth_callback():
+    """Handle Google's callback — match the verified email to a candidates
+    or users row and log the user in. Email-based linking only; we do not
+    auto-create new accounts here."""
+    try:
+        token = google.authorize_access_token()
+    except Exception as e:
+        logger.warning(f"Google OAuth callback failed: {e}")
+        flash("Google sign-in failed. Try again or use email and password.", "danger")
+        return redirect(url_for('login'))
+
+    userinfo = token.get('userinfo') or {}
+    email = (userinfo.get('email') or '').strip().lower()
+    if not email or not userinfo.get('email_verified'):
+        flash("Google did not return a verified email address.", "danger")
+        return redirect(url_for('login'))
+
+    intent = session.pop('oauth_intent', 'candidate')
+    next_url = session.pop('oauth_next', '') or None
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Try admins first when the user came from the admin login page
+        if intent == 'admin':
+            cur.execute("""
+                SELECT user_id, username, email, password_hash, role
+                FROM users WHERE LOWER(email) = %s LIMIT 1
+            """, (email,))
+            row = cur.fetchone()
+            if row:
+                user = AdminUser(*row)
+                login_user(user)
+                cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (row[0],))
+                conn.commit()
+                session.permanent = True
+                flash("Signed in with Google.", "success")
+                return redirect(get_safe_redirect(next_url, 'admin_dashboard'))
+
+        # Otherwise, match candidates by email1, email2, or email
+        cur.execute("""
+            SELECT candidate_id, email, password_hash, first_name, last_name,
+                   COALESCE(password_changed, FALSE), photo_url
+            FROM candidates
+            WHERE LOWER(email)  = %s
+               OR LOWER(email1) = %s
+               OR LOWER(email2) = %s
+            LIMIT 1
+        """, (email, email, email))
+        crow = cur.fetchone()
+        if crow:
+            candidate_id, c_email, password_hash, first_name, last_name, password_changed, photo_url = crow
+            user = CandidateUser(candidate_id, c_email or email, password_hash,
+                                 first_name, last_name, password_changed, photo_url)
+            login_user(user)
+            cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s", (candidate_id,))
+            conn.commit()
+            session.permanent = True
+            flash("Signed in with Google.", "success")
+            return redirect(get_safe_redirect(next_url, 'index'))
+
+        # Fall back to admins if intent was candidate but no candidate match
+        cur.execute("""
+            SELECT user_id, username, email, password_hash, role
+            FROM users WHERE LOWER(email) = %s LIMIT 1
+        """, (email,))
+        row = cur.fetchone()
+        if row:
+            user = AdminUser(*row)
+            login_user(user)
+            cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (row[0],))
+            conn.commit()
+            session.permanent = True
+            flash("Signed in with Google.", "success")
+            return redirect(get_safe_redirect(next_url, 'admin_dashboard'))
+
+        flash(f"No account on file for {email}. Ask an admin to add you, then try again.", "warning")
+        return redirect(url_for('login'))
+    except Exception as e:
+        logger.exception(f"Google OAuth lookup failed for {email}: {e}")
+        flash("Sign-in failed. Try again or use email and password.", "danger")
+        return redirect(url_for('login'))
+    finally:
+        cur.close()
+        release_db_connection(conn)
 
 
 # ============== PASSWORD RESET ==============
