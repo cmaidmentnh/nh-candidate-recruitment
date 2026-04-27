@@ -2051,7 +2051,6 @@ def profile():
         twitter_x = request.form.get('twitter_x', '').strip()
         facebook = request.form.get('facebook', '').strip()
         instagram = request.form.get('instagram', '').strip()
-        other = request.form.get('other', '').strip()
         signal = request.form.get('signal', '').strip()
         email1 = request.form.get('email1', '').strip()
         email2 = request.form.get('email2', '').strip()
@@ -2070,26 +2069,29 @@ def profile():
                     if uploaded_url:
                         photo_url = uploaded_url
             
+            # Note: candidates.other is intentionally NOT touched here. It holds
+            # legislator metadata (JSON) imported from external sources for incumbents
+            # and is not candidate-editable.
             if password and password.strip():
                 new_password_hash = generate_password_hash(password.strip())
                 cur.execute("""
                     UPDATE candidates
                     SET first_name = %s, last_name = %s, email = %s, address = %s, city = %s, zip = %s,
                         phone1 = %s, phone2 = %s, twitter_x = %s, facebook = %s, instagram = %s,
-                        other = %s, signal = %s, email1 = %s, email2 = %s, password_hash = %s, photo_url = %s
+                        signal = %s, email1 = %s, email2 = %s, password_hash = %s, photo_url = %s
                     WHERE candidate_id = %s
                 """, (first_name, last_name, email, address, city, zip_code, phone1, phone2, twitter_x,
-                      facebook, instagram, other, signal, email1, email2, new_password_hash, photo_url, 
+                      facebook, instagram, signal, email1, email2, new_password_hash, photo_url,
                       current_user.candidate_id))
             else:
                 cur.execute("""
                     UPDATE candidates
                     SET first_name = %s, last_name = %s, email = %s, address = %s, city = %s, zip = %s,
                         phone1 = %s, phone2 = %s, twitter_x = %s, facebook = %s, instagram = %s,
-                        other = %s, signal = %s, email1 = %s, email2 = %s, photo_url = %s
+                        signal = %s, email1 = %s, email2 = %s, photo_url = %s
                     WHERE candidate_id = %s
                 """, (first_name, last_name, email, address, city, zip_code, phone1, phone2, twitter_x,
-                      facebook, instagram, other, signal, email1, email2, photo_url, current_user.candidate_id))
+                      facebook, instagram, signal, email1, email2, photo_url, current_user.candidate_id))
             conn.commit()
             flash("Profile updated.", "success")
         except Exception as e:

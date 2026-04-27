@@ -147,32 +147,32 @@
           <div class="row">
             <div class="col-md-6 form-group">
               <label>First Name</label>
-              <input type="text" name="first_name" class="form-control" value="{{ user.first_name|default('') }}" required>
+              <input type="text" name="first_name" class="form-control" value="{{ user.first_name| default('', true) }}" required>
             </div>
             <div class="col-md-6 form-group">
               <label>Last Name</label>
-              <input type="text" name="last_name" class="form-control" value="{{ user.last_name|default('') }}" required>
+              <input type="text" name="last_name" class="form-control" value="{{ user.last_name| default('', true) }}" required>
             </div>
           </div>
 
           <div class="form-group">
             <label>Primary Email</label>
-            <input type="email" name="email" class="form-control" value="{{ user.email|default('') }}" required>
+            <input type="email" name="email" class="form-control" value="{{ user.email| default('', true) }}" required>
             <div class="field-help">This is the email you use to log in. Add a secondary public email under the Contact tab.</div>
           </div>
 
           <div class="row">
             <div class="col-md-7 form-group">
               <label>Address</label>
-              <input type="text" name="address" class="form-control" value="{{ user.address|default('') }}" placeholder="123 Main St">
+              <input type="text" name="address" class="form-control" value="{{ user.address| default('', true) }}" placeholder="123 Main St">
             </div>
             <div class="col-md-3 form-group">
               <label>City / Town</label>
-              <input type="text" name="city" class="form-control" value="{{ user.city|default('') }}">
+              <input type="text" name="city" class="form-control" value="{{ user.city| default('', true) }}">
             </div>
             <div class="col-md-2 form-group">
               <label>ZIP</label>
-              <input type="text" name="zip" class="form-control" value="{{ user.zip|default('') }}">
+              <input type="text" name="zip" class="form-control" value="{{ user.zip| default('', true) }}">
             </div>
           </div>
           <div class="field-help">Your address is the source of truth for voter file matching. If anything changes, update it here.</div>
@@ -198,52 +198,48 @@
           <div class="row">
             <div class="col-md-6 form-group">
               <label>Primary Phone</label>
-              <input type="tel" name="phone1" class="form-control" value="{{ user.phone1|default('') }}" placeholder="(603) 555-1234">
+              <input type="tel" name="phone1" class="form-control" value="{{ user.phone1| default('', true) }}" placeholder="(603) 555-1234">
             </div>
             <div class="col-md-6 form-group">
               <label>Secondary Phone</label>
-              <input type="tel" name="phone2" class="form-control" value="{{ user.phone2|default('') }}">
+              <input type="tel" name="phone2" class="form-control" value="{{ user.phone2| default('', true) }}">
             </div>
           </div>
 
           <div class="row">
             <div class="col-md-6 form-group">
               <label>Public Campaign Email</label>
-              <input type="email" name="email1" class="form-control" value="{{ user.email1|default('') }}">
+              <input type="email" name="email1" class="form-control" value="{{ user.email1| default('', true) }}">
               <div class="field-help">Shown on your candidate website if different from your login email.</div>
             </div>
             <div class="col-md-6 form-group">
               <label>Alternate Email</label>
-              <input type="email" name="email2" class="form-control" value="{{ user.email2|default('') }}">
+              <input type="email" name="email2" class="form-control" value="{{ user.email2| default('', true) }}">
             </div>
           </div>
 
           <div class="row">
             <div class="col-md-6 form-group">
               <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Facebook</label>
-              <input type="text" name="facebook" class="form-control" value="{{ user.facebook|default('') }}" placeholder="handle or full URL">
+              <input type="text" name="facebook" class="form-control" value="{{ user.facebook| default('', true) }}" placeholder="handle or full URL">
             </div>
             <div class="col-md-6 form-group">
               <label><i class="fab fa-x-twitter"></i> X / Twitter</label>
-              <input type="text" name="twitter_x" class="form-control" value="{{ user.twitter_x|default('') }}" placeholder="@handle">
+              <input type="text" name="twitter_x" class="form-control" value="{{ user.twitter_x| default('', true) }}" placeholder="@handle">
             </div>
           </div>
 
           <div class="row">
             <div class="col-md-6 form-group">
               <label><i class="fab fa-instagram" style="color:#e4405f;"></i> Instagram</label>
-              <input type="text" name="instagram" class="form-control" value="{{ user.instagram|default('') }}" placeholder="@handle">
+              <input type="text" name="instagram" class="form-control" value="{{ user.instagram| default('', true) }}" placeholder="@handle">
             </div>
             <div class="col-md-6 form-group">
               <label>Signal</label>
-              <input type="text" name="signal" class="form-control" value="{{ user.signal|default('') }}" placeholder="username or phone">
+              <input type="text" name="signal" class="form-control" value="{{ user.signal| default('', true) }}" placeholder="username or phone">
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Notes for the Committee</label>
-            <textarea name="other" rows="2" class="form-control" placeholder="Anything else we should know about reaching you...">{{ user.other|default('') }}</textarea>
-          </div>
         </div>
 
         <!-- PHOTO TAB -->
