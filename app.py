@@ -393,7 +393,10 @@ def is_super_admin():
     """Check if current user is super admin."""
     if not current_user.is_authenticated:
         return False
-    return current_user.email.lower() == SUPER_ADMIN_EMAIL.lower()
+    email = getattr(current_user, 'email', None)
+    if not email:
+        return False
+    return email.lower() == SUPER_ADMIN_EMAIL.lower()
 
 def admin_required(f):
     @wraps(f)
