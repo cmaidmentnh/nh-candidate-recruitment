@@ -1392,23 +1392,26 @@ def google_oauth_callback():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Try admins first when the user came from the admin login page
-        if intent == 'admin':
-            cur.execute("""
-                SELECT user_id, username, email, password_hash, role
-                FROM users WHERE LOWER(email) = %s LIMIT 1
-            """, (email,))
-            row = cur.fetchone()
-            if row:
-                user = AdminUser(*row)
-                login_user(user)
-                cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (row[0],))
-                conn.commit()
-                session.permanent = True
-                flash("Signed in with Google.", "success")
-                return redirect(get_safe_redirect(next_url, 'admin_dashboard'))
+        # Always check the admins table first. If the email is in both
+        # `users` (admin) and `candidates`, the admin role wins — it's the
+        # more privileged identity. The `intent` param only controls where
+        # we land after login, not which row we match.
+        cur.execute("""
+            SELECT user_id, username, email, password_hash, role
+            FROM users WHERE LOWER(email) = %s LIMIT 1
+        """, (email,))
+        row = cur.fetchone()
+        if row:
+            user = AdminUser(*row)
+            login_user(user)
+            cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (row[0],))
+            conn.commit()
+            session.permanent = True
+            flash("Signed in with Google.", "success")
+            default = 'admin_dashboard' if intent == 'admin' else 'index'
+            return redirect(get_safe_redirect(next_url, default))
 
-        # Otherwise, match candidates by email1, email2, or email
+        # Otherwise, match candidates by email, email1, or email2
         cur.execute("""
             SELECT candidate_id, email, password_hash, first_name, last_name,
                    COALESCE(password_changed, FALSE), photo_url
@@ -1429,21 +1432,6 @@ def google_oauth_callback():
             session.permanent = True
             flash("Signed in with Google.", "success")
             return redirect(get_safe_redirect(next_url, 'index'))
-
-        # Fall back to admins if intent was candidate but no candidate match
-        cur.execute("""
-            SELECT user_id, username, email, password_hash, role
-            FROM users WHERE LOWER(email) = %s LIMIT 1
-        """, (email,))
-        row = cur.fetchone()
-        if row:
-            user = AdminUser(*row)
-            login_user(user)
-            cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (row[0],))
-            conn.commit()
-            session.permanent = True
-            flash("Signed in with Google.", "success")
-            return redirect(get_safe_redirect(next_url, 'admin_dashboard'))
 
         flash(f"No account on file for {email}. Ask an admin to add you, then try again.", "warning")
         return redirect(url_for('login'))
