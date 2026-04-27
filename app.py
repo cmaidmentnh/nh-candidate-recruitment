@@ -707,7 +707,7 @@ def get_data_and_dashboard():
 # ============== ROUTES ==============
 
 @app.route('/')
-@login_required
+@candidate_restricted
 def index():
     search_query = request.args.get('search', '').strip()
     county_filter = request.args.get('county', '').strip()
