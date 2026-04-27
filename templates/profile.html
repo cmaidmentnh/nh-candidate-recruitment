@@ -1,95 +1,328 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-4">
-    <h1>Profile</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}  <!-- Close the if block -->
-    {% endwith %}  <!-- Close the with block -->
-    <form method="POST" enctype="multipart/form-data">
+<style>
+  .profile-hero {
+    background: linear-gradient(135deg, #1a2744 0%, #0f1d35 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: 0 8px 30px rgba(26,39,68,0.18);
+  }
+  .profile-hero h1 {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    margin: 0;
+    font-size: 32px;
+    line-height: 1.15;
+  }
+  .profile-hero .meta {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+  }
+  .profile-hero .meta .pill {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .profile-hero .pill.party-r { background: #c41e3a; }
+  .profile-hero .pill.incumbent { background: #c99a3b; color: #1a1a1a; }
+  .avatar {
+    width: 96px; height: 96px; border-radius: 50%;
+    background: #fff; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #1a2744; font-weight: 700; font-size: 36px; font-family: Georgia, serif;
+    border: 3px solid rgba(255,255,255,0.4);
+    overflow: hidden;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .progress-strip { height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; margin-top: 14px; }
+  .progress-strip-fill { height: 100%; background: #c99a3b; transition: width 0.4s; }
+  .profile-card {
+    background: #fff; border: 1px solid #e8e6e1; border-radius: 12px;
+    padding: 0; margin-top: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+  .nav-tabs.profile-tabs {
+    border-bottom: 1px solid #e8e6e1; padding: 0 20px;
+  }
+  .nav-tabs.profile-tabs .nav-link {
+    color: #6c757d; font-weight: 600; border: none; padding: 14px 18px;
+    border-bottom: 3px solid transparent;
+  }
+  .nav-tabs.profile-tabs .nav-link.active {
+    color: #1a2744; background: transparent; border-bottom-color: #c41e3a;
+  }
+  .tab-body { padding: 24px 28px; }
+  .field-help { font-size: 12px; color: #888; margin-top: 4px; }
+  .section-label {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #c41e3a; font-weight: 700; margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: Georgia, serif; font-size: 20px; font-weight: 700;
+    color: #1a2744; margin-bottom: 18px;
+  }
+  .save-row {
+    border-top: 1px solid #f0eee9; padding: 18px 28px;
+    background: #fbfaf6; border-radius: 0 0 12px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .form-control { padding: 10px 12px; }
+  label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #6c757d; }
+  .photo-preview { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 2px solid #e8e6e1; }
+  .read-only-card {
+    background: #fbfaf6; border: 1px solid #e8e6e1; border-radius: 8px;
+    padding: 14px 18px; font-size: 14px;
+  }
+</style>
+
+<div class="container" style="margin-top: 24px; max-width: 880px;">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- HERO -->
+  <div class="profile-hero">
+    <div style="display:flex; gap:22px; align-items:center;">
+      <div class="avatar">
+        {% if user.photo_url %}
+          <img src="{{ user.photo_url }}" alt="{{ user.first_name }}">
+        {% else %}
+          {{ (user.first_name or '?')[0] }}{{ (user.last_name or '')[0] }}
+        {% endif %}
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; opacity:0.7; margin-bottom:4px;">
+          {{ election_year }} Candidate
+        </div>
+        <h1>{{ user.first_name }} {{ user.last_name }}</h1>
+        <div class="meta">
+          {% if district_code %}<span class="pill">{{ district_code }}</span>{% endif %}
+          {% if party %}<span class="pill {% if party|upper == 'R' %}party-r{% endif %}">{{ 'Republican' if party|upper == 'R' else party }}</span>{% endif %}
+          {% if status %}<span class="pill">{{ status }}</span>{% endif %}
+          {% if incumbent %}<span class="pill incumbent">Incumbent</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:18px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+      <span style="letter-spacing:1px; text-transform:uppercase; opacity:0.85;">Profile completeness</span>
+      <span style="font-weight:700;">{{ completeness }}%</span>
+    </div>
+    <div class="progress-strip"><div class="progress-strip-fill" style="width: {{ completeness }}%;"></div></div>
+  </div>
+
+  <!-- TABBED CARD -->
+  <form method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="first_name">First Name</label>
-                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name|default('') }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="last_name">Last Name</label>
-                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name|default('') }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" value="{{ user.email|default('') }}" required>
-                </div>
-                <div class="form-group">
-                    <label for="address">Address</label>
-                    <input type="text" class="form-control" id="address" name="address" value="{{ user.address|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="city">City</label>
-                    <input type="text" class="form-control" id="city" name="city" value="{{ user.city|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="zip">Zip Code</label>
-                    <input type="text" class="form-control" id="zip" name="zip" value="{{ user.zip|default('') }}">
-                </div>
+    <div class="profile-card">
+
+      <ul class="nav nav-tabs profile-tabs" role="tablist">
+        <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tab-info">
+          <i class="fas fa-user"></i> Profile
+        </a></li>
+        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-contact">
+          <i class="fas fa-address-card"></i> Contact
+        </a></li>
+        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-photo">
+          <i class="fas fa-camera"></i> Headshot
+        </a></li>
+        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-security">
+          <i class="fas fa-lock"></i> Password
+        </a></li>
+      </ul>
+
+      <div class="tab-content">
+
+        <!-- PROFILE TAB -->
+        <div class="tab-pane fade show active tab-body" id="tab-info">
+          <div class="section-label">Your Identity</div>
+          <div class="section-title">Name, address, and election cycle</div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>First Name</label>
+              <input type="text" name="first_name" class="form-control" value="{{ user.first_name|default('') }}" required>
             </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label for="phone1">Phone 1</label>
-                    <input type="text" class="form-control" id="phone1" name="phone1" value="{{ user.phone1|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="phone2">Phone 2</label>
-                    <input type="text" class="form-control" id="phone2" name="phone2" value="{{ user.phone2|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="twitter_x">Twitter/X</label>
-                    <input type="text" class="form-control" id="twitter_x" name="twitter_x" value="{{ user.twitter_x|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="facebook">Facebook</label>
-                    <input type="text" class="form-control" id="facebook" name="facebook" value="{{ user.facebook|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="instagram">Instagram</label>
-                    <input type="text" class="form-control" id="instagram" name="instagram" value="{{ user.instagram|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="other">Other</label>
-                    <input type="text" class="form-control" id="other" name="other" value="{{ user.other|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="signal">Signal</label>
-                    <input type="text" class="form-control" id="signal" name="signal" value="{{ user.signal|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="email1">Email 1</label>
-                    <input type="text" class="form-control" id="email1" name="email1" value="{{ user.email1|default('') }}">
-                </div>
-                <div class="form-group">
-                    <label for="email2">Email 2</label>
-                    <input type="text" class="form-control" id="email2" name="email2" value="{{ user.email2|default('') }}">
-                </div>
+            <div class="col-md-6 form-group">
+              <label>Last Name</label>
+              <input type="text" name="last_name" class="form-control" value="{{ user.last_name|default('') }}" required>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label>Primary Email</label>
+            <input type="email" name="email" class="form-control" value="{{ user.email|default('') }}" required>
+            <div class="field-help">This is the email you use to log in. Add a secondary public email under the Contact tab.</div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-7 form-group">
+              <label>Address</label>
+              <input type="text" name="address" class="form-control" value="{{ user.address|default('') }}" placeholder="123 Main St">
+            </div>
+            <div class="col-md-3 form-group">
+              <label>City / Town</label>
+              <input type="text" name="city" class="form-control" value="{{ user.city|default('') }}">
+            </div>
+            <div class="col-md-2 form-group">
+              <label>ZIP</label>
+              <input type="text" name="zip" class="form-control" value="{{ user.zip|default('') }}">
+            </div>
+          </div>
+          <div class="field-help">Your address is the source of truth for voter file matching. If anything changes, update it here.</div>
+
+          {% if district_code or status %}
+          <div style="margin-top: 22px;">
+            <div class="section-label">Election Cycle</div>
+            <div class="read-only-card">
+              <strong>{{ election_year }}:</strong>
+              {% if district_code %}{{ district_code }}{% endif %}
+              {% if status %}<span style="color:#6c757d;"> · {{ status }}</span>{% endif %}
+              <div class="field-help" style="margin-top:6px;">District and status are managed by the Committee. To change them, contact your regional staff.</div>
+            </div>
+          </div>
+          {% endif %}
         </div>
-        <div class="form-group">
-            <label for="password">New Password (leave blank to keep current)</label>
-            <input type="password" class="form-control" id="password" name="password">
+
+        <!-- CONTACT TAB -->
+        <div class="tab-pane fade tab-body" id="tab-contact">
+          <div class="section-label">How Voters and the Committee Reach You</div>
+          <div class="section-title">Phones, emails, social</div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Primary Phone</label>
+              <input type="tel" name="phone1" class="form-control" value="{{ user.phone1|default('') }}" placeholder="(603) 555-1234">
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Secondary Phone</label>
+              <input type="tel" name="phone2" class="form-control" value="{{ user.phone2|default('') }}">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Public Campaign Email</label>
+              <input type="email" name="email1" class="form-control" value="{{ user.email1|default('') }}">
+              <div class="field-help">Shown on your candidate website if different from your login email.</div>
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Alternate Email</label>
+              <input type="email" name="email2" class="form-control" value="{{ user.email2|default('') }}">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label><i class="fab fa-facebook" style="color:#1877f2;"></i> Facebook</label>
+              <input type="text" name="facebook" class="form-control" value="{{ user.facebook|default('') }}" placeholder="handle or full URL">
+            </div>
+            <div class="col-md-6 form-group">
+              <label><i class="fab fa-x-twitter"></i> X / Twitter</label>
+              <input type="text" name="twitter_x" class="form-control" value="{{ user.twitter_x|default('') }}" placeholder="@handle">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label><i class="fab fa-instagram" style="color:#e4405f;"></i> Instagram</label>
+              <input type="text" name="instagram" class="form-control" value="{{ user.instagram|default('') }}" placeholder="@handle">
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Signal</label>
+              <input type="text" name="signal" class="form-control" value="{{ user.signal|default('') }}" placeholder="username or phone">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notes for the Committee</label>
+            <textarea name="other" rows="2" class="form-control" placeholder="Anything else we should know about reaching you...">{{ user.other|default('') }}</textarea>
+          </div>
         </div>
-        <div class="form-group">
-            <label for="photo">Profile Photo</label>
-            <input type="file" class="form-control-file" id="photo" name="photo">
-            {% if user.photo_url %}
-                <p>Current Photo: <a href="{{ user.photo_url }}" target="_blank">{{ user.photo_url }}</a></p>
-            {% endif %}
+
+        <!-- PHOTO TAB -->
+        <div class="tab-pane fade tab-body" id="tab-photo">
+          <div class="section-label">Your Headshot</div>
+          <div class="section-title">One photo, used everywhere</div>
+          <p style="color:#6c757d; font-size:14px;">
+            Your headshot appears on your candidate website, on Committee materials,
+            in voter outreach, and in our internal directory. Upload a clear,
+            professional photo — face centered, plain background, looking at the camera.
+          </p>
+
+          <div style="display:flex; gap:24px; align-items:flex-start; margin-top:18px; flex-wrap: wrap;">
+            <div>
+              {% if user.photo_url %}
+                <img src="{{ user.photo_url }}" class="photo-preview" alt="Current headshot">
+                <div class="field-help" style="margin-top:8px; text-align:center;">Current photo</div>
+              {% else %}
+                <div class="photo-preview" style="display:flex; align-items:center; justify-content:center; background:#fbfaf6; color:#c0bdb6;">
+                  <i class="fas fa-user fa-2x"></i>
+                </div>
+                <div class="field-help" style="margin-top:8px; text-align:center;">No photo yet</div>
+              {% endif %}
+            </div>
+            <div style="flex:1; min-width: 240px;">
+              <label>Upload new headshot</label>
+              <input type="file" name="photo" accept="image/*" class="form-control-file">
+              <div class="field-help">JPG or PNG. Square crop preferred. Will sync to your candidate website automatically.</div>
+            </div>
+          </div>
         </div>
-        <button type="submit" class="btn btn-primary">Save</button>
-    </form>
+
+        <!-- SECURITY TAB -->
+        <div class="tab-pane fade tab-body" id="tab-security">
+          <div class="section-label">Account Security</div>
+          <div class="section-title">Change your password</div>
+          <p style="color:#6c757d; font-size:14px;">
+            If you signed in with Google, you don't need a password to log in — but
+            setting one as a backup is a good idea.
+          </p>
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>New Password</label>
+              <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current">
+              <div class="field-help">At least 8 characters. Mix letters, numbers, and a symbol.</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <a href="{{ url_for('setup_2fa') }}" class="btn btn-outline-secondary btn-sm">
+              <i class="fas fa-shield-alt"></i> Set up two-factor authentication
+            </a>
+          </div>
+        </div>
+
+      </div><!-- /tab-content -->
+
+      <div class="save-row">
+        <span style="color:#6c757d; font-size:13px;">
+          <i class="fas fa-info-circle"></i>
+          Saving updates everything on this page.
+        </span>
+        <button type="submit" class="btn btn-primary" style="padding:10px 24px; font-weight:600;">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
+
+    </div>
+  </form>
+
 </div>
+
+<script>
+  // Re-open the right tab if a hash was on the URL (after a save redirect, etc.)
+  if (window.location.hash) {
+    var tab = document.querySelector('.profile-tabs a[href="' + window.location.hash + '"]');
+    if (tab) $(tab).tab('show');
+  }
+  $('.profile-tabs a').on('shown.bs.tab', function (e) {
+    history.replaceState(null, null, e.target.hash);
+  });
+</script>
 {% endblock %}

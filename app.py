@@ -450,12 +450,49 @@ def candidate_restricted(f):
     @login_required
     def decorated_function(*args, **kwargs):
         if hasattr(current_user, 'is_candidate') and current_user.is_candidate:
-            allowed_routes = {'profile', 'logout', 'change_password'}
+            allowed_routes = CANDIDATE_ALLOWED_ENDPOINTS
             if request.endpoint not in allowed_routes:
                 flash("You are only authorized to access your profile.", "danger")
                 return redirect(url_for('profile'))
         return f(*args, **kwargs)
     return decorated_function
+
+# Endpoints a logged-in candidate is allowed to reach. Anything else is bounced
+# to /profile by the global before_request hook below.
+CANDIDATE_ALLOWED_ENDPOINTS = {
+    'profile',
+    'change_password',
+    'logout',
+    'login',
+    'setup_2fa',
+    'verify_2fa',
+    'disable_2fa',
+    'forgot_password',
+    'reset_password',
+    'google_oauth_start',
+    'google_oauth_callback',
+    'stop_impersonating',
+    'static',
+}
+
+@app.before_request
+def restrict_candidate_endpoints():
+    """Global guard: candidates can only reach whitelisted endpoints. Admins
+    and unauthenticated users are unaffected."""
+    if not current_user.is_authenticated:
+        return None
+    if not getattr(current_user, 'is_candidate', False):
+        return None
+    if request.endpoint is None:
+        return None
+    # Skip the static blueprint and any sub-paths under /static
+    if request.endpoint == 'static' or (request.endpoint or '').endswith('.static'):
+        return None
+    if request.endpoint in CANDIDATE_ALLOWED_ENDPOINTS:
+        return None
+    # For POSTs, redirect with a flash. For GETs, same.
+    flash("You are only authorized to access your profile.", "danger")
+    return redirect(url_for('profile'))
 
 # Helper Functions
 def natural_district_sort_key(district_str):
@@ -2063,7 +2100,41 @@ def profile():
             cur.close()
             release_db_connection(conn)
         return redirect(url_for('profile'))
-    return render_template("profile.html", user=current_user)
+    # Pull election status (district, party, status) for the current cycle so the
+    # candidate's profile header has real context.
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT ces.district_code, c.party, ces.status, ces.election_year, c.incumbent
+            FROM candidates c
+            LEFT JOIN candidate_election_status ces
+                   ON ces.candidate_id = c.candidate_id AND ces.election_year = 2026
+            WHERE c.candidate_id = %s
+        """, (current_user.candidate_id,))
+        row = cur.fetchone()
+        district_code, party, status, election_year, incumbent = (row if row else (None,)*5)
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    # Compute completeness across the candidate-editable surface
+    fields = [
+        current_user.first_name, current_user.last_name, current_user.email,
+        current_user.address, current_user.city, current_user.zip,
+        current_user.phone1, current_user.email1, current_user.photo_url,
+    ]
+    filled = sum(1 for f in fields if f and str(f).strip())
+    completeness = int(round(100 * filled / len(fields)))
+
+    return render_template("profile.html",
+                           user=current_user,
+                           district_code=district_code,
+                           party=party,
+                           status=status,
+                           election_year=election_year or 2026,
+                           incumbent=incumbent,
+                           completeness=completeness)
 
 @app.route('/change_password', methods=['GET', 'POST'])
 @login_required
