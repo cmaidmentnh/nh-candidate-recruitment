@@ -424,6 +424,14 @@ def inject_super_admin():
     """Make is_super_admin available in all templates."""
     return {'is_super_admin': is_super_admin()}
 
+@app.context_processor
+def inject_impersonation():
+    """Expose impersonation state to all templates."""
+    return {
+        'is_impersonating': bool(session.get('impersonator_admin_id')),
+        'impersonator_admin_email': session.get('impersonator_admin_email'),
+    }
+
 # Register private features blueprint
 from private_features import private_bp, init_private_features
 init_private_features(get_db_connection, release_db_connection, is_super_admin, SUPER_ADMIN_EMAIL)
@@ -1446,6 +1454,98 @@ def google_oauth_callback():
     finally:
         cur.close()
         release_db_connection(conn)
+
+
+# ============== IMPERSONATION (super-admin only) ==============
+
+@app.route('/impersonate/<int:candidate_id>', methods=['POST'])
+@login_required
+def start_impersonating(candidate_id):
+    """Super-admin clicks 'View as candidate' on the edit page. We stash the
+    admin's user_id + email in the session, then login_user as the candidate.
+    A banner reminds them they're impersonating; /stop_impersonating restores
+    the admin session."""
+    if not is_super_admin():
+        flash("Super admin access required.", "danger")
+        return redirect(url_for('index'))
+
+    # Capture the admin identity BEFORE logout (current_user clears on logout)
+    admin_user_id = getattr(current_user, 'user_id', None)
+    admin_email = getattr(current_user, 'email', None)
+    if not admin_user_id:
+        flash("Impersonation requires an admin session.", "danger")
+        return redirect(url_for('index'))
+
+    # Load the target candidate
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url,
+                   address, city, zip, phone1, phone2, twitter_x, facebook, instagram, other, signal, email1, email2
+            FROM candidates
+            WHERE candidate_id = %s
+        """, (candidate_id,))
+        row = cur.fetchone()
+        if not row:
+            flash("Candidate not found.", "warning")
+            return redirect(url_for('index'))
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    target = CandidateUser(*row)
+
+    # Switch sessions
+    session['impersonator_admin_id'] = admin_user_id
+    session['impersonator_admin_email'] = admin_email
+    logout_user()
+    login_user(target)
+    log_activity('impersonation_started',
+                 f"{admin_email} began impersonating {target.first_name} {target.last_name}",
+                 candidate_id)
+    flash(f"Impersonating {target.first_name} {target.last_name}. Click 'Stop impersonating' to return.", "warning")
+    return redirect(url_for('profile'))
+
+@app.route('/stop_impersonating', methods=['POST', 'GET'])
+def stop_impersonating():
+    """Restore the original admin session."""
+    admin_user_id = session.pop('impersonator_admin_id', None)
+    admin_email = session.pop('impersonator_admin_email', None)
+    if not admin_user_id:
+        flash("You're not impersonating anyone.", "warning")
+        return redirect(url_for('index'))
+
+    # Identify who was impersonated for the audit log before we logout
+    impersonated_id = getattr(current_user, 'candidate_id', None)
+    impersonated_name = f"{getattr(current_user, 'first_name', '')} {getattr(current_user, 'last_name', '')}".strip()
+
+    # Reload the admin
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT user_id, username, email, password_hash, role
+            FROM users WHERE user_id = %s
+        """, (admin_user_id,))
+        row = cur.fetchone()
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    if not row:
+        # Admin row vanished mid-impersonation — fail safely
+        logout_user()
+        flash("Original admin account no longer exists. Please log in again.", "warning")
+        return redirect(url_for('admin_login'))
+
+    logout_user()
+    login_user(AdminUser(*row))
+    log_activity('impersonation_stopped',
+                 f"{admin_email} stopped impersonating {impersonated_name}".strip(),
+                 impersonated_id)
+    flash("Impersonation ended. You're back as admin.", "success")
+    return redirect(url_for('admin_dashboard'))
 
 
 # ============== PASSWORD RESET ==============

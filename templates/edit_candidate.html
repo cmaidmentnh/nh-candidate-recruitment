@@ -57,6 +57,14 @@
             {% if incumbent %}
             <span class="badge badge-warning ml-2" style="font-size: 0.7em;">Incumbent</span>
             {% endif %}
+            {% if is_super_admin %}
+            <form method="POST" action="{{ url_for('start_impersonating', candidate_id=candidate_id) }}" class="ml-auto" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-outline-warning btn-sm" title="See the recruitment app as this candidate sees it">
+                    <i class="fas fa-user-secret"></i> View as candidate
+                </button>
+            </form>
+            {% endif %}
         </div>
 
         <!-- District Section (always visible) -->
