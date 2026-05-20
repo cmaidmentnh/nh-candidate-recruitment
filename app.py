@@ -655,6 +655,7 @@ def get_data_and_dashboard():
         "confirmed": {"total": 0, "districts": []},
         "empty_seats": {"total": 0, "districts": []},
         "empty_districts": {"total": 0, "districts": []},
+        "districts_with_vacancies": {"total": 0, "districts": []},
         "potentials": {"total": 0, "districts": []},
         "incumbents_running": {"total": 0, "districts": []},
         "incumbents_not_running": {"total": 0, "districts": []},
@@ -689,6 +690,9 @@ def get_data_and_dashboard():
             if len(active_2026) == 0:
                 dashboard["empty_districts"]["total"] += 1
                 dashboard["empty_districts"]["districts"].append((county_name, fdc))
+            if len(active_2026) < seat_count:
+                dashboard["districts_with_vacancies"]["total"] += 1
+                dashboard["districts_with_vacancies"]["districts"].append((county_name, fdc))
             # Primary: more confirmed (same-party) candidates than seats
             if confirmed_count > seat_count:
                 dashboard["primaries"]["total"] += 1

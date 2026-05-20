@@ -47,10 +47,10 @@
             <small>{{ confirm_pct }}% of {{ dashboard.TOTAL_SEATS }}</small>
         </div>
     </a>
-    <a href="{{ url_for('filter_view', category='empty_districts') }}" class="dash-card dash-card-size dash-card-link">
-        <div class="card-header" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">Empty Districts</div>
+    <a href="{{ url_for('filter_view', category='districts_with_vacancies') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">Districts with Vacancies</div>
         <div class="card-body">
-            <h4>{{ dashboard.empty_districts.total }}</h4>
+            <h4>{{ dashboard.districts_with_vacancies.total }}</h4>
             <small>of {{ dashboard.TOTAL_DISTRICTS }}</small>
         </div>
     </a>
@@ -95,6 +95,13 @@
                 <div class="card-header">Empty Seats</div>
                 <div class="card-body">
                     <h4>{{ dashboard.empty_seats.total }}</h4>
+                </div>
+            </a>
+            <a href="{{ url_for('filter_view', category='empty_districts') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Empty Districts</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.empty_districts.total }}</h4>
+                    <small>no candidates</small>
                 </div>
             </a>
             <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="dash-card dash-card-size dash-card-link">
