@@ -1317,7 +1317,7 @@ def generate_token():
 @limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
-        email = request.form.get('email').strip()
+        email = request.form.get('email').strip().lower()
         password = request.form.get('password').strip()
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1327,8 +1327,8 @@ def login():
             SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url,
                    COALESCE(totp_enabled, FALSE) as totp_enabled
             FROM candidates
-            WHERE email = %s
-        """, (email,))
+            WHERE LOWER(email) = %s OR LOWER(email1) = %s
+        """, (email, email))
         user_row = cur.fetchone()
 
         if user_row:
@@ -1360,7 +1360,7 @@ def login():
             SELECT user_id, username, email, password_hash, role,
                    COALESCE(totp_enabled, FALSE) as totp_enabled
             FROM users
-            WHERE email = %s
+            WHERE LOWER(email) = %s
         """, (email,))
         admin_row = cur.fetchone()
         cur.close()
