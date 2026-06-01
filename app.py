@@ -1317,8 +1317,8 @@ def generate_token():
 @limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
-        email = request.form.get('email').strip().lower()
-        password = request.form.get('password').strip()
+        email = (request.form.get('email') or '').strip().lower()
+        password = (request.form.get('password') or '').strip()
         conn = get_db_connection()
         cur = conn.cursor()
 
@@ -1332,7 +1332,7 @@ def login():
         user_row = cur.fetchone()
 
         if user_row:
-            candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url, totp_enabled = user_row
+            candidate_id, cand_email, password_hash, first_name, last_name, password_changed, photo_url, totp_enabled = user_row
             if password_hash and check_password_hash(password_hash, password):
                 # Check if 2FA is enabled
                 if totp_enabled:
@@ -1341,7 +1341,7 @@ def login():
                     release_db_connection(conn)
                     return redirect(url_for('verify_2fa'))
 
-                user = CandidateUser(candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url)
+                user = CandidateUser(candidate_id, cand_email or email, password_hash, first_name, last_name, password_changed, photo_url)
                 login_user(user)
                 cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s", (candidate_id,))
                 conn.commit()
