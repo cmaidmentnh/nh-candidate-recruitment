@@ -13,11 +13,17 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="form-group">
             <label style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d;">Email</label>
-            <input type="email" name="email" class="form-control" placeholder="you@example.com" required autofocus style="padding: 12px 14px;">
+            <input type="email" name="email" class="form-control" placeholder="you@example.com"
+                   required autofocus
+                   autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false"
+                   inputmode="email"
+                   style="padding: 12px 14px;">
           </div>
           <div class="form-group">
             <label style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d;">Password</label>
-            <input type="password" name="password" class="form-control" placeholder="Your password" required style="padding: 12px 14px;">
+            <input type="password" name="password" class="form-control" placeholder="Your password"
+                   required autocomplete="current-password"
+                   style="padding: 12px 14px;">
           </div>
           <button type="submit" class="btn btn-primary btn-block" style="padding: 12px; font-weight: 600; font-size: 15px;">
             Sign In
