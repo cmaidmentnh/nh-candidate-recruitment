@@ -3650,6 +3650,251 @@ def sync_from_voter(candidate_id):
         release_db_connection(conn)
 
 
+# ============== FILINGS TRACKER ==============
+# Tracks who actually files for office (both parties). Separate from the
+# Republican recruitment pipeline — a filing is the official act of walking
+# into the Secretary of State / town clerk and putting your name on the ballot.
+
+@app.route('/filings')
+@candidate_restricted
+@login_required
+@admin_required
+def filings_list():
+    year = request.args.get('year', 2026, type=int)
+    party = (request.args.get('party') or '').upper().strip()
+    district = (request.args.get('district') or '').strip()
+    county = (request.args.get('county') or '').strip()
+    q = (request.args.get('q') or '').strip()
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        sql = """
+            SELECT f.filing_id, f.election_year, f.first_name, f.last_name, f.party,
+                   f.district_code, f.town, f.filed_at, f.filing_method, f.notes,
+                   f.candidate_id, f.created_by, f.created_at,
+                   d.county_name, d.seat_count, d.pvi, d.pvi_rating
+            FROM filings f
+            LEFT JOIN LATERAL (
+                SELECT county_name, MAX(seat_count) AS seat_count, MAX(pvi) AS pvi,
+                       MAX(pvi_rating) AS pvi_rating
+                FROM districts WHERE full_district_code = f.district_code
+                GROUP BY county_name
+            ) d ON TRUE
+            WHERE f.election_year = %s
+        """
+        params = [year]
+        if party in ('R', 'D', 'L', 'I', 'U'):
+            sql += " AND f.party = %s"; params.append(party)
+        if district:
+            sql += " AND f.district_code = %s"; params.append(district)
+        if county:
+            sql += " AND d.county_name ILIKE %s"; params.append(county)
+        if q:
+            sql += (" AND (LOWER(f.first_name||' '||f.last_name) LIKE %s "
+                    "OR LOWER(f.town) LIKE %s OR LOWER(f.district_code) LIKE %s)")
+            qp = f"%{q.lower()}%"
+            params.extend([qp, qp, qp])
+        sql += " ORDER BY f.district_code, f.party, f.last_name, f.first_name"
+        cur.execute(sql, params)
+        filings = []
+        for r in cur.fetchall():
+            filings.append({
+                'filing_id': r[0], 'year': r[1], 'first': r[2], 'last': r[3], 'party': r[4],
+                'district': r[5], 'town': r[6], 'filed_at': r[7], 'method': r[8],
+                'notes': r[9], 'candidate_id': r[10], 'created_by': r[11], 'created_at': r[12],
+                'county': r[13], 'seats': r[14], 'pvi': r[15], 'pvi_rating': r[16],
+            })
+
+        # Summary stats
+        cur.execute("""
+            SELECT party, COUNT(*) FROM filings WHERE election_year=%s GROUP BY party
+        """, (year,))
+        party_counts = dict(cur.fetchall())
+
+        cur.execute("""
+            SELECT COUNT(DISTINCT district_code) FROM filings WHERE election_year=%s
+        """, (year,))
+        districts_with_filings = cur.fetchone()[0] or 0
+
+        cur.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT district_code FROM filings WHERE election_year=%s
+                GROUP BY district_code HAVING COUNT(DISTINCT party) > 1
+            ) t
+        """, (year,))
+        contested = cur.fetchone()[0] or 0
+
+        # All districts for filter dropdown
+        cur.execute("""
+            SELECT DISTINCT full_district_code, county_name FROM districts
+            ORDER BY county_name, full_district_code
+        """)
+        all_districts = cur.fetchall()
+        counties = sorted({r[1] for r in all_districts})
+
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+    stats = {
+        'total': sum(party_counts.values()),
+        'by_party': party_counts,
+        'districts_with_filings': districts_with_filings,
+        'contested': contested,
+    }
+    return render_template('filings_list.html',
+                           filings=filings, stats=stats, year=year,
+                           filter_party=party, filter_district=district,
+                           filter_county=county, filter_q=q,
+                           all_districts=all_districts, counties=counties)
+
+
+def _link_to_existing_candidate(cur, year, first, last, party, district):
+    """If a candidate of the same party/name already exists for this year,
+    return their candidate_id so we can link the filing to them."""
+    cur.execute("""
+        SELECT c.candidate_id
+        FROM candidates c
+        JOIN candidate_election_status ces ON ces.candidate_id = c.candidate_id
+        WHERE ces.election_year = %s
+          AND c.party = %s
+          AND LOWER(c.first_name) = LOWER(%s)
+          AND LOWER(c.last_name) = LOWER(%s)
+          AND (ces.district_code = %s OR %s = '')
+        LIMIT 1
+    """, (year, party, first, last, district, district))
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+@app.route('/filings/add', methods=['GET', 'POST'])
+@candidate_restricted
+@login_required
+@admin_required
+def filings_add():
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        if request.method == 'POST':
+            year = int(request.form.get('election_year') or 2026)
+            first = (request.form.get('first_name') or '').strip()
+            last = (request.form.get('last_name') or '').strip()
+            party = (request.form.get('party') or '').upper().strip()
+            district = (request.form.get('district_code') or '').strip()
+            town = (request.form.get('town') or '').strip() or None
+            filed_at = request.form.get('filed_at') or None
+            method = (request.form.get('filing_method') or '').strip() or None
+            notes = (request.form.get('notes') or '').strip() or None
+            office = (request.form.get('office') or 'State Representative').strip()
+            if not (first and last and party and district):
+                flash('First name, last name, party, and district are required.', 'warning')
+                return redirect(url_for('filings_add'))
+            candidate_id = _link_to_existing_candidate(cur, year, first, last, party, district)
+            cur.execute("""
+                INSERT INTO filings
+                    (election_year, office, district_code, first_name, last_name,
+                     party, town, candidate_id, filed_at, filing_method, notes,
+                     source, created_by, modified_by)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'manual',%s,%s)
+                RETURNING filing_id
+            """, (year, office, district, first, last, party, town,
+                  candidate_id, filed_at, method, notes,
+                  current_user.email, current_user.email))
+            fid = cur.fetchone()[0]
+            conn.commit()
+            cur.execute("""
+                INSERT INTO activity_log (action_type, description, candidate_id, user_email)
+                VALUES ('filing_recorded',
+                        %s, %s, %s)
+            """, (f'Filing recorded: {first} {last} ({party}) in {district}',
+                  candidate_id, current_user.email))
+            conn.commit()
+            flash(f'Filing recorded: {first} {last} ({party}) — {district}.', 'success')
+            return redirect(url_for('filings_list', year=year))
+
+        cur.execute("""
+            SELECT DISTINCT full_district_code, county_name FROM districts
+            ORDER BY county_name, full_district_code
+        """)
+        all_districts = cur.fetchall()
+        return render_template('filings_form.html', filing=None, all_districts=all_districts)
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/filings/<int:filing_id>/edit', methods=['GET', 'POST'])
+@candidate_restricted
+@login_required
+@admin_required
+def filings_edit(filing_id):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        if request.method == 'POST':
+            year = int(request.form.get('election_year') or 2026)
+            first = (request.form.get('first_name') or '').strip()
+            last = (request.form.get('last_name') or '').strip()
+            party = (request.form.get('party') or '').upper().strip()
+            district = (request.form.get('district_code') or '').strip()
+            town = (request.form.get('town') or '').strip() or None
+            filed_at = request.form.get('filed_at') or None
+            method = (request.form.get('filing_method') or '').strip() or None
+            notes = (request.form.get('notes') or '').strip() or None
+            office = (request.form.get('office') or 'State Representative').strip()
+            candidate_id = _link_to_existing_candidate(cur, year, first, last, party, district)
+            cur.execute("""
+                UPDATE filings SET election_year=%s, office=%s, district_code=%s,
+                    first_name=%s, last_name=%s, party=%s, town=%s,
+                    candidate_id=%s, filed_at=%s, filing_method=%s, notes=%s,
+                    modified_by=%s, modified_at=NOW()
+                WHERE filing_id=%s
+            """, (year, office, district, first, last, party, town,
+                  candidate_id, filed_at, method, notes,
+                  current_user.email, filing_id))
+            conn.commit()
+            flash('Filing updated.', 'success')
+            return redirect(url_for('filings_list', year=year))
+
+        cur.execute("SELECT * FROM filings WHERE filing_id=%s", (filing_id,))
+        row = cur.fetchone()
+        if not row:
+            flash('Filing not found.', 'danger')
+            return redirect(url_for('filings_list'))
+        cols = [d[0] for d in cur.description]
+        filing = dict(zip(cols, row))
+        cur.execute("""
+            SELECT DISTINCT full_district_code, county_name FROM districts
+            ORDER BY county_name, full_district_code
+        """)
+        all_districts = cur.fetchall()
+        return render_template('filings_form.html', filing=filing, all_districts=all_districts)
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/filings/<int:filing_id>/delete', methods=['POST'])
+@candidate_restricted
+@login_required
+@admin_required
+def filings_delete(filing_id):
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT election_year, first_name, last_name FROM filings WHERE filing_id=%s",
+                    (filing_id,))
+        row = cur.fetchone()
+        if not row:
+            flash('Filing not found.', 'danger')
+            return redirect(url_for('filings_list'))
+        year = row[0]
+        cur.execute("DELETE FROM filings WHERE filing_id=%s", (filing_id,))
+        conn.commit()
+        flash(f'Deleted filing for {row[1]} {row[2]}.', 'success')
+        return redirect(url_for('filings_list', year=year))
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
 # Health check endpoint
 @app.route('/health')
 @csrf.exempt

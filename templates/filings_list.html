@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="mb-0" style="font-weight: 700;">Filings Tracker</h1>
+    <small class="text-muted">Who has officially filed for office — all parties.</small>
+  </div>
+  <a href="{{ url_for('filings_add') }}" class="btn btn-primary">
+    <i class="fas fa-plus"></i> Record Filing
+  </a>
+</div>
+
+<!-- Summary stats -->
+<div class="dashboard-row mb-3">
+  <div class="dash-card dash-card-size dash-card-static">
+    <div class="card-header" style="background: linear-gradient(135deg, #1a2744 0%, #2c3e50 100%);">Total Filed</div>
+    <div class="card-body"><h4>{{ stats.total }}</h4><small>{{ year }} cycle</small></div>
+  </div>
+  <div class="dash-card dash-card-size dash-card-static">
+    <div class="card-header" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">Republican</div>
+    <div class="card-body"><h4>{{ stats.by_party.get('R', 0) }}</h4></div>
+  </div>
+  <div class="dash-card dash-card-size dash-card-static">
+    <div class="card-header" style="background: linear-gradient(135deg, #1f3a93 0%, #3498db 100%);">Democrat</div>
+    <div class="card-body"><h4>{{ stats.by_party.get('D', 0) }}</h4></div>
+  </div>
+  <div class="dash-card dash-card-size dash-card-static">
+    <div class="card-header" style="background: linear-gradient(135deg, #555 0%, #777 100%);">Other</div>
+    <div class="card-body"><h4>{{ (stats.total - stats.by_party.get('R',0) - stats.by_party.get('D',0)) }}</h4>
+      <small>L / I / U / other</small></div>
+  </div>
+  <div class="dash-card dash-card-size dash-card-static">
+    <div class="card-header" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">Districts Active</div>
+    <div class="card-body"><h4>{{ stats.districts_with_filings }}</h4><small>with at least 1 filing</small></div>
+  </div>
+  <div class="dash-card dash-card-size dash-card-static">
+    <div class="card-header" style="background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);">Contested</div>
+    <div class="card-body"><h4>{{ stats.contested }}</h4><small>R + D both filed</small></div>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="form-inline mb-3" style="gap: 8px;">
+  <input type="number" name="year" value="{{ year }}" class="form-control form-control-sm" style="width: 90px;" placeholder="Year">
+  <select name="party" class="form-control form-control-sm" style="width: 110px;">
+    <option value="">All parties</option>
+    <option value="R" {% if filter_party == 'R' %}selected{% endif %}>Republican</option>
+    <option value="D" {% if filter_party == 'D' %}selected{% endif %}>Democrat</option>
+    <option value="L" {% if filter_party == 'L' %}selected{% endif %}>Libertarian</option>
+    <option value="I" {% if filter_party == 'I' %}selected{% endif %}>Independent</option>
+    <option value="U" {% if filter_party == 'U' %}selected{% endif %}>Undeclared</option>
+  </select>
+  <select name="county" class="form-control form-control-sm" style="width: 140px;">
+    <option value="">All counties</option>
+    {% for c in counties %}
+    <option value="{{ c }}" {% if filter_county == c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+  <select name="district" class="form-control form-control-sm" style="width: 170px;">
+    <option value="">All districts</option>
+    {% for fdc, cty in all_districts %}
+    <option value="{{ fdc }}" {% if filter_district == fdc %}selected{% endif %}>{{ fdc }} ({{ cty }})</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="q" value="{{ filter_q }}" class="form-control form-control-sm" style="width: 200px;" placeholder="Search name / town">
+  <button type="submit" class="btn btn-sm btn-secondary">Filter</button>
+  <a href="{{ url_for('filings_list', year=year) }}" class="btn btn-sm btn-link">Clear</a>
+</form>
+
+<!-- Filings table -->
+<div class="table-responsive">
+  <table class="table table-sm">
+    <thead style="background: #1a2744;">
+      <tr style="color: #fff;">
+        <th>District</th>
+        <th>Party</th>
+        <th>Name</th>
+        <th>Town</th>
+        <th>Filed</th>
+        <th>Method</th>
+        <th>Notes</th>
+        <th>Source</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in filings %}
+      <tr>
+        <td>
+          <strong>{{ f.district or '—' }}</strong>
+          {% if f.candidate_id %}
+          <a href="{{ url_for('edit_candidate', candidate_id=f.candidate_id, election_year=f.year) }}" title="Linked candidate record" class="text-success ml-1">
+            <i class="fas fa-link" style="font-size:11px;"></i>
+          </a>
+          {% endif %}
+        </td>
+        <td>
+          {% set bg = {'R':'#c41e3a','D':'#1f3a93','L':'#f1c40f','I':'#555','U':'#999'}.get(f.party, '#888') %}
+          <span class="badge" style="background: {{ bg }}; color: #fff; padding: 4px 8px; font-size: 11px;">{{ f.party }}</span>
+        </td>
+        <td><strong>{{ f.first }} {{ f.last }}</strong></td>
+        <td>{{ f.town or '' }}</td>
+        <td>{{ f.filed_at.strftime('%b %-d, %Y') if f.filed_at else '—' }}</td>
+        <td><small class="text-muted">{{ f.method or '' }}</small></td>
+        <td><small>{{ f.notes or '' }}</small></td>
+        <td><small class="text-muted">{{ f.created_by or '' }}</small></td>
+        <td class="text-right">
+          <a href="{{ url_for('filings_edit', filing_id=f.filing_id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="fas fa-pen"></i></a>
+          <form method="post" action="{{ url_for('filings_delete', filing_id=f.filing_id) }}" style="display:inline;" onsubmit="return confirm('Delete this filing record?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center text-muted py-4">No filings recorded yet for {{ year }}. <a href="{{ url_for('filings_add') }}">Add the first one →</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

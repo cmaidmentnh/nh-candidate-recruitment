@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center mb-3">
+  <a href="{{ url_for('filings_list') }}" class="btn btn-sm btn-outline-secondary mr-3">
+    <i class="fas fa-arrow-left"></i>
+  </a>
+  <h1 class="mb-0">{{ 'Edit Filing' if filing else 'Record Filing' }}</h1>
+</div>
+
+<form method="post" class="card p-4" style="max-width: 720px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+  <div class="form-row">
+    <div class="form-group col-md-4">
+      <label>Election Year</label>
+      <input type="number" name="election_year" class="form-control" value="{{ filing.election_year if filing else 2026 }}" required>
+    </div>
+    <div class="form-group col-md-8">
+      <label>Office</label>
+      <input type="text" name="office" class="form-control" value="{{ filing.office if filing else 'State Representative' }}">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group col-md-6">
+      <label>First Name *</label>
+      <input type="text" name="first_name" class="form-control" value="{{ filing.first_name if filing else '' }}" required>
+    </div>
+    <div class="form-group col-md-6">
+      <label>Last Name *</label>
+      <input type="text" name="last_name" class="form-control" value="{{ filing.last_name if filing else '' }}" required>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group col-md-4">
+      <label>Party *</label>
+      <select name="party" class="form-control" required>
+        {% set p = filing.party if filing else '' %}
+        <option value="R" {% if p == 'R' %}selected{% endif %}>Republican</option>
+        <option value="D" {% if p == 'D' %}selected{% endif %}>Democrat</option>
+        <option value="L" {% if p == 'L' %}selected{% endif %}>Libertarian</option>
+        <option value="I" {% if p == 'I' %}selected{% endif %}>Independent</option>
+        <option value="U" {% if p == 'U' %}selected{% endif %}>Undeclared</option>
+      </select>
+    </div>
+    <div class="form-group col-md-8">
+      <label>District *</label>
+      <select name="district_code" class="form-control" required>
+        <option value="">— select district —</option>
+        {% for fdc, cty in all_districts %}
+        <option value="{{ fdc }}" {% if filing and filing.district_code == fdc %}selected{% endif %}>{{ fdc }} ({{ cty }})</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group col-md-6">
+      <label>Town (if known)</label>
+      <input type="text" name="town" class="form-control" value="{{ filing.town if filing else '' }}">
+    </div>
+    <div class="form-group col-md-3">
+      <label>Filed Date</label>
+      <input type="date" name="filed_at" class="form-control" value="{{ filing.filed_at if filing else '' }}">
+    </div>
+    <div class="form-group col-md-3">
+      <label>Method</label>
+      <select name="filing_method" class="form-control">
+        {% set m = filing.filing_method if filing else '' %}
+        <option value="">—</option>
+        <option value="in_person" {% if m == 'in_person' %}selected{% endif %}>In person</option>
+        <option value="mail" {% if m == 'mail' %}selected{% endif %}>By mail</option>
+        <option value="online" {% if m == 'online' %}selected{% endif %}>Online</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Notes</label>
+    <textarea name="notes" class="form-control" rows="3" placeholder="Optional — any context (e.g. how confirmed, source, follow-up needed).">{{ filing.notes if filing else '' }}</textarea>
+  </div>
+
+  <div class="d-flex justify-content-between mt-3">
+    <a href="{{ url_for('filings_list') }}" class="btn btn-link">Cancel</a>
+    <button type="submit" class="btn btn-primary">{{ 'Save Changes' if filing else 'Record Filing' }}</button>
+  </div>
+</form>
+
+{% endblock %}
