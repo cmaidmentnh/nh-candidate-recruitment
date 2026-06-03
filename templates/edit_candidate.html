@@ -57,6 +57,14 @@
             {% if incumbent %}
             <span class="badge badge-warning ml-2" style="font-size: 0.7em;">Incumbent</span>
             {% endif %}
+            {% if filing %}
+            <a href="{{ url_for('filings_edit', filing_id=filing.filing_id) }}"
+               class="badge ml-2"
+               style="background:#1b8a2d;color:#fff;font-size:0.7em;letter-spacing:0.6px;padding:4px 8px;"
+               title="Filed {{ filing.filed_at.strftime('%b %-d, %Y') if filing.filed_at else 'on ' + filing.created_at.strftime('%b %-d, %Y') }} in {{ filing.district_code }} — click to view filing">
+               <i class="fas fa-check"></i> FILED
+            </a>
+            {% endif %}
             {% if is_super_admin %}
             <form method="POST" action="{{ url_for('start_impersonating', candidate_id=candidate_id) }}" class="ml-auto" style="margin:0;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>

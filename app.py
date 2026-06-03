@@ -557,12 +557,20 @@ def get_data_and_dashboard():
             WHERE ces.election_year = 2024 AND c.party = 'R';
         """)
         cands_2024_rows = cur.fetchall()
+
+        # Which candidates have filed for 2026? Surface as a FILED badge.
+        cur.execute("""
+            SELECT DISTINCT candidate_id FROM filings
+            WHERE election_year = 2026 AND candidate_id IS NOT NULL
+        """)
+        filed_2026_cids = {row[0] for row in cur.fetchall()}
     except Exception as e:
         logger.error(e)
         flash("Error fetching data from database.", "danger")
         district_rows = []
         cands_2026_rows = []
         cands_2024_rows = []
+        filed_2026_cids = set()
     finally:
         cur.close()
         release_db_connection(conn)
@@ -573,7 +581,8 @@ def get_data_and_dashboard():
             "name": f"{first} {last}",
             "status": status,
             "incumbent": inc,
-            "candidate_id": cid
+            "candidate_id": cid,
+            "filed": cid in filed_2026_cids,
         })
     cand2024_by_dist = defaultdict(list)
     for dist_code, status, first, last, inc, cid in cands_2024_rows:
@@ -1100,6 +1109,19 @@ def edit_candidate(candidate_id, election_year):
                 for h in history_rows
             ]
 
+            cur.execute("""
+                SELECT filing_id, district_code, filed_at, created_at, notes
+                FROM filings
+                WHERE candidate_id = %s AND election_year = %s
+                ORDER BY filed_at DESC NULLS LAST, created_at DESC
+                LIMIT 1
+            """, (candidate_id, election_year))
+            frow = cur.fetchone()
+            filing = None
+            if frow:
+                filing = {'filing_id': frow[0], 'district_code': frow[1],
+                          'filed_at': frow[2], 'created_at': frow[3], 'notes': frow[4]}
+
         except Exception as e:
             logger.error(f"Error loading candidate {candidate_id}: {e}")
             flash("Error loading candidate data.", "danger")
@@ -1135,6 +1157,7 @@ def edit_candidate(candidate_id, election_year):
                                 voter_id_exists=bool(voter_id),
                                 scores=candidate_scores,
                                 history_activities=history_activities,
+                                filing=filing,
                                 timedelta=timedelta)
 
 @app.route('/update_candidate_contact/<int:candidate_id>', methods=['POST'])

@@ -267,6 +267,12 @@
                                                         {% else %}text-secondary{% endif %}">
                                                         {{ cand.name|title }}
                                                     </a>
+                                                    {% if cand.filed %}
+                                                    <a href="{{ url_for('filings_list', year=2026, q=cand.name) }}"
+                                                       class="badge ml-1"
+                                                       style="background:#1b8a2d;color:#fff;font-size:9px;letter-spacing:0.6px;padding:2px 6px;"
+                                                       title="Officially filed for office">FILED</a>
+                                                    {% endif %}
                                                     <span class="status-badge badge badge-sm
                                                         {% if cand.status|upper == 'CONFIRMED' %}badge-success
                                                         {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}badge-warning
