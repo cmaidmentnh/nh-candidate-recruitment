@@ -4094,10 +4094,21 @@ def filings_add():
                   candidate_id, current_user.email))
             conn.commit()
             flash(f'Filing recorded: {first} {last} ({party}) — {district}.', 'success')
+            if request.form.get('action') == 'save_and_add':
+                # Pre-fill the next form with the same district + year so the
+                # user can rip through a list of filings for the same race.
+                return redirect(url_for('filings_add',
+                                        prefill_year=year,
+                                        prefill_district=district))
             return redirect(url_for('filings_list', year=year))
 
         all_districts = _fetch_districts_for_picker(cur)
-        return render_template('filings_form.html', filing=None, all_districts=all_districts)
+        prefill = {
+            'election_year': request.args.get('prefill_year'),
+            'district_code': request.args.get('prefill_district'),
+        }
+        return render_template('filings_form.html', filing=None,
+                               all_districts=all_districts, prefill=prefill)
     finally:
         cur.close()
         release_db_connection(conn)
@@ -4144,7 +4155,7 @@ def filings_edit(filing_id):
         cols = [d[0] for d in cur.description]
         filing = dict(zip(cols, row))
         all_districts = _fetch_districts_for_picker(cur)
-        return render_template('filings_form.html', filing=filing, all_districts=all_districts)
+        return render_template('filings_form.html', filing=filing, all_districts=all_districts, prefill={})
     finally:
         cur.close()
         release_db_connection(conn)
