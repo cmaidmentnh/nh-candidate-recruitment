@@ -3895,32 +3895,34 @@ def _fetch_districts_for_picker(cur):
 
 def _link_to_existing_candidate(cur, year, first, last, party, district):
     """Find the unique candidate this filing belongs to (one candidates row
-    per person, across years). Tiebreaks: name+party match in this district
-    > name+party match anywhere > name-only match if unique.
+    per person, across years). Match on the first WORD of the first name
+    (so 'Ralph' matches 'Ralph G.') and an exact last name + party.
 
     Does NOT create a new row — see _find_or_create_candidate for that."""
-    # 1. Same name + party + this district in ANY year
+    first_tok = (first or '').strip().split(' ', 1)[0] if (first or '').strip() else first
+
+    # 1. First-token + last + party + this district in ANY year (most precise)
     cur.execute("""
         SELECT DISTINCT c.candidate_id
         FROM candidates c
         JOIN candidate_election_status ces ON ces.candidate_id = c.candidate_id
         WHERE c.party = %s
-          AND LOWER(c.first_name) = LOWER(%s)
+          AND LOWER(SPLIT_PART(TRIM(c.first_name), ' ', 1)) = LOWER(%s)
           AND LOWER(c.last_name) = LOWER(%s)
           AND ces.district_code = %s
-    """, (party, first, last, district))
+    """, (party, first_tok, last, district))
     rows = cur.fetchall()
     if len(rows) == 1: return rows[0][0]
 
-    # 2. Same name + party — pick the candidate with the lowest cid (oldest record)
+    # 2. First-token + last + party anywhere, oldest cid wins
     cur.execute("""
         SELECT candidate_id FROM candidates
         WHERE party = %s
-          AND LOWER(first_name) = LOWER(%s)
+          AND LOWER(SPLIT_PART(TRIM(first_name), ' ', 1)) = LOWER(%s)
           AND LOWER(last_name) = LOWER(%s)
         ORDER BY candidate_id
         LIMIT 1
-    """, (party, first, last))
+    """, (party, first_tok, last))
     row = cur.fetchone()
     return row[0] if row else None
 
