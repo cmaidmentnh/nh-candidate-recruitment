@@ -71,8 +71,8 @@
 <!-- Ballot view -->
 {% if not district_groups %}
 <div class="alert alert-light text-center py-5" style="border: 2px dashed #d1d5db;">
-  <p class="mb-2">No filings recorded yet{% if filter_party or filter_district or filter_county or filter_q %} for that filter{% endif %}.</p>
-  <a href="{{ url_for('filings_add') }}" class="btn btn-primary">Record the first one</a>
+  <p class="mb-2">No districts match that filter.</p>
+  <a href="{{ url_for('filings_list', year=year) }}" class="btn btn-link">Clear filters</a>
 </div>
 {% endif %}
 
@@ -121,29 +121,48 @@
 </div>
 {%- endmacro %}
 
+{% set total_districts = district_groups|length %}
+<div class="d-flex align-items-center justify-content-between mb-2">
+  <p class="text-muted small mb-0">{{ total_districts }} district{% if total_districts != 1 %}s{% endif %} shown.</p>
+  <div>
+    <button type="button" class="btn btn-sm btn-link" id="expandAllBtn"><i class="fas fa-chevron-down"></i> Expand all</button>
+    <button type="button" class="btn btn-sm btn-link" id="collapseAllBtn"><i class="fas fa-chevron-right"></i> Collapse all</button>
+  </div>
+</div>
+
 {% for fdc, d in district_groups %}
-<div class="card mb-2" style="border: 1px solid #e2e6ea;">
-  <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
-       style="background: #fafbfc; border-bottom: 1px solid #e9ecef;">
-    <div>
-      <strong style="font-size: 15px;">{{ fdc }}</strong>
-      {{ pvi_badge(d.pvi, d.pvi_rating) }}
-      <span class="text-muted ml-2" style="font-size: 12px;">{{ d.county }}{% if d.seats %} · {{ d.seats }} seat{% if d.seats != 1 %}s{% endif %}{% endif %}</span>
-      {% if d.towns_label %}
-      <div style="font-size: 11px; color: #909090; margin-top: 2px;">{{ d.towns_label }}</div>
-      {% endif %}
+{% set r_n = d.R|length %}
+{% set d_n = d.D|length %}
+{% set o_n = d.other|length %}
+{% set seats = d.seats or 0 %}
+{% set r_full = r_n >= seats and seats > 0 %}
+{% set d_full = d_n >= seats and seats > 0 %}
+<div class="card mb-1 district-card" style="border: 1px solid #e2e6ea;">
+  <div class="card-header py-2 px-3 district-header d-flex align-items-center justify-content-between"
+       data-target="ballot-{{ loop.index }}"
+       style="background: #fafbfc; border-bottom: 1px solid #e9ecef; cursor: pointer;">
+    <div class="d-flex align-items-center" style="min-width: 0; flex: 1;">
+      <i class="fas fa-chevron-right toggle-chevron" style="font-size: 11px; color: #adb5bd; margin-right: 10px; transition: transform 0.15s;"></i>
+      <div style="min-width: 0; flex: 1;">
+        <strong style="font-size: 14px;">{{ fdc }}</strong>
+        {{ pvi_badge(d.pvi, d.pvi_rating) }}
+        <span class="text-muted ml-2" style="font-size: 12px;">{{ d.county }}{% if seats %} · {{ seats }} seat{% if seats != 1 %}s{% endif %}{% endif %}</span>
+        {% if d.towns_label %}
+        <div style="font-size: 11px; color: #909090; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ d.towns_label }}</div>
+        {% endif %}
+      </div>
     </div>
-    <div style="font-size: 11px; color: #6c757d;">
-      <span class="badge" style="background: #c41e3a; color: #fff;">R {{ d.R|length }}</span>
-      <span class="badge ml-1" style="background: #1f3a93; color: #fff;">D {{ d.D|length }}</span>
-      {% if d.other %}<span class="badge ml-1" style="background: #555; color: #fff;">{{ d.other|length }} other</span>{% endif %}
+    <div style="font-size: 11px; white-space: nowrap; margin-left: 12px;">
+      <span class="badge" style="background: {{ '#1b8a2d' if r_full else '#c41e3a' if r_n > 0 else '#aaa' }}; color: #fff; padding: 4px 8px;">R {{ r_n }}{% if seats %} / {{ seats }}{% endif %}</span>
+      <span class="badge ml-1" style="background: {{ '#1b8a2d' if d_full else '#1f3a93' if d_n > 0 else '#aaa' }}; color: #fff; padding: 4px 8px;">D {{ d_n }}{% if seats %} / {{ seats }}{% endif %}</span>
+      {% if o_n %}<span class="badge ml-1" style="background: #555; color: #fff; padding: 4px 8px;">+{{ o_n }}</span>{% endif %}
     </div>
   </div>
-  <div class="card-body p-3" style="background: #ffffff;">
+  <div id="ballot-{{ loop.index }}" class="card-body p-3 district-body" style="display: none; background: #ffffff;">
     <div class="row">
       <div class="col-md-6">
         <div style="font-family: Georgia, serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #c41e3a; font-weight: 700; margin-bottom: 6px;">
-          Republican{% if d.R|length != 1 %}s{% endif %} ({{ d.R|length }})
+          Republican{% if r_n != 1 %}s{% endif %} ({{ r_n }}{% if seats %} of {{ seats }}{% endif %})
         </div>
         {% for f in d.R %}{{ filer_row(f) }}{% else %}
         <div class="text-muted py-2" style="font-size: 12px; font-style: italic;">No R filings yet.</div>
@@ -151,7 +170,7 @@
       </div>
       <div class="col-md-6">
         <div style="font-family: Georgia, serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #1f3a93; font-weight: 700; margin-bottom: 6px;">
-          Democrat{% if d.D|length != 1 %}s{% endif %} ({{ d.D|length }})
+          Democrat{% if d_n != 1 %}s{% endif %} ({{ d_n }}{% if seats %} of {{ seats }}{% endif %})
         </div>
         {% for f in d.D %}{{ filer_row(f) }}{% else %}
         <div class="text-muted py-2" style="font-size: 12px; font-style: italic;">No D filings yet.</div>
@@ -184,6 +203,33 @@
 {% block scripts %}
 {{ super() }}
 <script>
+// District-level collapse
+document.querySelectorAll('.district-header').forEach(hdr => {
+  hdr.addEventListener('click', function(e) {
+    if (e.target.closest('a') || e.target.closest('button') || e.target.closest('form')) return;
+    const id = hdr.getAttribute('data-target');
+    const body = document.getElementById(id);
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    const chev = hdr.querySelector('.toggle-chevron');
+    if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+  });
+});
+
+function setAllDistricts(open) {
+  document.querySelectorAll('.district-header').forEach(hdr => {
+    const id = hdr.getAttribute('data-target');
+    const body = document.getElementById(id);
+    if (body) body.style.display = open ? 'block' : 'none';
+    const chev = hdr.querySelector('.toggle-chevron');
+    if (chev) chev.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
+  });
+}
+document.getElementById('expandAllBtn').addEventListener('click', () => setAllDistricts(true));
+document.getElementById('collapseAllBtn').addEventListener('click', () => setAllDistricts(false));
+
+// Filer-level expand inside a district
 document.querySelectorAll('.filer-row').forEach(row => {
   row.addEventListener('click', function(e) {
     if (e.target.closest('a') || e.target.closest('button') || e.target.closest('form')) return;

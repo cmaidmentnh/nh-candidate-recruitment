@@ -3705,36 +3705,45 @@ def filings_list():
                 'county': r[13], 'seats': r[14], 'pvi': r[15], 'pvi_rating': r[16],
             })
 
-        # Group filings by district for the ballot view
-        from collections import defaultdict as _dd
-        by_district = _dd(lambda: {'R': [], 'D': [], 'other': [],
-                                    'county': '', 'seats': None,
-                                    'pvi': None, 'pvi_rating': None,
-                                    'towns_label': ''})
+        # Start with ALL districts (so the ballot shows empty races too),
+        # then attach any filings that have come in.
+        cur.execute("""
+            SELECT d.full_district_code, d.county_name,
+                   MAX(d.seat_count) AS seats,
+                   MAX(d.pvi) AS pvi, MAX(d.pvi_rating) AS pvi_rating,
+                   STRING_AGG(DISTINCT
+                     CASE WHEN d.ward IS NOT NULL AND d.ward != 0
+                          THEN d.town || ' Ward ' || d.ward ELSE d.town END,
+                     ', ' ORDER BY CASE WHEN d.ward IS NOT NULL AND d.ward != 0
+                                        THEN d.town || ' Ward ' || d.ward ELSE d.town END)
+            FROM districts d
+            GROUP BY d.full_district_code, d.county_name
+            ORDER BY d.county_name, d.full_district_code
+        """)
+        all_district_rows = cur.fetchall()
+        by_district = {}
+        for fdc, cty, seats, pvi, rating, towns in all_district_rows:
+            by_district[fdc] = {
+                'county': cty or '', 'seats': seats,
+                'pvi': pvi, 'pvi_rating': rating,
+                'towns_label': towns or '',
+                'R': [], 'D': [], 'other': [],
+            }
+        # If filtering by county/district, hide districts that don't match
+        if county or district:
+            keep = set()
+            for fdc, meta in by_district.items():
+                if district and fdc != district: continue
+                if county and (meta['county'] or '').lower() != county.lower(): continue
+                keep.add(fdc)
+            by_district = {k: v for k, v in by_district.items() if k in keep}
+        # Attach filings
         for f in filings:
-            d = by_district[f['district'] or '(no district)']
-            d['county'] = f['county'] or ''
-            d['seats'] = f['seats']
-            d['pvi'] = f['pvi']
-            d['pvi_rating'] = f['pvi_rating']
+            d = by_district.get(f['district'])
+            if d is None: continue
             if f['party'] == 'R': d['R'].append(f)
             elif f['party'] == 'D': d['D'].append(f)
             else: d['other'].append(f)
-        # Enrich with town list for districts that have filings
-        if by_district:
-            cur.execute("""
-                SELECT d.full_district_code, STRING_AGG(DISTINCT
-                  CASE WHEN d.ward IS NOT NULL AND d.ward != 0
-                       THEN d.town || ' Ward ' || d.ward ELSE d.town END,
-                  ', ' ORDER BY CASE WHEN d.ward IS NOT NULL AND d.ward != 0
-                                     THEN d.town || ' Ward ' || d.ward ELSE d.town END)
-                FROM districts d
-                WHERE d.full_district_code = ANY(%s)
-                GROUP BY d.full_district_code
-            """, (list(by_district.keys()),))
-            for fdc, towns in cur.fetchall():
-                if fdc in by_district:
-                    by_district[fdc]['towns_label'] = towns or ''
         district_groups = sorted(by_district.items())
 
         # Summary stats
