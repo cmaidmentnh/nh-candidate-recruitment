@@ -3927,24 +3927,103 @@ def _link_to_existing_candidate(cur, year, first, last, party, district):
     return row[0] if row else None
 
 
+_PARTY_TO_VOTER_PARTY = {'R': 'REP', 'D': 'DEM', 'U': 'UND', 'I': 'UND', 'L': 'LIB'}
+
+def _voter_lookup_for_filing(cur, first, last, party, district):
+    """Find an id_voter for someone who's just filed. Constrained to the
+    towns inside their district to keep false-positive rates low.
+
+    Returns (id_voter, observed_party) or (None, None)."""
+    voter_conn = get_voter_db_connection()
+    if not voter_conn:
+        return (None, None)
+    try:
+        # The district's towns (uppercased) for the geographic constraint
+        cur.execute("""
+            SELECT UPPER(town) FROM districts WHERE full_district_code = %s
+        """, (district,))
+        towns = [r[0] for r in cur.fetchall() if r[0]]
+        if not towns:
+            return (None, None)
+
+        first_tok = (first or '').strip().split(' ', 1)[0]
+        target_voter_party = _PARTY_TO_VOTER_PARTY.get((party or '').upper())
+
+        vcur = voter_conn.cursor()
+        try:
+            # Tight match: same first-token, same last (suffix-stripped),
+            # in this district's towns. Prefer voters whose registered party
+            # matches the filing party (REP for R, etc.), then nearest-letter.
+            vcur.execute("""
+                SELECT id_voter, nm_first, nm_last, cd_party, ad_city
+                FROM statewidechecklist
+                WHERE UPPER(REGEXP_REPLACE(nm_last, '\\s+(JR|SR|II|III|IV|V)\\.?$', '', 'i')) = UPPER(%s)
+                  AND UPPER(ad_city) = ANY(%s)
+                  AND active IS NOT FALSE
+                ORDER BY
+                    CASE WHEN UPPER(SPLIT_PART(TRIM(nm_first),' ',1)) = UPPER(%s) THEN 0
+                         WHEN UPPER(SUBSTRING(nm_first,1,1)) = UPPER(SUBSTRING(%s,1,1)) THEN 2
+                         ELSE 9 END,
+                    CASE WHEN cd_party = %s THEN 0 ELSE 1 END,
+                    id_voter
+                LIMIT 5
+            """, (last, towns, first_tok, first_tok, target_voter_party))
+            rows = vcur.fetchall()
+        finally:
+            vcur.close()
+
+        # Require the top hit to have the matching first-token. Otherwise
+        # we'd assign 'Steve Smith' to 'Mary Smith' just because she's in town.
+        if not rows: return (None, None)
+        top = rows[0]
+        if (top[1] or '').strip().split(' ', 1)[0].upper() != first_tok.upper():
+            return (None, None)
+        return (top[0], top[3])  # id_voter, cd_party
+    finally:
+        release_voter_db_connection(voter_conn)
+
+
 def _find_or_create_candidate(cur, year, first, last, party, district, town, actor_email):
     """Return the candidate_id for this filer — creating a new candidates row
     only if no existing record matches. Also ensures a candidate_election_status
-    row exists for the filing year + district."""
+    row exists for the filing year + district, and runs a voter-file lookup
+    for new candidates so they get a voter_id automatically."""
     cid = _link_to_existing_candidate(cur, year, first, last, party, district)
     if cid is None:
+        # Try to find the voter file record before inserting so we can store
+        # both voter_id and the city/zip from the official record.
+        voter_id, _voter_party = _voter_lookup_for_filing(cur, first, last, party, district)
         cur.execute("""
-            INSERT INTO candidates (first_name, last_name, party, city,
+            INSERT INTO candidates (first_name, last_name, party, city, voter_id,
                                     created_by, modified_by, created_at, modified_at)
-            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
             RETURNING candidate_id
-        """, (first, last, party, (town or None), actor_email, actor_email))
+        """, (first, last, party, (town or None), voter_id, actor_email, actor_email))
         cid = cur.fetchone()[0]
         cur.execute("""
             INSERT INTO activity_log (action_type, description, candidate_id, user_email)
             VALUES ('candidate_created',
                     %s, %s, %s)
-        """, (f'Auto-created from filing: {first} {last} ({party}) — {district}', cid, actor_email))
+        """, (f'Auto-created from filing: {first} {last} ({party}) — {district}'
+              + (f' · matched voter_id {voter_id}' if voter_id else ' · no voter-file match'),
+              cid, actor_email))
+    else:
+        # Existing candidate — fill in voter_id if it's still missing.
+        cur.execute("SELECT voter_id FROM candidates WHERE candidate_id = %s", (cid,))
+        row = cur.fetchone()
+        if row and not row[0]:
+            voter_id, _ = _voter_lookup_for_filing(cur, first, last, party, district)
+            if voter_id:
+                cur.execute("""
+                    UPDATE candidates SET voter_id = %s, modified_by = %s, modified_at = NOW()
+                    WHERE candidate_id = %s AND voter_id IS NULL
+                """, (voter_id, actor_email, cid))
+                cur.execute("""
+                    INSERT INTO activity_log (action_type, description, candidate_id, user_email)
+                    VALUES ('voter_matched',
+                            %s, %s, %s)
+                """, (f'Auto-matched voter_id {voter_id} via filing in {district}',
+                      cid, actor_email))
 
     # Ensure a candidate_election_status row exists for the filing year+district.
     # If they're filed, mark them Confirmed (strongest commitment).
