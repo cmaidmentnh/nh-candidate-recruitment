@@ -3744,26 +3744,13 @@ def filings_list():
             if f['party'] == 'R': d['R'].append(f)
             elif f['party'] == 'D': d['D'].append(f)
             else: d['other'].append(f)
-        # Group districts by county, with Manchester/Nashua/Concord broken out
-        # the same way the main tracker does it.
+        # Group districts by county (Manchester is in Hillsborough,
+        # Concord is in Merrimack — keep them under their county).
         from collections import defaultdict as _dd
         county_groups = _dd(list)
         for fdc, meta in sorted(by_district.items()):
-            towns_upper = (meta['towns_label'] or '').upper()
-            if towns_upper and all(t.strip().startswith('MANCHESTER') for t in towns_upper.split(',')):
-                bucket = 'Manchester'
-            elif towns_upper and all(t.strip().startswith('NASHUA') for t in towns_upper.split(',')):
-                bucket = 'Nashua'
-            elif towns_upper and all(t.strip().startswith('CONCORD') for t in towns_upper.split(',')):
-                bucket = 'Concord'
-            else:
-                bucket = meta['county'] or '(unknown)'
-            county_groups[bucket].append((fdc, meta))
-        # Sort: cities first alphabetically, then counties alphabetically
-        cities = {'Manchester', 'Nashua', 'Concord'}
-        def bucket_key(name):
-            return (0 if name in cities else 1, name)
-        county_groups = sorted(county_groups.items(), key=lambda kv: bucket_key(kv[0]))
+            county_groups[meta['county'] or '(unknown)'].append((fdc, meta))
+        county_groups = sorted(county_groups.items())
         district_groups = sorted(by_district.items())  # kept for backwards compat
 
         # Summary stats
