@@ -4,7 +4,7 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
   <div>
     <h1 class="mb-0" style="font-weight: 700;">Filings Tracker</h1>
-    <small class="text-muted">Who has officially filed for office — all parties.</small>
+    <small class="text-muted">Who has officially filed for office — ballot view.</small>
   </div>
   <a href="{{ url_for('filings_add') }}" class="btn btn-primary">
     <i class="fas fa-plus"></i> Record Filing
@@ -68,54 +68,137 @@
   <a href="{{ url_for('filings_list', year=year) }}" class="btn btn-sm btn-link">Clear</a>
 </form>
 
-<!-- Filings table -->
-<div class="table-responsive">
-  <table class="table table-sm">
-    <thead style="background: #1a2744;">
-      <tr style="color: #fff;">
-        <th>District</th>
-        <th>Party</th>
-        <th>Name</th>
-        <th>Town</th>
-        <th>Filed</th>
-        <th>Notes</th>
-        <th>Source</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for f in filings %}
-      <tr>
-        <td>
-          <strong>{{ f.district or '—' }}</strong>
-          {% if f.candidate_id %}
-          <a href="{{ url_for('edit_candidate', candidate_id=f.candidate_id, election_year=f.year) }}" title="Linked candidate record" class="text-success ml-1">
-            <i class="fas fa-link" style="font-size:11px;"></i>
-          </a>
-          {% endif %}
-        </td>
-        <td>
-          {% set bg = {'R':'#c41e3a','D':'#1f3a93','L':'#f1c40f','I':'#555','U':'#999'}.get(f.party, '#888') %}
-          <span class="badge" style="background: {{ bg }}; color: #fff; padding: 4px 8px; font-size: 11px;">{{ f.party }}</span>
-        </td>
-        <td><strong>{{ f.first }} {{ f.last }}</strong></td>
-        <td>{{ f.town or '' }}</td>
-        <td>{{ f.filed_at.strftime('%b %-d, %Y') if f.filed_at else '—' }}</td>
-        <td><small>{{ f.notes or '' }}</small></td>
-        <td><small class="text-muted">{{ f.created_by or '' }}</small></td>
-        <td class="text-right">
-          <a href="{{ url_for('filings_edit', filing_id=f.filing_id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="fas fa-pen"></i></a>
-          <form method="post" action="{{ url_for('filings_delete', filing_id=f.filing_id) }}" style="display:inline;" onsubmit="return confirm('Delete this filing record?');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="8" class="text-center text-muted py-4">No filings recorded yet for {{ year }}. <a href="{{ url_for('filings_add') }}">Add the first one →</a></td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- Ballot view -->
+{% if not district_groups %}
+<div class="alert alert-light text-center py-5" style="border: 2px dashed #d1d5db;">
+  <p class="mb-2">No filings recorded yet{% if filter_party or filter_district or filter_county or filter_q %} for that filter{% endif %}.</p>
+  <a href="{{ url_for('filings_add') }}" class="btn btn-primary">Record the first one</a>
 </div>
+{% endif %}
 
+{% macro pvi_badge(pvi, rating) -%}
+{% if pvi is not none %}
+  {% set bg = '#8B0000' if pvi >= 8 else '#DC143C' if pvi >= 3 else '#FFD700' if pvi >= -3 else '#4169E1' if pvi >= -8 else '#00008B' %}
+  {% set fg = '#000' if pvi >= -3 and pvi < 3 else '#fff' %}
+  {% set lbl = 'R+' ~ (pvi|abs|int) if pvi > 0 else 'D+' ~ (pvi|abs|int) if pvi < 0 else 'EVEN' %}
+  <span class="badge ml-1" style="background:{{ bg }};color:{{ fg }};font-size:10px;letter-spacing:.4px;">{{ lbl }}</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro filer_row(f) -%}
+<div class="filer-row d-flex align-items-center justify-content-between"
+     data-toggle-id="filer-detail-{{ f.filing_id }}"
+     style="padding: 8px 10px; border-radius: 6px; cursor: pointer;">
+  <div style="line-height: 1.25;">
+    <strong style="font-size: 14px;">{{ f.first }} {{ f.last }}</strong>
+    {% if f.candidate_id %}
+    <i class="fas fa-link text-success ml-1" title="Linked to recruitment record" style="font-size: 10px;"></i>
+    {% endif %}
+    <div style="font-size: 11px; color: #6c757d;">
+      {{ f.town or '' }}{% if f.town and f.filed_at %} · {% endif %}{% if f.filed_at %}filed {{ f.filed_at.strftime('%b %-d') }}{% endif %}
+    </div>
+  </div>
+  <i class="fas fa-chevron-down" style="font-size: 11px; color: #adb5bd;"></i>
+</div>
+<div id="filer-detail-{{ f.filing_id }}" class="filer-detail" style="display: none; padding: 10px 14px; background: #f8f9fa; border-radius: 6px; margin-top: 4px; font-size: 13px;">
+  <div><strong>Town:</strong> {{ f.town or '—' }}</div>
+  <div><strong>Filed:</strong> {{ f.filed_at.strftime('%A, %B %-d, %Y') if f.filed_at else '—' }}</div>
+  <div><strong>Recorded by:</strong> {{ f.created_by or '—' }}</div>
+  {% if f.notes %}<div class="mt-1"><strong>Notes:</strong> {{ f.notes }}</div>{% endif %}
+  <div class="mt-2 d-flex" style="gap: 6px;">
+    {% if f.candidate_id %}
+    <a href="{{ url_for('edit_candidate', candidate_id=f.candidate_id, election_year=f.year) }}"
+       class="btn btn-sm btn-outline-success"><i class="fas fa-link"></i> Open candidate record</a>
+    {% endif %}
+    <a href="{{ url_for('filings_edit', filing_id=f.filing_id) }}"
+       class="btn btn-sm btn-outline-secondary"><i class="fas fa-pen"></i> Edit</a>
+    <form method="post" action="{{ url_for('filings_delete', filing_id=f.filing_id) }}"
+          style="display:inline;" onsubmit="return confirm('Delete this filing?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+    </form>
+  </div>
+</div>
+{%- endmacro %}
+
+{% for fdc, d in district_groups %}
+<div class="card mb-2" style="border: 1px solid #e2e6ea;">
+  <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
+       style="background: #fafbfc; border-bottom: 1px solid #e9ecef;">
+    <div>
+      <strong style="font-size: 15px;">{{ fdc }}</strong>
+      {{ pvi_badge(d.pvi, d.pvi_rating) }}
+      <span class="text-muted ml-2" style="font-size: 12px;">{{ d.county }}{% if d.seats %} · {{ d.seats }} seat{% if d.seats != 1 %}s{% endif %}{% endif %}</span>
+      {% if d.towns_label %}
+      <div style="font-size: 11px; color: #909090; margin-top: 2px;">{{ d.towns_label }}</div>
+      {% endif %}
+    </div>
+    <div style="font-size: 11px; color: #6c757d;">
+      <span class="badge" style="background: #c41e3a; color: #fff;">R {{ d.R|length }}</span>
+      <span class="badge ml-1" style="background: #1f3a93; color: #fff;">D {{ d.D|length }}</span>
+      {% if d.other %}<span class="badge ml-1" style="background: #555; color: #fff;">{{ d.other|length }} other</span>{% endif %}
+    </div>
+  </div>
+  <div class="card-body p-3" style="background: #ffffff;">
+    <div class="row">
+      <div class="col-md-6">
+        <div style="font-family: Georgia, serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #c41e3a; font-weight: 700; margin-bottom: 6px;">
+          Republican{% if d.R|length != 1 %}s{% endif %} ({{ d.R|length }})
+        </div>
+        {% for f in d.R %}{{ filer_row(f) }}{% else %}
+        <div class="text-muted py-2" style="font-size: 12px; font-style: italic;">No R filings yet.</div>
+        {% endfor %}
+      </div>
+      <div class="col-md-6">
+        <div style="font-family: Georgia, serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #1f3a93; font-weight: 700; margin-bottom: 6px;">
+          Democrat{% if d.D|length != 1 %}s{% endif %} ({{ d.D|length }})
+        </div>
+        {% for f in d.D %}{{ filer_row(f) }}{% else %}
+        <div class="text-muted py-2" style="font-size: 12px; font-style: italic;">No D filings yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% if d.other %}
+    <div class="mt-2 pt-2" style="border-top: 1px dashed #e9ecef;">
+      <div style="font-family: Georgia, serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #555; font-weight: 700; margin-bottom: 6px;">
+        Other filings
+      </div>
+      <div class="row">
+        {% for f in d.other %}
+        <div class="col-md-6">{{ filer_row(f) }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<style>
+.filer-row:hover { background: #f1f5f9; }
+.filer-row.expanded { background: #e8f0fc; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.querySelectorAll('.filer-row').forEach(row => {
+  row.addEventListener('click', function(e) {
+    if (e.target.closest('a') || e.target.closest('button') || e.target.closest('form')) return;
+    const id = row.getAttribute('data-toggle-id');
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    row.classList.toggle('expanded', !isOpen);
+    const chevron = row.querySelector('.fa-chevron-down, .fa-chevron-up');
+    if (chevron) {
+      chevron.classList.toggle('fa-chevron-down', isOpen);
+      chevron.classList.toggle('fa-chevron-up', !isOpen);
+    }
+  });
+});
+</script>
 {% endblock %}

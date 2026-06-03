@@ -3705,6 +3705,38 @@ def filings_list():
                 'county': r[13], 'seats': r[14], 'pvi': r[15], 'pvi_rating': r[16],
             })
 
+        # Group filings by district for the ballot view
+        from collections import defaultdict as _dd
+        by_district = _dd(lambda: {'R': [], 'D': [], 'other': [],
+                                    'county': '', 'seats': None,
+                                    'pvi': None, 'pvi_rating': None,
+                                    'towns_label': ''})
+        for f in filings:
+            d = by_district[f['district'] or '(no district)']
+            d['county'] = f['county'] or ''
+            d['seats'] = f['seats']
+            d['pvi'] = f['pvi']
+            d['pvi_rating'] = f['pvi_rating']
+            if f['party'] == 'R': d['R'].append(f)
+            elif f['party'] == 'D': d['D'].append(f)
+            else: d['other'].append(f)
+        # Enrich with town list for districts that have filings
+        if by_district:
+            cur.execute("""
+                SELECT d.full_district_code, STRING_AGG(DISTINCT
+                  CASE WHEN d.ward IS NOT NULL AND d.ward != 0
+                       THEN d.town || ' Ward ' || d.ward ELSE d.town END,
+                  ', ' ORDER BY CASE WHEN d.ward IS NOT NULL AND d.ward != 0
+                                     THEN d.town || ' Ward ' || d.ward ELSE d.town END)
+                FROM districts d
+                WHERE d.full_district_code = ANY(%s)
+                GROUP BY d.full_district_code
+            """, (list(by_district.keys()),))
+            for fdc, towns in cur.fetchall():
+                if fdc in by_district:
+                    by_district[fdc]['towns_label'] = towns or ''
+        district_groups = sorted(by_district.items())
+
         # Summary stats
         cur.execute("""
             SELECT party, COUNT(*) FROM filings WHERE election_year=%s GROUP BY party
@@ -3743,7 +3775,8 @@ def filings_list():
         'contested': contested,
     }
     return render_template('filings_list.html',
-                           filings=filings, stats=stats, year=year,
+                           filings=filings, district_groups=district_groups,
+                           stats=stats, year=year,
                            filter_party=party, filter_district=district,
                            filter_county=county, filter_q=q,
                            all_districts=all_districts, counties=counties)
