@@ -123,23 +123,45 @@
 
 {% set total_districts = district_groups|length %}
 <div class="d-flex align-items-center justify-content-between mb-2">
-  <p class="text-muted small mb-0">{{ total_districts }} district{% if total_districts != 1 %}s{% endif %} shown.</p>
+  <p class="text-muted small mb-0">{{ total_districts }} district{% if total_districts != 1 %}s{% endif %} across {{ county_groups|length }} {{ 'group' if county_groups|length == 1 else 'groups' }}.</p>
   <div>
     <button type="button" class="btn btn-sm btn-link" id="expandAllBtn"><i class="fas fa-chevron-down"></i> Expand all</button>
     <button type="button" class="btn btn-sm btn-link" id="collapseAllBtn"><i class="fas fa-chevron-right"></i> Collapse all</button>
   </div>
 </div>
 
-{% for fdc, d in district_groups %}
+{% for bucket, dists in county_groups %}
+{% set ns = namespace(r=0, d=0, seats=0) %}
+{% for fdc, dm in dists %}
+  {% set ns.r = ns.r + dm.R|length %}
+  {% set ns.d = ns.d + dm.D|length %}
+  {% set ns.seats = ns.seats + (dm.seats or 0) %}
+{% endfor %}
+<div class="county-section mb-3">
+  <div class="county-header d-flex align-items-center justify-content-between py-2 px-3"
+       data-county-target="county-{{ loop.index }}"
+       style="background: #1a2744; color: #fff; border-radius: 6px 6px 0 0; cursor: pointer;">
+    <div>
+      <i class="fas fa-chevron-down county-chev" style="font-size: 12px; margin-right: 10px;"></i>
+      <strong style="font-size: 15px; letter-spacing: 0.4px;">{{ bucket }}</strong>
+      <span class="ml-2" style="opacity: 0.8; font-size: 12px;">{{ dists|length }} district{% if dists|length != 1 %}s{% endif %} · {{ ns.seats }} seat{% if ns.seats != 1 %}s{% endif %}</span>
+    </div>
+    <div style="font-size: 11px;">
+      <span class="badge" style="background: #c41e3a; color: #fff; padding: 4px 8px;">R {{ ns.r }} / {{ ns.seats }}</span>
+      <span class="badge ml-1" style="background: #1f3a93; color: #fff; padding: 4px 8px;">D {{ ns.d }} / {{ ns.seats }}</span>
+    </div>
+  </div>
+  <div id="county-{{ loop.index }}" class="county-body">
+{% for fdc, d in dists %}
 {% set r_n = d.R|length %}
 {% set d_n = d.D|length %}
 {% set o_n = d.other|length %}
 {% set seats = d.seats or 0 %}
 {% set r_full = r_n >= seats and seats > 0 %}
 {% set d_full = d_n >= seats and seats > 0 %}
-<div class="card mb-1 district-card" style="border: 1px solid #e2e6ea;">
+<div class="card mb-1 district-card" style="border: 1px solid #e2e6ea; border-radius: 0;">
   <div class="card-header py-2 px-3 district-header d-flex align-items-center justify-content-between"
-       data-target="ballot-{{ loop.index }}"
+       data-target="ballot-{{ loop.index0 }}-{{ loop.index }}"
        style="background: #fafbfc; border-bottom: 1px solid #e9ecef; cursor: pointer;">
     <div class="d-flex align-items-center" style="min-width: 0; flex: 1;">
       <i class="fas fa-chevron-right toggle-chevron" style="font-size: 11px; color: #adb5bd; margin-right: 10px; transition: transform 0.15s;"></i>
@@ -158,7 +180,7 @@
       {% if o_n %}<span class="badge ml-1" style="background: #555; color: #fff; padding: 4px 8px;">+{{ o_n }}</span>{% endif %}
     </div>
   </div>
-  <div id="ballot-{{ loop.index }}" class="card-body p-3 district-body" style="display: none; background: #ffffff;">
+  <div id="ballot-{{ loop.index0 }}-{{ loop.index }}" class="card-body p-3 district-body" style="display: none; background: #ffffff;">
     <div class="row">
       <div class="col-md-6">
         <div style="font-family: Georgia, serif; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #c41e3a; font-weight: 700; margin-bottom: 6px;">
@@ -192,6 +214,9 @@
   </div>
 </div>
 {% endfor %}
+  </div>
+</div>
+{% endfor %}
 
 <style>
 .filer-row:hover { background: #f1f5f9; }
@@ -214,6 +239,19 @@ document.querySelectorAll('.district-header').forEach(hdr => {
     body.style.display = isOpen ? 'none' : 'block';
     const chev = hdr.querySelector('.toggle-chevron');
     if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+  });
+});
+
+document.querySelectorAll('.county-header').forEach(hdr => {
+  hdr.addEventListener('click', function(e) {
+    if (e.target.closest('a') || e.target.closest('button')) return;
+    const id = hdr.getAttribute('data-county-target');
+    const body = document.getElementById(id);
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    const chev = hdr.querySelector('.county-chev');
+    if (chev) chev.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
   });
 });
 

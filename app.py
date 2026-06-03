@@ -3744,7 +3744,27 @@ def filings_list():
             if f['party'] == 'R': d['R'].append(f)
             elif f['party'] == 'D': d['D'].append(f)
             else: d['other'].append(f)
-        district_groups = sorted(by_district.items())
+        # Group districts by county, with Manchester/Nashua/Concord broken out
+        # the same way the main tracker does it.
+        from collections import defaultdict as _dd
+        county_groups = _dd(list)
+        for fdc, meta in sorted(by_district.items()):
+            towns_upper = (meta['towns_label'] or '').upper()
+            if towns_upper and all(t.strip().startswith('MANCHESTER') for t in towns_upper.split(',')):
+                bucket = 'Manchester'
+            elif towns_upper and all(t.strip().startswith('NASHUA') for t in towns_upper.split(',')):
+                bucket = 'Nashua'
+            elif towns_upper and all(t.strip().startswith('CONCORD') for t in towns_upper.split(',')):
+                bucket = 'Concord'
+            else:
+                bucket = meta['county'] or '(unknown)'
+            county_groups[bucket].append((fdc, meta))
+        # Sort: cities first alphabetically, then counties alphabetically
+        cities = {'Manchester', 'Nashua', 'Concord'}
+        def bucket_key(name):
+            return (0 if name in cities else 1, name)
+        county_groups = sorted(county_groups.items(), key=lambda kv: bucket_key(kv[0]))
+        district_groups = sorted(by_district.items())  # kept for backwards compat
 
         # Summary stats
         cur.execute("""
@@ -3785,6 +3805,7 @@ def filings_list():
     }
     return render_template('filings_list.html',
                            filings=filings, district_groups=district_groups,
+                           county_groups=county_groups,
                            stats=stats, year=year,
                            filter_party=party, filter_district=district,
                            filter_county=county, filter_q=q,
@@ -3823,21 +3844,80 @@ def _fetch_districts_for_picker(cur):
 
 
 def _link_to_existing_candidate(cur, year, first, last, party, district):
-    """If a candidate of the same party/name already exists for this year,
-    return their candidate_id so we can link the filing to them."""
+    """Find the unique candidate this filing belongs to (one candidates row
+    per person, across years). Tiebreaks: name+party match in this district
+    > name+party match anywhere > name-only match if unique.
+
+    Does NOT create a new row — see _find_or_create_candidate for that."""
+    # 1. Same name + party + this district in ANY year
     cur.execute("""
-        SELECT c.candidate_id
+        SELECT DISTINCT c.candidate_id
         FROM candidates c
         JOIN candidate_election_status ces ON ces.candidate_id = c.candidate_id
-        WHERE ces.election_year = %s
-          AND c.party = %s
+        WHERE c.party = %s
           AND LOWER(c.first_name) = LOWER(%s)
           AND LOWER(c.last_name) = LOWER(%s)
-          AND (ces.district_code = %s OR %s = '')
+          AND ces.district_code = %s
+    """, (party, first, last, district))
+    rows = cur.fetchall()
+    if len(rows) == 1: return rows[0][0]
+
+    # 2. Same name + party — pick the candidate with the lowest cid (oldest record)
+    cur.execute("""
+        SELECT candidate_id FROM candidates
+        WHERE party = %s
+          AND LOWER(first_name) = LOWER(%s)
+          AND LOWER(last_name) = LOWER(%s)
+        ORDER BY candidate_id
         LIMIT 1
-    """, (year, party, first, last, district, district))
+    """, (party, first, last))
     row = cur.fetchone()
     return row[0] if row else None
+
+
+def _find_or_create_candidate(cur, year, first, last, party, district, town, actor_email):
+    """Return the candidate_id for this filer — creating a new candidates row
+    only if no existing record matches. Also ensures a candidate_election_status
+    row exists for the filing year + district."""
+    cid = _link_to_existing_candidate(cur, year, first, last, party, district)
+    if cid is None:
+        cur.execute("""
+            INSERT INTO candidates (first_name, last_name, party, city,
+                                    created_by, modified_by, created_at, modified_at)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
+            RETURNING candidate_id
+        """, (first, last, party, (town or None), actor_email, actor_email))
+        cid = cur.fetchone()[0]
+        cur.execute("""
+            INSERT INTO activity_log (action_type, description, candidate_id, user_email)
+            VALUES ('candidate_created',
+                    %s, %s, %s)
+        """, (f'Auto-created from filing: {first} {last} ({party}) — {district}', cid, actor_email))
+
+    # Ensure a candidate_election_status row exists for the filing year+district.
+    # If they're filed, mark them Confirmed (strongest commitment).
+    cur.execute("""
+        SELECT status_id, status FROM candidate_election_status
+        WHERE candidate_id = %s AND election_year = %s
+    """, (cid, year))
+    existing = cur.fetchone()
+    if existing is None:
+        cur.execute("""
+            INSERT INTO candidate_election_status
+                (candidate_id, election_year, district_code, status, is_running, added_by)
+            VALUES (%s, %s, %s, 'Confirmed', TRUE, %s)
+        """, (cid, year, district, actor_email))
+    else:
+        status_id, cur_status = existing
+        # If they had no district yet, or a weaker status, upgrade.
+        if not cur_status or cur_status.upper() in ('POTENTIAL', 'CONSIDERING', ''):
+            cur.execute("""
+                UPDATE candidate_election_status
+                SET district_code = COALESCE(NULLIF(district_code, ''), %s),
+                    status = 'Confirmed', is_running = TRUE
+                WHERE status_id = %s
+            """, (district, status_id))
+    return cid
 
 
 @app.route('/filings/add', methods=['GET', 'POST'])
@@ -3861,7 +3941,8 @@ def filings_add():
             if not (first and last and party and district):
                 flash('First name, last name, party, and district are required.', 'warning')
                 return redirect(url_for('filings_add'))
-            candidate_id = _link_to_existing_candidate(cur, year, first, last, party, district)
+            candidate_id = _find_or_create_candidate(
+                cur, year, first, last, party, district, town, current_user.email)
             cur.execute("""
                 INSERT INTO filings
                     (election_year, office, district_code, first_name, last_name,
@@ -3909,7 +3990,8 @@ def filings_edit(filing_id):
             method = 'in_person'
             notes = (request.form.get('notes') or '').strip() or None
             office = (request.form.get('office') or 'State Representative').strip()
-            candidate_id = _link_to_existing_candidate(cur, year, first, last, party, district)
+            candidate_id = _find_or_create_candidate(
+                cur, year, first, last, party, district, town, current_user.email)
             cur.execute("""
                 UPDATE filings SET election_year=%s, office=%s, district_code=%s,
                     first_name=%s, last_name=%s, party=%s, town=%s,
