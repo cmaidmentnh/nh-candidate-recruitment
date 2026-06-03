@@ -78,7 +78,6 @@
         <th>Name</th>
         <th>Town</th>
         <th>Filed</th>
-        <th>Method</th>
         <th>Notes</th>
         <th>Source</th>
         <th></th>
@@ -102,7 +101,6 @@
         <td><strong>{{ f.first }} {{ f.last }}</strong></td>
         <td>{{ f.town or '' }}</td>
         <td>{{ f.filed_at.strftime('%b %-d, %Y') if f.filed_at else '—' }}</td>
-        <td><small class="text-muted">{{ f.method or '' }}</small></td>
         <td><small>{{ f.notes or '' }}</small></td>
         <td><small class="text-muted">{{ f.created_by or '' }}</small></td>
         <td class="text-right">
@@ -114,7 +112,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="9" class="text-center text-muted py-4">No filings recorded yet for {{ year }}. <a href="{{ url_for('filings_add') }}">Add the first one →</a></td></tr>
+      <tr><td colspan="8" class="text-center text-muted py-4">No filings recorded yet for {{ year }}. <a href="{{ url_for('filings_add') }}">Add the first one →</a></td></tr>
       {% endfor %}
     </tbody>
   </table>

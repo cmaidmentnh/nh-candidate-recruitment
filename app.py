@@ -3813,7 +3813,7 @@ def filings_add():
             district = (request.form.get('district_code') or '').strip()
             town = (request.form.get('town') or '').strip() or None
             filed_at = request.form.get('filed_at') or None
-            method = (request.form.get('filing_method') or '').strip() or None
+            method = 'in_person'
             notes = (request.form.get('notes') or '').strip() or None
             office = (request.form.get('office') or 'State Representative').strip()
             if not (first and last and party and district):
@@ -3864,7 +3864,7 @@ def filings_edit(filing_id):
             district = (request.form.get('district_code') or '').strip()
             town = (request.form.get('town') or '').strip() or None
             filed_at = request.form.get('filed_at') or None
-            method = (request.form.get('filing_method') or '').strip() or None
+            method = 'in_person'
             notes = (request.form.get('notes') or '').strip() or None
             office = (request.form.get('office') or 'State Representative').strip()
             candidate_id = _link_to_existing_candidate(cur, year, first, last, party, district)

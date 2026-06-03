@@ -61,23 +61,13 @@
   </div>
 
   <div class="form-row">
-    <div class="form-group col-md-6">
+    <div class="form-group col-md-8">
       <label>Town (if known)</label>
       <input type="text" name="town" class="form-control" value="{{ filing.town if filing else '' }}">
     </div>
-    <div class="form-group col-md-3">
+    <div class="form-group col-md-4">
       <label>Filed Date</label>
       <input type="date" name="filed_at" class="form-control" value="{{ filing.filed_at if filing else '' }}">
-    </div>
-    <div class="form-group col-md-3">
-      <label>Method</label>
-      <select name="filing_method" class="form-control">
-        {% set m = filing.filing_method if filing else '' %}
-        <option value="">—</option>
-        <option value="in_person" {% if m == 'in_person' %}selected{% endif %}>In person</option>
-        <option value="mail" {% if m == 'mail' %}selected{% endif %}>By mail</option>
-        <option value="online" {% if m == 'online' %}selected{% endif %}>Online</option>
-      </select>
     </div>
   </div>
 
