@@ -3744,13 +3744,53 @@ def filings_list():
             if f['party'] == 'R': d['R'].append(f)
             elif f['party'] == 'D': d['D'].append(f)
             else: d['other'].append(f)
-        # Group districts by county (Manchester is in Hillsborough,
-        # Concord is in Merrimack — keep them under their county).
+        # Apply the 'show' filter (which districts to show in the ballot).
+        show = (request.args.get('show') or '').strip().lower()
+        def keep_district(meta):
+            r_n, d_n = len(meta['R']), len(meta['D'])
+            seats = meta['seats'] or 0
+            total = r_n + d_n + len(meta['other'])
+            if show == 'with_filings':       return total > 0
+            if show == 'empty':              return total == 0
+            if show == 'missing_r':          return r_n < seats
+            if show == 'missing_d':          return d_n < seats
+            if show == 'r_full':             return r_n >= seats and seats > 0
+            if show == 'd_full':             return d_n >= seats and seats > 0
+            if show == 'contested':          return r_n > 0 and d_n > 0
+            if show == 'uncontested':        return total > 0 and not (r_n > 0 and d_n > 0)
+            if show == 'both_full':          return r_n >= seats and d_n >= seats and seats > 0
+            return True
+        if show:
+            by_district = {k: v for k, v in by_district.items() if keep_district(v)}
+
+        # Group districts: Manchester / Nashua / Concord are their own cards,
+        # but sorted directly under their parent county (Hillsborough,
+        # Hillsborough, Merrimack respectively).
         from collections import defaultdict as _dd
+        CITY_PARENT = {
+            'Manchester': ('Hillsborough', 1),
+            'Nashua':     ('Hillsborough', 2),
+            'Concord':    ('Merrimack', 1),
+        }
         county_groups = _dd(list)
         for fdc, meta in sorted(by_district.items()):
-            county_groups[meta['county'] or '(unknown)'].append((fdc, meta))
-        county_groups = sorted(county_groups.items())
+            towns = (meta['towns_label'] or '').split(',')
+            towns_u = [t.strip().upper() for t in towns if t.strip()]
+            if towns_u and all(t.startswith('MANCHESTER') for t in towns_u):
+                bucket = 'Manchester'
+            elif towns_u and all(t.startswith('NASHUA') for t in towns_u):
+                bucket = 'Nashua'
+            elif towns_u and all(t.startswith('CONCORD') for t in towns_u):
+                bucket = 'Concord'
+            else:
+                bucket = meta['county'] or '(unknown)'
+            county_groups[bucket].append((fdc, meta))
+        def bucket_sort_key(name):
+            if name in CITY_PARENT:
+                parent, idx = CITY_PARENT[name]
+                return (parent, idx)
+            return (name, 0)
+        county_groups = sorted(county_groups.items(), key=lambda kv: bucket_sort_key(kv[0]))
         district_groups = sorted(by_district.items())  # kept for backwards compat
 
         # Summary stats
@@ -3795,7 +3835,7 @@ def filings_list():
                            county_groups=county_groups,
                            stats=stats, year=year,
                            filter_party=party, filter_district=district,
-                           filter_county=county, filter_q=q,
+                           filter_county=county, filter_q=q, filter_show=show,
                            all_districts=all_districts, counties=counties)
 
 

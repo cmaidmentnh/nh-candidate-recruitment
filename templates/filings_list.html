@@ -43,6 +43,23 @@
 <!-- Filters -->
 <form method="get" class="form-inline mb-3" style="gap: 8px;">
   <input type="number" name="year" value="{{ year }}" class="form-control form-control-sm" style="width: 90px;" placeholder="Year">
+  <select name="show" class="form-control form-control-sm" style="width: 180px;">
+    {% set show_opts = [
+      ('', 'All districts'),
+      ('with_filings',  'Districts with filings'),
+      ('empty',         'Empty districts (no filings)'),
+      ('missing_r',     'Missing R candidates'),
+      ('missing_d',     'Missing D candidates'),
+      ('r_full',        'R fully filed'),
+      ('d_full',        'D fully filed'),
+      ('both_full',     'Both R + D fully filed'),
+      ('contested',     'Contested (R + D)'),
+      ('uncontested',   'Uncontested (1 party only)'),
+    ] %}
+    {% for val, lbl in show_opts %}
+    <option value="{{ val }}" {% if filter_show == val %}selected{% endif %}>{{ lbl }}</option>
+    {% endfor %}
+  </select>
   <select name="party" class="form-control form-control-sm" style="width: 110px;">
     <option value="">All parties</option>
     <option value="R" {% if filter_party == 'R' %}selected{% endif %}>Republican</option>
@@ -63,7 +80,7 @@
     <option value="{{ fdc }}" {% if filter_district == fdc %}selected{% endif %}>{{ fdc }} ({{ cty }})</option>
     {% endfor %}
   </select>
-  <input type="text" name="q" value="{{ filter_q }}" class="form-control form-control-sm" style="width: 200px;" placeholder="Search name / town">
+  <input type="text" name="q" value="{{ filter_q }}" class="form-control form-control-sm" style="width: 180px;" placeholder="Search name / town">
   <button type="submit" class="btn btn-sm btn-secondary">Filter</button>
   <a href="{{ url_for('filings_list', year=year) }}" class="btn btn-sm btn-link">Clear</a>
 </form>
