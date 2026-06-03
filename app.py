@@ -3749,6 +3749,37 @@ def filings_list():
                            all_districts=all_districts, counties=counties)
 
 
+def _fetch_districts_for_picker(cur):
+    """Return list of dicts each with code, county, towns, seats, pvi_label
+    so the form's district picker can show + filter by town."""
+    cur.execute("""
+        SELECT d.full_district_code, d.county_name,
+               STRING_AGG(DISTINCT
+                  CASE WHEN d.ward IS NOT NULL AND d.ward != 0
+                       THEN d.town || ' Ward ' || d.ward ELSE d.town END,
+                  ', ' ORDER BY
+                  CASE WHEN d.ward IS NOT NULL AND d.ward != 0
+                       THEN d.town || ' Ward ' || d.ward ELSE d.town END
+               ) AS towns,
+               MAX(d.seat_count) AS seats,
+               MAX(d.pvi) AS pvi
+        FROM districts d
+        GROUP BY d.full_district_code, d.county_name
+        ORDER BY d.county_name, d.full_district_code
+    """)
+    out = []
+    for fdc, county, towns, seats, pvi in cur.fetchall():
+        if pvi is None:
+            pvi_label = ''
+        else:
+            pvi_label = f"R+{int(abs(pvi))}" if pvi > 0 else (f"D+{int(abs(pvi))}" if pvi < 0 else 'EVEN')
+        out.append({
+            'code': fdc, 'county': county, 'towns': towns or '',
+            'seats': seats, 'pvi_label': pvi_label,
+        })
+    return out
+
+
 def _link_to_existing_candidate(cur, year, first, last, party, district):
     """If a candidate of the same party/name already exists for this year,
     return their candidate_id so we can link the filing to them."""
@@ -3811,11 +3842,7 @@ def filings_add():
             flash(f'Filing recorded: {first} {last} ({party}) — {district}.', 'success')
             return redirect(url_for('filings_list', year=year))
 
-        cur.execute("""
-            SELECT DISTINCT full_district_code, county_name FROM districts
-            ORDER BY county_name, full_district_code
-        """)
-        all_districts = cur.fetchall()
+        all_districts = _fetch_districts_for_picker(cur)
         return render_template('filings_form.html', filing=None, all_districts=all_districts)
     finally:
         cur.close()
@@ -3861,11 +3888,7 @@ def filings_edit(filing_id):
             return redirect(url_for('filings_list'))
         cols = [d[0] for d in cur.description]
         filing = dict(zip(cols, row))
-        cur.execute("""
-            SELECT DISTINCT full_district_code, county_name FROM districts
-            ORDER BY county_name, full_district_code
-        """)
-        all_districts = cur.fetchall()
+        all_districts = _fetch_districts_for_picker(cur)
         return render_template('filings_form.html', filing=filing, all_districts=all_districts)
     finally:
         cur.close()

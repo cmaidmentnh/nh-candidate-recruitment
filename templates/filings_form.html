@@ -47,12 +47,16 @@
     </div>
     <div class="form-group col-md-8">
       <label>District *</label>
-      <select name="district_code" class="form-control" required>
-        <option value="">— select district —</option>
-        {% for fdc, cty in all_districts %}
-        <option value="{{ fdc }}" {% if filing and filing.district_code == fdc %}selected{% endif %}>{{ fdc }} ({{ cty }})</option>
-        {% endfor %}
-      </select>
+      <div class="district-picker" style="position: relative;">
+        <input type="hidden" name="district_code" id="district_code" value="{{ filing.district_code if filing else '' }}" required>
+        <input type="text" id="district_search" class="form-control" autocomplete="off"
+               placeholder="Type a town, county, or district code (e.g. 'Bedford', 'Manchester 6', 'Hills 2')"
+               value="">
+        <div id="district_selected" class="mt-1" style="font-size: 13px;"></div>
+        <div id="district_results" style="display:none; position: absolute; z-index: 50; background: #fff;
+             border: 1px solid #ced4da; border-top: none; width: 100%; max-height: 320px;
+             overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"></div>
+      </div>
     </div>
   </div>
 
@@ -88,4 +92,81 @@
   </div>
 </form>
 
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function() {
+  const DISTRICTS = {{ all_districts | tojson }};
+  const search = document.getElementById('district_search');
+  const hidden = document.getElementById('district_code');
+  const results = document.getElementById('district_results');
+  const selectedLine = document.getElementById('district_selected');
+
+  function fmt(d) {
+    const pvi = d.pvi_label ? `<span class="badge badge-light ml-2" style="font-size:10px;">${d.pvi_label}</span>` : '';
+    return `<div class="d-flex align-items-center justify-content-between" style="padding:8px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0;">
+      <div>
+        <strong>${d.code}</strong> <small class="text-muted">${d.county}</small> ${pvi}
+        <div style="font-size:12px; color:#666;">${d.towns}</div>
+      </div>
+      <div style="font-size:11px; color:#999;">${d.seats} seat${d.seats==1?'':'s'}</div>
+    </div>`;
+  }
+
+  function setSelected(d) {
+    hidden.value = d.code;
+    search.value = '';
+    results.style.display = 'none';
+    selectedLine.innerHTML = `<span class="badge badge-success" style="padding:5px 9px;">${d.code}</span>
+      <span class="text-muted ml-2">${d.towns} · ${d.county}</span>
+      <a href="#" id="district_clear" class="ml-2 text-danger" style="font-size:12px;">change</a>`;
+    document.getElementById('district_clear').onclick = function(e) {
+      e.preventDefault();
+      hidden.value = '';
+      selectedLine.innerHTML = '';
+      search.focus();
+    };
+  }
+
+  function render(matches) {
+    if (!matches.length) {
+      results.innerHTML = `<div style="padding:12px; color:#999;">No matches.</div>`;
+    } else {
+      results.innerHTML = matches.map(d => `<div data-code="${d.code}">${fmt(d)}</div>`).join('');
+      Array.from(results.children).forEach(node => {
+        node.onclick = function() {
+          const d = DISTRICTS.find(x => x.code === node.getAttribute('data-code'));
+          if (d) setSelected(d);
+        };
+      });
+    }
+    results.style.display = 'block';
+  }
+
+  function filter(q) {
+    q = q.trim().toLowerCase();
+    if (!q) { results.style.display = 'none'; return; }
+    const terms = q.split(/\s+/);
+    const matches = DISTRICTS.filter(d => {
+      const hay = (d.code + ' ' + d.county + ' ' + d.towns).toLowerCase();
+      return terms.every(t => hay.includes(t));
+    }).slice(0, 50);
+    render(matches);
+  }
+
+  search.addEventListener('input', e => filter(e.target.value));
+  search.addEventListener('focus', e => { if (e.target.value) filter(e.target.value); });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.district-picker')) results.style.display = 'none';
+  });
+
+  // Pre-populate on edit
+  if (hidden.value) {
+    const d = DISTRICTS.find(x => x.code === hidden.value);
+    if (d) setSelected(d);
+  }
+})();
+</script>
 {% endblock %}
