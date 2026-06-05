@@ -3893,36 +3893,96 @@ def _fetch_districts_for_picker(cur):
     return out
 
 
+_NICKNAMES = {
+    'andy':'andrew', 'andrew':'andy',
+    'ben':'benjamin', 'benjamin':'ben',
+    'bill':'william', 'will':'william', 'william':'bill',
+    'bob':'robert', 'rob':'robert', 'bobby':'robert', 'robert':'bob',
+    'brad':'bradley', 'bradley':'brad',
+    'chris':'christopher', 'christopher':'chris',
+    'chuck':'charles', 'charlie':'charles', 'charles':'chuck',
+    'cy':'cyril', 'cyril':'cy',
+    'dan':'daniel', 'danny':'daniel', 'daniel':'dan',
+    'dave':'david', 'david':'dave',
+    'deb':'deborah', 'debbie':'deborah', 'deborah':'deb',
+    'dick':'richard', 'rick':'richard', 'richard':'dick',
+    'don':'donald', 'donald':'don',
+    'ed':'edward', 'eddie':'edward', 'edward':'ed',
+    'fred':'frederick', 'frederick':'fred',
+    'greg':'gregory', 'gregory':'greg',
+    'hank':'henry', 'henry':'hank',
+    'jack':'john', 'john':'jack',
+    'jen':'jennifer', 'jenny':'jennifer', 'jennifer':'jen',
+    'jess':'jesse', 'jesse':'jess',
+    'jim':'james', 'jimmy':'james', 'james':'jim',
+    'joe':'joseph', 'joey':'joseph', 'joseph':'joe',
+    'josh':'joshua', 'joshua':'josh',
+    'kate':'kathryn', 'katie':'kathryn', 'kathy':'kathryn', 'kathryn':'kate',
+    'ken':'kenneth', 'kenny':'kenneth', 'kenneth':'ken',
+    'larry':'lawrence', 'lawrence':'larry',
+    'liz':'elizabeth', 'beth':'elizabeth', 'betty':'elizabeth', 'elizabeth':'liz',
+    'matt':'matthew', 'matthew':'matt',
+    'mickey':'michael', 'mike':'michael', 'michael':'mike',
+    'nick':'nicholas', 'nicholas':'nick',
+    'pat':'patrick', 'patrick':'pat',
+    'pete':'peter', 'peter':'pete',
+    'phil':'philip', 'philip':'phil', 'phillip':'phil',
+    'rich':'richard',
+    'ron':'ronald', 'ronald':'ron',
+    'russ':'russell', 'russell':'russ',
+    'sam':'samuel', 'samuel':'sam',
+    'steve':'steven', 'steven':'steve', 'stephen':'steve',
+    'sue':'susan', 'susan':'sue',
+    'ted':'theodore', 'theodore':'ted',
+    'tom':'thomas', 'tommy':'thomas', 'thomas':'tom',
+    'tony':'anthony', 'anthony':'tony',
+    'vince':'vincent', 'vinny':'vincent', 'vincent':'vince',
+    'walt':'walter', 'walter':'walt',
+    'zach':'zachary', 'zack':'zachary', 'zachary':'zach',
+}
+
+def _name_variants(first):
+    """Return the lowercase first-name plus any nickname/formal pair."""
+    tok = re.sub(r'[^a-z]', '', (first or '').lower().split(' ', 1)[0])
+    if not tok: return []
+    out = {tok}
+    if tok in _NICKNAMES: out.add(_NICKNAMES[tok])
+    return list(out)
+
+
 def _link_to_existing_candidate(cur, year, first, last, party, district):
-    """Find the unique candidate this filing belongs to (one candidates row
-    per person, across years). Match on the first WORD of the first name
-    (so 'Ralph' matches 'Ralph G.') and an exact last name + party.
+    """Find the unique candidate this filing belongs to (one row per person,
+    across years). Tolerant of:
+      - nickname/formal-name pairs (Bob↔Robert, Brad↔Bradley, Andy↔Andrew)
+      - middle initials ('Ralph G.' matches 'Ralph')
+      - suffixes in last name ('Giasson III' matches 'Giasson')"""
+    variants = _name_variants(first)
+    if not variants: return None
+    last_clean = re.sub(r'\s+(jr\.?|sr\.?|ii|iii|iv|v)$', '',
+                        (last or '').strip(), flags=re.I)
 
-    Does NOT create a new row — see _find_or_create_candidate for that."""
-    first_tok = (first or '').strip().split(' ', 1)[0] if (first or '').strip() else first
-
-    # 1. First-token + last + party + this district in ANY year (most precise)
+    # 1. Variant first + last + party + this district in ANY year
     cur.execute("""
         SELECT DISTINCT c.candidate_id
         FROM candidates c
         JOIN candidate_election_status ces ON ces.candidate_id = c.candidate_id
         WHERE c.party = %s
-          AND LOWER(SPLIT_PART(TRIM(c.first_name), ' ', 1)) = LOWER(%s)
-          AND LOWER(c.last_name) = LOWER(%s)
+          AND LOWER(REGEXP_REPLACE(SPLIT_PART(TRIM(c.first_name), ' ', 1), '[^a-zA-Z]', '', 'g')) = ANY(%s)
+          AND LOWER(REGEXP_REPLACE(c.last_name, '\\s+(jr\\.?|sr\\.?|ii|iii|iv|v)$', '', 'i')) = LOWER(%s)
           AND ces.district_code = %s
-    """, (party, first_tok, last, district))
+    """, (party, variants, last_clean, district))
     rows = cur.fetchall()
     if len(rows) == 1: return rows[0][0]
 
-    # 2. First-token + last + party anywhere, oldest cid wins
+    # 2. Variant first + last + party anywhere, oldest cid wins
     cur.execute("""
         SELECT candidate_id FROM candidates
         WHERE party = %s
-          AND LOWER(SPLIT_PART(TRIM(first_name), ' ', 1)) = LOWER(%s)
-          AND LOWER(last_name) = LOWER(%s)
+          AND LOWER(REGEXP_REPLACE(SPLIT_PART(TRIM(first_name), ' ', 1), '[^a-zA-Z]', '', 'g')) = ANY(%s)
+          AND LOWER(REGEXP_REPLACE(last_name, '\\s+(jr\\.?|sr\\.?|ii|iii|iv|v)$', '', 'i')) = LOWER(%s)
         ORDER BY candidate_id
         LIMIT 1
-    """, (party, first_tok, last))
+    """, (party, variants, last_clean))
     row = cur.fetchone()
     return row[0] if row else None
 
