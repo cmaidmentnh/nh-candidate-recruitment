@@ -3796,7 +3796,7 @@ def filings_list():
             'Concord':    ('Merrimack', 1),
         }
         county_groups = _dd(list)
-        for fdc, meta in sorted(by_district.items()):
+        for fdc, meta in sorted(by_district.items(), key=lambda kv: natural_district_sort_key(kv[0])):
             towns = (meta['towns_label'] or '').split(',')
             towns_u = [t.strip().upper() for t in towns if t.strip()]
             if towns_u and all(t.startswith('MANCHESTER') for t in towns_u):
