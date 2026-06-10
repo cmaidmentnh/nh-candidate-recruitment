@@ -3818,18 +3818,22 @@ def filings_list():
 
         # Summary stats
         cur.execute("""
-            SELECT party, COUNT(*) FROM filings WHERE election_year=%s GROUP BY party
+            SELECT party, COUNT(*) FROM filings
+            WHERE election_year=%s AND office = 'State Representative'
+            GROUP BY party
         """, (year,))
         party_counts = dict(cur.fetchall())
 
         cur.execute("""
-            SELECT COUNT(DISTINCT district_code) FROM filings WHERE election_year=%s
+            SELECT COUNT(DISTINCT district_code) FROM filings
+            WHERE election_year=%s AND office = 'State Representative'
         """, (year,))
         districts_with_filings = cur.fetchone()[0] or 0
 
         cur.execute("""
             SELECT COUNT(*) FROM (
-                SELECT district_code FROM filings WHERE election_year=%s
+                SELECT district_code FROM filings
+                WHERE election_year=%s AND office = 'State Representative'
                 GROUP BY district_code HAVING COUNT(DISTINCT party) > 1
             ) t
         """, (year,))
