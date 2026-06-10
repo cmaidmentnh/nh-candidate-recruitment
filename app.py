@@ -3932,6 +3932,7 @@ _NICKNAMES = {
     'greg':'gregory', 'gregory':'greg',
     'hank':'henry', 'henry':'hank',
     'jack':'john', 'john':'jack',
+    'jeff':'jeffrey', 'jeffery':'jeffrey', 'jeffrey':'jeff',
     'jen':'jennifer', 'jenny':'jennifer', 'jennifer':'jen',
     'jess':'jesse', 'jesse':'jess',
     'jim':'james', 'jimmy':'james', 'james':'jim',
