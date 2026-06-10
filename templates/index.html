@@ -36,7 +36,18 @@
 
 <!-- Dashboard Cards -->
 {% set confirm_pct = (dashboard.confirmed.total / dashboard.TOTAL_SEATS * 100)|round|int %}
+{% set filed_pct = (dashboard.filed.total / dashboard.TOTAL_SEATS * 100)|round|int %}
 <div class="dashboard-row mb-4">
+    <a href="{{ url_for('filings_list', party='R') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #0b4f9c 0%, #1f7ae0 100%);">Filed</div>
+        <div class="card-body">
+            <h4>{{ dashboard.filed.total }}</h4>
+            <div class="progress mt-2 w-100" style="height: 6px;">
+                <div class="progress-bar" style="width: {{ filed_pct }}%; background:#1f7ae0;"></div>
+            </div>
+            <small>{{ filed_pct }}% of {{ dashboard.TOTAL_SEATS }}</small>
+        </div>
+    </a>
     <a href="{{ url_for('filter_view', category='confirmed') }}" class="dash-card dash-card-size dash-card-link">
         <div class="card-header" style="background: linear-gradient(135deg, #1b8a2d 0%, #28a745 100%);">Confirmed</div>
         <div class="card-body">
@@ -145,13 +156,13 @@
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                 <div class="row">
                     {% for county_name, stats in county_stats.items()|sort %}
-                    {% set pct = (stats.c2026_confirmed / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
-                    {% set needs = stats.total_seats - stats.c2026_confirmed %}
+                    {% set pct = (stats.c2026_seats_filled / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
+                    {% set needs = stats.total_seats - stats.c2026_seats_filled %}
                     <div class="col-md-6 mb-3">
                         <a href="{{ url_for('index', county=county_name) }}" class="county-progress-link d-block text-decoration-none" data-dismiss="modal">
                             <div class="d-flex justify-content-between mb-1">
                                 <strong class="text-dark">{{ county_name }}</strong>
-                                <span class="text-muted">{{ stats.c2026_confirmed }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">({{ needs }})</small>{% endif %}</span>
+                                <span class="text-muted">{{ stats.c2026_seats_filled }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">({{ needs }})</small>{% endif %}</span>
                             </div>
                             <div class="progress" style="height: 20px;">
                                 <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
@@ -201,7 +212,7 @@
 <!-- County Accordion -->
 <div id="countyAccordion">
     {% for county_name, dist_dict in county_groups.items()|sort %}
-    {% set c_pct = (county_stats[county_name].c2026_confirmed / county_stats[county_name].total_seats * 100)|round|int if county_stats[county_name].total_seats > 0 else 0 %}
+    {% set c_pct = (county_stats[county_name].c2026_seats_filled / county_stats[county_name].total_seats * 100)|round|int if county_stats[county_name].total_seats > 0 else 0 %}
     <div class="card county-card" id="{{ county_name|replace(' ', '_') }}">
         <div class="card-header" data-toggle="collapse" data-target="#collapse-{{ county_name|replace(' ', '_') }}"
              aria-expanded="false" aria-controls="collapse-{{ county_name|replace(' ', '_') }}">
@@ -211,7 +222,7 @@
                     <div class="progress-bar {% if c_pct >= 75 %}bg-success{% elif c_pct >= 50 %}bg-info{% elif c_pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ c_pct }}%;"></div>
                 </div>
             </div>
-            <small><strong>{{ county_stats[county_name].c2026_confirmed }}</strong> / {{ county_stats[county_name].total_seats }} Seats <span class="ml-1" style="opacity:0.7;">({{ c_pct }}%)</span></small>
+            <small><strong>{{ county_stats[county_name].c2026_seats_filled }}</strong> / {{ county_stats[county_name].total_seats }} Seats <span class="ml-1" style="opacity:0.7;">({{ c_pct }}%)</span></small>
         </div>
         <div id="collapse-{{ county_name|replace(' ', '_') }}" class="collapse{% if search_query %} show{% endif %}">
             <div class="card-body">

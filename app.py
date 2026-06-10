@@ -564,6 +564,14 @@ def get_data_and_dashboard():
             WHERE election_year = 2026 AND candidate_id IS NOT NULL
         """)
         filed_2026_cids = {row[0] for row in cur.fetchall()}
+
+        # Count of Republican State Rep candidates who have officially filed.
+        cur.execute("""
+            SELECT COUNT(DISTINCT candidate_id) FROM filings
+            WHERE election_year = 2026 AND office = 'State Representative'
+              AND party = 'R' AND candidate_id IS NOT NULL
+        """)
+        filed_rep_count = cur.fetchone()[0] or 0
     except Exception as e:
         logger.error(e)
         flash("Error fetching data from database.", "danger")
@@ -571,6 +579,7 @@ def get_data_and_dashboard():
         cands_2026_rows = []
         cands_2024_rows = []
         filed_2026_cids = set()
+        filed_rep_count = 0
     finally:
         cur.close()
         release_db_connection(conn)
@@ -670,6 +679,7 @@ def get_data_and_dashboard():
         "incumbents_not_running": {"total": 0, "districts": []},
         "incumbents_undecided": {"total": 0, "districts": []},
         "primaries": {"total": 0, "districts": []},
+        "filed": {"total": filed_rep_count},
         "unmatched_voters": {"total": unmatched_count},
         "TOTAL_SEATS": TOTAL_SEATS,
         "TOTAL_DISTRICTS": TOTAL_DISTRICTS
@@ -740,16 +750,22 @@ def get_data_and_dashboard():
         c_2026 = 0
         c_2024 = 0
         c_2026_confirmed = 0
+        c_2026_seats_filled = 0
         for fdc, info in dist_dict.items():
             c_seats += info["seat_count"]
             c_2026 += len(info["cand2026"])
             c_2024 += len(info["cand2024"])
-            c_2026_confirmed += sum(1 for c in info["cand2026"] if c["status"].upper() == "CONFIRMED")
+            conf_in_dist = sum(1 for c in info["cand2026"] if c["status"].upper() == "CONFIRMED")
+            c_2026_confirmed += conf_in_dist
+            # Seats filled is capped at the district's seat count — extra
+            # confirmed candidates in a district are a primary, not extra seats.
+            c_2026_seats_filled += min(conf_in_dist, info["seat_count"])
         county_stats[county_name] = {
             "total_seats": c_seats,
             "c2026": c_2026,
             "c2024": c_2024,
-            "c2026_confirmed": c_2026_confirmed
+            "c2026_confirmed": c_2026_confirmed,
+            "c2026_seats_filled": c_2026_seats_filled
         }
     return sorted_county_groups, dashboard, county_stats
 
