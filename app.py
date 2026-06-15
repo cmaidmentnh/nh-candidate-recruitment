@@ -528,6 +528,22 @@ def log_activity(action_type, description, candidate_id=None):
     except Exception as e:
         logger.error(f"Error logging activity: {e}")
 
+# Register candidate intake blueprint (public API behind electhouserepublicans.com/candidates).
+# Registered here because it needs log_activity, defined just above.
+from candidate_intake import intake_bp, init_candidate_intake
+init_candidate_intake(get_db_connection, release_db_connection, upload_file_to_storage, send_email, log_activity)
+app.register_blueprint(intake_bp)
+# The three JSON API routes are token/code-gated and called without a session
+# cookie through the ctehr-website proxy, so CSRF tokens don't apply to them.
+# The /intake/admin routes keep normal CSRF protection.
+csrf.exempt(app.view_functions['intake.api_start'])
+csrf.exempt(app.view_functions['intake.api_verify'])
+csrf.exempt(app.view_functions['intake.api_submit'])
+for _ep, _lim in [('intake.api_start', "10 per minute; 30 per hour"),
+                  ('intake.api_verify', "15 per minute"),
+                  ('intake.api_submit', "10 per hour")]:
+    app.view_functions[_ep] = limiter.limit(_lim)(app.view_functions[_ep])
+
 def get_data_and_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -3945,6 +3961,7 @@ _NICKNAMES = {
     'matt':'matthew', 'matthew':'matt',
     'mickey':'michael', 'mike':'michael', 'michael':'mike',
     'nick':'nicholas', 'nicholas':'nick',
+    'pam':'pamela', 'pamela':'pam',
     'pat':'patrick', 'patrick':'pat',
     'pete':'peter', 'peter':'pete',
     'phil':'philip', 'philip':'phil', 'phillip':'phil',
@@ -3987,7 +4004,7 @@ def _link_to_existing_candidate(cur, year, first, last, party, district):
         SELECT DISTINCT c.candidate_id
         FROM candidates c
         JOIN candidate_election_status ces ON ces.candidate_id = c.candidate_id
-        WHERE c.party = %s
+        WHERE UPPER(c.party) = UPPER(%s)
           AND LOWER(REGEXP_REPLACE(SPLIT_PART(TRIM(c.first_name), ' ', 1), '[^a-zA-Z]', '', 'g')) = ANY(%s)
           AND LOWER(REGEXP_REPLACE(c.last_name, '\\s+(jr\\.?|sr\\.?|ii|iii|iv|v)$', '', 'i')) = LOWER(%s)
           AND ces.district_code = %s
@@ -3998,7 +4015,7 @@ def _link_to_existing_candidate(cur, year, first, last, party, district):
     # 2. Variant first + last + party anywhere, oldest cid wins
     cur.execute("""
         SELECT candidate_id FROM candidates
-        WHERE party = %s
+        WHERE UPPER(party) = UPPER(%s)
           AND LOWER(REGEXP_REPLACE(SPLIT_PART(TRIM(first_name), ' ', 1), '[^a-zA-Z]', '', 'g')) = ANY(%s)
           AND LOWER(REGEXP_REPLACE(last_name, '\\s+(jr\\.?|sr\\.?|ii|iii|iv|v)$', '', 'i')) = LOWER(%s)
         ORDER BY candidate_id
