@@ -534,18 +534,18 @@ try:
     from candidate_intake import intake_bp, init_candidate_intake
     init_candidate_intake(get_db_connection, release_db_connection, upload_file_to_storage, send_email, log_activity)
     app.register_blueprint(intake_bp)
+    # The three JSON API routes are token/code-gated and called without a session
+    # cookie through the ctehr-website proxy, so CSRF tokens don't apply to them.
+    # The /intake/admin routes keep normal CSRF protection.
+    csrf.exempt(app.view_functions['intake.api_start'])
+    csrf.exempt(app.view_functions['intake.api_verify'])
+    csrf.exempt(app.view_functions['intake.api_submit'])
+    for _ep, _lim in [('intake.api_start', "10 per minute; 30 per hour"),
+                      ('intake.api_verify', "15 per minute"),
+                      ('intake.api_submit', "10 per hour")]:
+        app.view_functions[_ep] = limiter.limit(_lim)(app.view_functions[_ep])
 except ImportError as e:
     logger.warning(f"candidate_intake module not deployed; intake feature disabled: {e}")
-# The three JSON API routes are token/code-gated and called without a session
-# cookie through the ctehr-website proxy, so CSRF tokens don't apply to them.
-# The /intake/admin routes keep normal CSRF protection.
-csrf.exempt(app.view_functions['intake.api_start'])
-csrf.exempt(app.view_functions['intake.api_verify'])
-csrf.exempt(app.view_functions['intake.api_submit'])
-for _ep, _lim in [('intake.api_start', "10 per minute; 30 per hour"),
-                  ('intake.api_verify', "15 per minute"),
-                  ('intake.api_submit', "10 per hour")]:
-    app.view_functions[_ep] = limiter.limit(_lim)(app.view_functions[_ep])
 
 def get_data_and_dashboard():
     conn = get_db_connection()
