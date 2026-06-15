@@ -530,9 +530,12 @@ def log_activity(action_type, description, candidate_id=None):
 
 # Register candidate intake blueprint (public API behind electhouserepublicans.com/candidates).
 # Registered here because it needs log_activity, defined just above.
-from candidate_intake import intake_bp, init_candidate_intake
-init_candidate_intake(get_db_connection, release_db_connection, upload_file_to_storage, send_email, log_activity)
-app.register_blueprint(intake_bp)
+try:
+    from candidate_intake import intake_bp, init_candidate_intake
+    init_candidate_intake(get_db_connection, release_db_connection, upload_file_to_storage, send_email, log_activity)
+    app.register_blueprint(intake_bp)
+except ImportError as e:
+    logger.warning(f"candidate_intake module not deployed; intake feature disabled: {e}")
 # The three JSON API routes are token/code-gated and called without a session
 # cookie through the ctehr-website proxy, so CSRF tokens don't apply to them.
 # The /intake/admin routes keep normal CSRF protection.
