@@ -3942,6 +3942,7 @@ _NICKNAMES = {
     'chuck':'charles', 'charlie':'charles', 'charles':'chuck',
     'cy':'cyril', 'cyril':'cy',
     'dan':'daniel', 'danny':'daniel', 'daniel':'dan',
+    'darryl':'daryl', 'daryl':'darryl', 'darrell':'daryl',
     'dave':'david', 'david':'dave',
     'deb':'deborah', 'debbie':'deborah', 'deborah':'deb',
     'dick':'richard', 'rick':'richard', 'richard':'dick',
