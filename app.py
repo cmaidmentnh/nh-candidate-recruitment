@@ -110,10 +110,18 @@ app.config['SESSION_PERMANENT'] = True
 # CSRF Protection
 csrf = CSRFProtect(app)
 
-# Rate Limiting
+# Rate Limiting — portal traffic arrives via the ctehr-website Node proxy, so
+# request.remote_addr is always 127.0.0.1. Key on the real client IP (first hop
+# of X-Forwarded-For) so candidates get per-person buckets, not one shared one.
+def _real_client_ip():
+    xff = request.headers.get('X-Forwarded-For', '')
+    if xff:
+        return xff.split(',')[0].strip()
+    return get_remote_address()
+
 limiter = Limiter(
     app=app,
-    key_func=get_remote_address,
+    key_func=_real_client_ip,
     default_limits=["200 per day", "50 per hour"]
 )
 
@@ -562,9 +570,9 @@ try:
                 'portal.login', 'portal.profile_get', 'portal.profile_post',
                 'portal.approve', 'portal.approve_do'):
         csrf.exempt(app.view_functions[_ep])
-    for _ep, _lim in [('portal.register_start', "8 per minute; 30 per hour"),
-                      ('portal.login', "10 per minute"),
-                      ('portal.setup', "10 per hour")]:
+    for _ep, _lim in [('portal.register_start', "8 per minute; 80 per hour"),
+                      ('portal.login', "20 per minute"),
+                      ('portal.setup', "10 per minute; 60 per hour")]:
         app.view_functions[_ep] = limiter.limit(_lim)(app.view_functions[_ep])
 except ImportError as e:
     logger.warning(f"candidate_portal module not deployed; portal feature disabled: {e}")
