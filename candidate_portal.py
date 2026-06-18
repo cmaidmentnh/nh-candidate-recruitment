@@ -282,7 +282,7 @@ def approve_do():
         cur.execute("UPDATE portal_registrations SET status='approved', approved_at=NOW(), approved_by='signal-admin' WHERE id=%s", (res['id'],))
         conn.commit()
         if log_activity and mid:
-            log_activity('portal_registration_approved', f'Approved portal registration for {name} ({email})', mid, 'portal-approval')
+            log_activity('portal_registration_approved', f'Approved portal registration for {name} ({email})', mid)
         msg = (f"Approved. Login email sent to {email}." if mid
                else f"Recorded {email}. No candidate matched — attach it manually in the recruitment app.")
         return _APPROVE_PAGE.format(body=f"<p>{msg}</p>")
