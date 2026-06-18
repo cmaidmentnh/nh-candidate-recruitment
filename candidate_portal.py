@@ -143,7 +143,8 @@ def register_start():
     conn = get_db_connection(); cur = conn.cursor()
     try:
         cur.execute("""SELECT candidate_id, first_name, last_name FROM candidates
-                       WHERE LOWER(email) = %s ORDER BY candidate_id LIMIT 1""", (email,))
+                       WHERE LOWER(email) = %s OR LOWER(email1) = %s OR LOWER(email2) = %s
+                       ORDER BY candidate_id LIMIT 1""", (email, email, email))
         row = cur.fetchone()
         if not row:
             who = name or email
@@ -233,10 +234,16 @@ def login():
     username = (data.get('username') or '').strip()
     password = (data.get('password') or '')
     if not username or not password:
-        return jsonify({'ok': False, 'error': 'Enter your username and password.'}), 400
+        return jsonify({'ok': False, 'error': 'Enter your username or email, and your password.'}), 400
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("SELECT candidate_id, password_hash FROM candidates WHERE LOWER(username)=LOWER(%s)", (username,))
+        # Accept either a username or the email on file (candidates naturally type their email).
+        cur.execute("""SELECT candidate_id, password_hash FROM candidates
+                       WHERE LOWER(username) = LOWER(%s)
+                          OR ((LOWER(email)=LOWER(%s) OR LOWER(email1)=LOWER(%s) OR LOWER(email2)=LOWER(%s))
+                              AND COALESCE(password_hash,'') <> '')
+                       ORDER BY CASE WHEN LOWER(username) = LOWER(%s) THEN 0 ELSE 1 END, candidate_id
+                       LIMIT 1""", (username, username, username, username, username))
         row = cur.fetchone()
         if not row or not row[1] or not check_password_hash(row[1], password):
             return jsonify({'ok': False, 'error': 'Incorrect username or password.'}), 401
