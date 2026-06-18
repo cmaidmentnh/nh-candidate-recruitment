@@ -3760,7 +3760,7 @@ def filings_list():
             SELECT f.filing_id, f.election_year, f.first_name, f.last_name, f.party,
                    f.district_code, f.town, f.filed_at, f.filing_method, f.notes,
                    f.candidate_id, f.created_by, f.created_at,
-                   d.county_name, d.seat_count, d.pvi, d.pvi_rating
+                   d.county_name, d.seat_count, d.pvi, d.pvi_rating, f.office
             FROM filings f
             LEFT JOIN LATERAL (
                 SELECT county_name, MAX(seat_count) AS seat_count, MAX(pvi) AS pvi,
@@ -3791,6 +3791,7 @@ def filings_list():
                 'district': r[5], 'town': r[6], 'filed_at': r[7], 'method': r[8],
                 'notes': r[9], 'candidate_id': r[10], 'created_by': r[11], 'created_at': r[12],
                 'county': r[13], 'seats': r[14], 'pvi': r[15], 'pvi_rating': r[16],
+                'office': r[17],
             })
 
         # Start with ALL districts (so the ballot shows empty races too),
@@ -3825,8 +3826,12 @@ def filings_list():
                 if county and (meta['county'] or '').lower() != county.lower(): continue
                 keep.add(fdc)
             by_district = {k: v for k, v in by_district.items() if k in keep}
-        # Attach filings
+        # Attach filings. The ballot cards are NH House (State Rep) districts, so only
+        # State Rep filings belong here — delegate codes like "Carroll 5" collide with
+        # House district codes but are a different race, so they must not attach.
         for f in filings:
+            if f['office'] != 'State Representative':
+                continue
             d = by_district.get(f['district'])
             if d is None: continue
             if f['party'] == 'R': d['R'].append(f)
