@@ -155,23 +155,102 @@ def _send_access_link(cid, fn, email):
                f"Access your candidate profile: {link}\nThis link expires in 7 days.")
 
 
+# Equivalence groups of given names so nicknames match their formal names
+# (Joe/Joseph, Tammy/Tamara, ...). Overlaps across groups are fine — variant
+# lookups union every group the name appears in, then surname must also agree.
+_NAME_GROUPS = [
+    {'joe', 'joseph', 'joey'}, {'tammy', 'tamara', 'tamra', 'tammie'},
+    {'jeff', 'jeffrey', 'jeffery'}, {'jon', 'john', 'jonathan', 'johnny', 'jonny'},
+    {'pam', 'pamela'}, {'dan', 'daniel', 'danny'}, {'dave', 'david'},
+    {'mike', 'michael', 'mick', 'mickey'}, {'bob', 'robert', 'rob', 'bobby', 'robby'},
+    {'bill', 'william', 'will', 'willie', 'billy', 'liam'}, {'tom', 'thomas', 'tommy'},
+    {'jim', 'james', 'jimmy', 'jamie'}, {'rich', 'richard', 'rick', 'ricky', 'dick'},
+    {'chris', 'christopher', 'christine', 'christina', 'chrissy', 'kris'},
+    {'matt', 'matthew', 'matty'}, {'nate', 'nathan', 'nathaniel'}, {'tony', 'anthony'},
+    {'ed', 'edward', 'eddie', 'ted', 'teddy', 'ned'},
+    {'steve', 'steven', 'stephen', 'stevie'}, {'ken', 'kenneth', 'kenny'},
+    {'greg', 'gregory'}, {'andy', 'andrew', 'drew'},
+    {'ben', 'benjamin', 'benny', 'benji'}, {'sam', 'samuel', 'samantha', 'sammy'},
+    {'nick', 'nicholas', 'nicky', 'nico'}, {'fred', 'frederick', 'freddie', 'fritz'},
+    {'gene', 'eugene'},
+    {'cathy', 'kathy', 'katherine', 'catherine', 'kate', 'katie', 'kathleen', 'katharine'},
+    {'liz', 'elizabeth', 'beth', 'lizzie', 'betsy', 'eliza', 'libby'},
+    {'sue', 'susan', 'susie', 'suzanne'}, {'debbie', 'deborah', 'debra', 'deb'},
+    {'peggy', 'meg', 'maggie', 'margaret', 'marge', 'greta'},
+    {'patty', 'patricia', 'pat', 'patrick', 'trish', 'tricia'}, {'sandy', 'sandra'},
+    {'barb', 'barbara', 'barbra', 'babs'}, {'becky', 'rebecca', 'becca'},
+    {'jenny', 'jennifer', 'jen', 'jenn'}, {'vicky', 'victoria', 'vicki'},
+    {'val', 'valerie'}, {'ron', 'ronald', 'ronnie'}, {'don', 'donald', 'donnie'},
+    {'larry', 'lawrence', 'laurence'}, {'terry', 'terrence', 'terence', 'theresa', 'teresa'},
+    {'gerry', 'gerald', 'jerry', 'jerome'}, {'hank', 'henry', 'harry', 'harold'},
+    {'walt', 'walter', 'wally'}, {'marty', 'martin'}, {'art', 'arthur', 'artie'},
+    {'al', 'albert', 'alan', 'allen', 'allan', 'alvin'},
+    {'alex', 'alexander', 'alexandra', 'alexandria', 'xander'},
+    {'vince', 'vincent', 'vinny'}, {'cindy', 'cynthia'}, {'connie', 'constance'},
+    {'gail', 'abigail'}, {'gabe', 'gabby', 'gabriel', 'gabrielle'},
+    {'charlie', 'charles', 'chuck', 'chip', 'charlene', 'charlotte'},
+    {'frank', 'francis', 'franklin', 'frances', 'fran'}, {'tim', 'timothy', 'timmy'},
+    {'phil', 'philip', 'phillip'}, {'doug', 'douglas'}, {'ray', 'raymond'},
+    {'stan', 'stanley'}, {'mitch', 'mitchell'}, {'brad', 'bradley', 'bradford'},
+    {'curt', 'curtis', 'kurt'}, {'wes', 'wesley'}, {'cal', 'calvin'},
+    {'lou', 'louis', 'louise', 'lewis'}, {'josh', 'joshua'}, {'zack', 'zachary', 'zach'},
+    {'jess', 'jessica', 'jesse', 'jessie'}, {'angie', 'angela', 'angelina'},
+    {'tina', 'christina', 'martina', 'valentina'}, {'kim', 'kimberly'},
+    {'dot', 'dorothy', 'dottie'}, {'theo', 'theodore'}, {'manny', 'manuel', 'emmanuel'},
+]
+_SUFFIXES = {'jr', 'sr', 'ii', 'iii', 'iv', 'v'}
+
+
+def _name_variants(first):
+    """All given-name forms equivalent to `first` (itself plus any nickname group)."""
+    first = (first or '').strip().lower()
+    v = {first} if first else set()
+    for g in _NAME_GROUPS:
+        if first in g:
+            v |= g
+    return v
+
+
+def _surname_tokens(s):
+    """Surname split into comparable tokens, dropping apostrophes, hyphens, suffixes."""
+    s = re.sub(r"['`’]", '', (s or '').lower())
+    return set(t for t in re.split(r'[\s\-]+', s) if t and t not in _SUFFIXES)
+
+
 def _match_by_name_town(cur, name, town):
-    """Best-guess match of a registrant (name + town) to a candidate record, or None."""
+    """Best-guess match of a registrant (name + town) to a candidate record, or None.
+
+    Tolerant of nicknames (Joe/Joseph), compound/hyphenated surnames
+    (Garthwaite vs. Simmons Garthwaite), name suffixes, and directional town
+    prefixes (East Wakefield vs. Wakefield)."""
     toks = [p for p in re.split(r'\s+', (name or '').strip()) if p]
     if len(toks) < 2:
         return None
-    first, last = toks[0], toks[-1]
-    last_clean = re.sub(r'\s+(jr|sr|ii|iii|iv|v)\.?$', '', last, flags=re.I)
-    cur.execute("""SELECT candidate_id FROM candidates
-                   WHERE LOWER(REGEXP_REPLACE(last_name,'\\s+(jr|sr|ii|iii|iv|v)\\.?$','','i')) = LOWER(%s)
-                     AND LOWER(SPLIT_PART(TRIM(first_name),' ',1)) = LOWER(%s)""", (last_clean, first))
-    ids = [r[0] for r in cur.fetchall()]
+    reg_firsts = _name_variants(toks[0])
+    reg_sur = _surname_tokens(' '.join(toks[1:]))
+    if not reg_sur:
+        return None
+
+    cur.execute("SELECT candidate_id, first_name, last_name FROM candidates")
+    ids = []
+    for cid, cf, cl in cur.fetchall():
+        cand_first = re.split(r'\s+', (cf or '').strip())
+        cand_firsts = _name_variants(cand_first[0]) if cand_first else set()
+        if not (reg_firsts & cand_firsts):
+            continue
+        if reg_sur & _surname_tokens(cl):   # any shared surname token
+            ids.append(cid)
+    ids = list(dict.fromkeys(ids))
     if len(ids) == 1:
         return ids[0]
     if not ids:
         return None
+
     if town:  # disambiguate multiple same-name people by the town's district
-        cur.execute("SELECT DISTINCT full_district_code FROM districts WHERE UPPER(town)=UPPER(%s)", (town,))
+        town_variants = {town}
+        town_variants.add(re.sub(r'^(east|west|north|south)\s+', '', town.strip(), flags=re.I))
+        cur.execute("SELECT DISTINCT full_district_code FROM districts WHERE UPPER(town) = ANY(%s)",
+                    ([t.upper() for t in town_variants],))
         tds = [r[0] for r in cur.fetchall()]
         if tds:
             cur.execute("""SELECT DISTINCT candidate_id FROM candidate_election_status
