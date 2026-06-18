@@ -142,6 +142,8 @@ def _send_access_link(cid, fn, email):
         set your username and password and update your information.</p>
         <p style="margin:24px 0"><a href="{link}" style="background:#b91c1c;color:#fff;padding:14px 28px;
         border-radius:6px;text-decoration:none;font-weight:700">Access My Profile</a></p>
+        <p style="font-size:13px;color:#444">Or paste this link into your browser:<br>
+        <a href="{link}" style="color:#b91c1c;word-break:break-all">{link}</a></p>
         <p style="color:#666;font-size:13px">This link expires in 7 days.</p></div>"""
     send_email(email, "Access your candidate profile", html,
                f"Access your candidate profile: {link}\nThis link expires in 7 days.")

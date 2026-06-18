@@ -309,13 +309,16 @@ def upload_file_to_storage(file_obj, destination_blob_name):
         return None
     
     try:
+        ctype = getattr(file_obj, 'content_type', None) or 'application/octet-stream'
+        # No ACL: the bucket is ACL-disabled and serves public objects via bucket policy
+        # (matches the website-builder app). Return the virtual-hosted public URL.
         s3.upload_fileobj(
             file_obj,
             S3_BUCKET,
             destination_blob_name,
-            ExtraArgs={'ACL': 'public-read'}
+            ExtraArgs={'ContentType': ctype}
         )
-        return f"{S3_ENDPOINT}/{S3_BUCKET}/{destination_blob_name}"
+        return f"https://{S3_BUCKET}.s3.amazonaws.com/{destination_blob_name}"
     except Exception as e:
         logger.error(f"Error uploading to S3: {e}")
         return None
