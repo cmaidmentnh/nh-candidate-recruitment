@@ -556,7 +556,8 @@ try:
                           send_email, generate_invite_token, verify_invite_token, log_activity)
     app.register_blueprint(portal_bp)
     for _ep in ('portal.register_start', 'portal.access', 'portal.setup',
-                'portal.login', 'portal.profile_get', 'portal.profile_post'):
+                'portal.login', 'portal.profile_get', 'portal.profile_post',
+                'portal.approve', 'portal.approve_do'):
         csrf.exempt(app.view_functions[_ep])
     for _ep, _lim in [('portal.register_start', "8 per minute; 30 per hour"),
                       ('portal.login', "10 per minute"),

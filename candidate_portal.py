@@ -37,6 +37,7 @@ read_token = None      # verify_invite_token(token, max_age) -> (user_type, user
 log_activity = None
 
 PORTAL_BASE = os.environ.get('PORTAL_BASE_URL', 'https://electhouserepublicans.com')
+APP_URL = os.environ.get('APP_URL', 'https://nhcandidaterecruitment.com')  # for admin approval links
 ACCESS_TTL = 7 * 24 * 3600          # email confirmation link
 SESSION_TTL = 12 * 3600             # logged-in session token
 SIGNAL_CLI_HOST = os.environ.get('SIGNAL_CLI_HOST', '127.0.0.1')
@@ -132,42 +133,151 @@ def _towns_list(cur):
     return [{'town': r[0], 'district_code': r[1]} for r in cur.fetchall()]
 
 
+def _send_access_link(cid, fn, email):
+    token = make_token('portal_access', cid)
+    link = f"{PORTAL_BASE}/candidates.html?token={token}"
+    html = f"""<div style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.6">
+        <p>Hi {fn or 'there'},</p>
+        <p>Your candidate profile with the Committee to Elect House Republicans is ready. Click below to
+        set your username and password and update your information.</p>
+        <p style="margin:24px 0"><a href="{link}" style="background:#b91c1c;color:#fff;padding:14px 28px;
+        border-radius:6px;text-decoration:none;font-weight:700">Access My Profile</a></p>
+        <p style="color:#666;font-size:13px">This link expires in 7 days.</p></div>"""
+    send_email(email, "Access your candidate profile", html,
+               f"Access your candidate profile: {link}\nThis link expires in 7 days.")
+
+
+def _match_by_name_town(cur, name, town):
+    """Best-guess match of a registrant (name + town) to a candidate record, or None."""
+    toks = [p for p in re.split(r'\s+', (name or '').strip()) if p]
+    if len(toks) < 2:
+        return None
+    first, last = toks[0], toks[-1]
+    last_clean = re.sub(r'\s+(jr|sr|ii|iii|iv|v)\.?$', '', last, flags=re.I)
+    cur.execute("""SELECT candidate_id FROM candidates
+                   WHERE LOWER(REGEXP_REPLACE(last_name,'\\s+(jr|sr|ii|iii|iv|v)\\.?$','','i')) = LOWER(%s)
+                     AND LOWER(SPLIT_PART(TRIM(first_name),' ',1)) = LOWER(%s)""", (last_clean, first))
+    ids = [r[0] for r in cur.fetchall()]
+    if len(ids) == 1:
+        return ids[0]
+    if not ids:
+        return None
+    if town:  # disambiguate multiple same-name people by the town's district
+        cur.execute("SELECT DISTINCT full_district_code FROM districts WHERE UPPER(town)=UPPER(%s)", (town,))
+        tds = [r[0] for r in cur.fetchall()]
+        if tds:
+            cur.execute("""SELECT DISTINCT candidate_id FROM candidate_election_status
+                           WHERE candidate_id = ANY(%s) AND district_code = ANY(%s)""", (ids, tds))
+            pref = [r[0] for r in cur.fetchall()]
+            if len(pref) == 1:
+                return pref[0]
+    return None
+
+
 @portal_bp.route('/register-start', methods=['POST'])
 def register_start():
     data = request.get_json(silent=True) or {}
-    name = (data.get('name') or '').strip()[:120]
+    name = (data.get('name') or '').strip()[:160]
+    town = (data.get('town') or '').strip()[:120]
+    phone = (data.get('phone') or '').strip()[:50]
     email = (data.get('email') or '').strip().lower()
     if not EMAIL_RE.match(email):
         return jsonify({'ok': False, 'error': 'Please enter a valid email address.'}), 400
 
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("""SELECT candidate_id, first_name, last_name FROM candidates
-                       WHERE LOWER(email) = %s OR LOWER(email1) = %s OR LOWER(email2) = %s
+        cur.execute("""SELECT candidate_id, first_name FROM candidates
+                       WHERE LOWER(email)=%s OR LOWER(email1)=%s OR LOWER(email2)=%s
                        ORDER BY candidate_id LIMIT 1""", (email, email, email))
         row = cur.fetchone()
-        if not row:
-            who = name or email
-            _signal_notify(f"Candidate {who} tried to register on the candidate portal "
-                           f"but we don't have an email on file for them ({email}).")
-            return jsonify({'ok': True, 'found': False, 'message': CONTACT_MSG})
+        if row:
+            _send_access_link(row[0], row[1], email)
+            return jsonify({'ok': True, 'found': True,
+                            'message': f"We've emailed a secure access link to {email}."})
 
-        cid, fn, ln = row
-        token = make_token('portal_access', cid)
-        link = f"{PORTAL_BASE}/candidates.html?token={token}"
-        subject = "Access your candidate profile"
-        html = f"""<div style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.6">
-            <p>Hi {fn or 'there'},</p>
-            <p>Click below to access your candidate profile with the Committee to Elect House Republicans.
-            You'll set a username and password the first time.</p>
-            <p style="margin:24px 0"><a href="{link}" style="background:#b91c1c;color:#fff;padding:14px 28px;
-            border-radius:6px;text-decoration:none;font-weight:700">Access My Profile</a></p>
-            <p style="color:#666;font-size:13px">This link expires in 7 days. If you didn't request it, you can ignore this email.</p>
-            </div>"""
-        text = f"Access your candidate profile: {link}\nThis link expires in 7 days."
-        send_email(email, subject, html, text)
-        return jsonify({'ok': True, 'found': True,
-                        'message': f"We've emailed a secure access link to {email}."})
+        # No email on file -> pending registration; admin approves from a Signal link.
+        match_id = _match_by_name_town(cur, name, town)
+        cur.execute("""INSERT INTO portal_registrations (name, town, email, phone, matched_candidate_id)
+                       VALUES (%s,%s,%s,%s,%s) RETURNING id""", (name, town, email, phone, match_id))
+        reg_id = cur.fetchone()[0]; conn.commit()
+        atok = make_token('portal_reg', reg_id)
+        approve_link = f"{APP_URL}/portal/api/approve?token={atok}"
+        mtxt = f"\nAuto-matched to candidate #{match_id}." if match_id else "\nNo auto-match — review."
+        _signal_notify("NEW candidate registration pending approval:\n"
+                       f"{name} — {town} — {email}" + (f" — {phone}" if phone else "") + mtxt +
+                       f"\n\nApprove & send login: {approve_link}")
+        return jsonify({'ok': True, 'pending': True,
+                        'message': "Your registration is pending approval — you'll receive an email once approved."})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+_APPROVE_PAGE = """<!doctype html><html><head><meta name=viewport content="width=device-width,initial-scale=1">
+<style>body{{font-family:Arial,sans-serif;max-width:520px;margin:56px auto;padding:0 20px;color:#222}}
+.btn{{background:#b91c1c;color:#fff;border:0;padding:14px 28px;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer}}
+.box{{border:1px solid #e5e7eb;border-radius:10px;padding:24px}}</style></head>
+<body><div class=box><h2>Candidate registration</h2>{body}</div></body></html>"""
+
+
+@portal_bp.route('/approve', methods=['GET'])
+def approve():
+    res = read_token(request.args.get('token', ''), 14 * 24 * 3600)
+    if not res or res.get('type') != 'portal_reg':
+        return _APPROVE_PAGE.format(body="<p>This approval link is invalid or expired.</p>"), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT name,town,email,phone,matched_candidate_id,status FROM portal_registrations WHERE id=%s", (res['id'],))
+        r = cur.fetchone()
+        if not r:
+            return _APPROVE_PAGE.format(body="<p>Registration not found.</p>"), 404
+        name, town, email, phone, mid, status = r
+        if status == 'approved':
+            return _APPROVE_PAGE.format(body=f"<p>Already approved — {name} ({email}).</p>")
+        cand = ''
+        if mid:
+            cur.execute("SELECT first_name,last_name FROM candidates WHERE candidate_id=%s", (mid,))
+            c = cur.fetchone(); cand = f"{c[0]} {c[1]} (#{mid})" if c else f"#{mid}"
+        body = (f"<p><b>{name}</b><br>{town}<br>{email}{(' &middot; '+phone) if phone else ''}</p>"
+                + (f"<p>Approving sets this email/phone on <b>{cand}</b> and emails them the login link.</p>"
+                   if mid else "<p style='color:#b91c1c'>No candidate auto-matched. Approving records the email; attach it to the right candidate in the recruitment app afterward.</p>")
+                + f'<form method=post><input type=hidden name=token value="{request.args.get("token","")}">'
+                  f'<button class=btn type=submit>Approve &amp; send login email</button></form>')
+        return _APPROVE_PAGE.format(body=body)
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/approve', methods=['POST'])
+def approve_do():
+    res = read_token(request.form.get('token', ''), 14 * 24 * 3600)
+    if not res or res.get('type') != 'portal_reg':
+        return _APPROVE_PAGE.format(body="<p>This approval link is invalid or expired.</p>"), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT name,town,email,phone,matched_candidate_id,status FROM portal_registrations WHERE id=%s", (res['id'],))
+        r = cur.fetchone()
+        if not r:
+            return _APPROVE_PAGE.format(body="<p>Registration not found.</p>"), 404
+        name, town, email, phone, mid, status = r
+        if status == 'approved':
+            return _APPROVE_PAGE.format(body=f"<p>Already approved — {name} ({email}).</p>")
+        if mid:
+            cur.execute("""UPDATE candidates SET
+                             email1 = CASE WHEN COALESCE(email1,'')='' THEN %s ELSE email1 END,
+                             email2 = CASE WHEN COALESCE(email1,'')<>'' AND COALESCE(email2,'')='' THEN %s ELSE email2 END,
+                             phone1 = CASE WHEN COALESCE(phone1,'')='' THEN %s ELSE phone1 END,
+                             modified_by='portal-approval', modified_at=NOW()
+                           WHERE candidate_id=%s""", (email, email, phone, mid))
+            cur.execute("SELECT first_name FROM candidates WHERE candidate_id=%s", (mid,))
+            fn = (cur.fetchone() or [''])[0]
+            _send_access_link(mid, fn, email)
+        cur.execute("UPDATE portal_registrations SET status='approved', approved_at=NOW(), approved_by='signal-admin' WHERE id=%s", (res['id'],))
+        conn.commit()
+        if log_activity and mid:
+            log_activity('portal_registration_approved', f'Approved portal registration for {name} ({email})', mid, 'portal-approval')
+        msg = (f"Approved. Login email sent to {email}." if mid
+               else f"Recorded {email}. No candidate matched — attach it manually in the recruitment app.")
+        return _APPROVE_PAGE.format(body=f"<p>{msg}</p>")
     finally:
         cur.close(); release_db_connection(conn)
 
