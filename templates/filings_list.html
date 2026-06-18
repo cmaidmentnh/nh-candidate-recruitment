@@ -14,44 +14,48 @@
 <!-- Summary stats -->
 <div class="dashboard-row mb-3">
   <div class="dash-card dash-card-size dash-card-static">
-    <div class="card-header" style="background: linear-gradient(135deg, #1a2744 0%, #2c3e50 100%);">Total Filed</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #1a2744 0%, #2c3e50 100%);">Total Filed</div>
     <div class="card-body"><h4>{{ stats.total }}</h4><small>{{ year }} cycle</small></div>
   </div>
   <div class="dash-card dash-card-size dash-card-static">
-    <div class="card-header" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">Republican</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">Republican</div>
     <div class="card-body"><h4>{{ stats.by_party.get('R', 0) }}</h4></div>
   </div>
   <div class="dash-card dash-card-size dash-card-static">
-    <div class="card-header" style="background: linear-gradient(135deg, #1f3a93 0%, #3498db 100%);">Democrat</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #1f3a93 0%, #3498db 100%);">Democrat</div>
     <div class="card-body"><h4>{{ stats.by_party.get('D', 0) }}</h4></div>
   </div>
   <div class="dash-card dash-card-size dash-card-static">
-    <div class="card-header" style="background: linear-gradient(135deg, #555 0%, #777 100%);">Other</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #555 0%, #777 100%);">Other</div>
     <div class="card-body"><h4>{{ (stats.total - stats.by_party.get('R',0) - stats.by_party.get('D',0)) }}</h4>
       <small>L / I / U / other</small></div>
   </div>
   <div class="dash-card dash-card-size dash-card-static">
-    <div class="card-header" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">Districts Active</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">Districts Active</div>
     <div class="card-body"><h4>{{ stats.districts_with_filings }}</h4><small>with at least 1 filing</small></div>
   </div>
   <div class="dash-card dash-card-size dash-card-static">
-    <div class="card-header" style="background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);">Contested</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);">Contested</div>
     <div class="card-body"><h4>{{ stats.contested }}</h4><small>R + D both filed</small></div>
   </div>
+</div>
+
+<!-- Race-status cards (own row) -->
+<div class="dashboard-row mb-3">
   <a href="{{ url_for('filings_list', year=year, show='r_primary') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
-    <div class="card-header" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">R Primaries</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">R Primaries</div>
     <div class="card-body"><h4>{{ stats.r_primaries }}</h4><small>more R's than seats</small></div>
   </a>
   <a href="{{ url_for('filings_list', year=year, show='d_primary') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
-    <div class="card-header" style="background: linear-gradient(135deg, #1f3a93 0%, #3498db 100%);">D Primaries</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #1f3a93 0%, #3498db 100%);">D Primaries</div>
     <div class="card-body"><h4>{{ stats.d_primaries }}</h4><small>more D's than seats</small></div>
   </a>
   <a href="{{ url_for('filings_list', year=year, show='zero_r') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
-    <div class="card-header" style="background: linear-gradient(135deg, #6e1414 0%, #922b21 100%);">Zero R's</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #6e1414 0%, #922b21 100%);">Zero R's</div>
     <div class="card-body"><h4>{{ stats.zero_r }}</h4><small>districts with no R filed</small></div>
   </a>
   <a href="{{ url_for('filings_list', year=year, show='zero_d') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
-    <div class="card-header" style="background: linear-gradient(135deg, #11243f 0%, #1b4f72 100%);">Zero D's</div>
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #11243f 0%, #1b4f72 100%);">Zero D's</div>
     <div class="card-body"><h4>{{ stats.zero_d }}</h4><small>districts with no D filed</small></div>
   </a>
 </div>
