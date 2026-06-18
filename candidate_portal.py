@@ -101,14 +101,16 @@ def _cid_from_session():
 def _prefill(cur, candidate_id):
     cur.execute("""
         SELECT first_name, last_name, phone1, phone2, address, city, zip,
-               twitter_x, facebook, instagram, photo_url, email, username
+               twitter_x, facebook, instagram, photo_url, email, username,
+               external_campaign_url, donate_url
         FROM candidates WHERE candidate_id = %s
     """, (candidate_id,))
     r = cur.fetchone()
     if not r:
         return None
     keys = ['first_name', 'last_name', 'phone1', 'phone2', 'address', 'city', 'zip',
-            'twitter_x', 'facebook', 'instagram', 'photo_url', 'email', 'username']
+            'twitter_x', 'facebook', 'instagram', 'photo_url', 'email', 'username',
+            'website', 'donate_url']
     p = {k: (v or '') for k, v in zip(keys, r)}
     p['town'] = p.get('city', '') or ''  # default the district town to the candidate's city
     cur.execute("""SELECT district_code FROM candidate_election_status
@@ -400,6 +402,7 @@ def profile_post():
            'town': field('town', 100), 'district_code': field('district_code', 50),
            'facebook': field('facebook', 500), 'twitter_x': field('twitter_x', 500),
            'instagram': field('instagram', 500), 'website': field('website', 500),
+           'donate_url': field('donate_url', 500),
            'notes': (request.form.get('notes') or '').strip()[:5000]}
     if not sub['first_name'] or not sub['last_name']:
         return jsonify({'ok': False, 'error': 'First and last name are required.'}), 400
@@ -435,6 +438,8 @@ def profile_post():
                 'facebook', 'twitter_x', 'instagram']
         sets = [f"{c}=%s" for c in cols]
         vals = [sub[c] for c in cols]
+        sets.append("external_campaign_url=%s"); vals.append(sub['website'])
+        sets.append("donate_url=%s"); vals.append(sub['donate_url'])
         if headshot_url:
             sets.append("photo_url=%s"); vals.append(headshot_url)
         sets.append("modified_by='candidate-portal'"); sets.append("modified_at=NOW()")
