@@ -110,16 +110,20 @@ def _prefill(cur, candidate_id):
     keys = ['first_name', 'last_name', 'phone1', 'phone2', 'address', 'city', 'zip',
             'twitter_x', 'facebook', 'instagram', 'photo_url', 'email', 'username']
     p = {k: (v or '') for k, v in zip(keys, r)}
+    p['town'] = p.get('city', '') or ''  # default the district town to the candidate's city
     cur.execute("""SELECT district_code FROM candidate_election_status
                    WHERE candidate_id=%s AND election_year=2026 LIMIT 1""", (candidate_id,))
     row = cur.fetchone()
     if row:
         p['district_code'] = row[0]
+    # Only a State Rep filing carries a real House district + town (county offices etc. don't).
     cur.execute("""SELECT district_code, town FROM filings
-                   WHERE candidate_id=%s AND election_year=2026 LIMIT 1""", (candidate_id,))
+                   WHERE candidate_id=%s AND election_year=2026 AND office='State Representative' LIMIT 1""", (candidate_id,))
     row = cur.fetchone()
     if row:
-        p.setdefault('district_code', row[0]); p['town'] = row[1] or ''
+        p.setdefault('district_code', row[0])
+        if row[1]:
+            p['town'] = row[1]
     return p
 
 
