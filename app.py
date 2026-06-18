@@ -547,6 +547,24 @@ try:
 except ImportError as e:
     logger.warning(f"candidate_intake module not deployed; intake feature disabled: {e}")
 
+# Register candidate portal blueprint (account-based self-service at
+# electhouserepublicans.com/candidates). Token-authed, called cross-domain
+# through the ctehr-website proxy, so CSRF doesn't apply.
+try:
+    from candidate_portal import portal_bp, init_candidate_portal
+    init_candidate_portal(get_db_connection, release_db_connection, upload_file_to_storage,
+                          send_email, generate_invite_token, verify_invite_token, log_activity)
+    app.register_blueprint(portal_bp)
+    for _ep in ('portal.register_start', 'portal.access', 'portal.setup',
+                'portal.login', 'portal.profile_get', 'portal.profile_post'):
+        csrf.exempt(app.view_functions[_ep])
+    for _ep, _lim in [('portal.register_start', "8 per minute; 30 per hour"),
+                      ('portal.login', "10 per minute"),
+                      ('portal.setup', "10 per hour")]:
+        app.view_functions[_ep] = limiter.limit(_lim)(app.view_functions[_ep])
+except ImportError as e:
+    logger.warning(f"candidate_portal module not deployed; portal feature disabled: {e}")
+
 def get_data_and_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()
