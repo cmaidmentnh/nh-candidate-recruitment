@@ -3931,10 +3931,12 @@ def filings_list():
                 COUNT(*) FILTER (WHERE COALESCE(fc.r,0) > dist.seats) AS r_primaries,
                 COUNT(*) FILTER (WHERE COALESCE(fc.d,0) > dist.seats) AS d_primaries,
                 COUNT(*) FILTER (WHERE COALESCE(fc.r,0) = 0)          AS zero_r,
-                COUNT(*) FILTER (WHERE COALESCE(fc.d,0) = 0)          AS zero_d
+                COUNT(*) FILTER (WHERE COALESCE(fc.d,0) = 0)          AS zero_d,
+                SUM(GREATEST(dist.seats - COALESCE(fc.r,0), 0))       AS r_seats_empty,
+                SUM(GREATEST(dist.seats - COALESCE(fc.d,0), 0))       AS d_seats_empty
             FROM dist LEFT JOIN fc ON fc.dc = dist.dc
         """, (year,))
-        r_primaries, d_primaries, zero_r, zero_d = cur.fetchone()
+        r_primaries, d_primaries, zero_r, zero_d, r_seats_empty, d_seats_empty = cur.fetchone()
 
         # All districts for filter dropdown
         cur.execute("""
@@ -3955,6 +3957,7 @@ def filings_list():
         'contested': contested,
         'r_primaries': r_primaries, 'd_primaries': d_primaries,
         'zero_r': zero_r, 'zero_d': zero_d,
+        'r_seats_empty': r_seats_empty or 0, 'd_seats_empty': d_seats_empty or 0,
     }
     return render_template('filings_list.html',
                            filings=filings, district_groups=district_groups,

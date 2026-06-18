@@ -50,6 +50,14 @@
     <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #1f3a93 0%, #3498db 100%);">D Primaries</div>
     <div class="card-body"><h4>{{ stats.d_primaries }}</h4><small>more D's than seats</small></div>
   </a>
+  <a href="{{ url_for('filings_list', year=year, show='missing_r') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #a93226 0%, #cd6155 100%);">R Seats Empty</div>
+    <div class="card-body"><h4>{{ stats.r_seats_empty }}</h4><small>open R nominations</small></div>
+  </a>
+  <a href="{{ url_for('filings_list', year=year, show='missing_d') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
+    <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #21618c 0%, #5499c7 100%);">D Seats Empty</div>
+    <div class="card-body"><h4>{{ stats.d_seats_empty }}</h4><small>open D nominations</small></div>
+  </a>
   <a href="{{ url_for('filings_list', year=year, show='zero_r') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
     <div class="card-header" style="color:#fff;background: linear-gradient(135deg, #6e1414 0%, #922b21 100%);">Zero R's</div>
     <div class="card-body"><h4>{{ stats.zero_r }}</h4><small>districts with no R filed</small></div>
