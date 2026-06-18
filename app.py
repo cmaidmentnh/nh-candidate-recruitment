@@ -3847,6 +3847,10 @@ def filings_list():
             if show == 'empty':              return total == 0
             if show == 'missing_r':          return r_n < seats
             if show == 'missing_d':          return d_n < seats
+            if show == 'r_primary':          return r_n > (meta['seats'] or 1)
+            if show == 'd_primary':          return d_n > (meta['seats'] or 1)
+            if show == 'zero_r':             return r_n == 0
+            if show == 'zero_d':             return d_n == 0
             if show == 'r_full':             return r_n >= seats and seats > 0
             if show == 'd_full':             return d_n >= seats and seats > 0
             if show == 'contested':          return r_n > 0 and d_n > 0
@@ -3909,6 +3913,29 @@ def filings_list():
         """, (year,))
         contested = cur.fetchone()[0] or 0
 
+        # Primary races (more candidates than seats) and districts missing a party,
+        # computed over the full universe of House districts.
+        cur.execute("""
+            WITH dist AS (
+                SELECT full_district_code AS dc, COALESCE(MAX(seat_count),1) AS seats
+                FROM districts GROUP BY full_district_code
+            ), fc AS (
+                SELECT district_code AS dc,
+                       COUNT(*) FILTER (WHERE party='R') AS r,
+                       COUNT(*) FILTER (WHERE party='D') AS d
+                FROM filings
+                WHERE election_year=%s AND office='State Representative'
+                GROUP BY district_code
+            )
+            SELECT
+                COUNT(*) FILTER (WHERE COALESCE(fc.r,0) > dist.seats) AS r_primaries,
+                COUNT(*) FILTER (WHERE COALESCE(fc.d,0) > dist.seats) AS d_primaries,
+                COUNT(*) FILTER (WHERE COALESCE(fc.r,0) = 0)          AS zero_r,
+                COUNT(*) FILTER (WHERE COALESCE(fc.d,0) = 0)          AS zero_d
+            FROM dist LEFT JOIN fc ON fc.dc = dist.dc
+        """, (year,))
+        r_primaries, d_primaries, zero_r, zero_d = cur.fetchone()
+
         # All districts for filter dropdown
         cur.execute("""
             SELECT DISTINCT full_district_code, county_name FROM districts
@@ -3926,6 +3953,8 @@ def filings_list():
         'by_party': party_counts,
         'districts_with_filings': districts_with_filings,
         'contested': contested,
+        'r_primaries': r_primaries, 'd_primaries': d_primaries,
+        'zero_r': zero_r, 'zero_d': zero_d,
     }
     return render_template('filings_list.html',
                            filings=filings, district_groups=district_groups,

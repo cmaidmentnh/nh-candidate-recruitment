@@ -38,6 +38,22 @@
     <div class="card-header" style="background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);">Contested</div>
     <div class="card-body"><h4>{{ stats.contested }}</h4><small>R + D both filed</small></div>
   </div>
+  <a href="{{ url_for('filings_list', year=year, show='r_primary') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
+    <div class="card-header" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">R Primaries</div>
+    <div class="card-body"><h4>{{ stats.r_primaries }}</h4><small>more R's than seats</small></div>
+  </a>
+  <a href="{{ url_for('filings_list', year=year, show='d_primary') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
+    <div class="card-header" style="background: linear-gradient(135deg, #1f3a93 0%, #3498db 100%);">D Primaries</div>
+    <div class="card-body"><h4>{{ stats.d_primaries }}</h4><small>more D's than seats</small></div>
+  </a>
+  <a href="{{ url_for('filings_list', year=year, show='zero_r') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
+    <div class="card-header" style="background: linear-gradient(135deg, #6e1414 0%, #922b21 100%);">Zero R's</div>
+    <div class="card-body"><h4>{{ stats.zero_r }}</h4><small>districts with no R filed</small></div>
+  </a>
+  <a href="{{ url_for('filings_list', year=year, show='zero_d') }}" class="dash-card dash-card-size" style="text-decoration:none;color:inherit;">
+    <div class="card-header" style="background: linear-gradient(135deg, #11243f 0%, #1b4f72 100%);">Zero D's</div>
+    <div class="card-body"><h4>{{ stats.zero_d }}</h4><small>districts with no D filed</small></div>
+  </a>
 </div>
 
 <!-- Filters -->
@@ -50,6 +66,10 @@
       ('empty',         'Empty districts (no filings)'),
       ('missing_r',     'Missing R candidates'),
       ('missing_d',     'Missing D candidates'),
+      ('r_primary',     'R primaries (R > seats)'),
+      ('d_primary',     'D primaries (D > seats)'),
+      ('zero_r',        'Zero R filed'),
+      ('zero_d',        'Zero D filed'),
       ('r_full',        'R fully filed'),
       ('d_full',        'D fully filed'),
       ('both_full',     'Both R + D fully filed'),
