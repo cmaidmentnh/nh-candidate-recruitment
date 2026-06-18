@@ -221,7 +221,7 @@ def setup():
                     (username, generate_password_hash(password), cid))
         conn.commit()
         if log_activity:
-            log_activity('portal_account_created', f'Candidate set up portal account (username {username})', cid, 'candidate-portal')
+            log_activity('portal_account_created', f'Candidate set up portal account (username {username})', cid)
         return jsonify({'ok': True, 'session': make_token('portal_session', cid)})
     finally:
         cur.close(); release_db_connection(conn)
@@ -330,7 +330,7 @@ def profile_post():
              sub['notes'], headshot_url, json.dumps(photo_urls), cid))
         conn.commit()
         if log_activity:
-            log_activity('portal_profile_update', 'Candidate updated their profile via the portal', cid, 'candidate-portal')
+            log_activity('portal_profile_update', 'Candidate updated their profile via the portal', cid)
         return jsonify({'ok': True, 'applied': True})
     finally:
         cur.close(); release_db_connection(conn)
