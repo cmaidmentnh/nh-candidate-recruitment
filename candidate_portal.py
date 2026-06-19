@@ -542,3 +542,82 @@ def profile_post():
         return jsonify({'ok': True, 'applied': True})
     finally:
         cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/walkbook-request', methods=['GET'])
+def walkbook_request_info():
+    """Return the signed-in candidate's name + district so the form can prefill."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        p = _prefill(cur, cid)
+        if p is None:
+            return jsonify({'ok': False, 'error': 'Profile not found.'}), 404
+        # Most-recent pending request (so the form can say "already requested")
+        cur.execute("""SELECT district_code, parties, status, created_at FROM walkbook_requests
+                       WHERE candidate_id=%s ORDER BY id DESC LIMIT 1""", (cid,))
+        last = cur.fetchone()
+        return jsonify({'ok': True,
+                        'first_name': p.get('first_name', ''), 'last_name': p.get('last_name', ''),
+                        'district_code': p.get('district_code', ''), 'town': p.get('town', ''),
+                        'last_request': ({'district_code': last[0], 'parties': last[1],
+                                          'status': last[2], 'created_at': last[3].isoformat() if last[3] else None}
+                                         if last else None)})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/walkbook-request', methods=['POST'])
+def walkbook_request_create():
+    """A logged-in candidate requests a walkbook for their district. Saves the
+    request and pings the admin on Signal (who builds it in the CRM)."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    data = request.get_json(silent=True) or {}
+
+    parties = [p for p in (data.get('parties') or []) if p in ('REP', 'UND', 'DEM')]
+    if not parties:
+        parties = ['REP', 'UND']
+    try:
+        size = int(data.get('size') or 100)
+    except (TypeError, ValueError):
+        size = 100
+    size = max(25, min(300, size))
+    notes = (data.get('notes') or '').strip()[:2000]
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        p = _prefill(cur, cid) or {}
+        # District always comes from their profile (not trusted from the client)
+        district = (p.get('district_code') or '').strip()
+        name = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
+        email = p.get('email', '')
+        if not district:
+            return jsonify({'ok': False, 'error':
+                "We don't have a State House district on your profile yet. Add your town on your "
+                "profile page first (it sets your district), then request your walkbook."}), 400
+
+        cur.execute("""INSERT INTO walkbook_requests
+            (candidate_id, candidate_name, email, district_code, parties, book_size, notes, status, created_at)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,'new',NOW()) RETURNING id""",
+            (cid, name, email, district, ','.join(parties), size, notes))
+        rid = cur.fetchone()[0]
+        conn.commit()
+        if log_activity:
+            log_activity('walkbook_requested', f'Requested a walkbook for {district}', cid)
+
+        _signal_notify(
+            f"\U0001F6B6 NEW walkbook request #{rid}\n"
+            f"{name} — {district}\n"
+            f"Voters: {' + '.join(parties)}  ·  ~{size}/book\n"
+            + (f"Notes: {notes}\n" if notes else "")
+            + f"Email: {email}\n\n"
+            "Reply 'walkbook requests' to see/manage all pending."
+        )
+        return jsonify({'ok': True,
+                        'message': "Your walkbook request is in! We'll build it and email you when it's ready to canvass."})
+    finally:
+        cur.close(); release_db_connection(conn)
