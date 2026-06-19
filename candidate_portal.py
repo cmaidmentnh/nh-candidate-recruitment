@@ -415,6 +415,7 @@ def setup():
         if cur.fetchone():
             return jsonify({'ok': False, 'error': 'That username is taken. Please choose another.'}), 409
         cur.execute("""UPDATE candidates SET username=%s, password_hash=%s, password_changed=TRUE,
+                       last_login=NOW(),
                        modified_by='candidate-portal', modified_at=NOW() WHERE candidate_id=%s""",
                     (username, generate_password_hash(password), cid))
         conn.commit()
