@@ -19,10 +19,13 @@ CREATE TABLE IF NOT EXISTS walkbook_requests (
     notes           TEXT,
     status          VARCHAR(20) DEFAULT 'new',
     created_at      TIMESTAMP DEFAULT NOW(),
-    built_at        TIMESTAMP
+    built_at        TIMESTAMP,
+    teammates       TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_walkbook_requests_status ON walkbook_requests(status);
 CREATE INDEX IF NOT EXISTS idx_walkbook_requests_candidate ON walkbook_requests(candidate_id);
+-- teammates added after initial deploy; idempotent for existing tables
+ALTER TABLE walkbook_requests ADD COLUMN IF NOT EXISTS teammates TEXT;
 """
 
 conn = psycopg2.connect(DB_URL)

@@ -588,6 +588,17 @@ def walkbook_request_create():
     size = max(25, min(300, size))
     notes = (data.get('notes') or '').strip()[:2000]
 
+    # Running mate(s) / teammates to share the walkbook with: [{name, email}]
+    _email_re = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+    teammates = []
+    for t in (data.get('teammates') or [])[:8]:
+        if not isinstance(t, dict):
+            continue
+        tem = (t.get('email') or '').strip().lower()
+        tnm = (t.get('name') or '').strip()[:120]
+        if tem and _email_re.match(tem):
+            teammates.append({'name': tnm, 'email': tem})
+
     conn = get_db_connection(); cur = conn.cursor()
     try:
         p = _prefill(cur, cid) or {}
@@ -601,18 +612,24 @@ def walkbook_request_create():
                 "profile page first (it sets your district), then request your walkbook."}), 400
 
         cur.execute("""INSERT INTO walkbook_requests
-            (candidate_id, candidate_name, email, district_code, parties, book_size, notes, status, created_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,'new',NOW()) RETURNING id""",
-            (cid, name, email, district, ','.join(parties), size, notes))
+            (candidate_id, candidate_name, email, district_code, parties, book_size, notes, status, created_at, teammates)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,'new',NOW(),%s) RETURNING id""",
+            (cid, name, email, district, ','.join(parties), size, notes,
+             json.dumps(teammates) if teammates else None))
         rid = cur.fetchone()[0]
         conn.commit()
         if log_activity:
             log_activity('walkbook_requested', f'Requested a walkbook for {district}', cid)
 
+        team_line = ""
+        if teammates:
+            team_line = "Also for: " + ", ".join(
+                f"{t['name']} <{t['email']}>" if t['name'] else t['email'] for t in teammates) + "\n"
         _signal_notify(
             f"\U0001F6B6 NEW walkbook request #{rid}\n"
             f"{name} — {district}\n"
             f"Voters: {' + '.join(parties)}  ·  ~{size}/book\n"
+            + team_line
             + (f"Notes: {notes}\n" if notes else "")
             + f"Email: {email}\n\n"
             "Reply 'walkbook requests' to see/manage all pending."
