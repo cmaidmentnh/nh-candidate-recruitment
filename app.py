@@ -568,7 +568,7 @@ try:
     app.register_blueprint(portal_bp)
     for _ep in ('portal.register_start', 'portal.access', 'portal.setup',
                 'portal.login', 'portal.profile_get', 'portal.profile_post',
-                'portal.approve', 'portal.approve_do'):
+                'portal.approve', 'portal.approve_do', 'portal.walkbook_request_create'):
         csrf.exempt(app.view_functions[_ep])
     for _ep, _lim in [('portal.register_start', "8 per minute; 80 per hour"),
                       ('portal.login', "20 per minute"),
