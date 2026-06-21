@@ -608,9 +608,13 @@ def get_data_and_dashboard():
         cands_2024_rows = cur.fetchall()
 
         # Which candidates have filed for 2026? Surface as a FILED badge.
+        # The recruitment dashboard is the State Rep pipeline, so only a State Rep
+        # filing counts — a Delegate (or other office) filing must NOT mark someone
+        # as filed for State Representative.
         cur.execute("""
             SELECT DISTINCT candidate_id FROM filings
-            WHERE election_year = 2026 AND candidate_id IS NOT NULL
+            WHERE election_year = 2026 AND office = 'State Representative'
+              AND candidate_id IS NOT NULL
         """)
         filed_2026_cids = {row[0] for row in cur.fetchall()}
 
