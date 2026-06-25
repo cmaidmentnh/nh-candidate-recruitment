@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .bk-hold_safe_r{background:#1e7a3c;color:#fff} .bk-defend{background:#1e3557;color:#fff}
+  .bk-battleground{background:#d97706;color:#fff} .bk-target{background:#c6312d;color:#fff}
+  .bk-watch{background:#7a8aa3;color:#fff} .bk-pass_safe_d{background:#6b7280;color:#fff}
+  .bk-unassigned{background:#cdd4df;color:#333}
+  .bdot{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:5px}
+  .plan-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+  .ptile{border-radius:10px;padding:10px 14px;min-width:120px;color:#fff}
+  .ptile .n{font-size:1.6rem;font-weight:800;line-height:1} .ptile .l{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;opacity:.95}
+  .ptile .s{font-size:.7rem;opacity:.9}
+  table.plan td,table.plan th{padding:6px 8px;font-size:.85rem;vertical-align:middle}
+  table.plan th{position:sticky;top:0;background:#1e3557;color:#fff;z-index:2;font-size:.7rem;text-transform:uppercase}
+  .chip{display:inline-block;font-size:.66rem;font-weight:700;padding:2px 6px;border-radius:10px;border:1px solid #ccd;
+        cursor:pointer;margin:1px;color:#667;background:#fff;user-select:none}
+  .chip.on{background:#1e3557;color:#fff;border-color:#1e3557}
+  .pvi-gop{color:#a8261f;font-weight:700}.pvi-dem{color:#1d4e89;font-weight:700}.pvi-swing{color:#8a6400;font-weight:700}
+  .no-r{background:#fff3f2}
+  .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px}
+  .kcol{flex:0 0 230px;background:#f1f4f9;border-radius:10px;padding:8px;min-height:120px}
+  .kcol h6{font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;padding:4px 6px;border-radius:6px;color:#fff;margin-bottom:8px}
+  .kcard{background:#fff;border:1px solid #e2e6ec;border-radius:8px;padding:6px 8px;margin-bottom:6px;cursor:grab;font-size:.8rem}
+  .kcard .d{font-weight:700;color:#1e3557}.kcard .m{font-size:.7rem;color:#777}
+  .mapcounty{margin-bottom:14px}.mapcounty h6{font-size:.8rem;color:#1e3557;font-weight:700;margin-bottom:5px}
+  .mtile{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:52px;height:46px;
+         border-radius:7px;margin:3px;font-size:.7rem;font-weight:700;text-align:center;cursor:default}
+  .mtile small{font-size:.6rem;font-weight:400;opacity:.9}
+  .filterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#fff;border:1px solid #e2e6ec;border-radius:10px;padding:10px;margin-bottom:12px}
+  .filterbar label{font-size:.66rem;text-transform:uppercase;color:#777;font-weight:700;display:block;margin-bottom:2px}
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="mb-0">Battle Plan <small class="text-muted" style="font-size:1rem">— {{ total }} districts · 400 seats</small></h1>
+  <a href="{{ url_for('private.campaign_plan_export') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-download"></i> Export CSV</a>
+</div>
+
+<!-- Summary -->
+<div class="plan-summary">
+  {% for key,label,color in buckets %}
+  <div class="ptile bk-{{ key }}">
+    <div class="n">{{ summary[key].districts }}</div>
+    <div class="l">{{ label }}</div>
+    <div class="s">{{ summary[key].seats }} seats</div>
+  </div>
+  {% endfor %}
+  <div class="ptile" style="background:#c6312d">
+    <div class="n">{{ no_r }}</div><div class="l">No R filed</div><div class="s">districts w/o a Republican</div>
+  </div>
+</div>
+
+<ul class="nav nav-tabs mb-3" id="planTabs">
+  <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tab-table">Table</a></li>
+  <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-board">Board</a></li>
+  <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tab-map">Map</a></li>
+</ul>
+
+<div class="tab-content">
+  <!-- ===================== TABLE ===================== -->
+  <div class="tab-pane fade show active" id="tab-table">
+    <div class="filterbar">
+      <div><label>Search</label><input id="fSearch" class="form-control form-control-sm" placeholder="District/town…" oninput="applyFilters()"></div>
+      <div><label>County</label><select id="fCounty" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option>{% for c in counties %}<option>{{ c }}</option>{% endfor %}</select></div>
+      <div><label>PVI</label><select id="fRating" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option><option>SAFE GOP</option><option>LIKELY GOP</option><option>LEAN GOP</option><option>SWING</option><option>LEAN DEM</option><option>LIKELY DEM</option><option>SAFE DEM</option></select></div>
+      <div><label>Bucket</label><select id="fBucket" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option>{% for key,label,color in buckets %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Channel</label><select id="fChannel" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option>{% for ch in channels %}<option>{{ ch }}</option>{% endfor %}</select></div>
+      <div class="form-check" style="margin-bottom:6px"><input type="checkbox" class="form-check-input" id="fNoR" onchange="applyFilters()"><label class="form-check-label" for="fNoR" style="text-transform:none">No R filed only</label></div>
+    </div>
+    <div style="max-height:70vh;overflow:auto">
+    <table class="table table-sm plan">
+      <thead><tr>
+        <th>District</th><th>Towns</th><th>Seats</th><th>PVI</th><th>R / D filed</th><th>Bucket</th><th>Channels</th><th>Pri</th><th>Notes</th>
+      </tr></thead>
+      <tbody>
+        {% for d in districts %}
+        <tr class="prow {{ 'no-r' if d.r_filers==0 }}" data-code="{{ d.code }}" data-county="{{ d.county }}" data-rating="{{ d.rating }}"
+            data-bucket="{{ d.bucket }}" data-channels="{{ d.channels|join(',') }}" data-nor="{{ 1 if d.r_filers==0 else 0 }}"
+            data-search="{{ (d.code ~ ' ' ~ d.towns)|lower }}">
+          <td><b>{{ d.code }}</b></td>
+          <td style="max-width:220px;font-size:.78rem;color:#666">{{ d.towns }}</td>
+          <td>{{ d.seats }}</td>
+          <td>
+            {% set cls = 'pvi-gop' if d.pvi and d.pvi>0 else ('pvi-dem' if d.pvi and d.pvi<0 else 'pvi-swing') %}
+            <span class="{{ cls }}">{{ d.rating|replace('GOP','R')|replace('DEM','D')|title }}</span>
+            {% if d.pvi is not none %}<small class="text-muted">{{ 'R+' ~ d.pvi if d.pvi>0 else ('D+' ~ (-d.pvi)) if d.pvi<0 else 'EVEN' }}</small>{% endif %}
+          </td>
+          <td>{{ d.r_filers }} / {{ d.d_filers }}</td>
+          <td>
+            <select class="form-control form-control-sm bsel" style="min-width:135px" onchange="save('{{ d.code }}','bucket',this.value);this.closest('tr').dataset.bucket=this.value">
+              {% for key,label,color in buckets %}<option value="{{ key }}" {{ 'selected' if d.bucket==key }}>{{ label }}</option>{% endfor %}
+            </select>
+          </td>
+          <td style="min-width:200px">
+            {% for ch in channels %}<span class="chip {{ 'on' if ch in d.channels }}" onclick="toggleChan(this,'{{ d.code }}','{{ ch }}')">{{ ch }}</span>{% endfor %}
+          </td>
+          <td>
+            <select class="form-control form-control-sm" style="width:60px" onchange="save('{{ d.code }}','priority',this.value)">
+              <option value="">—</option>{% for p in [1,2,3] %}<option value="{{ p }}" {{ 'selected' if d.priority==p }}>{{ p }}</option>{% endfor %}
+            </select>
+          </td>
+          <td><input class="form-control form-control-sm" style="min-width:160px" value="{{ d.notes }}" onchange="save('{{ d.code }}','notes',this.value)" placeholder="…"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- ===================== BOARD ===================== -->
+  <div class="tab-pane fade" id="tab-board">
+    <p class="text-muted small">Drag a district between columns to change its posture.</p>
+    <div class="kanban" id="kanban"></div>
+  </div>
+
+  <!-- ===================== MAP ===================== -->
+  <div class="tab-pane fade" id="tab-map">
+    <p class="text-muted small">Schematic view — districts grouped by county, colored by posture. (A true geographic map needs the district shapefile; this stand-in ships now.)</p>
+    <div class="plan-summary" style="gap:14px">{% for key,label,color in buckets %}<span><span class="bdot bk-{{ key }}"></span>{{ label }}</span>{% endfor %}</div>
+    <div id="mapWrap"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+  const DISTRICTS = {{ districts|tojson }};
+  const BUCKETS = {{ buckets|tojson }};
+  const CSRF = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+  function save(code, field, value){
+    return fetch('{{ url_for("private.campaign_plan_save") }}', {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body:JSON.stringify({district_code:code, field:field, value:value})}).then(r=>r.json());
+  }
+  function toggleChan(el, code, ch){
+    el.classList.toggle('on');
+    const row = el.closest('td');
+    const chans = Array.from(row.querySelectorAll('.chip.on')).map(c=>c.textContent);
+    el.closest('tr').dataset.channels = chans.join(',');
+    save(code, 'channels', chans);
+  }
+  function applyFilters(){
+    const q=fSearch.value.toLowerCase(), c=fCounty.value, r=fRating.value, b=fBucket.value, ch=fChannel.value, nor=fNoR.checked;
+    document.querySelectorAll('tr.prow').forEach(tr=>{
+      const d=tr.dataset;
+      let ok = (!q||d.search.includes(q)) && (!c||d.county===c) && (!r||d.rating===r) && (!b||d.bucket===b)
+        && (!ch||(d.channels||'').split(',').includes(ch)) && (!nor||d.nor==='1');
+      tr.style.display = ok ? '' : 'none';
+    });
+  }
+
+  // ---- Board ----
+  function buildBoard(){
+    const kb=document.getElementById('kanban'); kb.innerHTML='';
+    BUCKETS.forEach(([key,label,color])=>{
+      const col=document.createElement('div'); col.className='kcol';
+      col.innerHTML=`<h6 class="bk-${key}">${label} <span class="cnt"></span></h6><div class="kbody" data-bucket="${key}"></div>`;
+      kb.appendChild(col);
+    });
+    DISTRICTS.forEach(d=>{
+      const body=kb.querySelector(`.kbody[data-bucket="${d.bucket||'unassigned'}"]`); if(!body)return;
+      const card=document.createElement('div'); card.className='kcard'; card.dataset.code=d.code;
+      card.innerHTML=`<div class="d">${d.code}</div><div class="m">${d.seats} seat(s) · ${d.rating.replace('GOP','R').replace('DEM','D')} · R ${d.r_filers}/D ${d.d_filers}</div>`;
+      body.appendChild(card);
+    });
+    kb.querySelectorAll('.kbody').forEach(body=>{
+      new Sortable(body,{group:'plan',animation:120,onAdd:evt=>{
+        const code=evt.item.dataset.code, bucket=evt.to.dataset.bucket;
+        save(code,'bucket',bucket);
+        const row=document.querySelector(`tr.prow[data-code="${code}"]`);
+        if(row){row.dataset.bucket=bucket; const s=row.querySelector('.bsel'); if(s)s.value=bucket;}
+        updateCounts();
+      }});
+    });
+    updateCounts();
+  }
+  function updateCounts(){
+    document.querySelectorAll('.kbody').forEach(b=>{ b.closest('.kcol').querySelector('.cnt').textContent='('+b.children.length+')'; });
+  }
+
+  // ---- Map (schematic, county-grouped tiles) ----
+  function buildMap(){
+    const wrap=document.getElementById('mapWrap'); const byC={};
+    DISTRICTS.forEach(d=>{ (byC[d.county]=byC[d.county]||[]).push(d); });
+    Object.keys(byC).sort().forEach(county=>{
+      const div=document.createElement('div'); div.className='mapcounty';
+      let html=`<h6>${county} <span class="text-muted" style="font-weight:400">(${byC[county].length})</span></h6>`;
+      byC[county].sort((a,b)=>(parseInt((a.code.match(/\d+/)||[0])[0])-parseInt((b.code.match(/\d+/)||[0])[0])));
+      byC[county].forEach(d=>{
+        const num=(d.code.match(/\d+/)||['?'])[0];
+        html+=`<span class="mtile bk-${d.bucket||'unassigned'}" title="${d.code} — ${d.rating} — R ${d.r_filers}/D ${d.d_filers}">${num}<small>${d.seats}s</small></span>`;
+      });
+      div.innerHTML=html; wrap.appendChild(div);
+    });
+  }
+  buildBoard(); buildMap();
+</script>
+{% endblock %}
+{% block scripts %}{{ super() }}{% endblock %}

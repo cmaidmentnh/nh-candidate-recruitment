@@ -62,7 +62,7 @@ def get_user_private_features():
     # Superadmin has access to all
     email = getattr(current_user, 'email', None)
     if email and email.lower() == SUPER_ADMIN_EMAIL.lower():
-        return ['secret_primaries', 'speaker_votes']
+        return ['secret_primaries', 'speaker_votes', 'campaign_plan']
 
     if not hasattr(current_user, 'user_id'):
         return []
@@ -1104,3 +1104,168 @@ def inject_private_features():
     return {
         'user_private_features': get_user_private_features() if current_user.is_authenticated else []
     }
+
+
+# =============================================================================
+# CAMPAIGN BATTLE PLAN  (district-by-district strategy)
+# =============================================================================
+import re as _re
+
+# posture buckets: (key, label, color)
+PLAN_BUCKETS = [
+    ('hold_safe_r',  'Hold — Safe R',  '#1e7a3c'),
+    ('defend',       'Defend',              '#1e3557'),
+    ('battleground', 'Battleground',        '#d97706'),
+    ('target',       'Target',              '#c6312d'),
+    ('watch',        'Watch',               '#7a8aa3'),
+    ('pass_safe_d',  'Pass — Safe D',  '#6b7280'),
+    ('unassigned',   'Unassigned',          '#cdd4df'),
+]
+PLAN_BUCKET_KEYS = [b[0] for b in PLAN_BUCKETS]
+PLAN_BUCKET_LABEL = {b[0]: b[1] for b in PLAN_BUCKETS}
+PLAN_CHANNELS = ['Digital', 'Mail', 'Doors', 'Phones', 'Text', 'Events']
+
+
+def _dist_sortkey(code):
+    m = _re.search(r'(\d+)\s*$', code or '')
+    county = _re.sub(r'\s*\d+\s*$', '', code or '')
+    return (county, int(m.group(1)) if m else 0)
+
+
+@private_bp.route('/campaign-plan')
+@require_feature_access('campaign_plan')
+def campaign_plan():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT d.full_district_code, d.county_name, d.seats, d.pvi, d.pvi_rating, d.towns,
+                   p.bucket, p.channels, p.priority, p.notes
+            FROM (
+                SELECT full_district_code,
+                       MAX(county_name) AS county_name,
+                       MAX(seat_count)  AS seats,
+                       MAX(pvi)         AS pvi,
+                       MAX(pvi_rating)  AS pvi_rating,
+                       STRING_AGG(DISTINCT CASE WHEN ward IS NOT NULL AND ward <> 0
+                                   THEN town || ' Ward ' || ward ELSE town END, ', ') AS towns
+                FROM districts GROUP BY full_district_code
+            ) d
+            LEFT JOIN district_plan p ON p.district_code = d.full_district_code
+        """)
+        rows = cur.fetchall()
+
+        # 2026 State Rep filer counts per district by party
+        cur.execute("""
+            SELECT district_code, party, COUNT(*) FROM filings
+            WHERE election_year = 2026 AND office = 'State Representative'
+            GROUP BY district_code, party
+        """)
+        filers = {}
+        for dc, party, n in cur.fetchall():
+            filers.setdefault(dc, {}).setdefault(party, 0)
+            filers[dc][party] = n
+
+        districts = []
+        for code, county, seats, pvi, rating, towns, bucket, channels, priority, notes in rows:
+            f = filers.get(code, {})
+            districts.append({
+                'code': code, 'county': county or '', 'seats': seats or 1,
+                'pvi': float(pvi) if pvi is not None else None, 'rating': rating or '',
+                'towns': towns or '',
+                'bucket': bucket or 'unassigned', 'channels': channels or [],
+                'priority': priority, 'notes': notes or '',
+                'r_filers': f.get('R', 0), 'd_filers': f.get('D', 0),
+            })
+        districts.sort(key=lambda r: _dist_sortkey(r['code']))
+
+        # summary: districts + seats per bucket, district count per channel, no-R count
+        summary = {b: {'districts': 0, 'seats': 0} for b in PLAN_BUCKET_KEYS}
+        chan_counts = {c: 0 for c in PLAN_CHANNELS}
+        no_r = 0
+        for d in districts:
+            b = d['bucket'] if d['bucket'] in summary else 'unassigned'
+            summary[b]['districts'] += 1
+            summary[b]['seats'] += d['seats']
+            for c in d['channels']:
+                if c in chan_counts:
+                    chan_counts[c] += 1
+            if d['r_filers'] == 0:
+                no_r += 1
+
+        counties = sorted({d['county'] for d in districts if d['county']})
+        return render_template('private/campaign_plan.html',
+                               districts=districts, buckets=PLAN_BUCKETS,
+                               bucket_label=PLAN_BUCKET_LABEL, channels=PLAN_CHANNELS,
+                               summary=summary, chan_counts=chan_counts, no_r=no_r,
+                               counties=counties, total=len(districts))
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@private_bp.route('/campaign-plan/save', methods=['POST'])
+@require_feature_access('campaign_plan')
+def campaign_plan_save():
+    data = request.get_json(silent=True) or {}
+    code = data.get('district_code')
+    field = data.get('field')
+    value = data.get('value')
+    if not code or field not in ('bucket', 'channels', 'priority', 'notes'):
+        return jsonify(ok=False, error='bad request'), 400
+    if field == 'bucket' and value not in PLAN_BUCKET_KEYS:
+        return jsonify(ok=False, error='bad bucket'), 400
+    if field == 'channels':
+        value = [c for c in (value or []) if c in PLAN_CHANNELS]
+    if field == 'priority':
+        value = int(value) if value in (1, 2, 3, '1', '2', '3') else None
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # `field` is whitelisted above, so it's safe to inline as a column name.
+        sql = ("INSERT INTO district_plan (district_code, " + field + ", updated_by, updated_at) "
+               "VALUES (%s, %s, %s, NOW()) "
+               "ON CONFLICT (district_code) DO UPDATE SET " + field + " = EXCLUDED." + field + ", "
+               "updated_by = EXCLUDED.updated_by, updated_at = NOW()")
+        cur.execute(sql, (code, value, getattr(current_user, 'email', 'admin')))
+        conn.commit()
+        return jsonify(ok=True)
+    except Exception as e:
+        conn.rollback()
+        return jsonify(ok=False, error=str(e)), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@private_bp.route('/campaign-plan/export.csv')
+@require_feature_access('campaign_plan')
+def campaign_plan_export():
+    import csv, io
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT d.full_district_code, MAX(d.county_name), MAX(d.seat_count),
+                   MAX(d.pvi), MAX(d.pvi_rating),
+                   p.bucket, p.channels, p.priority, p.notes
+            FROM districts d
+            LEFT JOIN district_plan p ON p.district_code = d.full_district_code
+            GROUP BY d.full_district_code, p.bucket, p.channels, p.priority, p.notes
+        """)
+        rows = cur.fetchall()
+    finally:
+        cur.close()
+        release_db_connection(conn)
+    rows.sort(key=lambda r: _dist_sortkey(r[0]))
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['District', 'County', 'Seats', 'PVI', 'PVI Rating', 'Bucket', 'Channels', 'Priority', 'Notes'])
+    for code, county, seats, pvi, rating, bucket, channels, priority, notes in rows:
+        w.writerow([code, county, seats, pvi, rating,
+                    PLAN_BUCKET_LABEL.get(bucket or 'unassigned', bucket),
+                    ', '.join(channels or []), priority or '', (notes or '').replace('\n', ' ')])
+    from flask import Response
+    return Response(buf.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition': 'attachment; filename=battle_plan.csv'})

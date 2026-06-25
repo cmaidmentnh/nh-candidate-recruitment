@@ -60,6 +60,9 @@
                         <a class="nav-link" href="{{ url_for('filings_list') }}">Filings</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('intake.admin_queue') }}">Intake</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('activity_log_page') }}">Activity</a>
                     </li>
                     {% if is_super_admin %}
@@ -672,6 +675,11 @@
             {% if 'secret_primaries' in user_private_features %}
             <a class="dropdown-item" href="{{ url_for('private.secret_primaries') }}">
                 <i class="fas fa-bullseye text-muted"></i> Primary Tracking
+            </a>
+            {% endif %}
+            {% if 'campaign_plan' in user_private_features %}
+            <a class="dropdown-item" href="{{ url_for('private.campaign_plan') }}">
+                <i class="fas fa-chess-board text-muted"></i> Battle Plan
             </a>
             {% endif %}
             {% if is_super_admin %}
