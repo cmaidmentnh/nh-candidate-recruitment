@@ -1155,27 +1155,31 @@ def campaign_plan():
         """)
         rows = cur.fetchall()
 
-        # 2026 State Rep filer counts per district by party
+        # 2026 State Rep filers per district by party (counts + names for the matchup)
         cur.execute("""
-            SELECT district_code, party, COUNT(*) FROM filings
+            SELECT district_code, party, COUNT(*),
+                   STRING_AGG(first_name || ' ' || last_name, ', ' ORDER BY last_name) AS names
+            FROM filings
             WHERE election_year = 2026 AND office = 'State Representative'
             GROUP BY district_code, party
         """)
         filers = {}
-        for dc, party, n in cur.fetchall():
-            filers.setdefault(dc, {}).setdefault(party, 0)
-            filers[dc][party] = n
+        for dc, party, n, names in cur.fetchall():
+            filers.setdefault(dc, {})
+            filers[dc][party] = {'n': n, 'names': names or ''}
 
         districts = []
         for code, county, seats, pvi, rating, towns, bucket, channels, priority, notes in rows:
             f = filers.get(code, {})
+            r, d, ind = f.get('R', {}), f.get('D', {}), f.get('I', {})
             districts.append({
                 'code': code, 'county': county or '', 'seats': seats or 1,
                 'pvi': float(pvi) if pvi is not None else None, 'rating': rating or '',
                 'towns': towns or '',
                 'bucket': bucket or 'unassigned', 'channels': channels or [],
                 'priority': priority, 'notes': notes or '',
-                'r_filers': f.get('R', 0), 'd_filers': f.get('D', 0),
+                'r_filers': r.get('n', 0), 'd_filers': d.get('n', 0),
+                'r_names': r.get('names', ''), 'd_names': d.get('names', ''), 'i_names': ind.get('names', ''),
             })
         districts.sort(key=lambda r: _dist_sortkey(r['code']))
 

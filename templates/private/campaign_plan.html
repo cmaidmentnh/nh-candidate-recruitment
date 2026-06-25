@@ -69,7 +69,7 @@
     <div style="max-height:70vh;overflow:auto">
     <table class="table table-sm plan">
       <thead><tr>
-        <th>District</th><th>Towns</th><th>Seats</th><th>PVI</th><th>R / D filed</th><th>Bucket</th><th>Channels</th><th>Pri</th><th>Notes</th>
+        <th>District</th><th>Towns</th><th>Seats</th><th>PVI</th><th>Matchup (R&nbsp;v&nbsp;D)</th><th>Bucket</th><th>Channels</th><th>Pri</th><th>Notes</th>
       </tr></thead>
       <tbody>
         {% for d in districts %}
@@ -84,7 +84,11 @@
             <span class="{{ cls }}">{{ d.rating|replace('GOP','R')|replace('DEM','D')|title }}</span>
             {% if d.pvi is not none %}<small class="text-muted">{{ 'R+' ~ d.pvi if d.pvi>0 else ('D+' ~ (-d.pvi)) if d.pvi<0 else 'EVEN' }}</small>{% endif %}
           </td>
-          <td>{{ d.r_filers }} / {{ d.d_filers }}</td>
+          <td style="min-width:215px;font-size:.75rem;line-height:1.35">
+            <div><span class="pvi-gop">R:</span> {{ d.r_names if d.r_names else '—' }}</div>
+            <div><span class="pvi-dem">D:</span> {{ d.d_names if d.d_names else '—' }}</div>
+            {% if d.i_names %}<div class="text-muted">I: {{ d.i_names }}</div>{% endif %}
+          </td>
           <td>
             <select class="form-control form-control-sm bsel" style="min-width:135px" onchange="save('{{ d.code }}','bucket',this.value);this.closest('tr').dataset.bucket=this.value">
               {% for key,label,color in buckets %}<option value="{{ key }}" {{ 'selected' if d.bucket==key }}>{{ label }}</option>{% endfor %}
@@ -114,11 +118,14 @@
 
   <!-- ===================== MAP ===================== -->
   <div class="tab-pane fade" id="tab-map">
-    <p class="text-muted small">Schematic view — districts grouped by county, colored by posture. (A true geographic map needs the district shapefile; this stand-in ships now.)</p>
+    <p class="text-muted small">Districts colored by posture. Toggle base vs. floterial overlays (top-right). Click a district for the R-vs-D matchup.</p>
     <div class="plan-summary" style="gap:14px">{% for key,label,color in buckets %}<span><span class="bdot bk-{{ key }}"></span>{{ label }}</span>{% endfor %}</div>
-    <div id="mapWrap"></div>
+    <div id="mapLeaflet" style="height:72vh;border:1px solid #e2e6ec;border-radius:10px"></div>
   </div>
 </div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
@@ -176,22 +183,34 @@
     document.querySelectorAll('.kbody').forEach(b=>{ b.closest('.kcol').querySelector('.cnt').textContent='('+b.children.length+')'; });
   }
 
-  // ---- Map (schematic, county-grouped tiles) ----
-  function buildMap(){
-    const wrap=document.getElementById('mapWrap'); const byC={};
-    DISTRICTS.forEach(d=>{ (byC[d.county]=byC[d.county]||[]).push(d); });
-    Object.keys(byC).sort().forEach(county=>{
-      const div=document.createElement('div'); div.className='mapcounty';
-      let html=`<h6>${county} <span class="text-muted" style="font-weight:400">(${byC[county].length})</span></h6>`;
-      byC[county].sort((a,b)=>(parseInt((a.code.match(/\d+/)||[0])[0])-parseInt((b.code.match(/\d+/)||[0])[0])));
-      byC[county].forEach(d=>{
-        const num=(d.code.match(/\d+/)||['?'])[0];
-        html+=`<span class="mtile bk-${d.bucket||'unassigned'}" title="${d.code} — ${d.rating} — R ${d.r_filers}/D ${d.d_filers}">${num}<small>${d.seats}s</small></span>`;
-      });
-      div.innerHTML=html; wrap.appendChild(div);
+  // ---- Map (real Leaflet, geometry colored by posture) ----
+  const BCOLOR={hold_safe_r:'#1e7a3c',defend:'#1e3557',battleground:'#d97706',target:'#c6312d',watch:'#7a8aa3',pass_safe_d:'#6b7280',unassigned:'#cdd4df'};
+  const byCode={}; DISTRICTS.forEach(d=>byCode[d.code]=d);
+  let planMap=null;
+  function popupHtml(d, code){
+    if(!d) return '<b>'+code+'</b>';
+    return `<div style="font-size:13px"><b>${code}</b> · ${d.seats} seat(s)<br>
+      <span style="color:#8a6400">${(d.rating||'').replace('GOP','R').replace('DEM','D')}</span> · <b>${(BUCKETS.find(b=>b[0]===d.bucket)||['','—'])[1]}</b><hr style="margin:4px 0">
+      <span style="color:#a8261f;font-weight:700">R:</span> ${d.r_names||'—'}<br>
+      <span style="color:#1d4e89;font-weight:700">D:</span> ${d.d_names||'—'}${d.i_names?('<br><span style="color:#777">I:</span> '+d.i_names):''}</div>`;
+  }
+  function styleBase(f){const d=byCode[f.properties.dcode];return{color:'#fff',weight:1,fillColor:BCOLOR[(d&&d.bucket)||'unassigned'],fillOpacity:.78};}
+  function onEach(f,layer){const code=f.properties.dcode; layer.bindPopup(popupHtml(byCode[code],code)); layer.bindTooltip(code,{sticky:true});}
+  function initMap(){
+    if(planMap) { planMap.invalidateSize(); return; }
+    planMap=L.map('mapLeaflet').setView([43.85,-71.6], 8);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{maxZoom:13,attribution:'&copy; OpenStreetMap, &copy; CARTO'}).addTo(planMap);
+    fetch('/static/data/nh-house-plan.geojson').then(r=>r.json()).then(gj=>{
+      const base={type:'FeatureCollection',features:gj.features.filter(f=>f.properties.kind==='base')};
+      const flot={type:'FeatureCollection',features:gj.features.filter(f=>f.properties.kind==='floterial')};
+      const baseL=L.geoJSON(base,{style:styleBase,onEachFeature:onEach}).addTo(planMap);
+      const flotL=L.geoJSON(flot,{style:f=>({color:'#111',weight:1.5,dashArray:'5,4',fill:false}),onEachFeature:onEach});
+      L.control.layers(null,{'Base districts (posture fill)':baseL,'Floterial overlays':flotL},{collapsed:false}).addTo(planMap);
+      planMap.fitBounds(baseL.getBounds());
     });
   }
-  buildBoard(); buildMap();
+  buildBoard();
+  if(window.jQuery){ jQuery('a[href="#tab-map"]').on('shown.bs.tab', initMap); }
 </script>
 {% endblock %}
 {% block scripts %}{{ super() }}{% endblock %}
