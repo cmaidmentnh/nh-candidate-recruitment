@@ -15,6 +15,9 @@
   .chip{display:inline-block;font-size:.66rem;font-weight:700;padding:2px 6px;border-radius:10px;border:1px solid #ccd;
         cursor:pointer;margin:1px;color:#667;background:#fff;user-select:none}
   .chip.on{background:#1e3557;color:#fff;border-color:#1e3557}
+  .pbadge{display:inline-block;font-size:.6rem;font-weight:800;padding:1px 5px;border-radius:8px;text-transform:uppercase;letter-spacing:.03em}
+  .pbadge.r{background:#c6312d;color:#fff}.pbadge.d{background:#1d4e89;color:#fff}
+  tr.rprim td:first-child{box-shadow:inset 4px 0 0 #c6312d}
   .pvi-gop{color:#a8261f;font-weight:700}.pvi-dem{color:#1d4e89;font-weight:700}.pvi-swing{color:#8a6400;font-weight:700}
   .no-r{background:#fff3f2}
   .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px}
@@ -64,6 +67,7 @@
       <div><label>PVI</label><select id="fRating" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option><option>SAFE GOP</option><option>LIKELY GOP</option><option>LEAN GOP</option><option>SWING</option><option>LEAN DEM</option><option>LIKELY DEM</option><option>SAFE DEM</option></select></div>
       <div><label>Bucket</label><select id="fBucket" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option>{% for key,label,color in buckets %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
       <div><label>Channel</label><select id="fChannel" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option>{% for ch in channels %}<option>{{ ch }}</option>{% endfor %}</select></div>
+      <div><label>Primary</label><select id="fPrimary" class="form-control form-control-sm" onchange="applyFilters()"><option value="">All</option><option value="r">R primary</option><option value="d">D primary</option></select></div>
       <div class="form-check" style="margin-bottom:6px"><input type="checkbox" class="form-check-input" id="fNoR" onchange="applyFilters()"><label class="form-check-label" for="fNoR" style="text-transform:none">No R filed only</label></div>
     </div>
     <div style="max-height:70vh;overflow:auto">
@@ -73,8 +77,9 @@
       </tr></thead>
       <tbody>
         {% for d in districts %}
-        <tr class="prow {{ 'no-r' if d.r_filers==0 }}" data-code="{{ d.code }}" data-county="{{ d.county }}" data-rating="{{ d.rating }}"
+        <tr class="prow {{ 'no-r' if d.r_filers==0 }} {{ 'rprim' if d.r_filers > d.seats }}" data-code="{{ d.code }}" data-county="{{ d.county }}" data-rating="{{ d.rating }}"
             data-bucket="{{ d.bucket }}" data-channels="{{ d.channels|join(',') }}" data-nor="{{ 1 if d.r_filers==0 else 0 }}"
+            data-rprim="{{ 1 if d.r_filers > d.seats else 0 }}" data-dprim="{{ 1 if d.d_filers > d.seats else 0 }}"
             data-search="{{ (d.code ~ ' ' ~ d.towns)|lower }}">
           <td><b>{{ d.code }}</b></td>
           <td style="max-width:220px;font-size:.78rem;color:#666">{{ d.towns }}</td>
@@ -85,8 +90,8 @@
             {% if d.pvi is not none %}<small class="text-muted">{{ 'R+' ~ d.pvi if d.pvi>0 else ('D+' ~ (-d.pvi)) if d.pvi<0 else 'EVEN' }}</small>{% endif %}
           </td>
           <td style="min-width:215px;font-size:.75rem;line-height:1.35">
-            <div><span class="pvi-gop">R:</span> {{ d.r_names if d.r_names else '—' }}</div>
-            <div><span class="pvi-dem">D:</span> {{ d.d_names if d.d_names else '—' }}</div>
+            <div><span class="pvi-gop">R:</span> {{ d.r_names if d.r_names else '—' }}{% if d.r_filers > d.seats %} <span class="pbadge r" title="{{ d.r_filers }} R for {{ d.seats }} seat(s)">&#9876; Primary</span>{% endif %}</div>
+            <div><span class="pvi-dem">D:</span> {{ d.d_names if d.d_names else '—' }}{% if d.d_filers > d.seats %} <span class="pbadge d">Primary</span>{% endif %}</div>
             {% if d.i_names %}<div class="text-muted">I: {{ d.i_names }}</div>{% endif %}
           </td>
           <td>
@@ -145,11 +150,13 @@
     save(code, 'channels', chans);
   }
   function applyFilters(){
-    const q=fSearch.value.toLowerCase(), c=fCounty.value, r=fRating.value, b=fBucket.value, ch=fChannel.value, nor=fNoR.checked;
+    const q=fSearch.value.toLowerCase(), c=fCounty.value, r=fRating.value, b=fBucket.value, ch=fChannel.value,
+          p=document.getElementById('fPrimary').value, nor=fNoR.checked;
     document.querySelectorAll('tr.prow').forEach(tr=>{
       const d=tr.dataset;
       let ok = (!q||d.search.includes(q)) && (!c||d.county===c) && (!r||d.rating===r) && (!b||d.bucket===b)
-        && (!ch||(d.channels||'').split(',').includes(ch)) && (!nor||d.nor==='1');
+        && (!ch||(d.channels||'').split(',').includes(ch)) && (!nor||d.nor==='1')
+        && (!p || (p==='r'&&d.rprim==='1') || (p==='d'&&d.dprim==='1'));
       tr.style.display = ok ? '' : 'none';
     });
   }
@@ -194,23 +201,36 @@
       <span style="color:#a8261f;font-weight:700">R:</span> ${d.r_names||'—'}<br>
       <span style="color:#1d4e89;font-weight:700">D:</span> ${d.d_names||'—'}${d.i_names?('<br><span style="color:#777">I:</span> '+d.i_names):''}</div>`;
   }
-  function styleBase(f){const d=byCode[f.properties.dcode];return{color:'#fff',weight:1,fillColor:BCOLOR[(d&&d.bucket)||'unassigned'],fillOpacity:.78};}
+  function styleBase(f){
+    const d=byCode[f.properties.dcode]||{};
+    const rprim=(d.r_filers||0)>(d.seats||1);   // contested R primary -> red outline
+    return {color:rprim?'#c6312d':'#fff', weight:rprim?2.6:1, fillColor:BCOLOR[d.bucket||'unassigned'], fillOpacity:.78};
+  }
   function onEach(f,layer){const code=f.properties.dcode; layer.bindPopup(popupHtml(byCode[code],code)); layer.bindTooltip(code,{sticky:true});}
   function initMap(){
-    if(planMap) { planMap.invalidateSize(); return; }
+    if(planMap){ planMap.invalidateSize(); return; }
+    if(typeof L==='undefined'){ document.getElementById('mapLeaflet').innerHTML='<p class="text-danger p-3">Map library failed to load.</p>'; return; }
     planMap=L.map('mapLeaflet').setView([43.85,-71.6], 8);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{maxZoom:13,attribution:'&copy; OpenStreetMap, &copy; CARTO'}).addTo(planMap);
     fetch('/static/data/nh-house-plan.geojson').then(r=>r.json()).then(gj=>{
       const base={type:'FeatureCollection',features:gj.features.filter(f=>f.properties.kind==='base')};
       const flot={type:'FeatureCollection',features:gj.features.filter(f=>f.properties.kind==='floterial')};
       const baseL=L.geoJSON(base,{style:styleBase,onEachFeature:onEach}).addTo(planMap);
-      const flotL=L.geoJSON(flot,{style:f=>({color:'#111',weight:1.5,dashArray:'5,4',fill:false}),onEachFeature:onEach});
-      L.control.layers(null,{'Base districts (posture fill)':baseL,'Floterial overlays':flotL},{collapsed:false}).addTo(planMap);
+      const flotL=L.geoJSON(flot,{style:()=>({color:'#111',weight:1.5,dashArray:'5,4',fill:false}),onEachFeature:onEach});
+      const overlays={'House — base (posture fill)':baseL,'House — floterial overlays':flotL};
       planMap.fitBounds(baseL.getBounds());
+      // NH Senate overlay so you can see where House districts fall within Senate seats
+      fetch('/static/data/nh-senate-plan.geojson').then(r=>r.json()).then(sj=>{
+        overlays['NH Senate districts']=L.geoJSON(sj,{style:()=>({color:'#6b21a8',weight:2.6,fill:false}),
+          onEachFeature:(f,l)=>l.bindTooltip('Senate District '+f.properties.sd,{sticky:true})});
+        L.control.layers(null,overlays,{collapsed:false}).addTo(planMap);
+      }).catch(()=>{ L.control.layers(null,overlays,{collapsed:false}).addTo(planMap); });
     });
   }
   buildBoard();
-  if(window.jQuery){ jQuery('a[href="#tab-map"]').on('shown.bs.tab', initMap); }
+  // bind without depending on jQuery being loaded yet (content runs before base.html's jQuery)
+  var _mt=document.querySelector('a[href="#tab-map"]');
+  if(_mt){ _mt.addEventListener('click', function(){ setTimeout(initMap, 80); }); }
 </script>
 {% endblock %}
 {% block scripts %}{{ super() }}{% endblock %}

@@ -125,7 +125,7 @@ def manage_access():
         return render_template('private/manage_access.html',
                              users=users,
                              access_grants=access_grants,
-                             features=['secret_primaries', 'speaker_votes'])
+                             features=['secret_primaries', 'speaker_votes', 'campaign_plan'])
     finally:
         cur.close()
         release_db_connection(conn)
