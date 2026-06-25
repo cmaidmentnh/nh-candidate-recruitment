@@ -207,9 +207,8 @@
     return {color:rprim?'#c6312d':'#fff', weight:rprim?2.6:1, fillColor:BCOLOR[d.bucket||'unassigned'], fillOpacity:.78};
   }
   function onEach(f,layer){const code=f.properties.dcode; layer.bindPopup(popupHtml(byCode[code],code)); layer.bindTooltip(code,{sticky:true});}
-  function initMap(){
-    if(planMap){ planMap.invalidateSize(); return; }
-    if(typeof L==='undefined'){ document.getElementById('mapLeaflet').innerHTML='<p class="text-danger p-3">Map library failed to load.</p>'; return; }
+  let planBounds=null;
+  function buildMap(){
     planMap=L.map('mapLeaflet').setView([43.85,-71.6], 8);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{maxZoom:13,attribution:'&copy; OpenStreetMap, &copy; CARTO'}).addTo(planMap);
     fetch('/static/data/nh-house-plan.geojson').then(r=>r.json()).then(gj=>{
@@ -218,8 +217,8 @@
       const baseL=L.geoJSON(base,{style:styleBase,onEachFeature:onEach}).addTo(planMap);
       const flotL=L.geoJSON(flot,{style:()=>({color:'#111',weight:1.5,dashArray:'5,4',fill:false}),onEachFeature:onEach});
       const overlays={'House — base (posture fill)':baseL,'House — floterial overlays':flotL};
-      planMap.fitBounds(baseL.getBounds());
-      // NH Senate overlay so you can see where House districts fall within Senate seats
+      planBounds=baseL.getBounds();
+      planMap.invalidateSize(); planMap.fitBounds(planBounds);
       fetch('/static/data/nh-senate-plan.geojson').then(r=>r.json()).then(sj=>{
         overlays['NH Senate districts']=L.geoJSON(sj,{style:()=>({color:'#6b21a8',weight:2.6,fill:false}),
           onEachFeature:(f,l)=>l.bindTooltip('Senate District '+f.properties.sd,{sticky:true})});
@@ -227,10 +226,21 @@
       }).catch(()=>{ L.control.layers(null,overlays,{collapsed:false}).addTo(planMap); });
     });
   }
+  // Called when the Map tab is fully shown (after the fade transition) so the
+  // container has real dimensions — Leaflet sizes/centers correctly only then.
+  function showMap(){
+    if(typeof L==='undefined'){ document.getElementById('mapLeaflet').innerHTML='<p class="text-danger p-3">Map library failed to load.</p>'; return; }
+    if(!planMap){ buildMap(); }
+    setTimeout(function(){ if(planMap){ planMap.invalidateSize(); if(planBounds) planMap.fitBounds(planBounds); } }, 80);
+  }
   buildBoard();
-  // bind without depending on jQuery being loaded yet (content runs before base.html's jQuery)
-  var _mt=document.querySelector('a[href="#tab-map"]');
-  if(_mt){ _mt.addEventListener('click', function(){ setTimeout(initMap, 80); }); }
+  // bind after everything (incl. base.html's jQuery) has loaded
+  window.addEventListener('load', function(){
+    var t=document.querySelector('a[href="#tab-map"]');
+    if(!t) return;
+    if(window.jQuery){ window.jQuery(t).on('shown.bs.tab', showMap); }
+    else { t.addEventListener('click', function(){ setTimeout(showMap, 350); }); }
+  });
 </script>
 {% endblock %}
 {% block scripts %}{{ super() }}{% endblock %}
