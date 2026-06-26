@@ -44,6 +44,10 @@ LINK_RESULTS = 'https://elections.nhhouse.gop'
 
 CATEGORIES = ['Event', 'Training', 'Deadline', 'Resource', 'Other']
 
+# Standing campaign-finance reporting deadlines — shown in EVERY digest (past dates auto-drop off)
+FILING_DEADLINES = [date(2026, 8, 19), date(2026, 9, 2), date(2026, 9, 16),
+                    date(2026, 10, 14), date(2026, 10, 28), date(2026, 11, 25)]
+
 COMMITTEE = [
     ('Jason Osborne', 'Chairman', '(603) 391-2138'),
     ('Jim Kofalt', 'Treasurer', '(603) 264-2647'),
@@ -197,6 +201,20 @@ def render_digest_html(intro, events, unsub_url):
     intro_html = ''.join(f'<p style="margin:0 0 14px">{_esc(p)}</p>'
                          for p in (intro or '').split('\n\n') if p.strip())
 
+    # ---- campaign finance reporting deadlines (upcoming only) ----
+    upcoming = [d for d in FILING_DEADLINES if d >= date.today()]
+    pills = ''.join(
+        f'<span style="display:inline-block;background:#ffffff;border:1px solid #e6b9b6;color:{RED};'
+        f'font-weight:700;font-size:13px;padding:5px 11px;border-radius:14px;margin:3px 5px 0 0">'
+        f'{d.strftime("%b %-d")}</span>' for d in upcoming)
+    deadlines_html = (
+        f'<table width="100%" cellpadding="0" cellspacing="0" style="background:#fdf3f2;border:1px solid #f3d6d4;border-radius:12px;margin:4px 0 0">'
+        f'<tr><td style="padding:15px 18px">'
+        f'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:{RED}">&#9873; Campaign Finance Reporting Deadlines</div>'
+        f'<div style="margin:7px 0 6px">{pills}</div>'
+        f'<div style="color:{MUTE};font-size:12px">Receipts &amp; expenditure reports are due to the NH Secretary of State on these dates.</div>'
+        f'</td></tr></table>') if upcoming else ''
+
     # ---- resource tiles ----
     res = [('Build Your Website', LINK_WEBSITE, 'A free campaign site in minutes'),
            ('Candidate Surveys', LINK_SURVEYS, 'Earn endorsements & support from conservative organizations'),
@@ -238,6 +256,8 @@ def render_digest_html(intro, events, unsub_url):
     <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:{RED};margin:6px 0 0">Upcoming Events &amp; Trainings</div>
     {ev_html}
   </td></tr>
+
+  <tr><td style="padding:14px 30px 2px">{deadlines_html}</td></tr>
 
   <tr><td style="padding:8px 30px 4px">
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;border-radius:12px">
@@ -285,6 +305,10 @@ def render_digest_text(intro, events, unsub_url):
     else:
         lines.append('No events listed this week.')
         lines.append('')
+    upcoming = [d for d in FILING_DEADLINES if d >= date.today()]
+    if upcoming:
+        lines += ['', 'CAMPAIGN FINANCE REPORTING DEADLINES (NH Secretary of State):',
+                  '  ' + ' | '.join(d.strftime('%b %-d') for d in upcoming), '']
     lines += [
         'Build your website: ' + LINK_WEBSITE,
         'Take a survey: ' + LINK_SURVEYS,
