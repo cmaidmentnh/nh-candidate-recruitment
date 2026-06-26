@@ -1211,11 +1211,23 @@ def campaign_plan():
                       'districts': summary[k]['districts'], 'seats': summary[k]['seats']}
                      for k in DASH_ORDER if not (k == 'unassigned' and summary[k]['districts'] == 0)]
 
+        # persisted Project-240 seat projections per bucket (seeded from 2024 actuals)
+        cur.execute("SELECT bucket, seats_won FROM plan_projection")
+        projection = {b: (s if s is not None else 0) for b, s in cur.fetchall()}
+        # 2024 actual R seats won, aggregated by each district's CURRENT bucket
+        cur.execute("""SELECT p.bucket, COALESCE(SUM(t.r_seats), 0)
+                       FROM district_plan p LEFT JOIN district_2024 t ON t.district_code = p.district_code
+                       GROUP BY p.bucket""")
+        twentyfour = {b: int(s) for b, s in cur.fetchall()}
+        twentyfour_total = sum(twentyfour.values())
+
         counties = sorted({d['county'] for d in districts if d['county']})
         return render_template('private/campaign_plan.html',
                                districts=districts, buckets=PLAN_BUCKETS, plan_groups=PLAN_GROUPS,
                                bucket_label=PLAN_BUCKET_LABEL, channels=PLAN_CHANNELS,
-                               summary=summary, dashcards=dashcards, chan_counts=chan_counts, no_r=no_r,
+                               summary=summary, dashcards=dashcards, projection=projection,
+                               twentyfour=twentyfour, twentyfour_total=twentyfour_total,
+                               chan_counts=chan_counts, no_r=no_r,
                                counties=counties, total=len(districts))
     finally:
         cur.close()
@@ -1247,6 +1259,35 @@ def campaign_plan_save():
                "ON CONFLICT (district_code) DO UPDATE SET " + field + " = EXCLUDED." + field + ", "
                "updated_by = EXCLUDED.updated_by, updated_at = NOW()")
         cur.execute(sql, (code, value, getattr(current_user, 'email', 'admin')))
+        conn.commit()
+        return jsonify(ok=True)
+    except Exception as e:
+        conn.rollback()
+        return jsonify(ok=False, error=str(e)), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@private_bp.route('/campaign-plan/projection', methods=['POST'])
+@require_feature_access('campaign_plan')
+def campaign_plan_projection():
+    data = request.get_json(silent=True) or {}
+    bucket = data.get('bucket')
+    if bucket not in PLAN_BUCKET_KEYS:
+        return jsonify(ok=False, error='bad bucket'), 400
+    try:
+        seats = max(0, int(data.get('seats')))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error='bad seats'), 400
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""INSERT INTO plan_projection (bucket, seats_won, updated_by, updated_at)
+                       VALUES (%s, %s, %s, NOW())
+                       ON CONFLICT (bucket) DO UPDATE SET seats_won = EXCLUDED.seats_won,
+                           updated_by = EXCLUDED.updated_by, updated_at = NOW()""",
+                    (bucket, seats, getattr(current_user, 'email', 'admin')))
         conn.commit()
         return jsonify(ok=True)
     except Exception as e:

@@ -56,7 +56,12 @@
   <div class="card-body" style="padding:14px 18px">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
       <h5 style="margin:0;color:#1e3557;font-weight:800">Project 240 <span class="text-muted" style="font-weight:400;font-size:.85rem">— how the map gets to a 240-seat majority</span></h5>
-      <div><b id="p240total" style="font-size:1.6rem;color:#1e7a3c">0</b> <span class="text-muted">/ 240 projected R seats</span> <span id="p240gap" class="badge badge-secondary"></span></div>
+      <div>
+        <b id="p240total" style="font-size:1.6rem;color:#1e7a3c">0</b> <span class="text-muted">/ 240 projected R seats</span>
+        <span id="p240gap" class="badge badge-secondary"></span>
+        <span class="text-muted" style="margin-left:10px">2024 actual: <b>{{ twentyfour_total }}</b></span>
+        <span id="p240vs2024" class="badge badge-light"></span>
+      </div>
     </div>
     <div style="height:18px;background:#eef1f6;border-radius:9px;overflow:hidden;margin:8px 0 12px">
       <div id="p240bar" style="height:100%;width:0;background:#1e7a3c;transition:width .2s"></div>
@@ -65,13 +70,12 @@
       {% for c in dashcards if c.key != 'unassigned' %}
       <div style="text-align:center">
         <div style="font-size:.7rem;text-transform:uppercase;color:#777;font-weight:700">{{ c.label }}</div>
-        <div style="font-size:.72rem;color:#999">{{ c.seats }} seats</div>
-        <div><input type="number" min="0" max="100" class="p240win form-control form-control-sm" data-bucket="{{ c.key }}" data-seats="{{ c.seats }}"
-             style="width:64px;text-align:center;display:inline-block" oninput="calc240()">% R</div>
-        <div style="font-size:.78rem;font-weight:700;color:#1e3557">→ <span class="p240proj" data-bucket="{{ c.key }}">0</span></div>
+        <div><input type="number" min="0" max="{{ c.seats }}" value="{{ projection.get(c.key, 0) }}" class="p240seats form-control form-control-sm" data-bucket="{{ c.key }}" data-seats="{{ c.seats }}"
+             style="width:66px;text-align:center;display:inline-block" oninput="p240change(this)"> <span class="text-muted" style="font-size:.82rem">/ {{ c.seats }}</span></div>
+        <div style="font-size:.66rem;color:#999">seats won · <span style="color:#1e7a3c">’24: {{ twentyfour.get(c.key, 0) }}</span></div>
       </div>
       {% endfor %}
-      <div class="text-muted" style="font-size:.74rem;max-width:240px">Set the share of each bucket's seats you expect to win. Defaults are a starting point — push Lean D / Safe D up where the right candidate can steal a seat.</div>
+      <div class="text-muted" style="font-size:.74rem;max-width:230px">Enter the seats you expect to win in each bucket. Defaults are a starting point — bump Lean D / Safe D where the right candidate can steal one.</div>
     </div>
   </div>
 </div>
@@ -131,7 +135,7 @@
               <option value="">—</option>{% for p in [1,2,3] %}<option value="{{ p }}" {{ 'selected' if d.priority==p }}>{{ p }}</option>{% endfor %}
             </select>
           </td>
-          <td><input class="form-control form-control-sm" style="min-width:160px" value="{{ d.notes }}" onchange="save('{{ d.code }}','notes',this.value)" placeholder="…"></td>
+          <td><input class="form-control form-control-sm" style="min-width:160px" value="{{ d.notes }}" data-code="{{ d.code }}" oninput="noteInput(this)" onchange="save(this.dataset.code,'notes',this.value)" placeholder="…"></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -165,6 +169,11 @@
     return fetch('{{ url_for("private.campaign_plan_save") }}', {method:'POST',
       headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
       body:JSON.stringify({district_code:code, field:field, value:value})}).then(r=>r.json());
+  }
+  var _noteT={};
+  function noteInput(el){
+    clearTimeout(_noteT[el.dataset.code]);
+    _noteT[el.dataset.code]=setTimeout(function(){ save(el.dataset.code,'notes',el.value); }, 700);
   }
   function toggleChan(el, code, ch){
     el.classList.toggle('on');
@@ -257,16 +266,13 @@
     if(!planMap){ buildMap(); }
     setTimeout(function(){ if(planMap){ planMap.invalidateSize(); if(planBounds) planMap.fitBounds(planBounds); } }, 80);
   }
-  // ---- Project 240 ----
-  const P240_DEFAULTS={safe_r:100,lean_r:70,watch:50,lean_d:20,safe_d:3};
+  // ---- Project 240 (direct seat counts per bucket; persisted; compared to 2024) ----
+  const Y2024_TOTAL = {{ twentyfour_total }};
   function calc240(){
     let total=0;
-    document.querySelectorAll('.p240win').forEach(function(inp){
-      const seats=parseInt(inp.dataset.seats)||0;
-      const win=Math.max(0,Math.min(100,parseFloat(inp.value)||0));
-      const proj=Math.round(seats*win/100); total+=proj;
-      const out=document.querySelector('.p240proj[data-bucket="'+inp.dataset.bucket+'"]');
-      if(out) out.textContent=proj;
+    document.querySelectorAll('.p240seats').forEach(function(inp){
+      const max=parseInt(inp.dataset.seats)||0;
+      total += Math.max(0, Math.min(max, parseInt(inp.value)||0));
     });
     document.getElementById('p240total').textContent=total;
     const bar=document.getElementById('p240bar');
@@ -275,10 +281,19 @@
     const gap=document.getElementById('p240gap');
     if(total>=240){ gap.textContent='majority +'+(total-240); gap.className='badge badge-success'; }
     else { gap.textContent=(240-total)+' short'; gap.className='badge badge-danger'; }
+    const d=total-Y2024_TOTAL, v=document.getElementById('p240vs2024');
+    if(v){ v.textContent=(d>=0?'+':'')+d+' vs ’24'; v.className='badge '+(d>=0?'badge-success':'badge-danger'); }
   }
-  document.querySelectorAll('.p240win').forEach(function(inp){
-    var d=P240_DEFAULTS[inp.dataset.bucket]; inp.value = (d===undefined?50:d);
-  });
+  var _p240t={};
+  function p240change(inp){
+    calc240();
+    clearTimeout(_p240t[inp.dataset.bucket]);
+    _p240t[inp.dataset.bucket]=setTimeout(function(){
+      fetch('{{ url_for("private.campaign_plan_projection") }}',{method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body:JSON.stringify({bucket:inp.dataset.bucket, seats:inp.value})});
+    }, 500);
+  }
   calc240();
 
   buildBoard();
