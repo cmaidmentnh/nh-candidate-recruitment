@@ -39,15 +39,40 @@
 
 <!-- Summary -->
 <div class="plan-summary">
-  {% for g in group_summary %}
-  <div class="ptile" style="background:{{ g.color }}">
-    <div class="n">{{ g.districts }}</div>
-    <div class="l">{{ g.name }}</div>
-    <div class="s">{{ g.seats }} seats{% if g.subs %} · {% for lbl,n in g.subs %}{{ lbl }} {{ n }}{% if not loop.last %} / {% endif %}{% endfor %}{% endif %}</div>
+  {% for c in dashcards %}
+  <div class="ptile" style="background:{{ c.color }}">
+    <div class="n">{{ c.seats }}</div>
+    <div class="l">{{ c.label }}</div>
+    <div class="s">{{ c.seats }} seats · {{ c.districts }} districts</div>
   </div>
   {% endfor %}
   <div class="ptile" style="background:#7a1f1a">
     <div class="n">{{ no_r }}</div><div class="l">No R filed</div><div class="s">districts w/o a Republican</div>
+  </div>
+</div>
+
+<!-- ===================== PROJECT 240 ===================== -->
+<div id="project240" class="card mb-3" style="border:1px solid #e2e6ec;border-radius:12px">
+  <div class="card-body" style="padding:14px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h5 style="margin:0;color:#1e3557;font-weight:800">Project 240 <span class="text-muted" style="font-weight:400;font-size:.85rem">— how the map gets to a 240-seat majority</span></h5>
+      <div><b id="p240total" style="font-size:1.6rem;color:#1e7a3c">0</b> <span class="text-muted">/ 240 projected R seats</span> <span id="p240gap" class="badge badge-secondary"></span></div>
+    </div>
+    <div style="height:18px;background:#eef1f6;border-radius:9px;overflow:hidden;margin:8px 0 12px">
+      <div id="p240bar" style="height:100%;width:0;background:#1e7a3c;transition:width .2s"></div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end">
+      {% for c in dashcards if c.key != 'unassigned' %}
+      <div style="text-align:center">
+        <div style="font-size:.7rem;text-transform:uppercase;color:#777;font-weight:700">{{ c.label }}</div>
+        <div style="font-size:.72rem;color:#999">{{ c.seats }} seats</div>
+        <div><input type="number" min="0" max="100" class="p240win form-control form-control-sm" data-bucket="{{ c.key }}" data-seats="{{ c.seats }}"
+             style="width:64px;text-align:center;display:inline-block" oninput="calc240()">% R</div>
+        <div style="font-size:.78rem;font-weight:700;color:#1e3557">→ <span class="p240proj" data-bucket="{{ c.key }}">0</span></div>
+      </div>
+      {% endfor %}
+      <div class="text-muted" style="font-size:.74rem;max-width:240px">Set the share of each bucket's seats you expect to win. Defaults are a starting point — push Lean D / Safe D up where the right candidate can steal a seat.</div>
+    </div>
   </div>
 </div>
 
@@ -232,6 +257,30 @@
     if(!planMap){ buildMap(); }
     setTimeout(function(){ if(planMap){ planMap.invalidateSize(); if(planBounds) planMap.fitBounds(planBounds); } }, 80);
   }
+  // ---- Project 240 ----
+  const P240_DEFAULTS={safe_r:100,lean_r:70,watch:50,lean_d:20,safe_d:3};
+  function calc240(){
+    let total=0;
+    document.querySelectorAll('.p240win').forEach(function(inp){
+      const seats=parseInt(inp.dataset.seats)||0;
+      const win=Math.max(0,Math.min(100,parseFloat(inp.value)||0));
+      const proj=Math.round(seats*win/100); total+=proj;
+      const out=document.querySelector('.p240proj[data-bucket="'+inp.dataset.bucket+'"]');
+      if(out) out.textContent=proj;
+    });
+    document.getElementById('p240total').textContent=total;
+    const bar=document.getElementById('p240bar');
+    bar.style.width=Math.min(100,total/240*100)+'%';
+    bar.style.background = total>=240 ? '#1e7a3c' : (total>=225 ? '#d97706' : '#c6312d');
+    const gap=document.getElementById('p240gap');
+    if(total>=240){ gap.textContent='majority +'+(total-240); gap.className='badge badge-success'; }
+    else { gap.textContent=(240-total)+' short'; gap.className='badge badge-danger'; }
+  }
+  document.querySelectorAll('.p240win').forEach(function(inp){
+    var d=P240_DEFAULTS[inp.dataset.bucket]; inp.value = (d===undefined?50:d);
+  });
+  calc240();
+
   buildBoard();
   // bind after everything (incl. base.html's jQuery) has loaded
   window.addEventListener('load', function(){

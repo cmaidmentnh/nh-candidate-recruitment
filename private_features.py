@@ -1204,22 +1204,18 @@ def campaign_plan():
             if d['r_filers'] == 0:
                 no_r += 1
 
-        # roll sub-buckets up to main-category totals for the summary header
-        GROUP_COLOR = {'Spend': '#c6312d', 'No Spend': '#6b7280', 'Watch': '#d97706', 'Unassigned': '#cdd4df'}
-        group_summary = []
-        for g, keys in PLAN_GROUPS:
-            group_summary.append({
-                'name': g, 'color': GROUP_COLOR.get(g, '#888'),
-                'districts': sum(summary[k]['districts'] for k in keys),
-                'seats': sum(summary[k]['seats'] for k in keys),
-                'subs': [(PLAN_BUCKET_LABEL[k], summary[k]['districts']) for k in keys if summary[k]['districts']],
-            })
+        # one dashcard per sub-bucket, ordered by likelihood of an R win
+        DASH_ORDER = ['safe_r', 'lean_r', 'watch', 'lean_d', 'safe_d', 'unassigned']
+        BUCKET_COLOR = {b[0]: b[2] for b in PLAN_BUCKETS}
+        dashcards = [{'key': k, 'label': PLAN_BUCKET_LABEL[k], 'color': BUCKET_COLOR[k],
+                      'districts': summary[k]['districts'], 'seats': summary[k]['seats']}
+                     for k in DASH_ORDER if not (k == 'unassigned' and summary[k]['districts'] == 0)]
 
         counties = sorted({d['county'] for d in districts if d['county']})
         return render_template('private/campaign_plan.html',
                                districts=districts, buckets=PLAN_BUCKETS, plan_groups=PLAN_GROUPS,
                                bucket_label=PLAN_BUCKET_LABEL, channels=PLAN_CHANNELS,
-                               summary=summary, group_summary=group_summary, chan_counts=chan_counts, no_r=no_r,
+                               summary=summary, dashcards=dashcards, chan_counts=chan_counts, no_r=no_r,
                                counties=counties, total=len(districts))
     finally:
         cur.close()
