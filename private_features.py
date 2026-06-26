@@ -1112,13 +1112,22 @@ def inject_private_features():
 import re as _re
 
 # posture buckets: (key, label, color)
+# Sub-buckets (key, short label, color) that roll up to a main category (PLAN_GROUPS).
 PLAN_BUCKETS = [
-    ('spend',      'Spend',       '#c6312d'),
-    ('safe_r',     'Safe R',      '#1e7a3c'),
-    ('safe_d',     'Safe D',      '#1d4e89'),
-    ('watch',      'Watch — TBD', '#7a8aa3'),
-    ('unassigned', 'Unassigned',  '#cdd4df'),
+    ('lean_r',     'Lean R',     '#c6312d'),
+    ('lean_d',     'Lean D',     '#1d4e89'),
+    ('safe_r',     'Safe R',     '#1e7a3c'),
+    ('safe_d',     'Safe D',     '#7a8aa3'),
+    ('watch',      'Watch',      '#d97706'),
+    ('unassigned', 'Unassigned', '#cdd4df'),
 ]
+PLAN_GROUPS = [
+    ('Spend',      ['lean_r', 'lean_d']),
+    ('No Spend',   ['safe_r', 'safe_d']),
+    ('Watch',      ['watch']),
+    ('Unassigned', ['unassigned']),
+]
+PLAN_MAIN = {k: g for g, keys in PLAN_GROUPS for k in keys}
 PLAN_BUCKET_KEYS = [b[0] for b in PLAN_BUCKETS]
 PLAN_BUCKET_LABEL = {b[0]: b[1] for b in PLAN_BUCKETS}
 PLAN_CHANNELS = ['Digital', 'Mail', 'Doors', 'Phones', 'Text', 'Events']
@@ -1195,11 +1204,22 @@ def campaign_plan():
             if d['r_filers'] == 0:
                 no_r += 1
 
+        # roll sub-buckets up to main-category totals for the summary header
+        GROUP_COLOR = {'Spend': '#c6312d', 'No Spend': '#6b7280', 'Watch': '#d97706', 'Unassigned': '#cdd4df'}
+        group_summary = []
+        for g, keys in PLAN_GROUPS:
+            group_summary.append({
+                'name': g, 'color': GROUP_COLOR.get(g, '#888'),
+                'districts': sum(summary[k]['districts'] for k in keys),
+                'seats': sum(summary[k]['seats'] for k in keys),
+                'subs': [(PLAN_BUCKET_LABEL[k], summary[k]['districts']) for k in keys if summary[k]['districts']],
+            })
+
         counties = sorted({d['county'] for d in districts if d['county']})
         return render_template('private/campaign_plan.html',
-                               districts=districts, buckets=PLAN_BUCKETS,
+                               districts=districts, buckets=PLAN_BUCKETS, plan_groups=PLAN_GROUPS,
                                bucket_label=PLAN_BUCKET_LABEL, channels=PLAN_CHANNELS,
-                               summary=summary, chan_counts=chan_counts, no_r=no_r,
+                               summary=summary, group_summary=group_summary, chan_counts=chan_counts, no_r=no_r,
                                counties=counties, total=len(districts))
     finally:
         cur.close()
