@@ -456,6 +456,13 @@ from candidate_scout import scout_bp, init_candidate_scout
 init_candidate_scout(get_db_connection, release_db_connection, get_voter_db_connection, release_voter_db_connection, is_super_admin, SUPER_ADMIN_EMAIL)
 app.register_blueprint(scout_bp)
 
+# Register weekly candidate digest blueprint (admin compose + public submit/unsubscribe)
+from digest import digest_bp, init_digest
+init_digest(get_db_connection, release_db_connection, SUPER_ADMIN_EMAIL, app.secret_key)
+app.register_blueprint(digest_bp)
+# Public submission form has no admin session, so it's CSRF-exempt (validated server-side instead)
+csrf.exempt(app.view_functions['digest.digest_submit'])
+
 def candidate_restricted(f):
     @wraps(f)
     @login_required

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digest preferences — Committee to Elect House Republicans</title>
+<style>
+  body{margin:0;background:#f4f6fa;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a}
+  .card{max-width:520px;margin:8vh auto;background:#fff;border-radius:12px;padding:32px 34px;box-shadow:0 4px 24px rgba(20,40,80,.08)}
+  h1{font-size:20px;margin:0 0 10px;color:#1e3557}
+  p{line-height:1.6;color:#334}
+  .muted{color:#6b7280;font-size:13px;margin-top:18px}
+  a.btn{display:inline-block;margin-top:8px;color:#1e3557;font-weight:700;text-decoration:none}
+</style></head>
+<body><div class="card">
+{% if preview %}
+  <h1>Unsubscribe (preview)</h1>
+  <p>This is the page candidates land on. From a real email the link carries their address and removes them
+     from the weekly digest only.</p>
+{% elif resubscribed %}
+  <h1>You're back on the list</h1>
+  <p><strong>{{ email }}</strong> will once again receive the Win the House weekly digest. Welcome back!</p>
+{% else %}
+  <h1>You've been unsubscribed</h1>
+  <p><strong>{{ email }}</strong> will no longer receive the <em>weekly digest</em>.
+     You'll still receive other communications from the Committee to Elect House Republicans.</p>
+  <p class="muted">Didn't mean to do this?
+     <a class="btn" href="{{ url_for('digest.digest_resubscribe', u=request.args.get('u','')) }}">Re-subscribe to the digest &rsaquo;</a></p>
+{% endif %}
+</div></body></html>

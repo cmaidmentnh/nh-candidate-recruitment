@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .dg-wrap{max-width:980px;margin:0 auto}
+  .dg-stat{display:inline-block;background:#1e3557;color:#fff;border-radius:10px;padding:8px 16px;margin-right:8px}
+  .dg-stat .n{font-size:1.5rem;font-weight:800;line-height:1}
+  .dg-stat .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;opacity:.85}
+  .dg-card{border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff}
+  .dg-card.pending{border-left:4px solid #d97706;background:#fffaf2}
+  .dg-card.approved{border-left:4px solid #1e7a3c}
+  .cat-badge{display:inline-block;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+             padding:2px 8px;border-radius:10px;background:#1e3557;color:#fff}
+  .dg-meta{color:#6b7280;font-size:.82rem}
+  .dg-sec-h{font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#c6312d;margin:22px 0 10px}
+  label.sm{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#667;margin-bottom:2px}
+</style>
+<div class="dg-wrap py-3">
+  <div class="d-flex align-items-center justify-content-between flex-wrap">
+    <h3 class="mb-0"><i class="fas fa-envelope-open-text text-muted"></i> Weekly Candidate Digest</h3>
+    <div>
+      <span class="dg-stat"><span class="n">{{ recipient_count }}</span> <span class="l">recipients</span></span>
+      <span class="dg-stat" style="background:#6b7280"><span class="n">{{ unsub_count }}</span> <span class="l">opted out</span></span>
+    </div>
+  </div>
+
+  <!-- Compose & send -->
+  <div class="dg-sec-h">Compose this week's digest</div>
+  <form method="POST" action="{{ url_for('digest.digest_send') }}" id="sendForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-group">
+      <label class="sm">Subject</label>
+      <input class="form-control" name="subject" id="subject" value="{{ default_subject }}">
+    </div>
+    <div class="form-group">
+      <label class="sm">Intro message</label>
+      <textarea class="form-control" name="intro" id="intro" rows="3"
+        placeholder="A sentence or two up top. Use a blank line between paragraphs.">Happy to have you in the fight. Here's what's coming up — events, trainings, and resources to help you win your race. Reach out anytime; we work for you.</textarea>
+    </div>
+    <div class="d-flex align-items-center">
+      <button type="button" class="btn btn-outline-secondary mr-2" onclick="previewDigest()">
+        <i class="fas fa-eye"></i> Preview</button>
+      <button type="submit" class="btn btn-danger"
+        onclick="return confirm('Send this digest to {{ recipient_count }} candidates now?')">
+        <i class="fas fa-paper-plane"></i> Send to {{ recipient_count }} candidates</button>
+      <span class="text-muted ml-3" style="font-size:.82rem">{{ approved|length }} event(s) will be included.</span>
+    </div>
+  </form>
+
+  <!-- Approved events (in this digest) -->
+  <div class="dg-sec-h">In this digest &mdash; {{ approved|length }} event(s)</div>
+  {% for e in approved %}
+  <div class="dg-card approved">
+    <div class="d-flex justify-content-between">
+      <div>
+        <span class="cat-badge">{{ e.category }}</span>
+        <strong class="ml-1">{{ e.title }}</strong>
+        <div class="dg-meta">
+          {% if e.event_date %}{{ e.event_date.strftime('%a, %b %-d') }}{% endif %}
+          {% if e.event_time %} · {{ e.event_time }}{% endif %}
+          {% if e.location %} · {{ e.location }}{% endif %}
+          {% if e.url %} · <a href="{{ e.url }}" target="_blank">link</a>{% endif %}
+        </div>
+        {% if e.description %}<div style="font-size:.86rem;margin-top:4px">{{ e.description }}</div>{% endif %}
+      </div>
+      <div class="text-nowrap">
+        <form method="POST" action="{{ url_for('digest.digest_event_action', eid=e.id, action='archive') }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-sm btn-outline-secondary" title="Remove from digest"><i class="fas fa-archive"></i></button>
+        </form>
+        <form method="POST" action="{{ url_for('digest.digest_event_action', eid=e.id, action='delete') }}" style="display:inline"
+              onsubmit="return confirm('Delete this event?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">No events yet. Add one below, or approve a submission.</p>
+  {% endfor %}
+
+  <!-- Pending submissions -->
+  {% if pending %}
+  <div class="dg-sec-h">Submitted by candidates &mdash; needs review ({{ pending|length }})</div>
+  {% for e in pending %}
+  <div class="dg-card pending">
+    <div class="d-flex justify-content-between">
+      <div>
+        <span class="cat-badge" style="background:#d97706">{{ e.category }}</span>
+        <strong class="ml-1">{{ e.title }}</strong>
+        <div class="dg-meta">
+          {% if e.event_date %}{{ e.event_date.strftime('%a, %b %-d') }}{% endif %}
+          {% if e.event_time %} · {{ e.event_time }}{% endif %}
+          {% if e.location %} · {{ e.location }}{% endif %}
+          {% if e.url %} · <a href="{{ e.url }}" target="_blank">link</a>{% endif %}
+        </div>
+        {% if e.description %}<div style="font-size:.86rem;margin-top:4px">{{ e.description }}</div>{% endif %}
+        <div class="dg-meta mt-1"><em>from {{ e.submitted_by_name or 'anonymous' }}{% if e.submitted_by_email %} &lt;{{ e.submitted_by_email }}&gt;{% endif %}</em></div>
+      </div>
+      <div class="text-nowrap">
+        <form method="POST" action="{{ url_for('digest.digest_event_action', eid=e.id, action='approve') }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-sm btn-success"><i class="fas fa-check"></i> Approve</button>
+        </form>
+        <form method="POST" action="{{ url_for('digest.digest_event_action', eid=e.id, action='reject') }}" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-sm btn-outline-danger">Reject</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Add event -->
+  <div class="dg-sec-h">Add an event</div>
+  <form method="POST" action="{{ url_for('digest.digest_event_add') }}" class="dg-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-row">
+      <div class="form-group col-md-8"><label class="sm">Title</label>
+        <input class="form-control" name="title" required></div>
+      <div class="form-group col-md-4"><label class="sm">Category</label>
+        <select class="form-control" name="category">
+          {% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group col-md-3"><label class="sm">Date</label>
+        <input type="date" class="form-control" name="event_date"></div>
+      <div class="form-group col-md-3"><label class="sm">Time</label>
+        <input class="form-control" name="event_time" placeholder="6:00 PM"></div>
+      <div class="form-group col-md-6"><label class="sm">Location</label>
+        <input class="form-control" name="location"></div>
+    </div>
+    <div class="form-group"><label class="sm">Link (registration / info)</label>
+      <input class="form-control" name="url" placeholder="https://"></div>
+    <div class="form-group"><label class="sm">Description</label>
+      <textarea class="form-control" name="description" rows="2"></textarea></div>
+    <button class="btn btn-primary"><i class="fas fa-plus"></i> Add to digest</button>
+  </form>
+
+  <!-- Send history -->
+  {% if sends %}
+  <div class="dg-sec-h">Recent sends</div>
+  <table class="table table-sm">
+    <thead><tr><th>Subject</th><th>When</th><th>Recipients</th><th>Sent</th><th>Failed</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for s in sends %}
+      <tr><td>{{ s[0] }}</td><td>{{ s[5].strftime('%b %-d, %-I:%M %p') if s[5] }}</td>
+          <td>{{ s[1] }}</td><td>{{ s[2] }}</td><td>{{ s[3] }}</td><td>{{ s[4] }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <p class="text-muted mt-3" style="font-size:.8rem">
+    Public submission form: <a href="{{ url_for('digest.digest_submit') }}" target="_blank">/digest/submit</a>
+  </p>
+</div>
+<script>
+function previewDigest(){
+  var intro = encodeURIComponent(document.getElementById('intro').value);
+  window.open("{{ url_for('digest.digest_preview') }}?intro="+intro, "_blank");
+}
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submit an Event — Win the House Weekly Digest</title>
+<style>
+  body{margin:0;background:#f4f6fa;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a}
+  .wrap{max-width:600px;margin:0 auto;background:#fff;min-height:100vh}
+  .hd{background:#1e3557;color:#fff;padding:24px 28px}
+  .hd h1{margin:0;font-size:21px} .hd p{margin:4px 0 0;color:#9fb3d1;font-size:14px}
+  .bd{padding:24px 28px}
+  label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#556;margin:14px 0 4px}
+  input,select,textarea{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cbd3e0;border-radius:7px;font-size:15px}
+  .row{display:flex;gap:12px} .row>div{flex:1}
+  button{margin-top:20px;background:#c6312d;color:#fff;border:0;padding:13px 22px;border-radius:7px;font-size:15px;font-weight:700;cursor:pointer}
+  .ok{background:#e7f6ec;border:1px solid #1e7a3c;border-radius:8px;padding:18px;color:#155a2c}
+  .muted{color:#6b7280;font-size:13px}
+</style></head>
+<body><div class="wrap">
+  <div class="hd"><h1>Submit an Event</h1><p>For the Win the House weekly candidate digest</p></div>
+  <div class="bd">
+  {% if submitted %}
+    <div class="ok"><strong>Got it — thank you!</strong><br>Your event was submitted for review and, once approved,
+    will appear in an upcoming weekly digest to House Republican candidates.</div>
+    <p style="margin-top:18px"><a href="{{ url_for('digest.digest_submit') }}">Submit another &rsaquo;</a></p>
+  {% else %}
+    <p class="muted">Have a training, fundraiser, town meeting, or deadline candidates should know about?
+       Send it our way and we'll include it in the next digest.</p>
+    <form method="POST">
+      <label>Event title *</label>
+      <input name="title" required placeholder="e.g. Door-knocking 101 training">
+      <div class="row">
+        <div><label>Type</label><select name="category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+        <div><label>Date</label><input type="date" name="event_date"></div>
+      </div>
+      <div class="row">
+        <div><label>Time</label><input name="event_time" placeholder="6:00 PM"></div>
+        <div><label>Location</label><input name="location" placeholder="Town / venue / online"></div>
+      </div>
+      <label>Link (registration or info)</label>
+      <input name="url" placeholder="https://">
+      <label>Details</label>
+      <textarea name="description" rows="3" placeholder="What is it, who should come, anything else."></textarea>
+      <div class="row" style="margin-top:6px">
+        <div><label>Your name</label><input name="name"></div>
+        <div><label>Your email</label><input type="email" name="email"></div>
+      </div>
+      <button type="submit">Submit event</button>
+    </form>
+  {% endif %}
+  </div>
+</div></body></html>
