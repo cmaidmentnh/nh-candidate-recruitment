@@ -114,92 +114,142 @@ def _fmt_date(d):
         return str(d)
 
 
+def _town(location):
+    """Best-effort city/town from a free-text location ('McIntyre Ski Area, Manchester' -> 'Manchester')."""
+    if not location:
+        return ''
+    parts = [p.strip() for p in location.split(',') if p.strip()]
+    return parts[-1] if parts else location.strip()
+
+
 def render_digest_html(intro, events, unsub_url):
-    NAVY, RED, INK, MUTE = '#1e3557', '#c6312d', '#1a1a1a', '#6b7280'
-    cat_color = {'Event': NAVY, 'Training': '#1e7a3c', 'Deadline': RED,
-                 'Resource': '#7c3aed', 'Other': MUTE}
-
-    def btn(href, label, color):
-        return (f'<a href="{href}" style="display:inline-block;padding:11px 18px;margin:4px;'
-                f'background:{color};color:#fff;text-decoration:none;border-radius:6px;'
-                f'font-weight:600;font-size:14px">{label}</a>')
-
-    ev_html = ''
-    if events:
-        for e in events:
-            badge = (f'<span style="display:inline-block;background:{cat_color.get(e["category"],NAVY)};'
-                     f'color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;'
-                     f'padding:2px 8px;border-radius:10px">{_esc(e["category"])}</span>')
-            title = _esc(e['title'])
-            if e.get('url'):
-                title = f'<a href="{_esc(e["url"])}" style="color:{NAVY};text-decoration:none">{title} &rsaquo;</a>'
-            meta = []
-            if e.get('event_date'):
-                meta.append(_fmt_date(e['event_date']))
-            if e.get('event_time'):
-                meta.append(_esc(e['event_time']))
-            if e.get('location'):
-                meta.append(_esc(e['location']))
-            meta_html = (f'<div style="color:{MUTE};font-size:13px;margin:4px 0 0">'
-                         + ' &nbsp;|&nbsp; '.join(meta) + '</div>') if meta else ''
-            desc = (f'<div style="color:{INK};font-size:14px;line-height:1.5;margin:8px 0 0">'
-                    f'{_esc(e["description"])}</div>') if e.get('description') else ''
-            ev_html += (f'<div style="border:1px solid #e5e7eb;border-left:4px solid '
-                        f'{cat_color.get(e["category"],NAVY)};border-radius:8px;padding:14px 16px;margin:0 0 12px">'
-                        f'{badge}<div style="font-size:17px;font-weight:700;color:{NAVY};margin:6px 0 0">{title}</div>'
-                        f'{meta_html}{desc}</div>')
-    else:
-        ev_html = (f'<div style="color:{MUTE};font-size:14px;font-style:italic">'
-                   'No events listed this week — check back next week, or submit one below.</div>')
-
-    intro_html = ''.join(f'<p style="margin:0 0 12px">{_esc(p)}</p>'
-                         for p in (intro or '').split('\n\n') if p.strip())
-
-    committee_html = ''
-    for name, title, phone in COMMITTEE:
-        committee_html += (f'<tr><td style="padding:2px 14px 2px 0;font-weight:700;color:#fff;font-size:13px">{name}</td>'
-                           f'<td style="padding:2px 14px 2px 0;color:#cbd5e1;font-size:13px">{title}</td>'
-                           f'<td style="padding:2px 0;color:#cbd5e1;font-size:13px">{phone}</td></tr>')
-
+    NAVY, RED, INK, MUTE, LINE = '#16263f', '#b4262d', '#1f2733', '#6b7280', '#e8ebf1'
+    cat_color = {'Event': NAVY, 'Training': '#147a45', 'Deadline': RED,
+                 'Resource': '#6d3bbf', 'Other': MUTE}
     today = date.today().strftime('%B %-d, %Y')
     submit_url = DIGEST_BASE_URL + '/digest/submit'
 
-    return f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f6fa">
-<div style="max-width:600px;margin:0 auto;background:#fff;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
-  <div style="background:{NAVY};padding:22px 28px">
-    <div style="color:#fff;font-size:20px;font-weight:800;letter-spacing:.01em">Win the House — Weekly Digest</div>
-    <div style="color:#9fb3d1;font-size:13px;margin-top:2px">Committee to Elect House Republicans &nbsp;·&nbsp; {today}</div>
-  </div>
-  <div style="padding:24px 28px">
-    <div style="color:{INK};font-size:15px;line-height:1.6">{intro_html}</div>
+    # ---- events ----
+    ev_html = ''
+    if events:
+        for e in events:
+            cat = e.get('category') or 'Event'
+            ccol = cat_color.get(cat, NAVY)
+            # left date / category block
+            if e.get('event_date'):
+                d = e['event_date']
+                block = (f'<table cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr>'
+                         f'<td style="background:{NAVY};border-radius:10px;width:58px;text-align:center;padding:8px 0">'
+                         f'<div style="color:#f0a7a3;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;line-height:1">{d.strftime("%b")}</div>'
+                         f'<div style="color:#ffffff;font-size:24px;font-weight:800;line-height:1.15">{d.strftime("%-d")}</div>'
+                         f'</td></tr></table>')
+            else:
+                block = (f'<table cellpadding="0" cellspacing="0" style="border-collapse:separate"><tr>'
+                         f'<td style="background:{ccol};border-radius:10px;width:58px;height:50px;text-align:center;padding:6px 3px;vertical-align:middle">'
+                         f'<div style="color:#ffffff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;line-height:1.25">{_esc(cat)}</div>'
+                         f'</td></tr></table>')
+            title = _esc(e['title'])
+            town = _town(e.get('location'))
+            # meta line: TOWN prominent, then time
+            meta_bits = []
+            if town:
+                meta_bits.append(f'<span style="color:{NAVY};font-weight:700">&#9679; {_esc(town)}</span>')
+            if e.get('event_time'):
+                meta_bits.append(f'<span style="color:{MUTE}">{_esc(e["event_time"])}</span>')
+            if e.get('location') and _esc(e['location']) != _esc(town):
+                meta_bits.append(f'<span style="color:{MUTE}">{_esc(e["location"])}</span>')
+            meta_html = ('<div style="font-size:13px;margin:5px 0 0">' +
+                         ' &nbsp;&middot;&nbsp; '.join(meta_bits) + '</div>') if meta_bits else ''
+            desc = (f'<div style="color:{INK};font-size:14px;line-height:1.55;margin:7px 0 0">'
+                    f'{_esc(e["description"])}</div>') if e.get('description') else ''
+            if e.get('url'):
+                lbl = 'RSVP' if 'rsvp' in e['url'].lower() else 'Register'
+                cta = (f'<div style="margin:9px 0 0"><a href="{_esc(e["url"])}" '
+                       f'style="color:{RED};font-weight:700;font-size:13px;text-decoration:none">{lbl} &rsaquo;</a></div>')
+            else:
+                cta = ''
+            ev_html += (
+                f'<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:1px solid {LINE}">'
+                f'<tr><td style="padding:18px 0 0;width:58px;vertical-align:top">{block}</td>'
+                f'<td style="padding:18px 0 18px 16px;vertical-align:top">'
+                f'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:{ccol}">{_esc(cat)}</div>'
+                f'<div style="font-size:18px;font-weight:700;color:{NAVY};line-height:1.25;margin:3px 0 0">{title}</div>'
+                f'{meta_html}{desc}{cta}</td></tr></table>')
+    else:
+        ev_html = (f'<div style="color:{MUTE};font-size:14px;font-style:italic;padding:8px 0">'
+                   'Nothing on the calendar this week — submit an event below.</div>')
 
-    <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:{RED};margin:8px 0 14px">
-      Upcoming Events &amp; Trainings</div>
+    intro_html = ''.join(f'<p style="margin:0 0 14px">{_esc(p)}</p>'
+                         for p in (intro or '').split('\n\n') if p.strip())
+
+    # ---- resource tiles ----
+    res = [('Build Your Website', LINK_WEBSITE, 'A free campaign site in minutes'),
+           ('Take a Survey', LINK_SURVEYS, 'Tell us how we can help your race'),
+           ('Candidate List', LINK_CANDIDATES, 'Everyone on the September ballot'),
+           ('Past Election Results', LINK_RESULTS, 'District-by-district history')]
+    res_html = ''
+    for i, (lbl, href, sub) in enumerate(res):
+        bord = '' if i >= 2 else f'border-bottom:1px solid {LINE};'
+        res_html += (f'<a href="{href}" style="display:block;text-decoration:none;padding:11px 0;{bord}">'
+                     f'<span style="color:{NAVY};font-weight:700;font-size:14px">{lbl} &rsaquo;</span>'
+                     f'<span style="display:block;color:{MUTE};font-size:12px;margin-top:1px">{sub}</span></a>')
+
+    # ---- committee footer (2 columns) ----
+    cells = ''
+    for i, (name, title, phone) in enumerate(COMMITTEE):
+        if i % 2 == 0:
+            cells += '<tr>' if i else '<tr>'
+        cells += (f'<td style="padding:6px 18px 6px 0;vertical-align:top;width:50%">'
+                  f'<div style="color:#ffffff;font-weight:700;font-size:14px">{name}</div>'
+                  f'<div style="color:#9fb0c8;font-size:12px">{title}</div>'
+                  f'<div style="color:#cdd8e8;font-size:13px;margin-top:1px">{phone}</div></td>')
+        if i % 2 == 1:
+            cells += '</tr>'
+
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#eceff4">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#eceff4"><tr><td align="center" style="padding:24px 12px">
+<table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+
+  <tr><td style="height:5px;background:{RED}"></td></tr>
+  <tr><td style="background:{NAVY};padding:26px 30px 22px">
+    <div style="color:#9fb0c8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.2em">Committee to Elect House Republicans</div>
+    <div style="color:#ffffff;font-size:30px;font-weight:800;letter-spacing:-.01em;margin-top:6px">Weekly Digest</div>
+    <div style="color:#9fb0c8;font-size:13px;margin-top:5px">{today}</div>
+  </td></tr>
+
+  <tr><td style="padding:24px 30px 6px">
+    <div style="color:{INK};font-size:15px;line-height:1.65">{intro_html}</div>
+    <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:{RED};margin:6px 0 0">Upcoming Events &amp; Trainings</div>
     {ev_html}
+  </td></tr>
 
-    <div style="text-align:center;margin:22px 0 6px">
-      {btn(LINK_WEBSITE,'Build Your Website',NAVY)}
-      {btn(LINK_SURVEYS,'Take a Survey',NAVY)}
-      {btn(LINK_CANDIDATES,'Public Candidate List',NAVY)}
-      {btn(LINK_RESULTS,'Previous Election Results',NAVY)}
-    </div>
-    <div style="text-align:center;margin:14px 0 4px">
-      <a href="{submit_url}" style="color:{RED};font-weight:700;font-size:14px;text-decoration:none">
-        + Submit an event for the next digest &rsaquo;</a>
-    </div>
-  </div>
+  <tr><td style="padding:8px 30px 4px">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fb;border-radius:12px">
+      <tr><td style="padding:16px 20px">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:{NAVY};margin-bottom:4px">Tools &amp; Resources</div>
+        {res_html}
+      </td></tr>
+    </table>
+  </td></tr>
 
-  <div style="background:{NAVY};padding:22px 28px">
-    <div style="color:#fff;font-size:15px;font-weight:700;margin-bottom:10px">We work for you. Reach out to us anytime about anything.</div>
-    <table cellpadding="0" cellspacing="0" style="border-collapse:collapse">{committee_html}</table>
-    <div style="color:#9fb3d1;font-size:12px;margin-top:8px">chris@maidmentnh.com</div>
-  </div>
-  <div style="padding:16px 28px;background:#eef1f6;color:{MUTE};font-size:12px;line-height:1.5">
+  <tr><td style="padding:18px 30px 24px;text-align:center">
+    <a href="{submit_url}" style="display:inline-block;border:1.5px solid {RED};color:{RED};border-radius:24px;padding:10px 22px;font-weight:700;font-size:14px;text-decoration:none">Have an event? Submit it for next week &rsaquo;</a>
+  </td></tr>
+
+  <tr><td style="background:{NAVY};padding:24px 30px">
+    <div style="color:#ffffff;font-size:17px;font-weight:800">We work for you.</div>
+    <div style="color:#9fb0c8;font-size:13px;margin:2px 0 16px">Reach out anytime, about anything.</div>
+    <table width="100%" cellpadding="0" cellspacing="0">{cells}</table>
+    <div style="color:#9fb0c8;font-size:12px;margin-top:14px;border-top:1px solid #2a3c57;padding-top:12px">chris@maidmentnh.com</div>
+  </td></tr>
+
+  <tr><td style="padding:16px 30px;background:#f5f7fb;color:{MUTE};font-size:12px;line-height:1.5">
     You're receiving this as a filed Republican candidate for the NH House.
-    <a href="{unsub_url}" style="color:{MUTE};text-decoration:underline">Unsubscribe from this weekly digest</a>
-    — you'll still receive other committee communications.
-  </div>
-</div></body></html>"""
+    <a href="{unsub_url}" style="color:{MUTE};text-decoration:underline">Unsubscribe from this weekly digest</a> — you'll stay on our list for everything else.
+  </td></tr>
+
+</table></td></tr></table></body></html>"""
 
 
 def render_digest_text(intro, events, unsub_url):
