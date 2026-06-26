@@ -1208,6 +1208,7 @@ def campaign_plan():
         DASH_ORDER = ['safe_r', 'lean_r', 'watch', 'lean_d', 'safe_d', 'unassigned']
         BUCKET_COLOR = {b[0]: b[2] for b in PLAN_BUCKETS}
         dashcards = [{'key': k, 'label': PLAN_BUCKET_LABEL[k], 'color': BUCKET_COLOR[k],
+                      'main': PLAN_MAIN.get(k, ''),
                       'districts': summary[k]['districts'], 'seats': summary[k]['seats']}
                      for k in DASH_ORDER if not (k == 'unassigned' and summary[k]['districts'] == 0)]
 

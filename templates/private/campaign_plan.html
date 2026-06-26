@@ -41,6 +41,7 @@
 <div class="plan-summary">
   {% for c in dashcards %}
   <div class="ptile" style="background:{{ c.color }}">
+    <div style="font-size:.58rem;text-transform:uppercase;letter-spacing:.07em;opacity:.85;font-weight:700;border-bottom:1px solid rgba(255,255,255,.25);padding-bottom:2px;margin-bottom:3px">{{ c.main or '—' }}</div>
     <div class="n">{{ c.seats }}</div>
     <div class="l">{{ c.label }}</div>
     <div class="s">{{ c.seats }} seats · {{ c.districts }} districts</div>
