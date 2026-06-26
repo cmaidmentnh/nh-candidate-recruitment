@@ -1,10 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  .bk-hold_safe_r{background:#1e7a3c;color:#fff} .bk-defend{background:#1e3557;color:#fff}
-  .bk-battleground{background:#d97706;color:#fff} .bk-target{background:#c6312d;color:#fff}
-  .bk-watch{background:#7a8aa3;color:#fff} .bk-pass_safe_d{background:#6b7280;color:#fff}
-  .bk-unassigned{background:#cdd4df;color:#333}
+  .bk-spend{background:#c6312d;color:#fff} .bk-no_spend{background:#6b7280;color:#fff}
+  .bk-watch{background:#7a8aa3;color:#fff} .bk-unassigned{background:#cdd4df;color:#333}
   .bdot{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:5px}
   .plan-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
   .ptile{border-radius:10px;padding:10px 14px;min-width:120px;color:#fff}
@@ -191,7 +189,7 @@
   }
 
   // ---- Map (real Leaflet, geometry colored by posture) ----
-  const BCOLOR={hold_safe_r:'#1e7a3c',defend:'#1e3557',battleground:'#d97706',target:'#c6312d',watch:'#7a8aa3',pass_safe_d:'#6b7280',unassigned:'#cdd4df'};
+  const BCOLOR={spend:'#c6312d',no_spend:'#6b7280',watch:'#7a8aa3',unassigned:'#cdd4df'};
   const byCode={}; DISTRICTS.forEach(d=>byCode[d.code]=d);
   let planMap=null;
   function popupHtml(d, code){

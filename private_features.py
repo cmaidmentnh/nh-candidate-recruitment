@@ -1113,13 +1113,10 @@ import re as _re
 
 # posture buckets: (key, label, color)
 PLAN_BUCKETS = [
-    ('hold_safe_r',  'Hold — Safe R',  '#1e7a3c'),
-    ('defend',       'Defend',              '#1e3557'),
-    ('battleground', 'Battleground',        '#d97706'),
-    ('target',       'Target',              '#c6312d'),
-    ('watch',        'Watch',               '#7a8aa3'),
-    ('pass_safe_d',  'Pass — Safe D',  '#6b7280'),
-    ('unassigned',   'Unassigned',          '#cdd4df'),
+    ('spend',      'Spend',       '#c6312d'),
+    ('no_spend',   'No Spend',    '#6b7280'),
+    ('watch',      'Watch — TBD', '#7a8aa3'),
+    ('unassigned', 'Unassigned',  '#cdd4df'),
 ]
 PLAN_BUCKET_KEYS = [b[0] for b in PLAN_BUCKETS]
 PLAN_BUCKET_LABEL = {b[0]: b[1] for b in PLAN_BUCKETS}

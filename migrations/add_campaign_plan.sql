@@ -13,13 +13,13 @@ CREATE TABLE IF NOT EXISTS district_plan (
 INSERT INTO district_plan (district_code, bucket, updated_by)
 SELECT d.full_district_code,
        CASE UPPER(d.pvi_rating)
-            WHEN 'SAFE GOP'   THEN 'hold_safe_r'
-            WHEN 'LIKELY GOP' THEN 'defend'
-            WHEN 'LEAN GOP'   THEN 'defend'
-            WHEN 'SWING'      THEN 'battleground'
-            WHEN 'LEAN DEM'   THEN 'target'
-            WHEN 'LIKELY DEM' THEN 'target'
-            WHEN 'SAFE DEM'   THEN 'pass_safe_d'
+            WHEN 'SAFE GOP'   THEN 'no_spend'
+            WHEN 'SAFE DEM'   THEN 'no_spend'
+            WHEN 'LIKELY GOP' THEN 'spend'
+            WHEN 'LEAN GOP'   THEN 'spend'
+            WHEN 'SWING'      THEN 'spend'
+            WHEN 'LEAN DEM'   THEN 'spend'
+            WHEN 'LIKELY DEM' THEN 'spend'
             ELSE 'unassigned'
        END AS bucket,
        'pvi-seed'
