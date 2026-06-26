@@ -1114,7 +1114,8 @@ import re as _re
 # posture buckets: (key, label, color)
 PLAN_BUCKETS = [
     ('spend',      'Spend',       '#c6312d'),
-    ('no_spend',   'No Spend',    '#6b7280'),
+    ('safe_r',     'Safe R',      '#1e7a3c'),
+    ('safe_d',     'Safe D',      '#1d4e89'),
     ('watch',      'Watch — TBD', '#7a8aa3'),
     ('unassigned', 'Unassigned',  '#cdd4df'),
 ]

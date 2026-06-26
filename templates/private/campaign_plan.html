@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  .bk-spend{background:#c6312d;color:#fff} .bk-no_spend{background:#6b7280;color:#fff}
+  .bk-spend{background:#c6312d;color:#fff} .bk-safe_r{background:#1e7a3c;color:#fff} .bk-safe_d{background:#1d4e89;color:#fff}
   .bk-watch{background:#7a8aa3;color:#fff} .bk-unassigned{background:#cdd4df;color:#333}
   .bdot{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:5px}
   .plan-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
@@ -189,7 +189,7 @@
   }
 
   // ---- Map (real Leaflet, geometry colored by posture) ----
-  const BCOLOR={spend:'#c6312d',no_spend:'#6b7280',watch:'#7a8aa3',unassigned:'#cdd4df'};
+  const BCOLOR={spend:'#c6312d',safe_r:'#1e7a3c',safe_d:'#1d4e89',watch:'#7a8aa3',unassigned:'#cdd4df'};
   const byCode={}; DISTRICTS.forEach(d=>byCode[d.code]=d);
   let planMap=null;
   function popupHtml(d, code){
