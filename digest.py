@@ -32,6 +32,9 @@ DIGEST_BASE_URL = os.environ.get('DIGEST_BASE_URL', 'https://electhouserepublica
 DIGEST_FROM = os.environ.get('DIGEST_FROM',
                              'Committee to Elect House Republicans <digest@electhouserepublicans.com>')
 DIGEST_REPLYTO = os.environ.get('DIGEST_REPLYTO', 'chris@maidmentnh.com')
+# Where new-event-submission alerts go (comma-separated ok)
+DIGEST_NOTIFY = os.environ.get('DIGEST_NOTIFY', 'chris@maidmentnh.com')
+ADMIN_REVIEW_URL = os.environ.get('APP_URL', 'https://nhcandidaterecruitment.com') + '/private/digest'
 
 # Resource links highlighted in every digest
 LINK_WEBSITE = 'https://sites.winthehouse.gop'
@@ -335,6 +338,37 @@ def _send_worker(send_id, subject, intro, events, recipients):
 # --------------------------------------------------------------------------- #
 # Admin routes
 # --------------------------------------------------------------------------- #
+def _notify_submission(f, loc):
+    """Email the admin the moment a candidate submits an event. Best-effort (never blocks the submit)."""
+    try:
+        import boto3
+        title = f.get('title', '').strip()
+        who = f.get('name', '').strip() or 'someone'
+        whom_email = f.get('email', '').strip()
+        place = 'Online' if loc.get('is_online') else (loc.get('location') or '—')
+        when = ' '.join(x for x in [f.get('event_date', ''), f.get('event_time', '').strip()] if x) or '—'
+        body = (f"New event submitted for the weekly digest:\n\n"
+                f"  {title}\n"
+                f"  Category: {f.get('category','Event')}\n"
+                f"  When: {when}\n"
+                f"  Where: {place}\n"
+                f"  Link: {f.get('url','').strip() or '—'}\n"
+                f"  Details: {f.get('description','').strip() or '—'}\n\n"
+                f"  Submitted by: {who}" + (f" <{whom_email}>" if whom_email else "") + "\n\n"
+                f"Review / approve it here: {ADMIN_REVIEW_URL}")
+        ses = boto3.client('ses', region_name=os.environ.get('AWS_REGION', 'us-east-1'),
+                           aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                           aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'))
+        ses.send_email(
+            Source=DIGEST_FROM,
+            Destination={'ToAddresses': [a.strip() for a in DIGEST_NOTIFY.split(',') if a.strip()]},
+            Message={'Subject': {'Data': f'Digest submission: {title}', 'Charset': 'UTF-8'},
+                     'Body': {'Text': {'Data': body, 'Charset': 'UTF-8'}}},
+            ReplyToAddresses=[whom_email] if whom_email else [DIGEST_REPLYTO])
+    except Exception:
+        pass
+
+
 def _whoami():
     return getattr(current_user, 'email', None) or 'admin'
 
@@ -507,6 +541,7 @@ def digest_submit():
         finally:
             cur.close()
             _release_db(conn)
+        _notify_submission(f, loc)
         return render_template('digest_submit.html', categories=CATEGORIES, submitted=True)
     return render_template('digest_submit.html', categories=CATEGORIES, submitted=False)
 
