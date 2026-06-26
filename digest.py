@@ -199,7 +199,7 @@ def render_digest_html(intro, events, unsub_url):
 
     # ---- resource tiles ----
     res = [('Build Your Website', LINK_WEBSITE, 'A free campaign site in minutes'),
-           ('Take a Survey', LINK_SURVEYS, 'Tell us how we can help your race'),
+           ('Candidate Surveys', LINK_SURVEYS, 'Earn endorsements & support from conservative organizations'),
            ('Candidate List', LINK_CANDIDATES, 'Everyone on the September ballot'),
            ('Past Election Results', LINK_RESULTS, 'District-by-district history')]
     res_html = ''
