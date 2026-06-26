@@ -31,7 +31,7 @@ SECRET = None
 DIGEST_BASE_URL = os.environ.get('DIGEST_BASE_URL', 'https://electhouserepublicans.com')
 DIGEST_FROM = os.environ.get('DIGEST_FROM',
                              'Committee to Elect House Republicans <digest@electhouserepublicans.com>')
-DIGEST_REPLYTO = os.environ.get('DIGEST_REPLYTO', 'chris@maidmentnh.com')
+DIGEST_REPLYTO = os.environ.get('DIGEST_REPLYTO', 'info@electhouserepublicans.com')
 # Where new-event-submission alerts go (comma-separated ok)
 DIGEST_NOTIFY = os.environ.get('DIGEST_NOTIFY', 'chris@maidmentnh.com')
 ADMIN_REVIEW_URL = os.environ.get('APP_URL', 'https://nhcandidaterecruitment.com') + '/private/digest'
