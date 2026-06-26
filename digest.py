@@ -176,7 +176,9 @@ def render_digest_html(intro, events, unsub_url):
             desc = (f'<div style="color:{INK};font-size:14px;line-height:1.55;margin:7px 0 0">'
                     f'{_esc(e["description"])}</div>') if e.get('description') else ''
             if e.get('url'):
-                lbl = 'RSVP' if 'rsvp' in e['url'].lower() else 'Register'
+                lbl = ('Register' if cat == 'Training'
+                       else 'Details' if cat in ('Deadline', 'Resource', 'Other')
+                       else 'RSVP')
                 cta = (f'<div style="margin:9px 0 0"><a href="{_esc(e["url"])}" '
                        f'style="color:{RED};font-weight:700;font-size:13px;text-decoration:none">{lbl} &rsaquo;</a></div>')
             else:
