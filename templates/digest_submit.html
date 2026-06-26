@@ -32,10 +32,25 @@
         <div><label>Type</label><select name="category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
         <div><label>Date</label><input type="date" name="event_date"></div>
       </div>
-      <div class="row">
-        <div><label>Time</label><input name="event_time" placeholder="6:00 PM"></div>
-        <div><label>Location</label><input name="location" placeholder="Town / venue / online"></div>
+      <label>Time</label><input name="event_time" placeholder="6:00 PM">
+
+      <div style="margin-top:16px;padding:16px;background:#f5f7fb;border-radius:9px">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#556;margin-bottom:10px">Location</div>
+        <label style="font-weight:500;text-transform:none;letter-spacing:0;font-size:14px;color:#222;display:flex;align-items:center;gap:8px;margin:0 0 12px">
+          <input type="checkbox" name="is_online" value="on" id="onl" onchange="toggleLoc()" style="width:auto;margin:0"> This is an online / virtual event
+        </label>
+        <div id="locfields">
+          <input name="venue" placeholder="Venue or place name (e.g. American Legion Post 3)">
+          <input name="address" placeholder="Street address" style="margin-top:8px">
+          <div class="row" style="margin-top:8px">
+            <div style="flex:2"><input name="city" id="city" placeholder="City / Town *" required></div>
+            <div style="flex:1"><input name="state" value="NH"></div>
+            <div style="flex:1"><input name="zip" placeholder="Zip"></div>
+          </div>
+          <div style="font-size:12px;color:#6b7280;margin-top:6px">City/town is required so candidates know where to go.</div>
+        </div>
       </div>
+
       <label>Link (registration or info)</label>
       <input name="url" placeholder="https://">
       <label>Details</label>
@@ -48,4 +63,12 @@
     </form>
   {% endif %}
   </div>
-</div></body></html>
+</div>
+<script>
+function toggleLoc(){
+  var on=document.getElementById('onl').checked;
+  document.getElementById('locfields').style.display = on ? 'none' : 'block';
+  document.getElementById('city').required = !on;
+}
+</script>
+</body></html>

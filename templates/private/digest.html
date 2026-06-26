@@ -128,8 +128,24 @@
         <input type="date" class="form-control" name="event_date"></div>
       <div class="form-group col-md-3"><label class="sm">Time</label>
         <input class="form-control" name="event_time" placeholder="6:00 PM"></div>
-      <div class="form-group col-md-6"><label class="sm">Location</label>
-        <input class="form-control" name="location"></div>
+      <div class="form-group col-md-6 d-flex align-items-end"><label class="mb-2" style="font-size:.85rem">
+        <input type="checkbox" name="is_online" value="on" id="adm_onl" onchange="admToggleLoc()"> This is an online / virtual event</label></div>
+    </div>
+    <div id="adm_locfields">
+      <div class="form-row">
+        <div class="form-group col-md-6"><label class="sm">Venue / place</label>
+          <input class="form-control" name="venue" placeholder="e.g. American Legion Post 3"></div>
+        <div class="form-group col-md-6"><label class="sm">Street address</label>
+          <input class="form-control" name="address"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group col-md-6"><label class="sm">City / Town</label>
+          <input class="form-control" name="city" placeholder="Required so candidates know where to go"></div>
+        <div class="form-group col-md-3"><label class="sm">State</label>
+          <input class="form-control" name="state" value="NH"></div>
+        <div class="form-group col-md-3"><label class="sm">Zip</label>
+          <input class="form-control" name="zip"></div>
+      </div>
     </div>
     <div class="form-group"><label class="sm">Link (registration / info)</label>
       <input class="form-control" name="url" placeholder="https://"></div>
@@ -160,6 +176,10 @@
 function previewDigest(){
   var intro = encodeURIComponent(document.getElementById('intro').value);
   window.open("{{ url_for('digest.digest_preview') }}?intro="+intro, "_blank");
+}
+function admToggleLoc(){
+  document.getElementById('adm_locfields').style.display =
+    document.getElementById('adm_onl').checked ? 'none' : 'block';
 }
 </script>
 {% endblock %}

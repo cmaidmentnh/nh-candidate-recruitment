@@ -6,7 +6,13 @@ CREATE TABLE IF NOT EXISTS digest_events (
     category           VARCHAR(40) DEFAULT 'Event',   -- Event / Training / Deadline / Resource / Other
     event_date         DATE,
     event_time         VARCHAR(60),
-    location           TEXT,
+    location           TEXT,                          -- composed full address (display/back-compat)
+    venue              TEXT,
+    address            TEXT,
+    city               VARCHAR(120),
+    state              VARCHAR(20) DEFAULT 'NH',
+    zip                VARCHAR(12),
+    is_online          BOOLEAN DEFAULT false,
     url                TEXT,
     description        TEXT,
     submitted_by_name  VARCHAR(150),

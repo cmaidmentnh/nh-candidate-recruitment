@@ -10,6 +10,7 @@ Private admin routes live under /private/digest (feature slug 'digest').
 Public routes (/digest/submit, /digest/unsubscribe) require no login.
 """
 import os, threading, html as _html
+from urllib.parse import quote_plus
 from datetime import datetime, date
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, abort, current_app)
@@ -149,15 +150,24 @@ def render_digest_html(intro, events, unsub_url):
                          f'<div style="color:#ffffff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;line-height:1.25">{_esc(cat)}</div>'
                          f'</td></tr></table>')
             title = _esc(e['title'])
-            town = _town(e.get('location'))
-            # meta line: TOWN prominent, then time
+            # location: city is the prominent town; venue/address build a maps link
+            online = bool(e.get('is_online'))
+            city = (e.get('city') or _town(e.get('location')) or '').strip()
+            venue = (e.get('venue') or '').strip()
+            place = 'Online' if online else city
+            full_addr = ', '.join(x for x in [venue, e.get('address'), city,
+                                              e.get('state'), e.get('zip')] if x)
             meta_bits = []
-            if town:
-                meta_bits.append(f'<span style="color:{NAVY};font-weight:700">&#9679; {_esc(town)}</span>')
+            if place:
+                if online or not full_addr:
+                    meta_bits.append(f'<span style="color:{NAVY};font-weight:700">&#9679; {_esc(place)}</span>')
+                else:
+                    maps = 'https://www.google.com/maps/search/?api=1&query=' + quote_plus(full_addr)
+                    meta_bits.append(f'<a href="{maps}" style="color:{NAVY};font-weight:700;text-decoration:none">&#9679; {_esc(place)}</a>')
+            if venue and not online and venue.lower() != place.lower():
+                meta_bits.append(f'<span style="color:{MUTE}">{_esc(venue)}</span>')
             if e.get('event_time'):
                 meta_bits.append(f'<span style="color:{MUTE}">{_esc(e["event_time"])}</span>')
-            if e.get('location') and _esc(e['location']) != _esc(town):
-                meta_bits.append(f'<span style="color:{MUTE}">{_esc(e["location"])}</span>')
             meta_html = ('<div style="font-size:13px;margin:5px 0 0">' +
                          ' &nbsp;&middot;&nbsp; '.join(meta_bits) + '</div>') if meta_bits else ''
             desc = (f'<div style="color:{INK};font-size:14px;line-height:1.55;margin:7px 0 0">'
@@ -329,6 +339,22 @@ def _whoami():
     return getattr(current_user, 'email', None) or 'admin'
 
 
+def _loc_from_form(f):
+    """Pull structured location fields from a submitted form. Returns a dict."""
+    online = f.get('is_online') in ('on', '1', 'true', 'yes')
+    venue = f.get('venue', '').strip()
+    address = f.get('address', '').strip()
+    city = f.get('city', '').strip()
+    state = (f.get('state', '').strip() or 'NH')
+    zipc = f.get('zip', '').strip()
+    if online:
+        composed = 'Online'
+    else:
+        composed = ', '.join(x for x in [venue, address, city, state, zipc] if x)
+    return {'venue': venue, 'address': address, 'city': city, 'state': state,
+            'zip': zipc, 'is_online': online, 'location': composed}
+
+
 @digest_bp.route('/private/digest')
 @require_feature_access('digest')
 def digest_home():
@@ -363,16 +389,18 @@ def digest_home():
 @require_feature_access('digest')
 def digest_event_add():
     f = request.form
+    loc = _loc_from_form(f)
     conn = _get_db()
     cur = conn.cursor()
     try:
         cur.execute("""INSERT INTO digest_events
-            (title,category,event_date,event_time,location,url,description,status,reviewed_by,reviewed_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,'approved',%s,NOW())""",
+            (title,category,event_date,event_time,location,venue,address,city,state,zip,is_online,
+             url,description,status,reviewed_by,reviewed_at)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'approved',%s,NOW())""",
             (f.get('title','').strip(), f.get('category','Event'),
              f.get('event_date') or None, f.get('event_time','').strip(),
-             f.get('location','').strip(), f.get('url','').strip(),
-             f.get('description','').strip(), _whoami()))
+             loc['location'], loc['venue'], loc['address'], loc['city'], loc['state'], loc['zip'], loc['is_online'],
+             f.get('url','').strip(), f.get('description','').strip(), _whoami()))
         conn.commit()
         flash('Event added to the digest.', 'success')
     finally:
@@ -414,12 +442,15 @@ def digest_preview():
     return render_digest_html(intro, events, DIGEST_BASE_URL + '/digest/unsubscribe?u=PREVIEW')
 
 
+_EVENT_COLS = ['id','title','category','event_date','event_time','location','url','description',
+               'venue','address','city','state','zip','is_online']
+_EVENT_SEL = ','.join(_EVENT_COLS)
+
+
 def _load_approved(cur):
-    cur.execute("""SELECT id,title,category,event_date,event_time,location,url,description
-                   FROM digest_events WHERE status='approved'
-                   ORDER BY event_date NULLS LAST, created_at""")
-    cols = ['id','title','category','event_date','event_time','location','url','description']
-    return [dict(zip(cols, r)) for r in cur.fetchall()]
+    cur.execute(f"""SELECT {_EVENT_SEL} FROM digest_events WHERE status='approved'
+                    ORDER BY event_date NULLS LAST, created_at""")
+    return [dict(zip(_EVENT_COLS, r)) for r in cur.fetchall()]
 
 
 @digest_bp.route('/private/digest/send', methods=['POST'])
@@ -459,18 +490,19 @@ def digest_submit():
         if not f.get('title', '').strip():
             flash('Please give the event a title.', 'error')
             return redirect(url_for('digest.digest_submit'))
+        loc = _loc_from_form(f)
         conn = _get_db()
         cur = conn.cursor()
         try:
             cur.execute("""INSERT INTO digest_events
-                (title,category,event_date,event_time,location,url,description,
-                 submitted_by_name,submitted_by_email,status)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending')""",
+                (title,category,event_date,event_time,location,venue,address,city,state,zip,is_online,
+                 url,description,submitted_by_name,submitted_by_email,status)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending')""",
                 (f.get('title','').strip(), f.get('category','Event'),
                  f.get('event_date') or None, f.get('event_time','').strip(),
-                 f.get('location','').strip(), f.get('url','').strip(),
-                 f.get('description','').strip(), f.get('name','').strip(),
-                 f.get('email','').strip()))
+                 loc['location'], loc['venue'], loc['address'], loc['city'], loc['state'], loc['zip'], loc['is_online'],
+                 f.get('url','').strip(), f.get('description','').strip(),
+                 f.get('name','').strip(), f.get('email','').strip()))
             conn.commit()
         finally:
             cur.close()
