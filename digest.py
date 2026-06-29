@@ -439,7 +439,7 @@ def digest_home():
     finally:
         cur.close()
         _release_db(conn)
-    default_subject = 'Win the House — Weekly Digest, ' + date.today().strftime('%B %-d')
+    default_subject = 'Committee to Elect House Republicans — Weekly Digest, ' + date.today().strftime('%B %-d')
     return render_template('private/digest.html', approved=approved, pending=pending,
                            recipient_count=len(recips), unsub_count=unsub_n, sends=sends,
                            categories=CATEGORIES, default_subject=default_subject)
@@ -516,7 +516,7 @@ def _load_approved(cur):
 @digest_bp.route('/private/digest/send', methods=['POST'])
 @require_feature_access('digest')
 def digest_send():
-    subject = request.form.get('subject', '').strip() or ('Win the House — Weekly Digest, ' + date.today().strftime('%B %-d'))
+    subject = request.form.get('subject', '').strip() or ('Committee to Elect House Republicans — Weekly Digest, ' + date.today().strftime('%B %-d'))
     intro = request.form.get('intro', '').strip()
     conn = _get_db()
     cur = conn.cursor()
