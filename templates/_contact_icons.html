@@ -1,6 +1,8 @@
 {# Contact icons for a candidate: email / phone / signal. Reused on dashboard + filings. #}
 {% macro contact_icons(email, phone, signal, signal_uuid, size=13) %}
-{% set sig = (signal or '')|trim %}
+{# Signal "message from your own account" needs a phone/username, not a UUID. Use the
+   imported Signal number if we have it, otherwise fall back to the candidate's phone. #}
+{% set sig = ((signal or '')|trim) or ((phone or '')|trim) %}
 {%- set d = sig|replace('-','')|replace(' ','')|replace('(','')|replace(')','')|replace('.','') -%}
 {%- if d.startswith('+') -%}{% set siglink = d %}
 {%- elif d|length == 10 -%}{% set siglink = '+1' + d %}
