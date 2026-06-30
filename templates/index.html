@@ -284,7 +284,7 @@
                                                         {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
                                                         {% else %}text-secondary{% endif %}">
                                                         {{ cand.name|title }}
-                                                    </a>{{ contact_icons(cand.email, cand.phone, cand.signal, cand.signal_uuid) }}
+                                                    </a>{{ contact_icons(cand.email, cand.phone, cand.signal, cand.signal_uuid, cand.signal_registered) }}
                                                     <span class="status-badge badge badge-sm
                                                         {% if cand.status|upper == 'CONFIRMED' %}badge-success
                                                         {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}badge-warning

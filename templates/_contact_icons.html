@@ -1,7 +1,7 @@
-{# Contact icons for a candidate: email / phone / signal. Reused on dashboard + filings. #}
-{% macro contact_icons(email, phone, signal, signal_uuid, size=13) %}
-{# Signal "message from your own account" needs a phone/username, not a UUID. Use the
-   imported Signal number if we have it, otherwise fall back to the candidate's phone. #}
+{# Contact icons for a candidate: email / phone / signal. Reused on dashboard + filings.
+   The Signal icon only appears when the number is verified on Signal (signal_registered),
+   and links to signal.me so the viewer messages from their OWN Signal account. #}
+{% macro contact_icons(email, phone, signal, signal_uuid, signal_registered=false, size=13) %}
 {% set sig = ((signal or '')|trim) or ((phone or '')|trim) %}
 {%- set d = sig|replace('-','')|replace(' ','')|replace('(','')|replace(')','')|replace('.','') -%}
 {%- if d.startswith('+') -%}{% set siglink = d %}
@@ -13,8 +13,7 @@
 <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="currentColor" aria-label="Email"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4h17A1.5 1.5 0 0 1 22 5.5v13A1.5 1.5 0 0 1 20.5 20h-17A1.5 1.5 0 0 1 2 18.5v-13Zm2.4.5 7.6 5.3L19.6 6H4.4ZM20 7.7l-7.4 5.2a1 1 0 0 1-1.2 0L4 7.7V18h16V7.7Z"/></svg></a>{% endif -%}
 {%- if phone %}<a href="tel:{{ phone }}" title="{{ phone }}" onclick="event.stopPropagation()" style="color:#6b7280;line-height:0">
 <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="currentColor" aria-label="Phone"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></a>{% endif -%}
-{%- if siglink %}<a href="https://signal.me/#p/{{ siglink }}" target="_blank" rel="noopener" title="Signal: {{ sig }}{% if signal_uuid %} · {{ signal_uuid }}{% endif %}" onclick="event.stopPropagation()" style="color:#3a76f0;line-height:0">
-<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="currentColor" aria-label="Signal"><path d="M12 2C6.477 2 2 6.13 2 11.2c0 2.4 1 4.59 2.64 6.23-.17 1.2-.56 2.4-1.11 3.37 1.27-.15 2.51-.6 3.6-1.3 1.46.66 3.09 1.03 4.87 1.03 5.52 0 10-4.13 10-9.2S17.52 2 12 2Z"/></svg></a>{% elif signal_uuid %}<a href="#" onclick="event.stopPropagation();event.preventDefault();if(navigator.clipboard){navigator.clipboard.writeText('{{ signal_uuid }}');var s=this;s.style.color='#1e7a3c';setTimeout(function(){s.style.color='#3a76f0';},900);}return false;" title="Signal ID — click to copy: {{ signal_uuid }}" style="color:#3a76f0;line-height:0;cursor:pointer">
+{%- if signal_registered and siglink %}<a href="https://signal.me/#p/{{ siglink }}" target="_blank" rel="noopener" title="Message on Signal ({{ siglink }}) — opens your Signal app" onclick="event.stopPropagation()" style="color:#3a76f0;line-height:0">
 <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="currentColor" aria-label="Signal"><path d="M12 2C6.477 2 2 6.13 2 11.2c0 2.4 1 4.59 2.64 6.23-.17 1.2-.56 2.4-1.11 3.37 1.27-.15 2.51-.6 3.6-1.3 1.46.66 3.09 1.03 4.87 1.03 5.52 0 10-4.13 10-9.2S17.52 2 12 2Z"/></svg></a>{% endif -%}
 </span>
 {%- endmacro %}

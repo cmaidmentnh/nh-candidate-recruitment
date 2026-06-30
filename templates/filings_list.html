@@ -143,7 +143,7 @@
     <strong style="font-size: 14px;">{{ f.first }} {{ f.last }}</strong>
     {% if f.candidate_id %}
     <i class="fas fa-link text-success ml-1" title="Linked to recruitment record" style="font-size: 10px;"></i>
-    {% endif %}{{ contact_icons(f.email, f.phone, f.signal, f.signal_uuid) }}
+    {% endif %}{{ contact_icons(f.email, f.phone, f.signal, f.signal_uuid, f.signal_registered) }}
     <div style="font-size: 11px; color: #6c757d;">
       {{ f.town or '' }}{% if f.town and f.filed_at %} · {% endif %}{% if f.filed_at %}filed {{ f.filed_at.strftime('%b %-d') }}{% endif %}
     </div>

@@ -601,7 +601,7 @@ def get_data_and_dashboard():
         cur.execute("""
             SELECT ces.district_code, ces.status, c.first_name, c.last_name, c.incumbent, c.candidate_id,
                    COALESCE(NULLIF(c.email,''),NULLIF(c.email1,''),NULLIF(c.email2,'')) AS email,
-                   c.phone1, c.signal, c.signal_uuid
+                   c.phone1, c.signal, c.signal_uuid, c.signal_registered
             FROM candidate_election_status ces
             JOIN candidates c ON ces.candidate_id = c.candidate_id
             WHERE ces.election_year = 2026 AND c.party = 'R';
@@ -647,7 +647,7 @@ def get_data_and_dashboard():
         release_db_connection(conn)
 
     cand2026_by_dist = defaultdict(list)
-    for dist_code, status, first, last, inc, cid, email, phone1, signal, signal_uuid in cands_2026_rows:
+    for dist_code, status, first, last, inc, cid, email, phone1, signal, signal_uuid, signal_reg in cands_2026_rows:
         cand2026_by_dist[dist_code].append({
             "name": f"{first} {last}",
             "status": status,
@@ -655,6 +655,7 @@ def get_data_and_dashboard():
             "candidate_id": cid,
             "filed": cid in filed_2026_cids,
             "email": email, "phone": phone1, "signal": signal, "signal_uuid": signal_uuid,
+            "signal_registered": signal_reg,
         })
     cand2024_by_dist = defaultdict(list)
     for dist_code, status, first, last, inc, cid in cands_2024_rows:
@@ -3776,7 +3777,7 @@ def filings_list():
                    f.candidate_id, f.created_by, f.created_at,
                    d.county_name, d.seat_count, d.pvi, d.pvi_rating, f.office,
                    COALESCE(NULLIF(c.email,''),NULLIF(c.email1,''),NULLIF(c.email2,'')) AS email,
-                   c.phone1, c.signal, c.signal_uuid
+                   c.phone1, c.signal, c.signal_uuid, c.signal_registered
             FROM filings f
             LEFT JOIN candidates c ON c.candidate_id = f.candidate_id
             LEFT JOIN LATERAL (
@@ -3810,6 +3811,7 @@ def filings_list():
                 'county': r[13], 'seats': r[14], 'pvi': r[15], 'pvi_rating': r[16],
                 'office': r[17],
                 'email': r[18], 'phone': r[19], 'signal': r[20], 'signal_uuid': r[21],
+                'signal_registered': r[22],
             })
 
         # Start with ALL districts (so the ballot shows empty races too),
