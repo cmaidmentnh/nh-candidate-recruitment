@@ -1130,7 +1130,7 @@ PLAN_GROUPS = [
 PLAN_MAIN = {k: g for g, keys in PLAN_GROUPS for k in keys}
 PLAN_BUCKET_KEYS = [b[0] for b in PLAN_BUCKETS]
 PLAN_BUCKET_LABEL = {b[0]: b[1] for b in PLAN_BUCKETS}
-PLAN_CHANNELS = ['Digital', 'Mail', 'Doors', 'Phones', 'Text', 'Events']
+PLAN_CHANNELS = ['Digital', 'Video', 'Mail', 'Doors', 'Phones', 'Text', 'Events']
 
 
 def _dist_sortkey(code):
