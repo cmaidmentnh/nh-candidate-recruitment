@@ -4379,6 +4379,41 @@ def filings_delete(filing_id):
 def health():
     return jsonify({"status": "healthy"}), 200
 
+
+# HMO quick-intake form (electhouserepublicans.com/hmo) -> emails chris@maidmentnh.com.
+# Reached via the Node front-end proxy (/api/hmo). noindex/robots-blocked page.
+@app.route('/api/hmo', methods=['POST'])
+@csrf.exempt
+def api_hmo():
+    from markupsafe import escape
+    data = request.get_json(silent=True) or {}
+    if (data.get('website') or '').strip():          # honeypot -> silently drop bots
+        return jsonify({'ok': True})
+    g = lambda k, n=2000: (str(data.get(k) or '')).strip()[:n]
+    name, number, email = g('name', 200), g('number', 60), g('email', 200)
+    notes, doc = g('notes', 5000), g('document_link', 1000)
+    called, urgency = g('called_at', 120), g('urgency', 60)
+    if not (name or number or notes):
+        return jsonify({'ok': False, 'error': 'Please add at least a name, number, or notes.'}), 400
+    doc_html = (f'<a href="{escape(doc)}">{escape(doc)}</a>'
+                if doc.lower().startswith(('http://', 'https://')) else escape(doc))
+    rows = [('Name', escape(name)), ('Number', escape(number)), ('Email', escape(email)),
+            ('Date/time called in', escape(called)), ('Priority', escape(urgency)),
+            ('Document link', doc_html), ('Notes', escape(notes).replace('\n', '<br>'))]
+    body = ''.join(
+        f'<tr><td style="padding:5px 14px 5px 0;font-weight:bold;vertical-align:top;white-space:nowrap;">{lab}</td>'
+        f'<td style="padding:5px 0;">{val if val else "&mdash;"}</td></tr>' for lab, val in rows)
+    html = (f'<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#222;">'
+            f'<h2 style="margin:0 0 10px;">HMO Intake</h2>'
+            f'<table style="border-collapse:collapse;font-size:15px;">{body}</table></div>')
+    text = '\n'.join(f'{lab}: {v or "-"}' for lab, v in
+                     [('Name', name), ('Number', number), ('Email', email),
+                      ('Called in', called), ('Priority', urgency), ('Document link', doc), ('Notes', notes)])
+    subj = 'HMO Intake' + (f' [{urgency}]' if urgency else '') + (f' — {name}' if name else '')
+    ok = send_email('chris@maidmentnh.com', subj, html, text)
+    return jsonify({'ok': bool(ok)})
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
     app.run(host='0.0.0.0', port=port, debug=os.getenv("DEBUG", "false").lower() == "true")
