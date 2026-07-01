@@ -101,7 +101,8 @@ def _cid_from_session():
 def _prefill(cur, candidate_id):
     cur.execute("""
         SELECT first_name, last_name, phone1, phone2, address, city, zip,
-               twitter_x, facebook, instagram, photo_url, email, username,
+               twitter_x, facebook, instagram, photo_url,
+               COALESCE(NULLIF(email,''), email1) AS email, username,
                external_campaign_url, donate_url
         FROM candidates WHERE candidate_id = %s
     """, (candidate_id,))
