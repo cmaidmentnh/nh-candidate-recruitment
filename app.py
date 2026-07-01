@@ -4380,11 +4380,19 @@ def health():
     return jsonify({"status": "healthy"}), 200
 
 
-# HMO quick-intake form (electhouserepublicans.com/hmo) -> emails chris@maidmentnh.com.
-# Reached via the Node front-end proxy (/api/hmo). noindex/robots-blocked page.
+# Elect House Republicans intake form (electhouserepublicans.com/hmo) -> emails
+# chris@maidmentnh.com from info@electhouserepublicans.com. Any uploaded document
+# under 25 MB is attached directly. noindex/robots-blocked page, reached via the
+# Node front-end proxy (/api/hmo).
+HMO_FROM = '"Elect House Republicans" <info@electhouserepublicans.com>'
+HMO_FROM_ADDR = 'info@electhouserepublicans.com'
+HMO_TO = 'chris@maidmentnh.com'
+
+
 @app.route('/api/hmo', methods=['POST'])
 @csrf.exempt
 def api_hmo():
+    import base64
     from markupsafe import escape
     data = request.get_json(silent=True) or {}
     if (data.get('website') or '').strip():          # honeypot -> silently drop bots
@@ -4395,21 +4403,21 @@ def api_hmo():
     called, urgency = g('called_at', 120), g('urgency', 60)
     if not (name or number or notes):
         return jsonify({'ok': False, 'error': 'Please add at least a name, number, or notes.'}), 400
-    # Optional uploaded document (base64) -> attached to the email (max 8 MB).
-    import base64
-    file_name = (str(data.get('file_name') or '')).strip()[:200]
+
+    # Optional uploaded document -> attached directly to the email (max 25 MB).
+    file_name = (str(data.get('file_name') or '')).strip()[:200] or 'document'
     file_raw = None
     if data.get('file_data'):
         try:
             file_raw = base64.b64decode(str(data.get('file_data')), validate=False)
         except Exception:
             file_raw = None
-        if file_raw and len(file_raw) > 8 * 1024 * 1024:
-            return jsonify({'ok': False, 'error': 'Attachment too large (max 8 MB). Please paste a link instead.'}), 400
+        if file_raw and len(file_raw) > 25 * 1024 * 1024:
+            return jsonify({'ok': False, 'error': 'That file is over 25 MB. Please attach a smaller file.'}), 400
 
     doc_html = (f'<a href="{escape(doc)}">{escape(doc)}</a>'
                 if doc.lower().startswith(('http://', 'https://')) else escape(doc))
-    attach_cell = (f'{escape(file_name or "document")} (attached)') if file_raw else '&mdash;'
+    attach_cell = (f'{escape(file_name)} (attached)') if file_raw else '&mdash;'
     rows = [('Name', escape(name)), ('Number', escape(number)), ('Email', escape(email)),
             ('Date/time called in', escape(called)), ('Priority', escape(urgency)),
             ('Document link', doc_html), ('Attachment', attach_cell),
@@ -4418,45 +4426,47 @@ def api_hmo():
         f'<tr><td style="padding:5px 14px 5px 0;font-weight:bold;vertical-align:top;white-space:nowrap;">{lab}</td>'
         f'<td style="padding:5px 0;">{val if val else "&mdash;"}</td></tr>' for lab, val in rows)
     html = (f'<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#222;">'
-            f'<h2 style="margin:0 0 10px;">HMO Intake</h2>'
+            f'<h2 style="margin:0 0 10px;color:#0f1d35;">Elect House Republicans</h2>'
             f'<table style="border-collapse:collapse;font-size:15px;">{body}</table></div>')
-    text = '\n'.join(f'{lab}: {v or "-"}' for lab, v in
-                     [('Name', name), ('Number', number), ('Email', email),
-                      ('Called in', called), ('Priority', urgency), ('Document link', doc),
-                      ('Attachment', file_name if file_raw else ''), ('Notes', notes)])
-    subj = 'HMO Intake' + (f' [{urgency}]' if urgency else '') + (f' — {name}' if name else '')
+    text = 'Elect House Republicans — Intake\n\n' + '\n'.join(
+        f'{lab}: {v or "-"}' for lab, v in
+        [('Name', name), ('Number', number), ('Email', email), ('Called in', called),
+         ('Priority', urgency), ('Document link', doc),
+         ('Attachment', file_name if file_raw else ''), ('Notes', notes)])
+    subj = 'Elect House Republicans' + (f' — [{urgency}]' if urgency else ' — Intake') + (f' {name}' if name else '')
 
-    if not file_raw:
-        return jsonify({'ok': bool(send_email('chris@maidmentnh.com', subj, html, text))})
-
-    # With an attachment: send a raw MIME message via SES.
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    from email.mime.application import MIMEApplication
-    from email.utils import formataddr
     ses = get_ses_client()
     if not ses:
         logger.error("HMO: SES not configured")
         return jsonify({'ok': False, 'error': 'Email not configured.'}), 500
     try:
-        msg = MIMEMultipart('mixed')
-        msg['Subject'] = subj
-        msg['From'] = formataddr((SES_SENDER_NAME, SES_SENDER_EMAIL))
-        msg['To'] = 'chris@maidmentnh.com'
-        alt = MIMEMultipart('alternative')
-        alt.attach(MIMEText(text, 'plain', 'utf-8'))
-        alt.attach(MIMEText(html, 'html', 'utf-8'))
-        msg.attach(alt)
-        att = MIMEApplication(file_raw)
-        att.add_header('Content-Disposition', 'attachment', filename=(file_name or 'document'))
-        msg.attach(att)
-        ses.send_raw_email(Source=SES_SENDER_EMAIL, Destinations=['chris@maidmentnh.com'],
-                           RawMessage={'Data': msg.as_string()})
-        logger.info(f"HMO intake with attachment emailed: {subj}")
+        if file_raw:
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            from email.mime.application import MIMEApplication
+            msg = MIMEMultipart('mixed')
+            msg['Subject'] = subj
+            msg['From'] = HMO_FROM
+            msg['To'] = HMO_TO
+            alt = MIMEMultipart('alternative')
+            alt.attach(MIMEText(text, 'plain', 'utf-8'))
+            alt.attach(MIMEText(html, 'html', 'utf-8'))
+            msg.attach(alt)
+            att = MIMEApplication(file_raw)
+            att.add_header('Content-Disposition', 'attachment', filename=file_name)
+            msg.attach(att)
+            ses.send_raw_email(Source=HMO_FROM_ADDR, Destinations=[HMO_TO],
+                               RawMessage={'Data': msg.as_string()})
+        else:
+            ses.send_email(Source=HMO_FROM, Destination={'ToAddresses': [HMO_TO]},
+                           Message={'Subject': {'Data': subj, 'Charset': 'UTF-8'},
+                                    'Body': {'Text': {'Data': text, 'Charset': 'UTF-8'},
+                                             'Html': {'Data': html, 'Charset': 'UTF-8'}}})
+        logger.info(f"HMO intake emailed (attachment={bool(file_raw)}): {subj}")
         return jsonify({'ok': True})
     except Exception as e:
-        logger.error(f"HMO send_raw_email failed: {e}")
-        return jsonify({'ok': False, 'error': 'Could not send. Please try again or paste a link.'}), 500
+        logger.error(f"HMO email failed: {e}")
+        return jsonify({'ok': False, 'error': 'Could not send. Please try again.'}), 500
 
 
 if __name__ == "__main__":
