@@ -21,10 +21,14 @@
   .cell .detail { font-size:.75rem; color:#8a8a8a; margin-top:3px; line-height:1.2; }
   .cell .empty { color:#cfcfcf; font-size:1.1rem; }
   .cell-input { width:100%; border:1px solid #4a90d9; border-radius:5px; padding:4px 7px; font-size:.85rem; }
-  .src-head { display:flex; align-items:center; gap:8px; }
-  .src-count { font-size:.68rem; color:#aaa; text-transform:none; letter-spacing:0; }
+  .survey-matrix thead th.src { background:#eef1f6; border-left:1px solid #e0e0e0; border-bottom:3px solid #4a90d9;
+      color:#2c3e50; font-size:.82rem; letter-spacing:0; text-transform:none; }
+  .src-name { font-weight:700; }
+  .src-count { display:block; font-size:.68rem; color:#9aa4b0; font-weight:400; margin-top:2px; }
   .legend .badge { font-weight:600; }
   #addForm { background:#fffdf5; border:1px dashed #e2cf7a; border-radius:8px; }
+  tr.dist-group td { background:#f2f4f7; font-weight:700; font-size:.8rem; color:#4a5568;
+      letter-spacing:.03em; padding:6px 14px; border-top:2px solid #dfe3e8; position:sticky; }
 </style>
 {% endblock %}
 {% block content %}
@@ -41,7 +45,9 @@
     <span class="badge badge-danger">Bad</span>
     <span class="tag-inc">INCUMBENT</span>
     <span class="text-muted small ml-2">{{ rows|length }} candidates &middot; {{ orgs|length }} source{{ 's' if orgs|length != 1 }}</span>
-    <div class="ml-auto d-flex" style="gap:8px;">
+    <div class="ml-auto d-flex align-items-center" style="gap:8px;">
+        <input id="search" class="form-control form-control-sm" style="width:190px;" placeholder="Search name / district…" oninput="applyFilter()">
+        <button id="ratedBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleRated()">Rated only</button>
         <button class="btn btn-sm btn-outline-danger" onclick="toggleAdd()"><i class="fas fa-plus"></i> Add candidate</button>
         <button class="btn btn-sm btn-outline-primary" onclick="addSource()"><i class="fas fa-columns"></i> Add survey source</button>
     </div>
@@ -65,13 +71,19 @@
         <tr>
             <th style="min-width:220px;">Candidate</th>
             {% for o in orgs %}
-            <th><div class="src-head">{{ o }} <span class="src-count">{{ stats.get(o,0) }} rated</span></div></th>
+            <th class="src"><span class="src-name">{{ o }}</span><span class="src-count">{{ stats.get(o,0) }} rated</span></th>
             {% endfor %}
         </tr>
     </thead>
     <tbody>
+        {% set ns = namespace(cur='__none__') %}
         {% for r in rows %}
-        <tr data-name="{{ r.name }}" data-district="{{ r.district }}">
+        {% if r.district != ns.cur %}
+        {% set ns.cur = r.district %}
+        <tr class="dist-group"><td colspan="{{ orgs|length + 1 }}">{{ r.district or 'No district listed' }}</td></tr>
+        {% endif %}
+        <tr data-name="{{ r.name }}" data-district="{{ r.district }}"
+            data-search="{{ (r.name ~ ' ' ~ r.district)|lower }}" data-has="{{ '1' if r.has_any else '0' }}">
             <td>
                 <span class="cand-name">
                 {% if r.candidate_id %}<a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}">{{ r.name }}</a>
@@ -142,6 +154,34 @@ function addCandidate(){
 function addSource(){
     const n = prompt("New survey source name (e.g., NHLA, Gun Owners of NH, Right to Life):");
     if (n && n.trim()) location.href = "?add_org=" + encodeURIComponent(n.trim());
+}
+
+// search + rated-only filtering over the 365-row roster
+let ratedOnly = false;
+function applyFilter(){
+    const q = (document.getElementById('search').value || '').toLowerCase().trim();
+    // filter candidate rows
+    document.querySelectorAll('table.survey-matrix tbody tr:not(.dist-group)').forEach(tr => {
+        const okText = !q || (tr.dataset.search || '').includes(q);
+        const okRated = !ratedOnly || tr.dataset.has === '1';
+        tr.style.display = (okText && okRated) ? '' : 'none';
+    });
+    // hide district headers that have no visible candidates
+    document.querySelectorAll('table.survey-matrix tbody tr.dist-group').forEach(h => {
+        let any = false;
+        for (let n = h.nextElementSibling; n && !n.classList.contains('dist-group'); n = n.nextElementSibling){
+            if (n.style.display !== 'none'){ any = true; break; }
+        }
+        h.style.display = any ? '' : 'none';
+    });
+}
+function toggleRated(){
+    ratedOnly = !ratedOnly;
+    const b = document.getElementById('ratedBtn');
+    b.classList.toggle('btn-secondary', ratedOnly);
+    b.classList.toggle('btn-outline-secondary', !ratedOnly);
+    b.classList.toggle('text-white', ratedOnly);
+    applyFilter();
 }
 </script>
 {% endblock %}

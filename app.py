@@ -4408,25 +4408,48 @@ def surveys():
         add_org = request.args.get('add_org', '').strip()
         if add_org and add_org not in orgs:
             orgs.append(add_org)
-        # candidate x survey-source matrix
-        cur.execute("""SELECT s.candidate_id, s.candidate_name, s.district, s.survey_org,
-                              s.rating, s.notes, COALESCE(c.incumbent, false)
-                       FROM candidate_surveys s
-                       LEFT JOIN candidates c ON c.candidate_id = s.candidate_id
-                       ORDER BY s.candidate_name""")
-        cands = {}
-        for cid, name, dist, org, rating, notes, inc in cur.fetchall():
-            key = (name, dist or '')
-            c = cands.setdefault(key, {'candidate_id': cid, 'name': name,
-                                       'district': dist or '', 'incumbent': False, 'cells': {}})
-            if cid and not c['candidate_id']:
-                c['candidate_id'] = cid
-            if inc:
-                c['incumbent'] = True
+        # Base roster: every active 2026 R House candidate is a row.
+        cur.execute("""SELECT f.candidate_id, f.first_name, f.last_name, f.district_code,
+                              COALESCE(c.incumbent, false)
+                       FROM filings f LEFT JOIN candidates c ON c.candidate_id = f.candidate_id
+                       WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
+                       ORDER BY f.last_name, f.first_name""")
+        rows = []
+        by_id, by_nd = {}, {}
+        for cid, fn, ln, dist, inc in cur.fetchall():
+            name = f"{fn} {ln}".strip()
+            row = {'candidate_id': cid, 'name': name, 'district': dist or '',
+                   'incumbent': inc, 'cells': {}}
+            rows.append(row)
+            if cid:
+                by_id[cid] = row
+            by_nd[(name.lower(), (dist or '').lower())] = row
+        # Attach survey ratings onto the roster (by candidate_id, then name+district).
+        cur.execute("SELECT candidate_id, candidate_name, district, survey_org, rating FROM candidate_surveys")
+        for cid, name, dist, org, rating in cur.fetchall():
+            row = (by_id.get(cid) if cid else None) or by_nd.get(((name or '').lower(), (dist or '').lower()))
+            if row is None:  # surveyed but not in the R House roster — still show them
+                row = {'candidate_id': cid, 'name': name, 'district': dist or '',
+                       'incumbent': False, 'cells': {}}
+                rows.append(row)
+                if cid:
+                    by_id[cid] = row
+                by_nd[((name or '').lower(), (dist or '').lower())] = row
             badge, label = _survey_badge(rating)
             detail = rating if (rating and rating.strip().lower() != label.lower()) else None
-            c['cells'][org] = {'rating': rating or '', 'badge': badge, 'label': label, 'detail': detail}
-        rows = sorted(cands.values(), key=lambda x: x['name'].lower())
+            row['cells'][org] = {'rating': rating or '', 'badge': badge, 'label': label, 'detail': detail}
+        for r in rows:
+            r['has_any'] = any(c.get('rating') for c in r['cells'].values())
+
+        def _dkey(d):
+            # natural district sort: "Cheshire 2" < "Cheshire 10"
+            d = (d or '~').strip()
+            parts = d.rsplit(' ', 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                return (parts[0].lower(), int(parts[1]))
+            return (d.lower(), 0)
+        rows.sort(key=lambda x: (_dkey(x['district']),
+                                 x['name'].split()[-1].lower() if x['name'] else '', x['name'].lower()))
         stats = {o: sum(1 for r in rows if r['cells'].get(o, {}).get('rating')) for o in orgs}
         return render_template('surveys.html', rows=rows, orgs=orgs, stats=stats)
     finally:
