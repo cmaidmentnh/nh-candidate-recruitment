@@ -436,7 +436,7 @@ def super_admin_required(f):
 # Emails (besides the super admin) allowed into the Survey Tracking page.
 SURVEY_ACCESS_EMAILS = {
     'jason@osborne4nh.com',   # Jason Osborne
-    # 'sarah@...',            # Sarah — add once her login email is confirmed
+    'sscott@afphq.org',       # Sarah Scott (AFP)
 }
 
 def can_access_surveys():
