@@ -4395,11 +4395,25 @@ def api_hmo():
     called, urgency = g('called_at', 120), g('urgency', 60)
     if not (name or number or notes):
         return jsonify({'ok': False, 'error': 'Please add at least a name, number, or notes.'}), 400
+    # Optional uploaded document (base64) -> attached to the email (max 8 MB).
+    import base64
+    file_name = (str(data.get('file_name') or '')).strip()[:200]
+    file_raw = None
+    if data.get('file_data'):
+        try:
+            file_raw = base64.b64decode(str(data.get('file_data')), validate=False)
+        except Exception:
+            file_raw = None
+        if file_raw and len(file_raw) > 8 * 1024 * 1024:
+            return jsonify({'ok': False, 'error': 'Attachment too large (max 8 MB). Please paste a link instead.'}), 400
+
     doc_html = (f'<a href="{escape(doc)}">{escape(doc)}</a>'
                 if doc.lower().startswith(('http://', 'https://')) else escape(doc))
+    attach_cell = (f'{escape(file_name or "document")} (attached)') if file_raw else '&mdash;'
     rows = [('Name', escape(name)), ('Number', escape(number)), ('Email', escape(email)),
             ('Date/time called in', escape(called)), ('Priority', escape(urgency)),
-            ('Document link', doc_html), ('Notes', escape(notes).replace('\n', '<br>'))]
+            ('Document link', doc_html), ('Attachment', attach_cell),
+            ('Notes', escape(notes).replace('\n', '<br>'))]
     body = ''.join(
         f'<tr><td style="padding:5px 14px 5px 0;font-weight:bold;vertical-align:top;white-space:nowrap;">{lab}</td>'
         f'<td style="padding:5px 0;">{val if val else "&mdash;"}</td></tr>' for lab, val in rows)
@@ -4408,10 +4422,41 @@ def api_hmo():
             f'<table style="border-collapse:collapse;font-size:15px;">{body}</table></div>')
     text = '\n'.join(f'{lab}: {v or "-"}' for lab, v in
                      [('Name', name), ('Number', number), ('Email', email),
-                      ('Called in', called), ('Priority', urgency), ('Document link', doc), ('Notes', notes)])
+                      ('Called in', called), ('Priority', urgency), ('Document link', doc),
+                      ('Attachment', file_name if file_raw else ''), ('Notes', notes)])
     subj = 'HMO Intake' + (f' [{urgency}]' if urgency else '') + (f' — {name}' if name else '')
-    ok = send_email('chris@maidmentnh.com', subj, html, text)
-    return jsonify({'ok': bool(ok)})
+
+    if not file_raw:
+        return jsonify({'ok': bool(send_email('chris@maidmentnh.com', subj, html, text))})
+
+    # With an attachment: send a raw MIME message via SES.
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.application import MIMEApplication
+    from email.utils import formataddr
+    ses = get_ses_client()
+    if not ses:
+        logger.error("HMO: SES not configured")
+        return jsonify({'ok': False, 'error': 'Email not configured.'}), 500
+    try:
+        msg = MIMEMultipart('mixed')
+        msg['Subject'] = subj
+        msg['From'] = formataddr((SES_SENDER_NAME, SES_SENDER_EMAIL))
+        msg['To'] = 'chris@maidmentnh.com'
+        alt = MIMEMultipart('alternative')
+        alt.attach(MIMEText(text, 'plain', 'utf-8'))
+        alt.attach(MIMEText(html, 'html', 'utf-8'))
+        msg.attach(alt)
+        att = MIMEApplication(file_raw)
+        att.add_header('Content-Disposition', 'attachment', filename=(file_name or 'document'))
+        msg.attach(att)
+        ses.send_raw_email(Source=SES_SENDER_EMAIL, Destinations=['chris@maidmentnh.com'],
+                           RawMessage={'Data': msg.as_string()})
+        logger.info(f"HMO intake with attachment emailed: {subj}")
+        return jsonify({'ok': True})
+    except Exception as e:
+        logger.error(f"HMO send_raw_email failed: {e}")
+        return jsonify({'ok': False, 'error': 'Could not send. Please try again or paste a link.'}), 500
 
 
 if __name__ == "__main__":
