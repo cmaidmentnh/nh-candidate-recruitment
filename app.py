@@ -4373,6 +4373,116 @@ def filings_delete(filing_id):
         release_db_connection(conn)
 
 
+# ---------------------------------------------------------------------------
+# Candidate survey tracking (super-admin only) — how R House candidates score
+# on outside-group surveys (AFP, etc.). Restricted to SUPER_ADMIN_EMAIL.
+# ---------------------------------------------------------------------------
+def _survey_badge(rating):
+    """Map a free-text survey rating to a Bootstrap badge class + short label."""
+    if not rating or not rating.strip():
+        return ('badge-light border text-muted', 'Pending')
+    t = rating.strip().lower()
+    if t == 'bad' or t.startswith('bad'):
+        return ('badge-danger', 'Bad')
+    if t.startswith('good'):
+        return ('badge-success', 'Good')
+    if 'not bad' in t:
+        return ('badge-warning', 'Not Bad')
+    if 'not great' in t or "can't endorse" in t or 'not necessarily' in t:
+        return ('badge-warning', 'Caution')
+    return ('badge-secondary', 'Noted')
+
+
+@app.route('/surveys')
+@super_admin_required
+def surveys():
+    org = request.args.get('org', 'AFP')
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT DISTINCT survey_org FROM candidate_surveys ORDER BY 1")
+        orgs = [r[0] for r in cur.fetchall()] or ['AFP']
+        if org not in orgs:
+            org = orgs[0]
+        cur.execute("""SELECT id, survey_org, candidate_id, candidate_name, district, rating, notes, updated_at
+                       FROM candidate_surveys WHERE survey_org=%s
+                       ORDER BY candidate_name""", (org,))
+        rows = []
+        for r in cur.fetchall():
+            badge, label = _survey_badge(r[5])
+            rows.append({'id': r[0], 'survey_org': r[1], 'candidate_id': r[2],
+                         'candidate_name': r[3], 'district': r[4], 'rating': r[5],
+                         'notes': r[6], 'updated_at': r[7], 'badge': badge, 'label': label})
+        return render_template('surveys.html', rows=rows, orgs=orgs, current_org=org)
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/surveys/update', methods=['POST'])
+@super_admin_required
+@csrf.exempt
+def surveys_update():
+    data = request.get_json() or {}
+    field = data.get('field')
+    if field not in ('rating', 'notes'):
+        return jsonify({'error': 'bad field'}), 400
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"UPDATE candidate_surveys SET {field}=%s, updated_at=now(), updated_by=%s WHERE id=%s",
+                    (data.get('value', '').strip() or None, current_user.email, data.get('id')))
+        if cur.rowcount == 0:
+            return jsonify({'error': 'not found'}), 404
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"survey update failed: {e}")
+        return jsonify({'error': 'failed'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/surveys/add', methods=['POST'])
+@super_admin_required
+@csrf.exempt
+def surveys_add():
+    data = request.get_json() or {}
+    name = (data.get('candidate_name') or '').strip()
+    if not name:
+        return jsonify({'error': 'name required'}), 400
+    org = (data.get('org') or 'AFP').strip()
+    district = (data.get('district') or '').strip()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # best-effort match to a 2026 R filer by last name + district
+        cur.execute("""SELECT candidate_id FROM filings
+                       WHERE election_year=2026 AND party='R'
+                         AND upper(district_code)=upper(%s)
+                         AND upper(last_name)=upper(%s) LIMIT 1""",
+                    (district, name.split()[-1]))
+        m = cur.fetchone()
+        cur.execute("""INSERT INTO candidate_surveys (survey_org, candidate_id, candidate_name, district, rating, notes, updated_by)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s)
+                       ON CONFLICT (survey_org, candidate_name, district) DO UPDATE
+                         SET rating=EXCLUDED.rating, notes=EXCLUDED.notes, updated_at=now(), updated_by=EXCLUDED.updated_by""",
+                    (org, m[0] if m else None, name, district or None,
+                     (data.get('rating') or '').strip() or None,
+                     (data.get('notes') or '').strip() or None, current_user.email))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"survey add failed: {e}")
+        return jsonify({'error': 'failed'}), 500
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
 # Health check endpoint
 @app.route('/health')
 @csrf.exempt

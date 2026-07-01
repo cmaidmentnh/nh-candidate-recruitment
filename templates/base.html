@@ -64,6 +64,9 @@
                     </li>
                     {% if is_super_admin %}
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('surveys') }}">Surveys</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin</a>
                     </li>
                     {% endif %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0"><i class="fas fa-clipboard-check"></i> Candidate Survey Tracking</h1>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+</div>
+<p class="text-muted"><i class="fas fa-lock"></i> Private &mdash; visible only to you. Tracks how R House candidates score on outside-group surveys.</p>
+
+<div class="d-flex align-items-center mb-3" style="gap:10px; flex-wrap:wrap;">
+    <div class="btn-group btn-group-sm" role="group">
+        {% for org in orgs %}
+        <a href="{{ url_for('surveys', org=org) }}"
+           class="btn {{ 'btn-danger' if org==current_org else 'btn-outline-danger' }}">{{ org }}</a>
+        {% endfor %}
+    </div>
+    <span class="text-muted small">
+        {{ rows|length }} candidates &middot;
+        {{ rows|selectattr('rating')|list|length }} returned &middot;
+        {{ rows|rejectattr('candidate_id')|list|length }} unmatched
+    </span>
+    <button class="btn btn-sm btn-outline-secondary ml-auto" onclick="document.getElementById('addRow').style.display='table-row';">
+        <i class="fas fa-plus"></i> Add candidate
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" id="surveyTable">
+            <thead class="thead-light">
+                <tr>
+                    <th style="width:22%">Candidate</th>
+                    <th style="width:14%">District</th>
+                    <th style="width:26%">Rating</th>
+                    <th style="width:28%">Notes</th>
+                    <th style="width:10%">Updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr id="addRow" style="display:none; background:#fff8e1;">
+                    <td><input class="form-control form-control-sm" id="newName" placeholder="Full name"></td>
+                    <td><input class="form-control form-control-sm" id="newDistrict" placeholder="County N"></td>
+                    <td><input class="form-control form-control-sm" id="newRating" placeholder="Good / Bad / …"></td>
+                    <td colspan="2">
+                        <div class="input-group input-group-sm">
+                            <input class="form-control form-control-sm" id="newNotes" placeholder="Notes">
+                            <div class="input-group-append">
+                                <button class="btn btn-success btn-sm" onclick="addSurvey()"><i class="fas fa-check"></i></button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% for r in rows %}
+                <tr data-id="{{ r.id }}">
+                    <td>
+                        {% if r.candidate_id %}
+                        <a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}">{{ r.candidate_name }}</a>
+                        {% else %}
+                        {{ r.candidate_name }} <span class="badge badge-light border text-muted" title="Not matched to a candidate record">?</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">{{ r.district or '' }}</td>
+                    <td>
+                        <span class="badge {{ r.badge }} mr-1">{{ r.label }}</span>
+                        <input class="form-control form-control-sm d-inline-block rating-input" style="width:auto; min-width:60%;"
+                               value="{{ r.rating or '' }}" data-field="rating" placeholder="not returned">
+                    </td>
+                    <td>
+                        <input class="form-control form-control-sm note-input" value="{{ r.notes or '' }}" data-field="notes" placeholder="—">
+                    </td>
+                    <td class="text-muted small">{{ r.updated_at.strftime('%m/%d') if r.updated_at else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify(body)});
+}
+// inline save on blur / enter
+document.querySelectorAll('.rating-input, .note-input').forEach(inp => {
+    const save = () => {
+        const tr = inp.closest('tr');
+        post("{{ url_for('surveys_update') }}", {id: tr.dataset.id, field: inp.dataset.field, value: inp.value})
+          .then(r => r.json()).then(d => {
+            if(d.success){ inp.classList.add('is-valid'); setTimeout(()=>inp.classList.remove('is-valid'),800);
+                if(inp.dataset.field==='rating'){ location.reload(); } }
+            else { inp.classList.add('is-invalid'); }
+          });
+    };
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }});
+});
+function addSurvey(){
+    const body = {org:"{{ current_org }}", candidate_name: newName.value.trim(),
+        district: newDistrict.value.trim(), rating: newRating.value.trim(), notes: newNotes.value.trim()};
+    if(!body.candidate_name){ newName.focus(); return; }
+    post("{{ url_for('surveys_add') }}", body).then(r=>r.json()).then(d=>{
+        if(d.success){ location.reload(); } else { alert(d.error||'Failed'); }
+    });
+}
+</script>
+{% endblock %}
