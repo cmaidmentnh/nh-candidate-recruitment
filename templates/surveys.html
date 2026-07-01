@@ -1,78 +1,101 @@
 {% extends "base.html" %}
+{% block head %}
+<style>
+  .survey-wrap { background:#fff; border:1px solid #e6e6e6; border-radius:10px; overflow:hidden; }
+  .survey-matrix { margin:0; }
+  .survey-matrix th, .survey-matrix td { vertical-align:middle; border-top:1px solid #f0f0f0; }
+  .survey-matrix thead th { position:sticky; top:0; z-index:3; background:#f7f7f9; border-bottom:2px solid #e0e0e0;
+      font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; color:#777; padding:10px 14px; }
+  .survey-matrix tbody td { padding:9px 14px; }
+  .survey-matrix tbody tr:hover { background:#fbfbfd; }
+  .cand-name { font-weight:600; color:#212529; }
+  .cand-name a { color:#212529; }
+  .cand-name a:hover { color:#d91720; }
+  .cand-dist { font-size:.78rem; color:#9a9a9a; }
+  .tag-inc { font-size:.62rem; font-weight:700; letter-spacing:.03em; color:#1565c0;
+      background:#e3f0fb; border-radius:4px; padding:2px 6px; margin-left:6px; vertical-align:middle; }
+  .tag-unmatched { font-size:.62rem; color:#b98900; background:#fff5d6; border-radius:4px; padding:2px 6px; margin-left:6px; }
+  .cell { cursor:pointer; min-width:150px; }
+  .cell:hover { background:#f0f4ff; }
+  .cell .badge { font-size:.75rem; font-weight:600; padding:.4em .7em; }
+  .cell .detail { font-size:.75rem; color:#8a8a8a; margin-top:3px; line-height:1.2; }
+  .cell .empty { color:#cfcfcf; font-size:1.1rem; }
+  .cell-input { width:100%; border:1px solid #4a90d9; border-radius:5px; padding:4px 7px; font-size:.85rem; }
+  .src-head { display:flex; align-items:center; gap:8px; }
+  .src-count { font-size:.68rem; color:#aaa; text-transform:none; letter-spacing:0; }
+  .legend .badge { font-weight:600; }
+  #addForm { background:#fffdf5; border:1px dashed #e2cf7a; border-radius:8px; }
+</style>
+{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0"><i class="fas fa-clipboard-check"></i> Candidate Survey Tracking</h1>
-    <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h1 class="mb-0" style="font-size:1.6rem;"><i class="fas fa-clipboard-check text-danger"></i> Survey Tracking</h1>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
 </div>
-<p class="text-muted"><i class="fas fa-lock"></i> Private &mdash; visible only to you. Tracks how R House candidates score on outside-group surveys.</p>
+<p class="text-muted small mb-3"><i class="fas fa-lock"></i> Private &mdash; visible only to you. How R House candidates score across outside-group surveys.</p>
 
-<div class="d-flex align-items-center mb-3" style="gap:10px; flex-wrap:wrap;">
-    <div class="btn-group btn-group-sm" role="group">
-        {% for org in orgs %}
-        <a href="{{ url_for('surveys', org=org) }}"
-           class="btn {{ 'btn-danger' if org==current_org else 'btn-outline-danger' }}">{{ org }}</a>
+<div class="d-flex align-items-center flex-wrap mb-3 legend" style="gap:6px;">
+    <span class="badge badge-success">Good</span>
+    <span class="badge badge-warning">Not Bad</span>
+    <span class="badge badge-warning">Caution</span>
+    <span class="badge badge-danger">Bad</span>
+    <span class="tag-inc">INCUMBENT</span>
+    <span class="text-muted small ml-2">{{ rows|length }} candidates &middot; {{ orgs|length }} source{{ 's' if orgs|length != 1 }}</span>
+    <div class="ml-auto d-flex" style="gap:8px;">
+        <button class="btn btn-sm btn-outline-danger" onclick="toggleAdd()"><i class="fas fa-plus"></i> Add candidate</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="addSource()"><i class="fas fa-columns"></i> Add survey source</button>
+    </div>
+</div>
+
+<div id="addForm" class="p-3 mb-3" style="display:none;">
+    <div class="form-row align-items-end">
+        <div class="col-md-3 mb-2"><label class="small mb-1">Candidate</label><input id="newName" class="form-control form-control-sm" placeholder="Full name"></div>
+        <div class="col-md-2 mb-2"><label class="small mb-1">District</label><input id="newDistrict" class="form-control form-control-sm" placeholder="County N"></div>
+        <div class="col-md-2 mb-2"><label class="small mb-1">Source</label>
+            <select id="newOrg" class="form-control form-control-sm">{% for o in orgs %}<option>{{ o }}</option>{% endfor %}</select></div>
+        <div class="col-md-3 mb-2"><label class="small mb-1">Rating</label><input id="newRating" class="form-control form-control-sm" placeholder="Good / Bad / notes…"></div>
+        <div class="col-md-2 mb-2"><button class="btn btn-sm btn-success btn-block" onclick="addCandidate()"><i class="fas fa-check"></i> Save</button></div>
+    </div>
+</div>
+
+<div class="survey-wrap">
+<div class="table-responsive">
+<table class="table survey-matrix">
+    <thead>
+        <tr>
+            <th style="min-width:220px;">Candidate</th>
+            {% for o in orgs %}
+            <th><div class="src-head">{{ o }} <span class="src-count">{{ stats.get(o,0) }} rated</span></div></th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr data-name="{{ r.name }}" data-district="{{ r.district }}">
+            <td>
+                <span class="cand-name">
+                {% if r.candidate_id %}<a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}">{{ r.name }}</a>
+                {% else %}{{ r.name }}<span class="tag-unmatched" title="Not matched to a candidate record">unmatched</span>{% endif %}
+                </span>
+                {% if r.incumbent %}<span class="tag-inc" title="Incumbent — has a voting record">INCUMBENT</span>{% endif %}
+                <div class="cand-dist">{{ r.district }}</div>
+            </td>
+            {% for o in orgs %}
+            {% set cell = r.cells.get(o) %}
+            <td class="cell" data-org="{{ o }}" data-rating="{{ cell.rating if cell else '' }}">
+                {% if cell and cell.rating %}
+                    <span class="badge {{ cell.badge }}">{{ cell.label }}</span>
+                    {% if cell.detail %}<div class="detail">{{ cell.detail }}</div>{% endif %}
+                {% else %}
+                    <span class="empty">+</span>
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
         {% endfor %}
-    </div>
-    <span class="text-muted small">
-        {{ rows|length }} candidates &middot;
-        {{ rows|selectattr('rating')|list|length }} returned &middot;
-        {{ rows|rejectattr('candidate_id')|list|length }} unmatched
-    </span>
-    <button class="btn btn-sm btn-outline-secondary ml-auto" onclick="document.getElementById('addRow').style.display='table-row';">
-        <i class="fas fa-plus"></i> Add candidate
-    </button>
+    </tbody>
+</table>
 </div>
-
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0" id="surveyTable">
-            <thead class="thead-light">
-                <tr>
-                    <th style="width:22%">Candidate</th>
-                    <th style="width:14%">District</th>
-                    <th style="width:26%">Rating</th>
-                    <th style="width:28%">Notes</th>
-                    <th style="width:10%">Updated</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr id="addRow" style="display:none; background:#fff8e1;">
-                    <td><input class="form-control form-control-sm" id="newName" placeholder="Full name"></td>
-                    <td><input class="form-control form-control-sm" id="newDistrict" placeholder="County N"></td>
-                    <td><input class="form-control form-control-sm" id="newRating" placeholder="Good / Bad / …"></td>
-                    <td colspan="2">
-                        <div class="input-group input-group-sm">
-                            <input class="form-control form-control-sm" id="newNotes" placeholder="Notes">
-                            <div class="input-group-append">
-                                <button class="btn btn-success btn-sm" onclick="addSurvey()"><i class="fas fa-check"></i></button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                {% for r in rows %}
-                <tr data-id="{{ r.id }}">
-                    <td>
-                        {% if r.candidate_id %}
-                        <a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}">{{ r.candidate_name }}</a>
-                        {% else %}
-                        {{ r.candidate_name }} <span class="badge badge-light border text-muted" title="Not matched to a candidate record">?</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-muted small">{{ r.district or '' }}</td>
-                    <td>
-                        <span class="badge {{ r.badge }} mr-1">{{ r.label }}</span>
-                        <input class="form-control form-control-sm d-inline-block rating-input" style="width:auto; min-width:60%;"
-                               value="{{ r.rating or '' }}" data-field="rating" placeholder="not returned">
-                    </td>
-                    <td>
-                        <input class="form-control form-control-sm note-input" value="{{ r.notes or '' }}" data-field="notes" placeholder="—">
-                    </td>
-                    <td class="text-muted small">{{ r.updated_at.strftime('%m/%d') if r.updated_at else '' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
 </div>
 {% endblock %}
 
@@ -80,31 +103,45 @@
 {{ super() }}
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+const ADD_URL = "{{ url_for('surveys_add') }}";
 function post(url, body){
-    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
-        body: JSON.stringify(body)});
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify(body)})
+        .then(r=>r.json());
 }
-// inline save on blur / enter
-document.querySelectorAll('.rating-input, .note-input').forEach(inp => {
-    const save = () => {
-        const tr = inp.closest('tr');
-        post("{{ url_for('surveys_update') }}", {id: tr.dataset.id, field: inp.dataset.field, value: inp.value})
-          .then(r => r.json()).then(d => {
-            if(d.success){ inp.classList.add('is-valid'); setTimeout(()=>inp.classList.remove('is-valid'),800);
-                if(inp.dataset.field==='rating'){ location.reload(); } }
-            else { inp.classList.add('is-invalid'); }
-          });
-    };
-    inp.addEventListener('blur', save);
-    inp.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }});
-});
-function addSurvey(){
-    const body = {org:"{{ current_org }}", candidate_name: newName.value.trim(),
-        district: newDistrict.value.trim(), rating: newRating.value.trim(), notes: newNotes.value.trim()};
-    if(!body.candidate_name){ newName.focus(); return; }
-    post("{{ url_for('surveys_add') }}", body).then(r=>r.json()).then(d=>{
-        if(d.success){ location.reload(); } else { alert(d.error||'Failed'); }
+function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+// click a cell -> inline edit -> upsert (candidate, source)
+document.querySelectorAll('td.cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+        if (cell.querySelector('input')) return;
+        const cur = cell.dataset.rating || '';
+        cell.innerHTML = `<input class="cell-input" value="${esc(cur)}" placeholder="Good / Bad / notes…">`;
+        const inp = cell.querySelector('input'); inp.focus(); inp.select();
+        let done = false;
+        const save = () => {
+            if (done) return; done = true;
+            const tr = cell.closest('tr');
+            post(ADD_URL, {org: cell.dataset.org, candidate_name: tr.dataset.name,
+                district: tr.dataset.district, rating: inp.value.trim()})
+              .then(d => { if(d.success) location.reload(); else { alert(d.error||'Failed'); location.reload(); } });
+        };
+        inp.addEventListener('blur', save);
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); save(); }
+            if (e.key === 'Escape') { done = true; location.reload(); }
+        });
     });
+});
+
+function toggleAdd(){ const f=document.getElementById('addForm'); f.style.display = f.style.display==='none'?'block':'none'; if(f.style.display==='block') newName.focus(); }
+function addCandidate(){
+    const body = {org:newOrg.value, candidate_name:newName.value.trim(), district:newDistrict.value.trim(), rating:newRating.value.trim()};
+    if(!body.candidate_name){ newName.focus(); return; }
+    post(ADD_URL, body).then(d => d.success ? location.reload() : alert(d.error||'Failed'));
+}
+function addSource(){
+    const n = prompt("New survey source name (e.g., NHLA, Gun Owners of NH, Right to Life):");
+    if (n && n.trim()) location.href = "?add_org=" + encodeURIComponent(n.trim());
 }
 </script>
 {% endblock %}

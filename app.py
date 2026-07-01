@@ -4400,29 +4400,35 @@ def _survey_badge(rating, incumbent=False):
 @app.route('/surveys')
 @super_admin_required
 def surveys():
-    org = request.args.get('org', 'AFP')
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("SELECT DISTINCT survey_org FROM candidate_surveys ORDER BY 1")
         orgs = [r[0] for r in cur.fetchall()] or ['AFP']
-        if org not in orgs:
-            org = orgs[0]
-        cur.execute("""SELECT s.id, s.survey_org, s.candidate_id, s.candidate_name, s.district,
-                              s.rating, s.notes, s.updated_at, COALESCE(c.incumbent, false)
+        add_org = request.args.get('add_org', '').strip()
+        if add_org and add_org not in orgs:
+            orgs.append(add_org)
+        # candidate x survey-source matrix
+        cur.execute("""SELECT s.candidate_id, s.candidate_name, s.district, s.survey_org,
+                              s.rating, s.notes, COALESCE(c.incumbent, false)
                        FROM candidate_surveys s
                        LEFT JOIN candidates c ON c.candidate_id = s.candidate_id
-                       WHERE s.survey_org=%s
-                       ORDER BY s.candidate_name""", (org,))
-        rows = []
-        for r in cur.fetchall():
-            incumbent = r[8]
-            badge, label = _survey_badge(r[5], incumbent)
-            rows.append({'id': r[0], 'survey_org': r[1], 'candidate_id': r[2],
-                         'candidate_name': r[3], 'district': r[4], 'rating': r[5],
-                         'notes': r[6], 'updated_at': r[7], 'incumbent': incumbent,
-                         'badge': badge, 'label': label})
-        return render_template('surveys.html', rows=rows, orgs=orgs, current_org=org)
+                       ORDER BY s.candidate_name""")
+        cands = {}
+        for cid, name, dist, org, rating, notes, inc in cur.fetchall():
+            key = (name, dist or '')
+            c = cands.setdefault(key, {'candidate_id': cid, 'name': name,
+                                       'district': dist or '', 'incumbent': False, 'cells': {}})
+            if cid and not c['candidate_id']:
+                c['candidate_id'] = cid
+            if inc:
+                c['incumbent'] = True
+            badge, label = _survey_badge(rating)
+            detail = rating if (rating and rating.strip().lower() != label.lower()) else None
+            c['cells'][org] = {'rating': rating or '', 'badge': badge, 'label': label, 'detail': detail}
+        rows = sorted(cands.values(), key=lambda x: x['name'].lower())
+        stats = {o: sum(1 for r in rows if r['cells'].get(o, {}).get('rating')) for o in orgs}
+        return render_template('surveys.html', rows=rows, orgs=orgs, stats=stats)
     finally:
         cur.close()
         release_db_connection(conn)
