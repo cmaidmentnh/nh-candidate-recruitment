@@ -4377,9 +4377,13 @@ def filings_delete(filing_id):
 # Candidate survey tracking (super-admin only) — how R House candidates score
 # on outside-group surveys (AFP, etc.). Restricted to SUPER_ADMIN_EMAIL.
 # ---------------------------------------------------------------------------
-def _survey_badge(rating):
-    """Map a free-text survey rating to a Bootstrap badge class + short label."""
+def _survey_badge(rating, incumbent=False):
+    """Map a free-text survey rating to a Bootstrap badge class + short label.
+    Incumbents with no survey back are flagged 'Incumbent' (they have a voting
+    record to judge) rather than 'Pending'."""
     if not rating or not rating.strip():
+        if incumbent:
+            return ('badge-info', 'Incumbent')
         return ('badge-light border text-muted', 'Pending')
     t = rating.strip().lower()
     if t == 'bad' or t.startswith('bad'):
@@ -4404,15 +4408,20 @@ def surveys():
         orgs = [r[0] for r in cur.fetchall()] or ['AFP']
         if org not in orgs:
             org = orgs[0]
-        cur.execute("""SELECT id, survey_org, candidate_id, candidate_name, district, rating, notes, updated_at
-                       FROM candidate_surveys WHERE survey_org=%s
-                       ORDER BY candidate_name""", (org,))
+        cur.execute("""SELECT s.id, s.survey_org, s.candidate_id, s.candidate_name, s.district,
+                              s.rating, s.notes, s.updated_at, COALESCE(c.incumbent, false)
+                       FROM candidate_surveys s
+                       LEFT JOIN candidates c ON c.candidate_id = s.candidate_id
+                       WHERE s.survey_org=%s
+                       ORDER BY s.candidate_name""", (org,))
         rows = []
         for r in cur.fetchall():
-            badge, label = _survey_badge(r[5])
+            incumbent = r[8]
+            badge, label = _survey_badge(r[5], incumbent)
             rows.append({'id': r[0], 'survey_org': r[1], 'candidate_id': r[2],
                          'candidate_name': r[3], 'district': r[4], 'rating': r[5],
-                         'notes': r[6], 'updated_at': r[7], 'badge': badge, 'label': label})
+                         'notes': r[6], 'updated_at': r[7], 'incumbent': incumbent,
+                         'badge': badge, 'label': label})
         return render_template('surveys.html', rows=rows, orgs=orgs, current_org=org)
     finally:
         cur.close()
