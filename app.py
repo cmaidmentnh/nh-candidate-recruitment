@@ -433,10 +433,34 @@ def super_admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Emails (besides the super admin) allowed into the Survey Tracking page.
+SURVEY_ACCESS_EMAILS = {
+    'jason@osborne4nh.com',   # Jason Osborne
+    # 'sarah@...',            # Sarah — add once her login email is confirmed
+}
+
+def can_access_surveys():
+    if is_super_admin():
+        return True
+    email = getattr(current_user, 'email', None) if current_user.is_authenticated else None
+    return bool(email) and email.lower() in SURVEY_ACCESS_EMAILS
+
+def survey_access_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash("Please log in.", "warning")
+            return redirect(url_for('login'))
+        if not can_access_surveys():
+            flash("You don't have access to this page.", "danger")
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.context_processor
 def inject_super_admin():
-    """Make is_super_admin available in all templates."""
-    return {'is_super_admin': is_super_admin()}
+    """Make is_super_admin and survey access available in all templates."""
+    return {'is_super_admin': is_super_admin(), 'can_access_surveys': can_access_surveys()}
 
 @app.context_processor
 def inject_impersonation():
@@ -4398,7 +4422,7 @@ def _survey_badge(rating, incumbent=False):
 
 
 @app.route('/surveys')
-@super_admin_required
+@survey_access_required
 def surveys():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -4482,7 +4506,7 @@ def surveys():
 
 
 @app.route('/surveys/admin_note', methods=['POST'])
-@super_admin_required
+@survey_access_required
 @csrf.exempt
 def surveys_admin_note():
     data = request.get_json() or {}
@@ -4511,7 +4535,7 @@ def surveys_admin_note():
 
 
 @app.route('/surveys/update', methods=['POST'])
-@super_admin_required
+@survey_access_required
 @csrf.exempt
 def surveys_update():
     data = request.get_json() or {}
@@ -4537,7 +4561,7 @@ def surveys_update():
 
 
 @app.route('/surveys/add', methods=['POST'])
-@super_admin_required
+@survey_access_required
 @csrf.exempt
 def surveys_add():
     data = request.get_json() or {}
