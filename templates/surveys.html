@@ -29,6 +29,14 @@
   #addForm { background:#fffdf5; border:1px dashed #e2cf7a; border-radius:8px; }
   tr.dist-group td { background:#f2f4f7; font-weight:700; font-size:.8rem; color:#4a5568;
       letter-spacing:.03em; padding:6px 14px; border-top:2px solid #dfe3e8; position:sticky; }
+  tr.dist-group.is-primary td { background:#fdeef0; color:#a01023; border-top-color:#e6a5ae; }
+  .tag-primary { font-size:.62rem; font-weight:700; letter-spacing:.03em; color:#a01023;
+      background:#fbdde1; border-radius:4px; padding:2px 6px; margin-left:8px; }
+  .admin-sel { border:1px solid #dcdcdc; border-radius:5px; font-size:.82rem; padding:2px 6px; }
+  .admin-sel.good { color:#1e7e34; font-weight:700; } .admin-sel.bad { color:#c82333; font-weight:700; }
+  .admin-sel.ind { color:#6c757d; }
+  .admin-note { border:none; background:transparent; width:100%; font-size:.82rem; padding:3px 5px; border-radius:4px; }
+  .admin-note:focus { background:#fffdf0; outline:1px solid #e2cf7a; }
 </style>
 {% endblock %}
 {% block content %}
@@ -36,7 +44,8 @@
     <h1 class="mb-0" style="font-size:1.6rem;"><i class="fas fa-clipboard-check text-danger"></i> Survey Tracking</h1>
     <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
 </div>
-<p class="text-muted small mb-3"><i class="fas fa-lock"></i> Private &mdash; visible only to you. How R House candidates score across outside-group surveys.</p>
+<p class="text-muted small mb-3"><i class="fas fa-lock"></i> Private &mdash; visible only to you. How R House candidates score across outside-group surveys.
+{% if primary_first %}<span class="tag-primary">PRIMARIES FIRST</span> contested R primary districts float to the top until the Sept 8 primary.{% endif %}</p>
 
 <div class="d-flex align-items-center flex-wrap mb-3 legend" style="gap:6px;">
     <span class="badge badge-success">Good</span>
@@ -46,7 +55,8 @@
     <span class="tag-inc">INCUMBENT</span>
     <span class="text-muted small ml-2">{{ rows|length }} candidates &middot; {{ orgs|length }} source{{ 's' if orgs|length != 1 }}</span>
     <div class="ml-auto d-flex align-items-center" style="gap:8px;">
-        <input id="search" class="form-control form-control-sm" style="width:190px;" placeholder="Search name / district…" oninput="applyFilter()">
+        <input id="search" class="form-control form-control-sm" style="width:180px;" placeholder="Search name / district…" oninput="applyFilter()">
+        <button id="primaryBtn" class="btn btn-sm btn-outline-danger" onclick="togglePrimary()">In primary</button>
         <button id="ratedBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleRated()">Rated only</button>
         <button class="btn btn-sm btn-outline-danger" onclick="toggleAdd()"><i class="fas fa-plus"></i> Add candidate</button>
         <button class="btn btn-sm btn-outline-primary" onclick="addSource()"><i class="fas fa-columns"></i> Add survey source</button>
@@ -73,6 +83,8 @@
             {% for o in orgs %}
             <th class="src"><span class="src-name">{{ o }}</span><span class="src-count">{{ stats.get(o,0) }} rated</span></th>
             {% endfor %}
+            <th class="src" style="border-bottom-color:#8e44ad;"><span class="src-name">Admin</span><span class="src-count">your call</span></th>
+            <th style="min-width:220px;">Notes</th>
         </tr>
     </thead>
     <tbody>
@@ -80,10 +92,11 @@
         {% for r in rows %}
         {% if r.district != ns.cur %}
         {% set ns.cur = r.district %}
-        <tr class="dist-group"><td colspan="{{ orgs|length + 1 }}">{{ r.district or 'No district listed' }}</td></tr>
+        <tr class="dist-group {{ 'is-primary' if r.primary }}"><td colspan="{{ orgs|length + 3 }}">{{ r.district or 'No district listed' }}{% if r.primary %}<span class="tag-primary">CONTESTED PRIMARY</span>{% endif %}</td></tr>
         {% endif %}
         <tr data-name="{{ r.name }}" data-district="{{ r.district }}"
-            data-search="{{ (r.name ~ ' ' ~ r.district)|lower }}" data-has="{{ '1' if r.has_any else '0' }}">
+            data-search="{{ (r.name ~ ' ' ~ r.district)|lower }}" data-has="{{ '1' if r.has_any else '0' }}"
+            data-primary="{{ '1' if r.primary else '0' }}">
             <td>
                 <span class="cand-name">
                 {% if r.candidate_id %}<a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}">{{ r.name }}</a>
@@ -103,6 +116,21 @@
                 {% endif %}
             </td>
             {% endfor %}
+            <td>
+                {% if r.candidate_id %}
+                <select class="admin-sel admin-select" data-cid="{{ r.candidate_id }}">
+                    <option value="" {{ 'selected' if not r.assessment }}>—</option>
+                    <option {{ 'selected' if r.assessment=='Good' }}>Good</option>
+                    <option {{ 'selected' if r.assessment=='Bad' }}>Bad</option>
+                    <option {{ 'selected' if r.assessment=='Indifferent' }}>Indifferent</option>
+                </select>
+                {% else %}<span class="text-muted small">—</span>{% endif %}
+            </td>
+            <td>
+                {% if r.candidate_id %}
+                <input class="admin-note" data-cid="{{ r.candidate_id }}" value="{{ r.notes }}" placeholder="notes…">
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>
@@ -116,6 +144,7 @@
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 const ADD_URL = "{{ url_for('surveys_add') }}";
+const ADMIN_URL = "{{ url_for('surveys_admin_note') }}";
 function post(url, body){
     return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify(body)})
         .then(r=>r.json());
@@ -145,6 +174,28 @@ document.querySelectorAll('td.cell').forEach(cell => {
     });
 });
 
+// Admin assessment (Good/Bad/Indifferent) — colored, saves on change, no reload
+function colorSel(sel){
+    sel.classList.remove('good','bad','ind');
+    if(sel.value==='Good') sel.classList.add('good');
+    else if(sel.value==='Bad') sel.classList.add('bad');
+    else if(sel.value==='Indifferent') sel.classList.add('ind');
+}
+document.querySelectorAll('.admin-select').forEach(sel => {
+    colorSel(sel);
+    sel.addEventListener('change', () => {
+        colorSel(sel);
+        post(ADMIN_URL, {candidate_id: sel.dataset.cid, field:'assessment', value: sel.value})
+          .then(d => { if(!d.success) alert('Save failed'); });
+    });
+});
+document.querySelectorAll('.admin-note').forEach(inp => {
+    const save = () => post(ADMIN_URL, {candidate_id: inp.dataset.cid, field:'notes', value: inp.value})
+        .then(d => { if(d.success){ inp.style.background='#e6ffed'; setTimeout(()=>inp.style.background='',600);} });
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }});
+});
+
 function toggleAdd(){ const f=document.getElementById('addForm'); f.style.display = f.style.display==='none'?'block':'none'; if(f.style.display==='block') newName.focus(); }
 function addCandidate(){
     const body = {org:newOrg.value, candidate_name:newName.value.trim(), district:newDistrict.value.trim(), rating:newRating.value.trim()};
@@ -156,15 +207,16 @@ function addSource(){
     if (n && n.trim()) location.href = "?add_org=" + encodeURIComponent(n.trim());
 }
 
-// search + rated-only filtering over the 365-row roster
-let ratedOnly = false;
+// search + rated-only + in-primary filtering over the 365-row roster
+let ratedOnly = false, primaryOnly = false;
 function applyFilter(){
     const q = (document.getElementById('search').value || '').toLowerCase().trim();
     // filter candidate rows
     document.querySelectorAll('table.survey-matrix tbody tr:not(.dist-group)').forEach(tr => {
         const okText = !q || (tr.dataset.search || '').includes(q);
         const okRated = !ratedOnly || tr.dataset.has === '1';
-        tr.style.display = (okText && okRated) ? '' : 'none';
+        const okPrimary = !primaryOnly || tr.dataset.primary === '1';
+        tr.style.display = (okText && okRated && okPrimary) ? '' : 'none';
     });
     // hide district headers that have no visible candidates
     document.querySelectorAll('table.survey-matrix tbody tr.dist-group').forEach(h => {
@@ -181,6 +233,14 @@ function toggleRated(){
     b.classList.toggle('btn-secondary', ratedOnly);
     b.classList.toggle('btn-outline-secondary', !ratedOnly);
     b.classList.toggle('text-white', ratedOnly);
+    applyFilter();
+}
+function togglePrimary(){
+    primaryOnly = !primaryOnly;
+    const b = document.getElementById('primaryBtn');
+    b.classList.toggle('btn-danger', primaryOnly);
+    b.classList.toggle('btn-outline-danger', !primaryOnly);
+    b.classList.toggle('text-white', primaryOnly);
     applyFilter();
 }
 </script>

@@ -13,7 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
@@ -4441,6 +4441,28 @@ def surveys():
         for r in rows:
             r['has_any'] = any(c.get('rating') for c in r['cells'].values())
 
+        # Admin assessment + notes (per candidate).
+        cur.execute("SELECT candidate_id, assessment, notes FROM candidate_admin_notes")
+        admin = {cid: (a, n) for cid, a, n in cur.fetchall()}
+        for r in rows:
+            a, n = admin.get(r['candidate_id'], (None, None))
+            r['assessment'] = a or ''
+            r['notes'] = n or ''
+
+        # Contested R primaries: districts where R filers exceed the seat count.
+        cur.execute("""WITH f AS (SELECT district_code, count(*) rc FROM filings
+                                  WHERE election_year=2026 AND party='R' AND office='State Representative'
+                                  GROUP BY 1),
+                            d AS (SELECT full_district_code, max(seat_count) seats FROM districts GROUP BY 1)
+                       SELECT f.district_code FROM f JOIN d ON d.full_district_code=f.district_code
+                       WHERE f.rc > d.seats""")
+        contested = {r[0] for r in cur.fetchall()}
+        for r in rows:
+            r['primary'] = r['district'] in contested
+
+        # Until the Sept 8, 2026 primary, float contested-primary districts to the top.
+        primary_first = date.today() < date(2026, 9, 8)
+
         def _dkey(d):
             # natural district sort: "Cheshire 2" < "Cheshire 10"
             d = (d or '~').strip()
@@ -4448,10 +4470,41 @@ def surveys():
             if len(parts) == 2 and parts[1].isdigit():
                 return (parts[0].lower(), int(parts[1]))
             return (d.lower(), 0)
-        rows.sort(key=lambda x: (_dkey(x['district']),
+        rows.sort(key=lambda x: ((0 if (primary_first and x['primary']) else 1),
+                                 _dkey(x['district']),
                                  x['name'].split()[-1].lower() if x['name'] else '', x['name'].lower()))
         stats = {o: sum(1 for r in rows if r['cells'].get(o, {}).get('rating')) for o in orgs}
-        return render_template('surveys.html', rows=rows, orgs=orgs, stats=stats)
+        return render_template('surveys.html', rows=rows, orgs=orgs, stats=stats,
+                               primary_first=primary_first)
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
+@app.route('/surveys/admin_note', methods=['POST'])
+@super_admin_required
+@csrf.exempt
+def surveys_admin_note():
+    data = request.get_json() or {}
+    cid = data.get('candidate_id')
+    field = data.get('field')
+    if not cid or field not in ('assessment', 'notes'):
+        return jsonify({'error': 'bad request'}), 400
+    val = (data.get('value') or '').strip() or None
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"""INSERT INTO candidate_admin_notes (candidate_id, {field}, updated_at, updated_by)
+                        VALUES (%s, %s, now(), %s)
+                        ON CONFLICT (candidate_id) DO UPDATE
+                          SET {field}=EXCLUDED.{field}, updated_at=now(), updated_by=EXCLUDED.updated_by""",
+                    (cid, val, current_user.email))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"admin note save failed: {e}")
+        return jsonify({'error': 'failed'}), 500
     finally:
         cur.close()
         release_db_connection(conn)
