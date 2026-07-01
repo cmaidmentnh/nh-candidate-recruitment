@@ -437,6 +437,7 @@ def super_admin_required(f):
 SURVEY_ACCESS_EMAILS = {
     'jason@osborne4nh.com',   # Jason Osborne
     'sscott@afphq.org',       # Sarah Scott (AFP)
+    'brenttweed@hotmail.com', # Brent Tweed
 }
 
 def can_access_surveys():
