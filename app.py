@@ -3926,6 +3926,10 @@ def filings_list():
             return True
         if show:
             by_district = {k: v for k, v in by_district.items() if keep_district(v)}
+        # When searching by name/town, show only districts that actually contain a match.
+        if q:
+            by_district = {k: v for k, v in by_district.items()
+                           if (len(v['R']) + len(v['D']) + len(v['other'])) > 0}
 
         # Group districts: Manchester / Nashua / Concord are their own cards,
         # but sorted directly under their parent county (Hillsborough,
