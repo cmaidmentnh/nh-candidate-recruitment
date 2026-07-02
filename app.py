@@ -446,6 +446,20 @@ def can_access_surveys():
     email = getattr(current_user, 'email', None) if current_user.is_authenticated else None
     return bool(email) and email.lower() in SURVEY_ACCESS_EMAILS
 
+# Survey sources with restricted visibility -> only these emails (plus super admin) see them.
+RESTRICTED_SURVEY_ORGS = {
+    'CANH': {'chris@maidmentnh.com', 'jason@osborne4nh.com'},
+}
+
+def can_see_org(org):
+    allowed = RESTRICTED_SURVEY_ORGS.get(org)
+    if allowed is None:
+        return True
+    if is_super_admin():
+        return True
+    email = (getattr(current_user, 'email', None) or '').lower() if current_user.is_authenticated else ''
+    return email in allowed
+
 def survey_access_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -4438,6 +4452,9 @@ def surveys():
         add_org = request.args.get('add_org', '').strip()
         if add_org and add_org not in orgs:
             orgs.append(add_org)
+        # Restrict which survey sources this user may see (e.g. CANH -> Chris + Osborne).
+        orgs = [o for o in orgs if can_see_org(o)]
+        visible = set(orgs)
         # Base roster: every active 2026 R House candidate is a row.
         cur.execute("""SELECT f.candidate_id, f.first_name, f.last_name, f.district_code,
                               COALESCE(c.incumbent, false)
@@ -4457,6 +4474,8 @@ def surveys():
         # Attach survey ratings onto the roster (by candidate_id, then name+district).
         cur.execute("SELECT candidate_id, candidate_name, district, survey_org, rating FROM candidate_surveys")
         for cid, name, dist, org, rating in cur.fetchall():
+            if org not in visible:  # never send hidden-source data to the client
+                continue
             row = (by_id.get(cid) if cid else None) or by_nd.get(((name or '').lower(), (dist or '').lower()))
             if row is None:  # surveyed but not in the R House roster — still show them
                 row = {'candidate_id': cid, 'name': name, 'district': dist or '',
@@ -4575,6 +4594,8 @@ def surveys_add():
     if not name:
         return jsonify({'error': 'name required'}), 400
     org = (data.get('org') or 'AFP').strip()
+    if not can_see_org(org):
+        return jsonify({'error': 'forbidden'}), 403
     district = (data.get('district') or '').strip()
     rating = (data.get('rating') or '').strip() or None
     notes = (data.get('notes') or '').strip() or None
