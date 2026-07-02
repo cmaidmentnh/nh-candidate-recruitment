@@ -4419,6 +4419,11 @@ def _survey_badge(rating, incumbent=False):
         return ('badge-warning', 'Not Bad')
     if 'not great' in t or "can't endorse" in t or 'not necessarily' in t:
         return ('badge-warning', 'Caution')
+    # sentiment keywords (esp. Citizens Alliance freeform notes)
+    if any(w in t for w in ('suck', 'infiltrator', 'rino', 'awful', 'terrible', ' bad')):
+        return ('badge-danger', 'Bad')
+    if any(w in t for w in ('amazing', 'excellent', 'fantastic', 'solid')):
+        return ('badge-success', 'Good')
     return ('badge-secondary', 'Noted')
 
 
@@ -4571,23 +4576,41 @@ def surveys_add():
         return jsonify({'error': 'name required'}), 400
     org = (data.get('org') or 'AFP').strip()
     district = (data.get('district') or '').strip()
+    rating = (data.get('rating') or '').strip() or None
+    notes = (data.get('notes') or '').strip() or None
+    cid = data.get('candidate_id')
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # best-effort match to a 2026 R filer by last name + district
-        cur.execute("""SELECT candidate_id FROM filings
-                       WHERE election_year=2026 AND party='R'
-                         AND upper(district_code)=upper(%s)
-                         AND upper(last_name)=upper(%s) LIMIT 1""",
-                    (district, name.split()[-1]))
-        m = cur.fetchone()
-        cur.execute("""INSERT INTO candidate_surveys (survey_org, candidate_id, candidate_name, district, rating, notes, updated_by)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s)
-                       ON CONFLICT (survey_org, candidate_name, district) DO UPDATE
-                         SET rating=EXCLUDED.rating, notes=EXCLUDED.notes, updated_at=now(), updated_by=EXCLUDED.updated_by""",
-                    (org, m[0] if m else None, name, district or None,
-                     (data.get('rating') or '').strip() or None,
-                     (data.get('notes') or '').strip() or None, current_user.email))
+        if not cid:  # best-effort match to a 2026 R filer by last name + district
+            cur.execute("""SELECT candidate_id FROM filings
+                           WHERE election_year=2026 AND party='R'
+                             AND upper(district_code)=upper(%s)
+                             AND upper(last_name)=upper(%s) LIMIT 1""",
+                        (district, name.split()[-1]))
+            m = cur.fetchone()
+            cid = m[0] if m else None
+        # If we know the candidate, key the upsert on (org, candidate_id) so name
+        # variants (e.g. "Rob" vs "Robert Lovett") update the same row, not a dup.
+        if cid:
+            cur.execute("""UPDATE candidate_surveys
+                           SET rating=%s, notes=%s, candidate_name=%s, district=%s,
+                               updated_at=now(), updated_by=%s
+                           WHERE survey_org=%s AND candidate_id=%s""",
+                        (rating, notes, name, district or None, current_user.email, org, cid))
+            if cur.rowcount == 0:
+                cur.execute("""INSERT INTO candidate_surveys (survey_org, candidate_id, candidate_name, district, rating, notes, updated_by)
+                               VALUES (%s,%s,%s,%s,%s,%s,%s)
+                               ON CONFLICT (survey_org, candidate_name, district) DO UPDATE
+                                 SET rating=EXCLUDED.rating, notes=EXCLUDED.notes, candidate_id=EXCLUDED.candidate_id,
+                                     updated_at=now(), updated_by=EXCLUDED.updated_by""",
+                            (org, cid, name, district or None, rating, notes, current_user.email))
+        else:
+            cur.execute("""INSERT INTO candidate_surveys (survey_org, candidate_id, candidate_name, district, rating, notes, updated_by)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s)
+                           ON CONFLICT (survey_org, candidate_name, district) DO UPDATE
+                             SET rating=EXCLUDED.rating, notes=EXCLUDED.notes, updated_at=now(), updated_by=EXCLUDED.updated_by""",
+                        (org, None, name, district or None, rating, notes, current_user.email))
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:

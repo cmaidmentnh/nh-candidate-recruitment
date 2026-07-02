@@ -94,7 +94,7 @@
         {% set ns.cur = r.district %}
         <tr class="dist-group {{ 'is-primary' if r.primary }}"><td colspan="{{ orgs|length + 3 }}">{{ r.district or 'No district listed' }}{% if r.primary %}<span class="tag-primary">CONTESTED PRIMARY</span>{% endif %}</td></tr>
         {% endif %}
-        <tr data-name="{{ r.name }}" data-district="{{ r.district }}"
+        <tr data-name="{{ r.name }}" data-district="{{ r.district }}" data-cid="{{ r.candidate_id or '' }}"
             data-search="{{ (r.name ~ ' ' ~ r.district)|lower }}" data-has="{{ '1' if r.has_any else '0' }}"
             data-primary="{{ '1' if r.primary else '0' }}">
             <td>
@@ -163,7 +163,7 @@ document.querySelectorAll('td.cell').forEach(cell => {
             if (done) return; done = true;
             const tr = cell.closest('tr');
             post(ADD_URL, {org: cell.dataset.org, candidate_name: tr.dataset.name,
-                district: tr.dataset.district, rating: inp.value.trim()})
+                district: tr.dataset.district, candidate_id: tr.dataset.cid || null, rating: inp.value.trim()})
               .then(d => { if(d.success) location.reload(); else { alert(d.error||'Failed'); location.reload(); } });
         };
         inp.addEventListener('blur', save);
