@@ -319,8 +319,8 @@ function setAllOpen(open) {
 document.getElementById('expandAllBtn').addEventListener('click', () => setAllOpen(true));
 document.getElementById('collapseAllBtn').addEventListener('click', () => setAllOpen(false));
 
-// When a search or county/district filter is active, auto-expand so matches are visible.
-{% if filter_q or filter_county or filter_district %}
+// When a search, filter, or dashboard card (show) is active, auto-expand so matches are visible.
+{% if filter_q or filter_county or filter_district or filter_show %}
 setAllOpen(true);
 {% endif %}
 

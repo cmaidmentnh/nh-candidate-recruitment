@@ -3842,11 +3842,8 @@ def filings_list():
             sql += " AND f.district_code = %s"; params.append(district)
         if county:
             sql += " AND d.county_name ILIKE %s"; params.append(county)
-        if q:
-            sql += (" AND (LOWER(f.first_name||' '||f.last_name) LIKE %s "
-                    "OR LOWER(f.town) LIKE %s OR LOWER(f.district_code) LIKE %s)")
-            qp = f"%{q.lower()}%"
-            params.extend([qp, qp, qp])
+        # NB: search (q) is NOT applied to filings here — it selects which whole
+        # districts to show below, so a name match still shows the full district.
         sql += " ORDER BY f.district_code, f.party, f.last_name, f.first_name"
         cur.execute(sql, params)
         filings = []
@@ -3926,10 +3923,22 @@ def filings_list():
             return True
         if show:
             by_district = {k: v for k, v in by_district.items() if keep_district(v)}
-        # When searching by name/town, show only districts that actually contain a match.
+        # When searching, keep whole districts that match by name, town, or district code.
         if q:
-            by_district = {k: v for k, v in by_district.items()
-                           if (len(v['R']) + len(v['D']) + len(v['other'])) > 0}
+            ql = q.lower()
+            def _dmatch(fdc, meta):
+                if ql in fdc.lower():
+                    return True
+                if ql in (meta.get('towns_label') or '').lower():
+                    return True
+                for lst in (meta['R'], meta['D'], meta['other']):
+                    for fil in lst:
+                        if ql in f"{fil['first']} {fil['last']}".lower():
+                            return True
+                        if ql in (fil.get('town') or '').lower():
+                            return True
+                return False
+            by_district = {k: v for k, v in by_district.items() if _dmatch(k, v)}
 
         # Group districts: Manchester / Nashua / Concord are their own cards,
         # but sorted directly under their parent county (Hillsborough,
