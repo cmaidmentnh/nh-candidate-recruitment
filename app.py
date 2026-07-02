@@ -446,19 +446,27 @@ def can_access_surveys():
     email = getattr(current_user, 'email', None) if current_user.is_authenticated else None
     return bool(email) and email.lower() in SURVEY_ACCESS_EMAILS
 
-# Survey sources with restricted visibility -> only these emails (plus super admin) see them.
-RESTRICTED_SURVEY_ORGS = {
+# Survey sources whose columns are fully hidden -> only these emails (plus super admin) see them.
+RESTRICTED_SURVEY_ORGS = {}
+
+# Survey sources where everyone sees the status badge, but only these emails see the notes text.
+RESTRICTED_NOTE_ORGS = {
     'CANH': {'chris@maidmentnh.com', 'jason@osborne4nh.com'},
 }
 
-def can_see_org(org):
-    allowed = RESTRICTED_SURVEY_ORGS.get(org)
+def _email_in(allowed):
     if allowed is None:
         return True
     if is_super_admin():
         return True
     email = (getattr(current_user, 'email', None) or '').lower() if current_user.is_authenticated else ''
     return email in allowed
+
+def can_see_org(org):
+    return _email_in(RESTRICTED_SURVEY_ORGS.get(org))
+
+def can_see_notes(org):
+    return _email_in(RESTRICTED_NOTE_ORGS.get(org))
 
 def survey_access_required(f):
     @wraps(f)
@@ -4472,6 +4480,7 @@ def surveys():
                 by_id[cid] = row
             by_nd[(name.lower(), (dist or '').lower())] = row
         # Attach survey ratings onto the roster (by candidate_id, then name+district).
+        note_ok = {o: can_see_notes(o) for o in orgs}
         cur.execute("SELECT candidate_id, candidate_name, district, survey_org, rating FROM candidate_surveys")
         for cid, name, dist, org, rating in cur.fetchall():
             if org not in visible:  # never send hidden-source data to the client
@@ -4485,10 +4494,16 @@ def surveys():
                     by_id[cid] = row
                 by_nd[((name or '').lower(), (dist or '').lower())] = row
             badge, label = _survey_badge(rating)
-            detail = rating if (rating and rating.strip().lower() != label.lower()) else None
-            row['cells'][org] = {'rating': rating or '', 'badge': badge, 'label': label, 'detail': detail}
+            if note_ok.get(org, True):
+                detail = rating if (rating and rating.strip().lower() != label.lower()) else None
+                row['cells'][org] = {'rated': bool(rating), 'rating': rating or '',
+                                     'badge': badge, 'label': label, 'detail': detail, 'locked': False}
+            else:
+                # status badge visible, but notes text is redacted for this viewer
+                row['cells'][org] = {'rated': bool(rating), 'rating': '',
+                                     'badge': badge, 'label': label, 'detail': None, 'locked': True}
         for r in rows:
-            r['has_any'] = any(c.get('rating') for c in r['cells'].values())
+            r['has_any'] = any(c.get('rated') for c in r['cells'].values())
 
         # Admin assessment + notes (per candidate).
         cur.execute("SELECT candidate_id, assessment, notes FROM candidate_admin_notes")
@@ -4524,7 +4539,7 @@ def surveys():
                                  x['name'].split()[-1].lower() if x['name'] else '', x['name'].lower()))
         stats = {o: sum(1 for r in rows if r['cells'].get(o, {}).get('rating')) for o in orgs}
         return render_template('surveys.html', rows=rows, orgs=orgs, stats=stats,
-                               primary_first=primary_first)
+                               primary_first=primary_first, note_ok=note_ok)
     finally:
         cur.close()
         release_db_connection(conn)
@@ -4594,7 +4609,7 @@ def surveys_add():
     if not name:
         return jsonify({'error': 'name required'}), 400
     org = (data.get('org') or 'AFP').strip()
-    if not can_see_org(org):
+    if not can_see_org(org) or not can_see_notes(org):
         return jsonify({'error': 'forbidden'}), 403
     district = (data.get('district') or '').strip()
     rating = (data.get('rating') or '').strip() or None

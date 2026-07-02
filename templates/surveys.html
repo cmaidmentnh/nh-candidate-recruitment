@@ -17,6 +17,8 @@
   .tag-unmatched { font-size:.62rem; color:#b98900; background:#fff5d6; border-radius:4px; padding:2px 6px; margin-left:6px; }
   .cell { cursor:pointer; min-width:150px; }
   .cell:hover { background:#f0f4ff; }
+  .cell.locked { cursor:default; }
+  .cell.locked:hover { background:inherit; }
   .cell .badge { font-size:.75rem; font-weight:600; padding:.4em .7em; }
   .cell .detail { font-size:.75rem; color:#8a8a8a; margin-top:3px; line-height:1.2; }
   .cell .empty { color:#cfcfcf; font-size:1.1rem; }
@@ -81,7 +83,7 @@
         <tr>
             <th style="min-width:220px;">Candidate</th>
             {% for o in orgs %}
-            <th class="src"><span class="src-name">{{ o }}</span><span class="src-count">{{ stats.get(o,0) }} rated</span></th>
+            <th class="src"><span class="src-name">{{ o }}{% if o in note_ok and not note_ok[o] %} <i class="fas fa-lock" title="Status only — notes hidden"></i>{% endif %}</span><span class="src-count">{{ stats.get(o,0) }} rated</span></th>
             {% endfor %}
             <th class="src" style="border-bottom-color:#8e44ad;"><span class="src-name">Admin</span><span class="src-count">your call</span></th>
             <th style="min-width:220px;">Notes</th>
@@ -107,11 +109,12 @@
             </td>
             {% for o in orgs %}
             {% set cell = r.cells.get(o) %}
-            <td class="cell" data-org="{{ o }}" data-rating="{{ cell.rating if cell else '' }}">
-                {% if cell and cell.rating %}
+            {% set locked = (o in note_ok and not note_ok[o]) %}
+            <td class="cell {{ 'locked' if locked }}" data-org="{{ o }}" data-rating="{{ cell.rating if cell else '' }}"{% if locked %} data-locked="1"{% endif %}>
+                {% if cell and cell.rated %}
                     <span class="badge {{ cell.badge }}">{{ cell.label }}</span>
                     {% if cell.detail %}<div class="detail">{{ cell.detail }}</div>{% endif %}
-                {% else %}
+                {% elif not locked %}
                     <span class="empty">+</span>
                 {% endif %}
             </td>
@@ -154,6 +157,7 @@ function esc(s){ return (s||'').replace(/"/g,'&quot;'); }
 // click a cell -> inline edit -> upsert (candidate, source)
 document.querySelectorAll('td.cell').forEach(cell => {
     cell.addEventListener('click', () => {
+        if (cell.dataset.locked) return;        // status-only source (notes hidden)
         if (cell.querySelector('input')) return;
         const cur = cell.dataset.rating || '';
         cell.innerHTML = `<input class="cell-input" value="${esc(cur)}" placeholder="Good / Bad / notes…">`;
