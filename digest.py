@@ -41,6 +41,7 @@ LINK_WEBSITE = 'https://sites.winthehouse.gop'
 LINK_SURVEYS = 'https://surveys.winthehouse.gop'
 LINK_CANDIDATES = 'https://candidates.electhouserepublicans.com'
 LINK_RESULTS = 'https://elections.nhhouse.gop'
+LINK_CONSULT = DIGEST_BASE_URL + '/consult'
 
 CATEGORIES = ['Event', 'Training', 'Deadline', 'Resource', 'Other']
 
@@ -216,13 +217,14 @@ def render_digest_html(intro, events, unsub_url):
         f'</td></tr></table>') if upcoming else ''
 
     # ---- resource tiles ----
-    res = [('Build Your Website', LINK_WEBSITE, 'A free campaign site in minutes'),
+    res = [('Book a Consult with Chris', LINK_CONSULT, 'Request a 1:1 meeting with Chris Maidment'),
+           ('Build Your Website', LINK_WEBSITE, 'A free campaign site in minutes'),
            ('Candidate Surveys', LINK_SURVEYS, 'Earn endorsements & support from conservative organizations'),
            ('Candidate List', LINK_CANDIDATES, 'Everyone on the September ballot'),
            ('Past Election Results', LINK_RESULTS, 'District-by-district history')]
     res_html = ''
     for i, (lbl, href, sub) in enumerate(res):
-        bord = '' if i >= 2 else f'border-bottom:1px solid {LINE};'
+        bord = '' if i == len(res) - 1 else f'border-bottom:1px solid {LINE};'
         res_html += (f'<a href="{href}" style="display:block;text-decoration:none;padding:11px 0;{bord}">'
                      f'<span style="color:{NAVY};font-weight:700;font-size:14px">{lbl} &rsaquo;</span>'
                      f'<span style="display:block;color:{MUTE};font-size:12px;margin-top:1px">{sub}</span></a>')
@@ -310,6 +312,7 @@ def render_digest_text(intro, events, unsub_url):
         lines += ['', 'CAMPAIGN FINANCE REPORTING DEADLINES (NH Secretary of State):',
                   '  ' + ' | '.join(d.strftime('%b %-d') for d in upcoming), '']
     lines += [
+        'Book a consult with Chris (request a 1:1 meeting): ' + LINK_CONSULT,
         'Build your website: ' + LINK_WEBSITE,
         'Take a survey: ' + LINK_SURVEYS,
         'Public candidate list: ' + LINK_CANDIDATES,
@@ -352,9 +355,9 @@ def _send_worker(send_id, subject, intro, events, recipients):
     try:
         cur.execute("""UPDATE digest_sends SET sent_count=%s, failed_count=%s,
                        status='complete', finished_at=NOW() WHERE id=%s""", (sent, failed, send_id))
-        eids = [e['id'] for e in events if e.get('id')]
-        if eids:
-            cur.execute("UPDATE digest_events SET status='sent' WHERE id = ANY(%s)", (eids,))
+        # Events intentionally stay 'approved' so they repeat in each edition until
+        # their date passes (auto-filtered by _load_approved). Per-send history is
+        # preserved in digest_sends.event_ids. Undated events persist until archived.
         conn.commit()
     finally:
         cur.close()
@@ -508,7 +511,11 @@ _EVENT_SEL = ','.join(_EVENT_COLS)
 
 
 def _load_approved(cur):
-    cur.execute(f"""SELECT {_EVENT_SEL} FROM digest_events WHERE status='approved'
+    # Approved events repeat in every weekly edition until their date has passed;
+    # undated events persist until an admin archives them. Past-dated events auto-drop.
+    cur.execute(f"""SELECT {_EVENT_SEL} FROM digest_events
+                    WHERE status='approved'
+                      AND (event_date IS NULL OR event_date >= CURRENT_DATE)
                     ORDER BY event_date NULLS LAST, created_at""")
     return [dict(zip(_EVENT_COLS, r)) for r in cur.fetchall()]
 
