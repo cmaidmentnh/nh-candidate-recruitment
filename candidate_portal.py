@@ -63,6 +63,10 @@ def init_candidate_portal(db_get, db_release, storage_upload, email_send,
     make_token = token_make
     read_token = token_read
     log_activity = activity_log
+    try:
+        _ensure_consult_table()
+    except Exception:
+        logger.exception("consult table ensure failed")
 
 
 def _signal_notify(message):
@@ -639,3 +643,285 @@ def walkbook_request_create():
                         'message': "Your walkbook request is in! We'll build it and email you when it's ready to canvass."})
     finally:
         cur.close(); release_db_connection(conn)
+
+
+# ===========================================================================
+# Consult booking — a logged-in candidate requests a short video consult with
+# Chris. Approve-first: candidate picks an open slot -> admin approves -> a
+# Google Calendar event with a Meet link is created and the candidate invited.
+# Availability + event creation live in google_calendar.py.
+# ===========================================================================
+import datetime as _dt
+try:
+    import google_calendar as gcal
+except Exception as _e:  # pragma: no cover
+    gcal = None
+    logger.warning("google_calendar module unavailable; consult booking disabled: %s", _e)
+
+CONSULT_ADMIN_EMAIL = os.environ.get('CONSULT_ADMIN_EMAIL', 'chris@electhouserepublicans.com')
+
+
+def _ensure_consult_table():
+    if get_db_connection is None:
+        return
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""CREATE TABLE IF NOT EXISTS consult_requests (
+            id SERIAL PRIMARY KEY,
+            candidate_id INTEGER,
+            candidate_name TEXT,
+            email TEXT,
+            duration_min INTEGER,
+            requested_start TIMESTAMPTZ,
+            topic TEXT,
+            status TEXT DEFAULT 'pending',
+            meet_link TEXT,
+            event_id TEXT,
+            html_link TEXT,
+            admin_note TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            decided_at TIMESTAMPTZ
+        )""")
+        conn.commit()
+    except Exception:
+        conn.rollback(); logger.exception("consult table init failed")
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+def _fmt_when(start_iso):
+    try:
+        d = _dt.datetime.fromisoformat(start_iso)
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=gcal.TZ)
+        return d.astimezone(gcal.TZ).strftime('%a, %b %-d · %-I:%M %p ET')
+    except Exception:
+        return start_iso
+
+
+def _pending_busy(cur):
+    """Slots already held by pending/approved consults, as (start, end) intervals."""
+    cur.execute("""SELECT requested_start, duration_min FROM consult_requests
+                   WHERE status IN ('pending','approved') AND requested_start > NOW()""")
+    out = []
+    for start, dur in cur.fetchall():
+        out.append((start, start + _dt.timedelta(minutes=int(dur or 30))))
+    return out
+
+
+@portal_bp.route('/consult', methods=['GET'])
+def consult_info():
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        p = _prefill(cur, cid) or {}
+        cur.execute("""SELECT id, duration_min, requested_start, status, meet_link, created_at
+                       FROM consult_requests WHERE candidate_id=%s ORDER BY id DESC LIMIT 1""", (cid,))
+        r = cur.fetchone()
+        last = None
+        if r:
+            last = {'id': r[0], 'duration_min': r[1],
+                    'requested_start': r[2].isoformat() if r[2] else None,
+                    'status': r[3], 'meet_link': r[4],
+                    'created_at': r[5].isoformat() if r[5] else None}
+        return jsonify({'ok': True,
+                        'connected': bool(gcal and gcal.is_configured()),
+                        'durations': list(gcal.ALLOWED_DURATIONS) if gcal else [15, 30],
+                        'first_name': p.get('first_name', ''),
+                        'has_email': bool(p.get('email')),
+                        'last_request': last})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/consult/slots', methods=['GET'])
+def consult_slots():
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    if not (gcal and gcal.is_configured()):
+        return jsonify({'ok': False, 'error': 'Scheduling is not available yet.'}), 503
+    try:
+        duration = int(request.args.get('duration', 30))
+    except (TypeError, ValueError):
+        duration = 30
+    if duration not in gcal.ALLOWED_DURATIONS:
+        duration = 30
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        extra = _pending_busy(cur)
+    finally:
+        cur.close(); release_db_connection(conn)
+    try:
+        slots = gcal.available_slots(duration, extra_busy=extra)
+    except Exception as e:
+        logger.warning("consult slots error: %s", e)
+        return jsonify({'ok': False, 'error': 'Could not load availability right now.'}), 502
+    return jsonify({'ok': True, 'duration': duration, 'slots': slots})
+
+
+@portal_bp.route('/consult/request', methods=['POST'])
+def consult_request():
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    if not (gcal and gcal.is_configured()):
+        return jsonify({'ok': False, 'error': 'Scheduling is not available yet.'}), 503
+    data = request.get_json(silent=True) or {}
+    try:
+        duration = int(data.get('duration') or 30)
+    except (TypeError, ValueError):
+        duration = 30
+    if duration not in gcal.ALLOWED_DURATIONS:
+        return jsonify({'ok': False, 'error': 'Pick a 15- or 30-minute consult.'}), 400
+    start = (data.get('start') or '').strip()
+    topic = (data.get('topic') or '').strip()[:1000]
+    if not start:
+        return jsonify({'ok': False, 'error': 'Pick a time.'}), 400
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        p = _prefill(cur, cid) or {}
+        name = f"{p.get('first_name','')} {p.get('last_name','')}".strip() or 'Candidate'
+        email = p.get('email', '')
+        if not email:
+            return jsonify({'ok': False, 'error': 'Add an email to your profile first so we can send the invite.'}), 400
+        extra = _pending_busy(cur)
+        try:
+            if not gcal.slot_is_open(start, duration, extra_busy=extra):
+                return jsonify({'ok': False, 'error': 'That time was just taken — please pick another.'}), 409
+        except Exception:
+            return jsonify({'ok': False, 'error': 'Could not verify availability.'}), 502
+        cur.execute("SELECT 1 FROM consult_requests WHERE candidate_id=%s AND status='pending'", (cid,))
+        if cur.fetchone():
+            return jsonify({'ok': False, 'error': "You already have a consult request pending — we'll confirm it shortly."}), 409
+        cur.execute("""INSERT INTO consult_requests
+            (candidate_id, candidate_name, email, duration_min, requested_start, topic, status, created_at)
+            VALUES (%s,%s,%s,%s,%s,%s,'pending',NOW()) RETURNING id""",
+            (cid, name, email, duration, start, topic))
+        rid = cur.fetchone()[0]
+        conn.commit()
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    if log_activity:
+        log_activity('consult_requested', f'Requested a {duration}-min consult', cid)
+    when = _fmt_when(start)
+    atok = make_token('consult_approve', rid)
+    approve_link = f"{APP_URL}/portal/api/consult/approve?token={atok}"
+    _signal_notify(
+        f"\U0001F4C5 NEW consult request #{rid}\n{name} — {duration} min\n{when}\n"
+        + (f"Topic: {topic}\n" if topic else "")
+        + f"Email: {email}\n\nApprove/decline: {approve_link}")
+    try:
+        send_email(CONSULT_ADMIN_EMAIL, f"Consult request — {name} ({when})",
+                   f"<p><b>{name}</b> requested a {duration}-minute consult.</p>"
+                   f"<p><b>When:</b> {when}<br><b>Email:</b> {email}</p>"
+                   + (f"<p><b>Topic:</b> {topic}</p>" if topic else "")
+                   + f'<p><a href="{approve_link}">Approve or decline &rarr;</a></p>',
+                   f"{name} requested a {duration}-min consult at {when}. Approve/decline: {approve_link}")
+    except Exception:
+        logger.exception("consult admin email failed")
+    return jsonify({'ok': True,
+                    'message': "Request sent! Chris will confirm, and you'll get a calendar invite with a Google Meet link."})
+
+
+@portal_bp.route('/consult/approve', methods=['GET'])
+def consult_approve_page():
+    token = request.args.get('token', '')
+    res = read_token(token, 14 * 24 * 3600)
+    if not res or res.get('type') != 'consult_approve':
+        return _APPROVE_PAGE.format(body="<p>This approval link is invalid or expired.</p>"), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT candidate_name, email, duration_min, requested_start, topic, status
+                       FROM consult_requests WHERE id=%s""", (res['id'],))
+        row = cur.fetchone()
+    finally:
+        cur.close(); release_db_connection(conn)
+    if not row:
+        return _APPROVE_PAGE.format(body="<p>Request not found.</p>"), 404
+    name, email, dur, start, topic, status = row
+    when = _fmt_when(start.isoformat() if start else '')
+    if status != 'pending':
+        return _APPROVE_PAGE.format(body=f"<p>Already <b>{status}</b> — {name}, {when}.</p>")
+    body = (f"<h2 style='margin-top:0'>Consult request</h2>"
+            f"<p><b>{name}</b> &middot; {dur} min<br>{when}<br>{email}</p>"
+            + (f"<p><b>Topic:</b> {topic}</p>" if topic else "")
+            + f'<form method=post><input type=hidden name=token value="{token}">'
+              f'<button class=btn name=action value=approve type=submit>Approve &amp; send invite</button> '
+              f'<button class=btn style="background:#6b7280" name=action value=decline type=submit>Decline</button></form>')
+    return _APPROVE_PAGE.format(body=body)
+
+
+@portal_bp.route('/consult/approve', methods=['POST'])
+def consult_approve_do():
+    token = request.form.get('token', '')
+    action = request.form.get('action', '')
+    res = read_token(token, 14 * 24 * 3600)
+    if not res or res.get('type') != 'consult_approve':
+        return _APPROVE_PAGE.format(body="<p>This approval link is invalid or expired.</p>"), 400
+    rid = res['id']
+    ev = None
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT candidate_name, email, duration_min, requested_start, topic, status
+                       FROM consult_requests WHERE id=%s FOR UPDATE""", (rid,))
+        row = cur.fetchone()
+        if not row:
+            conn.rollback()
+            return _APPROVE_PAGE.format(body="<p>Request not found.</p>"), 404
+        name, email, dur, start, topic, status = row
+        when = _fmt_when(start.isoformat() if start else '')
+        if status != 'pending':
+            conn.rollback()
+            return _APPROVE_PAGE.format(body=f"<p>Already <b>{status}</b> — {name}.</p>")
+
+        if action == 'decline':
+            cur.execute("UPDATE consult_requests SET status='declined', decided_at=NOW() WHERE id=%s", (rid,))
+            conn.commit()
+            try:
+                send_email(email, "About your consult request",
+                           f"<p>Hi {name.split(' ')[0] or 'there'},</p><p>Thanks for reaching out. That time "
+                           f"didn't end up working — please pick another opening from your candidate profile and "
+                           f"we'll get it booked.</p><p>— Chris Maidment</p>",
+                           "Please pick another opening from your candidate profile.")
+            except Exception:
+                logger.exception("consult decline email failed")
+            return _APPROVE_PAGE.format(body=f"<p>Declined — {name} notified.</p>")
+
+        # approve -> create the Google Calendar event with a Meet link + invite
+        try:
+            ev = gcal.create_consult_event(
+                start.isoformat(), int(dur), name, email,
+                summary=f"CTEHR consult — {name}",
+                description=(f"Consult with {name}." + (f"\nTopic: {topic}" if topic else "")))
+        except Exception as e:
+            conn.rollback()
+            logger.exception("consult event create failed")
+            return _APPROVE_PAGE.format(
+                body=f"<p style='color:#b91c1c'>Could not create the calendar event: {e}</p>"
+                     f"<p>The request is still pending — you can retry this link.</p>")
+        cur.execute("""UPDATE consult_requests SET status='approved', decided_at=NOW(),
+                       meet_link=%s, event_id=%s, html_link=%s WHERE id=%s""",
+                    (ev['meet_link'], ev['event_id'], ev['html_link'], rid))
+        conn.commit()
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    if log_activity:
+        log_activity('consult_approved', f'Approved consult for {name} ({when})', None)
+    try:
+        send_email(email, f"Confirmed: your consult with Chris — {when}",
+                   f"<p>Hi {name.split(' ')[0] or 'there'},</p>"
+                   f"<p>Your {dur}-minute consult is confirmed for <b>{when}</b>. A calendar invite is on its way.</p>"
+                   + (f'<p><b>Google Meet:</b> <a href="{ev["meet_link"]}">{ev["meet_link"]}</a></p>'
+                      if ev and ev.get('meet_link') else '')
+                   + "<p>See you then!<br>— Chris Maidment</p>",
+                   f"Your consult is confirmed for {when}. "
+                   + (f"Meet link: {ev['meet_link']}" if ev and ev.get('meet_link') else "Details in the calendar invite."))
+    except Exception:
+        logger.exception("consult confirm email failed")
+    return _APPROVE_PAGE.format(body=f"<p>Approved ✅ — invite + Meet link sent to {name}.</p>")
