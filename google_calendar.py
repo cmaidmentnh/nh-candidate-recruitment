@@ -13,10 +13,17 @@ Env (portal .env):
   CAL_OWNER_EMAIL     owner's email (default: chris@maidmentnh.com)
 """
 import os
+import json
+import time
+import base64
 import datetime as dt
 from zoneinfo import ZoneInfo
 
 import requests
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+
+CAL_SCOPE = "https://www.googleapis.com/auth/calendar"
 
 TZ = ZoneInfo("America/New_York")
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -34,6 +41,9 @@ ALLOWED_DURATIONS = (15, 30)
 
 def _cfg():
     return {
+        # Service-account + domain-wide delegation (preferred on Workspace)
+        "sa_keyfile": os.environ.get("CAL_SA_KEYFILE", ""),
+        # OAuth refresh-token fallback
         "client_id": os.environ.get("CAL_CLIENT_ID", ""),
         "client_secret": os.environ.get("CAL_CLIENT_SECRET", ""),
         "refresh_token": os.environ.get("CAL_REFRESH_TOKEN", ""),
@@ -44,26 +54,52 @@ def _cfg():
 
 def is_configured():
     c = _cfg()
-    return bool(c["client_id"] and c["client_secret"] and c["refresh_token"])
+    return bool(c["sa_keyfile"] or (c["client_id"] and c["client_secret"] and c["refresh_token"]))
 
 
 class CalendarError(RuntimeError):
     pass
 
 
+def _b64u(b):
+    return base64.urlsafe_b64encode(b).rstrip(b"=")
+
+
+def _sa_access_token(keyfile, subject):
+    """Domain-wide-delegation token: the service account impersonates `subject`."""
+    try:
+        with open(keyfile) as f:
+            sa = json.load(f)
+    except Exception as e:
+        raise CalendarError(f"Could not read service-account key: {e}")
+    now = int(time.time())
+    header = {"alg": "RS256", "typ": "JWT"}
+    claims = {"iss": sa["client_email"], "scope": CAL_SCOPE,
+              "aud": TOKEN_URL, "iat": now, "exp": now + 3600, "sub": subject}
+    seg = _b64u(json.dumps(header).encode()) + b"." + _b64u(json.dumps(claims).encode())
+    key = serialization.load_pem_private_key(sa["private_key"].encode(), password=None)
+    sig = key.sign(seg, padding.PKCS1v15(), hashes.SHA256())
+    assertion = (seg + b"." + _b64u(sig)).decode()
+    r = requests.post(TOKEN_URL, data={
+        "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        "assertion": assertion}, timeout=15)
+    if r.status_code != 200:
+        raise CalendarError(f"Service-account token failed: {r.status_code} {r.text[:200]}")
+    return r.json()["access_token"]
+
+
 def _access_token():
     c = _cfg()
-    if not is_configured():
-        raise CalendarError("Calendar not connected (missing CAL_* env).")
-    r = requests.post(TOKEN_URL, data={
-        "client_id": c["client_id"],
-        "client_secret": c["client_secret"],
-        "refresh_token": c["refresh_token"],
-        "grant_type": "refresh_token",
-    }, timeout=15)
-    if r.status_code != 200:
-        raise CalendarError(f"Token refresh failed: {r.status_code} {r.text[:200]}")
-    return r.json()["access_token"]
+    if c["sa_keyfile"]:
+        return _sa_access_token(c["sa_keyfile"], c["owner_email"])
+    if c["client_id"] and c["client_secret"] and c["refresh_token"]:
+        r = requests.post(TOKEN_URL, data={
+            "client_id": c["client_id"], "client_secret": c["client_secret"],
+            "refresh_token": c["refresh_token"], "grant_type": "refresh_token"}, timeout=15)
+        if r.status_code != 200:
+            raise CalendarError(f"Token refresh failed: {r.status_code} {r.text[:200]}")
+        return r.json()["access_token"]
+    raise CalendarError("Calendar not connected (set CAL_SA_KEYFILE or CAL_* refresh token).")
 
 
 def _busy(time_min, time_max):
