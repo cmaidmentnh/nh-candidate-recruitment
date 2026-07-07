@@ -220,7 +220,7 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
     # Conference creation is async — poll events.get until the Meet link is finalized
     # (status == "success"), so the link we store/email is the final, stable one.
     tries = 0
-    while (status != "success" or not meet) and tries < 8:
+    while (not meet or status == "pending") and tries < 8:
         time.sleep(1.3)
         gr = requests.get(f"{CAL_BASE}/calendars/{c['calendar_id']}/events/{eid}",
                           headers={"Authorization": f"Bearer {tok}"},
