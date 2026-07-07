@@ -914,27 +914,21 @@ def consult_approve_do():
     if log_activity:
         log_activity('consult_approved', f'Approved consult for {name} ({when})', None)
     meet_link = ev.get('meet_link') if ev else ''
-    sent_invite = False
-    if ev and ev.get('event_id'):
-        try:
-            _send_consult_invite(email, name, start, start + _dt.timedelta(minutes=int(dur)),
-                                 meet_link, ev.get('event_id'), topic)
-            sent_invite = True
-        except Exception:
-            logger.exception("consult .ics invite failed; falling back to plain email")
-    if not sent_invite:
-        try:
-            send_email(email, f"Confirmed: your consult with Chris — {when}",
-                       f"<p>Hi {name.split(' ')[0] or 'there'},</p>"
-                       f"<p>Your {dur}-minute consult is confirmed for <b>{when}</b>.</p>"
-                       + (f'<p style="margin:16px 0"><a href="{meet_link}" style="background:#b91c1c;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;display:inline-block">Join Google Meet</a></p>'
-                          f'<p style="font-size:13px;color:#555">Or paste this link: <a href="{meet_link}">{meet_link}</a> — please use <b>this exact link</b> so we\'re in the same room.</p>'
-                          if meet_link else '<p>A calendar invite is on its way.</p>')
-                       + "<p>See you then!<br>— Chris Maidment</p>",
-                       f"Your consult is confirmed for {when}. "
-                       + (f"Join here (use this exact link): {meet_link}" if meet_link else "Details in the calendar invite."))
-        except Exception:
-            logger.exception("consult confirm email failed")
+    # Google sends the actual calendar invite (renders in Outlook/Gmail/Apple). This is
+    # just a friendly branded confirmation with the same Meet link.
+    try:
+        send_email(email, f"Confirmed: your consult with Chris — {when}",
+                   f"<p>Hi {name.split(' ')[0] or 'there'},</p>"
+                   f"<p>Your {dur}-minute consult with Chris is confirmed for <b>{when}</b>. "
+                   f"A Google Calendar invite is on its way — accept it to add it to your calendar.</p>"
+                   + (f'<p style="margin:16px 0"><a href="{meet_link}" style="background:#b91c1c;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;display:inline-block">Join Google Meet</a></p>'
+                      f'<p style="font-size:13px;color:#555">Meet link: <a href="{meet_link}">{meet_link}</a></p>'
+                      if meet_link else '')
+                   + "<p>See you then!<br>— Chris Maidment</p>",
+                   f"Your consult with Chris is confirmed for {when}. A calendar invite is on its way. "
+                   + (f"Google Meet: {meet_link}" if meet_link else ""))
+    except Exception:
+        logger.exception("consult confirm email failed")
     return _APPROVE_PAGE.format(body=f"<p>Approved ✅ — invite + Meet link sent to {name}.</p>")
 
 

@@ -194,7 +194,6 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
         "description": description or f"{duration_min}-minute consult with {candidate_name}.",
         "start": {"dateTime": start.isoformat(), "timeZone": "America/New_York"},
         "end": {"dateTime": end.isoformat(), "timeZone": "America/New_York"},
-        "attendees": [{"email": candidate_email, "displayName": candidate_name}],
         "reminders": {"useDefault": True},
         "conferenceData": {
             "createRequest": {
@@ -203,9 +202,9 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
             }
         },
     }
-    # sendUpdates=none: we do NOT let Google email its own guest invite, because a
-    # service-account event's per-guest Meet link can be generated asynchronously and
-    # diverge from the organizer's. We send our own .ics with the finalized link instead.
+    # Step 1 — create the event WITH the Meet conference but WITHOUT the guest yet, and
+    # notify no one. This lets the Meet link finalize before any invite is sent, so the
+    # guest can't receive an early/divergent link.
     r = requests.post(
         f"{CAL_BASE}/calendars/{c['calendar_id']}/events",
         headers={"Authorization": f"Bearer {tok}"},
@@ -217,8 +216,6 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
     eid = ev.get("id")
     meet = _extract_meet(ev)
     status = ((ev.get("conferenceData") or {}).get("status") or {}).get("statusCode")
-    # Conference creation is async — poll events.get until the Meet link is finalized
-    # (status == "success"), so the link we store/email is the final, stable one.
     tries = 0
     while (not meet or status == "pending") and tries < 8:
         time.sleep(1.3)
@@ -230,6 +227,18 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
             meet = _extract_meet(ev)
             status = ((ev.get("conferenceData") or {}).get("status") or {}).get("statusCode")
         tries += 1
+    # Step 2 — add the guest and let GOOGLE send its native calendar invite (renders
+    # correctly in Outlook/Exchange, Gmail, and Apple Mail) now that the link is final.
+    if candidate_email and eid:
+        pr = requests.patch(
+            f"{CAL_BASE}/calendars/{c['calendar_id']}/events/{eid}",
+            headers={"Authorization": f"Bearer {tok}"},
+            params={"conferenceDataVersion": 1, "sendUpdates": "all"},
+            json={"attendees": [{"email": candidate_email, "displayName": candidate_name}]},
+            timeout=25)
+        if pr.status_code == 200:
+            ev = pr.json()
+            meet = _extract_meet(ev) or meet
     return {"event_id": eid, "meet_link": meet, "conf_status": status,
             "html_link": ev.get("htmlLink", ""),
             "start": start.isoformat(), "end": end.isoformat()}
