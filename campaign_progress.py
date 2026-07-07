@@ -9,6 +9,7 @@ progress score, stage, and a "falling behind" flag.
 Mirrors the surveys feature: restricted-allowlist gate, big filterable matrix,
 inline-edit JSON endpoints guarded by the X-CSRFToken header.
 """
+import os, time, json, re, unicodedata, urllib.request
 from functools import wraps
 from datetime import date, datetime, timedelta
 
@@ -16,6 +17,42 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import current_user
 
 progress_bp = Blueprint('progress', __name__)
+
+# goppictures video-shoot signups (external API, key in env). Cached ~5 min; fails soft.
+GOPPICTURES_URL = 'https://www.goppictures.com/api/export'
+_GP_CACHE = {'ts': 0.0, 'data': None}
+
+
+def _norm_name(s):
+    s = ''.join(c for c in unicodedata.normalize('NFKD', s or '') if not unicodedata.combining(c)).lower()
+    return re.sub(r'\s+', ' ', re.sub(r"[^a-z ]", ' ', s)).strip()
+
+
+def _fetch_goppictures():
+    """Return a list of {email, name, type, slot, date, checkin} reservations, or []
+    if the key is unset / the API is unreachable. Never raises (progress must load)."""
+    key = os.environ.get('GOPPICTURES_API_KEY')
+    if not key:
+        return []
+    now = time.time()
+    if _GP_CACHE['data'] is not None and (now - _GP_CACHE['ts']) < 300:
+        return _GP_CACHE['data']
+    try:
+        req = urllib.request.Request(GOPPICTURES_URL, headers={'X-API-Key': key})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            payload = json.loads(resp.read().decode())
+        out = []
+        for r in (payload.get('reservations') or []):
+            f = r.get('fields') or {}
+            out.append({'email': (f.get('email') or '').strip().lower(),
+                        'name': _norm_name(f.get('fullName') or ''),
+                        'type': r.get('type'), 'slot': r.get('slotLabel'),
+                        'date': r.get('date'), 'checkin': bool(r.get('checkin'))})
+        _GP_CACHE['data'] = out
+        _GP_CACHE['ts'] = now
+        return out
+    except Exception:
+        return _GP_CACHE['data'] or []
 
 # wired by init_campaign_progress()
 _get_db = None
@@ -33,7 +70,7 @@ PROGRESS_ACCESS_EMAILS = {
 # 'walkbook' = requested a walkbook via the portal OR an admin ticked the manual box
 # (covers voter lists emailed out, which aren't otherwise logged).
 AUTO_ITEMS = ['website', 'donate', 'socials', 'photo', 'bio',
-              'portal', 'walkbook', 'consult', 'survey']
+              'portal', 'walkbook', 'consult', 'videoshoot', 'survey']
 MANUAL_ITEMS = ['fundraising', 'canvassing_started', 'signs_ordered', 'training_attended']
 SCORED_ITEMS = AUTO_ITEMS + MANUAL_ITEMS
 
@@ -103,12 +140,33 @@ def progress():
                    c.facebook_url, c.twitter_url, c.instagram_url, c.tiktok_url, c.youtube_url,
                    c.facebook, c.instagram, c.twitter_x,
                    c.photo_url, c.bio, c.password_hash, c.last_login,
-                   c.signal_registered, c.phone1_type
+                   c.signal_registered, c.phone1_type,
+                   c.email, c.email1, c.email2
             FROM filings f LEFT JOIN candidates c ON c.candidate_id = f.candidate_id
             WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
             ORDER BY f.last_name, f.first_name
         """)
         base = cur.fetchall()
+
+        # Match goppictures video-shoot reservations to these candidates (by email, then name).
+        email2cid, name2cid = {}, {}
+        for row in base:
+            _cid, _fn, _ln = row[0], row[1], row[2]
+            for em in (row[23], row[24], row[25]):
+                if em and '@' in em:
+                    email2cid.setdefault(em.strip().lower(), _cid)
+            name2cid.setdefault(_norm_name(f"{_fn} {_ln}"), _cid)
+        videoshoot = {}   # cid -> {types:set, date, slot, checkin}
+        for rv in _fetch_goppictures():
+            vcid = email2cid.get(rv['email']) or name2cid.get(rv['name'])
+            if not vcid:
+                continue
+            v = videoshoot.setdefault(vcid, {'types': set(), 'date': rv['date'],
+                                             'slot': rv['slot'], 'checkin': False})
+            if rv['type']:
+                v['types'].add(rv['type'])
+            if rv['checkin']:
+                v['checkin'] = True
 
         # Website live + donations enabled from the website-builder tables.
         cur.execute("""
@@ -168,7 +226,8 @@ def progress():
         rows = []
         for (cid, fn, ln, dist, filed_at, inc, ext_url, web_url, donate_url,
              fb_url, tw_url, ig_url, tt_url, yt_url, fb, ig, tx,
-             photo, bio, pw_hash, last_login, sig_reg, phone_type) in base:
+             photo, bio, pw_hash, last_login, sig_reg, phone_type,
+             _email, _email1, _email2) in base:
             m = manual.get(cid, {})
             wsr = ws.get(cid, {})
             has_link = bool((ext_url or '').strip() or (web_url or '').strip())
@@ -189,6 +248,8 @@ def progress():
                 'consult_booked': cid in consult, 'consult_status': consult.get(cid),
                 'consult_done': bool(m.get('consult_done')),
                 'consult': (cid in consult) or bool(m.get('consult_done')),
+                'videoshoot': cid in videoshoot,
+                'videoshoot_info': videoshoot.get(cid),
                 'survey_orgs': sorted(survey_orgs.get(cid, [])),
                 'survey': bool(survey_orgs.get(cid)),
                 'signal': bool(sig_reg), 'phone_type': phone_type or '',
@@ -226,6 +287,7 @@ def progress():
             'donate': sum(1 for r in rows if r['donate']),
             'portal': sum(1 for r in rows if r['portal']),
             'fundraising': sum(1 for r in rows if r['fundraising']),
+            'videoshoot': sum(1 for r in rows if r['videoshoot']),
             'behind': sum(1 for r in rows if r['falling_behind']),
         }
         return render_template('campaign_progress.html', rows=rows, stats=stats)

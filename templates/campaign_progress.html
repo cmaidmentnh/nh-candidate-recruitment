@@ -53,6 +53,7 @@
     <div class="tile"><div class="n">{{ stats.donate }}</div><div class="l">Donate page</div></div>
     <div class="tile"><div class="n">{{ stats.portal }}</div><div class="l">Portal account</div></div>
     <div class="tile"><div class="n">{{ stats.fundraising }}</div><div class="l">Fundraising</div></div>
+    <div class="tile"><div class="n">{{ stats.videoshoot }}</div><div class="l">Video shoot</div></div>
     <div class="tile warn"><div class="n">{{ stats.behind }}</div><div class="l">Falling behind</div></div>
 </div>
 
@@ -72,7 +73,7 @@
             <th class="left" style="min-width:200px;">Candidate</th>
             <th>Progress</th>
             <th>Website</th><th>Donate</th><th>Social</th><th>Photo</th><th>Bio</th>
-            <th>Portal</th><th>Walkbook</th><th>Consult</th><th>Survey</th>
+            <th>Portal</th><th>Walkbook</th><th>Consult</th><th>Video</th><th>Survey</th>
             <th style="border-left:2px solid #e2cf7a;">Fund$</th><th>Canvass</th><th>Signs</th><th>Training</th>
             <th class="left" style="min-width:160px;">Notes</th>
         </tr>
@@ -83,7 +84,7 @@
         {% set ns = namespace(cur='__none__') %}
         {% for r in rows %}
         {% if r.district != ns.cur %}{% set ns.cur = r.district %}
-        <tr class="dist-group"><td colspan="16">{{ r.district or 'No district listed' }}</td></tr>
+        <tr class="dist-group"><td colspan="17">{{ r.district or 'No district listed' }}</td></tr>
         {% endif %}
         <tr data-search="{{ (r.name ~ ' ' ~ r.district)|lower }}"
             data-behind="{{ '1' if r.falling_behind else '0' }}"
@@ -111,6 +112,7 @@
             <td>{% if r.portal %}<span class="chk-yes">&#10004;</span>{% if r.last_login %}<span class="subtxt">{{ r.last_login.strftime('%-m/%-d') }}</span>{% endif %}{% else %}<span class="chk-no">&ndash;</span>{% endif %}</td>
             <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="walkbook_done" {{ 'checked' if r.walkbook_done }}>{% if r.voter_list %}<span class="pill" title="Requested a walkbook in the portal">portal</span>{% endif %}</td>
             <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="consult_done" {{ 'checked' if r.consult_done }}>{% if r.consult_booked %}<span class="pill" title="Booked via the consult page">booked</span>{% endif %}</td>
+            <td>{% if r.videoshoot %}<span class="chk-yes" title="Booked goppictures shoot{% if r.videoshoot_info %} — {{ r.videoshoot_info.date }} ({{ r.videoshoot_info.types|list|sort|join(', ') }}){% endif %}">&#10004;</span>{% if r.videoshoot_info and r.videoshoot_info.checkin %}<span class="pill" title="Checked in">in</span>{% endif %}{% else %}<span class="chk-no">&ndash;</span>{% endif %}</td>
             <td>
                 {% for org in r.survey_orgs %}{% if org in SURVEY_LOGOS %}<img class="survey-logo" src="{{ url_for('static', filename='images/' + SURVEY_LOGOS[org]) }}" title="{{ org }} survey on file" alt="{{ org }}">{% else %}<span class="badge small2 badge-link" title="{{ org }}">{{ org }}</span>{% endif %}{% endfor %}
                 {% if not r.survey_orgs %}<span class="chk-no">&ndash;</span>{% endif %}
