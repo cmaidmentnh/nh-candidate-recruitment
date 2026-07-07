@@ -512,6 +512,16 @@ csrf.exempt(app.view_functions['digest.digest_submit'])
 # One-click List-Unsubscribe (RFC 8058) POSTs come from mail providers with no CSRF token.
 csrf.exempt(app.view_functions['digest.digest_unsubscribe'])
 
+# Register campaign progress tracker (admin matrix of where 2026 R House candidates stand)
+from campaign_progress import progress_bp, init_campaign_progress, can_access_progress
+init_campaign_progress(get_db_connection, release_db_connection, is_super_admin)
+app.register_blueprint(progress_bp)
+csrf.exempt(app.view_functions['progress.progress_update'])  # JSON inline-edit, admin-gated
+
+@app.context_processor
+def inject_progress_access():
+    return {'can_access_progress': can_access_progress()}
+
 def candidate_restricted(f):
     @wraps(f)
     @login_required

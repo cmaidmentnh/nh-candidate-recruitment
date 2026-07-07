@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .pg-wrap { background:#fff; border:1px solid #e6e6e6; border-radius:10px; overflow:hidden; }
+  .pg-matrix { margin:0; font-size:.85rem; }
+  .pg-matrix th, .pg-matrix td { vertical-align:middle; border-top:1px solid #f0f0f0; white-space:nowrap; }
+  .pg-matrix thead th { position:sticky; top:0; z-index:3; background:#f7f7f9; border-bottom:2px solid #e0e0e0;
+      font-size:.66rem; letter-spacing:.03em; text-transform:uppercase; color:#777; padding:9px 8px; text-align:center; }
+  .pg-matrix thead th.left { text-align:left; }
+  .pg-matrix tbody td { padding:7px 8px; text-align:center; }
+  .pg-matrix tbody td.left { text-align:left; }
+  .pg-matrix tbody tr:hover { background:#fbfbfd; }
+  .cand-name { font-weight:600; color:#212529; }
+  .cand-name a { color:#212529; } .cand-name a:hover { color:#d91720; }
+  .cand-dist { font-size:.72rem; color:#9a9a9a; }
+  .tag-inc { font-size:.6rem; font-weight:700; color:#1565c0; background:#e3f0fb; border-radius:4px; padding:1px 5px; margin-left:5px; }
+  .tag-behind { font-size:.6rem; font-weight:700; color:#a01023; background:#fbdde1; border-radius:4px; padding:1px 5px; margin-left:5px; }
+  .chk-yes { color:#1e7e34; font-weight:700; } .chk-no { color:#d6d6d6; }
+  .badge-live { background:#1e7e34; color:#fff; } .badge-link { background:#b0b7c0; color:#fff; }
+  .badge.small2 { font-size:.66rem; font-weight:600; padding:.3em .5em; }
+  .subtxt { display:block; font-size:.62rem; color:#a0a0a0; }
+  .barwrap { width:66px; height:7px; background:#eceff3; border-radius:4px; overflow:hidden; margin:0 auto; }
+  .bar { height:100%; background:#4a90d9; }
+  .bar.lo { background:#e0a800; } .bar.hi { background:#1e7e34; } .bar.zero { background:#e05a5a; }
+  .stage { font-size:.66rem; color:#667; display:block; margin-top:2px; }
+  tr.dist-group td { background:#f2f4f7; font-weight:700; font-size:.76rem; color:#4a5568; letter-spacing:.03em;
+      padding:5px 10px; border-top:2px solid #dfe3e8; text-align:left; }
+  tr.behind td.left { box-shadow:inset 3px 0 0 #e05a5a; }
+  .amt { width:64px; border:1px solid #dcdcdc; border-radius:4px; font-size:.78rem; padding:2px 4px; text-align:right; }
+  .pnote { border:none; background:transparent; width:150px; font-size:.78rem; padding:3px 5px; border-radius:4px; text-align:left; }
+  .pnote:focus { background:#fffdf0; outline:1px solid #e2cf7a; }
+  .tiles { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .tile { background:#fff; border:1px solid #e6e6e6; border-radius:8px; padding:8px 14px; min-width:96px; }
+  .tile .n { font-size:1.3rem; font-weight:700; color:#212529; } .tile .l { font-size:.68rem; color:#888; text-transform:uppercase; letter-spacing:.03em; }
+  .tile.warn .n { color:#a01023; }
+  input[type=checkbox].ms { transform:scale(1.15); cursor:pointer; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h1 class="mb-0" style="font-size:1.6rem;"><i class="fas fa-flag-checkered text-danger"></i> Campaign Progress</h1>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+</div>
+<p class="text-muted small mb-3"><i class="fas fa-lock"></i> Private &mdash; where every filed 2026 R House candidate stands. Green = done; check the manual boxes as candidates progress.</p>
+
+<div class="tiles">
+    <div class="tile"><div class="n">{{ stats.total }}</div><div class="l">Candidates</div></div>
+    <div class="tile"><div class="n">{{ stats.website }}</div><div class="l">Have a website</div></div>
+    <div class="tile"><div class="n">{{ stats.donate }}</div><div class="l">Donate page</div></div>
+    <div class="tile"><div class="n">{{ stats.portal }}</div><div class="l">Portal account</div></div>
+    <div class="tile"><div class="n">{{ stats.fundraising }}</div><div class="l">Fundraising</div></div>
+    <div class="tile warn"><div class="n">{{ stats.behind }}</div><div class="l">Falling behind</div></div>
+</div>
+
+<div class="d-flex align-items-center flex-wrap mb-3" style="gap:8px;">
+    <input id="search" class="form-control form-control-sm" style="width:200px;" placeholder="Search name / district…" oninput="applyFilter()">
+    <button id="behindBtn" class="btn btn-sm btn-outline-danger" onclick="toggleFlag('behind')">Falling behind</button>
+    <button id="nowebBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleFlag('noweb')">No website</button>
+    <button id="noportalBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleFlag('noportal')">Not activated</button>
+    <span class="text-muted small ml-auto">Auto columns are read-only; manual boxes save instantly.</span>
+</div>
+
+<div class="pg-wrap">
+<div class="table-responsive">
+<table class="table pg-matrix">
+    <thead>
+        <tr>
+            <th class="left" style="min-width:200px;">Candidate</th>
+            <th>Progress</th>
+            <th>Website</th><th>Donate</th><th>Social</th><th>Photo</th><th>Bio</th>
+            <th>Portal</th><th>Voter&nbsp;list</th><th>Video</th><th>Survey</th>
+            <th style="border-left:2px solid #e2cf7a;">Fund$</th><th>Canvass</th><th>Signs</th><th>Training</th>
+            <th class="left" style="min-width:160px;">Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% macro yn(v) %}{% if v %}<span class="chk-yes">&#10004;</span>{% else %}<span class="chk-no">&ndash;</span>{% endif %}{% endmacro %}
+        {% set ns = namespace(cur='__none__') %}
+        {% for r in rows %}
+        {% if r.district != ns.cur %}{% set ns.cur = r.district %}
+        <tr class="dist-group"><td colspan="16">{{ r.district or 'No district listed' }}</td></tr>
+        {% endif %}
+        <tr data-search="{{ (r.name ~ ' ' ~ r.district)|lower }}"
+            data-behind="{{ '1' if r.falling_behind else '0' }}"
+            data-noweb="{{ '0' if r.website else '1' }}"
+            data-noportal="{{ '0' if r.portal else '1' }}"
+            class="{{ 'behind' if r.falling_behind }}">
+            <td class="left">
+                <span class="cand-name">
+                {% if r.candidate_id %}<a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}
+                </span>
+                {% if r.incumbent %}<span class="tag-inc">INC</span>{% endif %}
+                {% if r.falling_behind %}<span class="tag-behind">BEHIND</span>{% endif %}
+                <div class="cand-dist">{{ r.district }}</div>
+            </td>
+            <td>
+                {% set bcls = 'zero' if r.score == 0 else ('lo' if r.score < 40 else ('hi' if r.score >= 75 else '')) %}
+                <div class="barwrap"><div class="bar {{ bcls }}" style="width:{{ r.score }}%;"></div></div>
+                <span class="stage">{{ r.score }}% &middot; {{ r.stage }}</span>
+            </td>
+            <td>{% if r.website_live %}<span class="badge small2 badge-live">Live</span>{% elif r.website %}<span class="badge small2 badge-link">Link</span>{% else %}<span class="chk-no">&ndash;</span>{% endif %}</td>
+            <td>{{ yn(r.donate) }}</td>
+            <td>{{ yn(r.socials) }}</td>
+            <td>{{ yn(r.photo) }}</td>
+            <td>{{ yn(r.bio) }}</td>
+            <td>{% if r.portal %}<span class="chk-yes">&#10004;</span>{% if r.last_login %}<span class="subtxt">{{ r.last_login.strftime('%-m/%-d') }}</span>{% endif %}{% else %}<span class="chk-no">&ndash;</span>{% endif %}</td>
+            <td>{{ yn(r.voter_list) }}</td>
+            <td>{{ yn(r.video) }}</td>
+            <td>{{ yn(r.survey) }}</td>
+            <td style="border-left:2px solid #f2e6b8;">
+                <input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="fundraising_started" {{ 'checked' if r.fundraising_started }}>
+                <input class="amt" data-cid="{{ r.candidate_id }}" data-field="fundraising_amount" value="{{ '%0.0f'|format(r.fundraising_amount) if r.fundraising_amount is not none else '' }}" placeholder="$">
+            </td>
+            <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="canvassing_started" {{ 'checked' if r.canvassing_started }}></td>
+            <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="signs_ordered" {{ 'checked' if r.signs_ordered }}></td>
+            <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="training_attended" {{ 'checked' if r.training_attended }}></td>
+            <td class="left"><input class="pnote" data-cid="{{ r.candidate_id }}" data-field="notes" value="{{ r.notes }}" placeholder="notes…"></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+const CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+const URL_UPDATE = "{{ url_for('progress.progress_update') }}";
+function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify(body)}).then(r=>r.json());
+}
+function flash(el){ el.style.transition='background .1s'; el.style.background='#e6ffed'; setTimeout(()=>el.style.background='',600); }
+
+document.querySelectorAll('input.ms').forEach(cb => {
+    cb.addEventListener('change', () => {
+        post(URL_UPDATE, {candidate_id: cb.dataset.cid, field: cb.dataset.field, value: cb.checked})
+          .then(d => { if(!d.success) { alert(d.error||'Save failed'); cb.checked = !cb.checked; } });
+    });
+});
+document.querySelectorAll('input.amt, input.pnote').forEach(inp => {
+    const save = () => post(URL_UPDATE, {candidate_id: inp.dataset.cid, field: inp.dataset.field, value: inp.value})
+        .then(d => { if(d.success) flash(inp); else alert(d.error||'Save failed'); });
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }});
+});
+
+let flags = {behind:false, noweb:false, noportal:false};
+function applyFilter(){
+    const q = (document.getElementById('search').value || '').toLowerCase().trim();
+    document.querySelectorAll('table.pg-matrix tbody tr:not(.dist-group)').forEach(tr => {
+        let ok = !q || (tr.dataset.search || '').includes(q);
+        if (ok && flags.behind)   ok = tr.dataset.behind === '1';
+        if (ok && flags.noweb)    ok = tr.dataset.noweb === '1';
+        if (ok && flags.noportal) ok = tr.dataset.noportal === '1';
+        tr.style.display = ok ? '' : 'none';
+    });
+    document.querySelectorAll('table.pg-matrix tbody tr.dist-group').forEach(h => {
+        let any = false;
+        for (let n = h.nextElementSibling; n && !n.classList.contains('dist-group'); n = n.nextElementSibling){
+            if (n.style.display !== 'none'){ any = true; break; }
+        }
+        h.style.display = any ? '' : 'none';
+    });
+}
+function toggleFlag(name){
+    flags[name] = !flags[name];
+    const b = document.getElementById({behind:'behindBtn', noweb:'nowebBtn', noportal:'noportalBtn'}[name]);
+    const on = name==='behind' ? 'btn-danger' : 'btn-secondary';
+    const off = name==='behind' ? 'btn-outline-danger' : 'btn-outline-secondary';
+    b.classList.toggle(on, flags[name]); b.classList.toggle(off, !flags[name]); b.classList.toggle('text-white', flags[name]);
+    applyFilter();
+}
+</script>
+{% endblock %}
