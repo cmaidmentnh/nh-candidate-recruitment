@@ -166,6 +166,15 @@ def slot_is_open(start_iso, duration_min, extra_busy=None):
     return start.isoformat() in set(available_slots(duration_min, extra_busy=extra_busy))
 
 
+def _extract_meet(ev):
+    if ev.get("hangoutLink"):
+        return ev["hangoutLink"]
+    for ep in (ev.get("conferenceData") or {}).get("entryPoints", []):
+        if ep.get("entryPointType") == "video":
+            return ep.get("uri", "")
+    return ""
+
+
 def create_consult_event(start_iso, duration_min, candidate_name, candidate_email,
                          summary=None, description=""):
     """Create the calendar event with a Google Meet link and invite the candidate.
@@ -194,22 +203,33 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
             }
         },
     }
+    # sendUpdates=none: we do NOT let Google email its own guest invite, because a
+    # service-account event's per-guest Meet link can be generated asynchronously and
+    # diverge from the organizer's. We send our own .ics with the finalized link instead.
     r = requests.post(
         f"{CAL_BASE}/calendars/{c['calendar_id']}/events",
         headers={"Authorization": f"Bearer {tok}"},
-        params={"conferenceDataVersion": 1, "sendUpdates": "all"},
+        params={"conferenceDataVersion": 1, "sendUpdates": "none"},
         json=body, timeout=25)
     if r.status_code not in (200, 201):
         raise CalendarError(f"event insert failed: {r.status_code} {r.text[:300]}")
     ev = r.json()
-    meet = ""
-    if ev.get("hangoutLink"):
-        meet = ev["hangoutLink"]
-    else:
-        for ep in ev.get("conferenceData", {}).get("entryPoints", []):
-            if ep.get("entryPointType") == "video":
-                meet = ep.get("uri", "")
-                break
-    return {"event_id": ev.get("id"), "meet_link": meet,
+    eid = ev.get("id")
+    meet = _extract_meet(ev)
+    status = ((ev.get("conferenceData") or {}).get("status") or {}).get("statusCode")
+    # Conference creation is async — poll events.get until the Meet link is finalized
+    # (status == "success"), so the link we store/email is the final, stable one.
+    tries = 0
+    while (status != "success" or not meet) and tries < 8:
+        time.sleep(1.3)
+        gr = requests.get(f"{CAL_BASE}/calendars/{c['calendar_id']}/events/{eid}",
+                          headers={"Authorization": f"Bearer {tok}"},
+                          params={"conferenceDataVersion": 1}, timeout=20)
+        if gr.status_code == 200:
+            ev = gr.json()
+            meet = _extract_meet(ev)
+            status = ((ev.get("conferenceData") or {}).get("status") or {}).get("statusCode")
+        tries += 1
+    return {"event_id": eid, "meet_link": meet, "conf_status": status,
             "html_link": ev.get("htmlLink", ""),
             "start": start.isoformat(), "end": end.isoformat()}

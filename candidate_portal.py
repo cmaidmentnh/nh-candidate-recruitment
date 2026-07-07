@@ -913,15 +913,104 @@ def consult_approve_do():
 
     if log_activity:
         log_activity('consult_approved', f'Approved consult for {name} ({when})', None)
-    try:
-        send_email(email, f"Confirmed: your consult with Chris — {when}",
-                   f"<p>Hi {name.split(' ')[0] or 'there'},</p>"
-                   f"<p>Your {dur}-minute consult is confirmed for <b>{when}</b>. A calendar invite is on its way.</p>"
-                   + (f'<p><b>Google Meet:</b> <a href="{ev["meet_link"]}">{ev["meet_link"]}</a></p>'
-                      if ev and ev.get('meet_link') else '')
-                   + "<p>See you then!<br>— Chris Maidment</p>",
-                   f"Your consult is confirmed for {when}. "
-                   + (f"Meet link: {ev['meet_link']}" if ev and ev.get('meet_link') else "Details in the calendar invite."))
-    except Exception:
-        logger.exception("consult confirm email failed")
+    meet_link = ev.get('meet_link') if ev else ''
+    sent_invite = False
+    if ev and ev.get('event_id'):
+        try:
+            _send_consult_invite(email, name, start, start + _dt.timedelta(minutes=int(dur)),
+                                 meet_link, ev.get('event_id'), topic)
+            sent_invite = True
+        except Exception:
+            logger.exception("consult .ics invite failed; falling back to plain email")
+    if not sent_invite:
+        try:
+            send_email(email, f"Confirmed: your consult with Chris — {when}",
+                       f"<p>Hi {name.split(' ')[0] or 'there'},</p>"
+                       f"<p>Your {dur}-minute consult is confirmed for <b>{when}</b>.</p>"
+                       + (f'<p style="margin:16px 0"><a href="{meet_link}" style="background:#b91c1c;color:#fff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:700;display:inline-block">Join Google Meet</a></p>'
+                          f'<p style="font-size:13px;color:#555">Or paste this link: <a href="{meet_link}">{meet_link}</a> — please use <b>this exact link</b> so we\'re in the same room.</p>'
+                          if meet_link else '<p>A calendar invite is on its way.</p>')
+                       + "<p>See you then!<br>— Chris Maidment</p>",
+                       f"Your consult is confirmed for {when}. "
+                       + (f"Join here (use this exact link): {meet_link}" if meet_link else "Details in the calendar invite."))
+        except Exception:
+            logger.exception("consult confirm email failed")
     return _APPROVE_PAGE.format(body=f"<p>Approved ✅ — invite + Meet link sent to {name}.</p>")
+
+
+def _ics_dt(d):
+    return d.astimezone(_dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+
+
+def _ics_escape(s):
+    return (s or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def _send_consult_invite(to_email, name, start_dt, end_dt, meet_link, event_id, topic="", sequence=0):
+    """Email the candidate a real calendar invite (.ics) carrying the authoritative
+    Meet link, so their calendar and Chris's reference the same single link. We send
+    this ourselves (instead of relying on Google's service-account guest invite, whose
+    Meet link can diverge) so both parties are guaranteed the same room."""
+    import boto3
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.base import MIMEBase
+    from email import encoders
+
+    sender_email = os.environ.get('SES_SENDER_EMAIL', 'noreply@nhcandidaterecruitment.com')
+    sender_name = 'Committee to Elect House Republicans'
+    organizer = os.environ.get('CAL_OWNER_EMAIL', 'chris@maidmentnh.com')
+    first = (name.split(' ')[0] if name else 'there')
+    when = _fmt_when(start_dt.isoformat())
+    uid = f"{event_id}@google.com" if event_id else f"consult-{_ics_dt(start_dt)}@electhouserepublicans.com"
+    desc = f"Join Google Meet: {meet_link}" + (f"\n\nTopic: {topic}" if topic else "")
+
+    ics = "\r\n".join([
+        "BEGIN:VCALENDAR", "PRODID:-//CTEHR//Consult//EN", "VERSION:2.0",
+        "CALSCALE:GREGORIAN", "METHOD:REQUEST",
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"SEQUENCE:{sequence}",
+        f"DTSTAMP:{_ics_dt(_dt.datetime.now(_dt.timezone.utc))}",
+        f"DTSTART:{_ics_dt(start_dt)}",
+        f"DTEND:{_ics_dt(end_dt)}",
+        "SUMMARY:Consult with Chris Maidment (CTEHR)",
+        f"DESCRIPTION:{_ics_escape(desc)}",
+        f"LOCATION:{_ics_escape(meet_link)}",
+        f"ORGANIZER;CN=Chris Maidment:mailto:{organizer}",
+        f"ATTENDEE;CN={_ics_escape(name)};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:{to_email}",
+        "STATUS:CONFIRMED",
+        "BEGIN:VALARM", "TRIGGER:-PT10M", "ACTION:DISPLAY", "DESCRIPTION:Consult with Chris", "END:VALARM",
+        "END:VEVENT", "END:VCALENDAR"]) + "\r\n"
+
+    html = (f"<p>Hi {first},</p>"
+            f"<p>Your consult with Chris is confirmed for <b>{when}</b>.</p>"
+            f'<p style="margin:18px 0"><a href="{meet_link}" style="background:#b91c1c;color:#fff;padding:13px 26px;border-radius:6px;text-decoration:none;font-weight:700;display:inline-block;font-size:16px">Join Google Meet</a></p>'
+            f'<p style="font-size:13px;color:#555;line-height:1.5">Meet link: <a href="{meet_link}">{meet_link}</a><br>'
+            f"This invite has been added to your calendar. <b>Please join using this exact link</b> so we’re in the same room — ignore any other Meet link you may have received.</p>"
+            "<p>— Chris Maidment</p>")
+    text = (f"Hi {first},\n\nYour consult with Chris is confirmed for {when}.\n"
+            f"Join Google Meet (use THIS exact link): {meet_link}\n\n— Chris Maidment")
+
+    root = MIMEMultipart('mixed')
+    root['Subject'] = f"Confirmed: your consult with Chris — {when}"
+    root['From'] = f'"{sender_name}" <{sender_email}>'
+    root['To'] = to_email
+    alt = MIMEMultipart('alternative')
+    alt.attach(MIMEText(text, 'plain', 'utf-8'))
+    alt.attach(MIMEText(html, 'html', 'utf-8'))
+    cal = MIMEText(ics, 'calendar', 'utf-8')
+    cal.set_param('method', 'REQUEST')
+    alt.attach(cal)
+    root.attach(alt)
+    att = MIMEBase('application', 'ics')
+    att.set_payload(ics)
+    encoders.encode_base64(att)
+    att.add_header('Content-Disposition', 'attachment; filename="consult.ics"')
+    root.attach(att)
+
+    ses = boto3.client('ses', region_name=os.environ.get('AWS_REGION', 'us-east-1'),
+                       aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                       aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'))
+    ses.send_raw_email(Source=root['From'], Destinations=[to_email],
+                       RawMessage={'Data': root.as_string()})
