@@ -189,11 +189,13 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
     end = start + dt.timedelta(minutes=duration_min)
     summary = summary or f"CTEHR consult — {candidate_name}"
 
+    base_desc = description or f"{duration_min}-minute consult with {candidate_name}."
     body = {
         "summary": summary,
-        "description": description or f"{duration_min}-minute consult with {candidate_name}.",
+        "description": base_desc,
         "start": {"dateTime": start.isoformat(), "timeZone": "America/New_York"},
         "end": {"dateTime": end.isoformat(), "timeZone": "America/New_York"},
+        "attendees": [{"email": candidate_email, "displayName": candidate_name}],
         "reminders": {"useDefault": True},
         "conferenceData": {
             "createRequest": {
@@ -202,9 +204,9 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
             }
         },
     }
-    # Step 1 — create the event WITH the Meet conference but WITHOUT the guest yet, and
-    # notify no one. This lets the Meet link finalize before any invite is sent, so the
-    # guest can't receive an early/divergent link.
+    # Step 1 — create the event WITH the guest attached but notify NO ONE yet. This lets
+    # the Meet link finalize before the invite is sent, so the guest can't get an
+    # early/divergent link.
     r = requests.post(
         f"{CAL_BASE}/calendars/{c['calendar_id']}/events",
         headers={"Authorization": f"Bearer {tok}"},
@@ -227,14 +229,16 @@ def create_consult_event(start_iso, duration_min, candidate_name, candidate_emai
             meet = _extract_meet(ev)
             status = ((ev.get("conferenceData") or {}).get("status") or {}).get("statusCode")
         tries += 1
-    # Step 2 — add the guest and let GOOGLE send its native calendar invite (renders
-    # correctly in Outlook/Exchange, Gmail, and Apple Mail) now that the link is final.
+    # Step 2 — now that the link is final, notify the guest by updating the event (add the
+    # Meet link into the description). With sendUpdates=all this makes GOOGLE send its own
+    # native calendar invite, which renders correctly in Outlook/Exchange, Gmail and Apple.
     if candidate_email and eid:
+        new_desc = base_desc + (f"\n\nJoin Google Meet: {meet}" if meet else "")
         pr = requests.patch(
             f"{CAL_BASE}/calendars/{c['calendar_id']}/events/{eid}",
             headers={"Authorization": f"Bearer {tok}"},
             params={"conferenceDataVersion": 1, "sendUpdates": "all"},
-            json={"attendees": [{"email": candidate_email, "displayName": candidate_name}]},
+            json={"description": new_desc},
             timeout=25)
         if pr.status_code == 200:
             ev = pr.json()
