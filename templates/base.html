@@ -700,6 +700,12 @@
                 <i class="fas fa-clipboard-check text-muted"></i> Survey Tracking
             </a>
             {% endif %}
+            {% if can_access_progress %}
+            {% if not can_access_surveys %}<div class="dropdown-divider"></div>{% endif %}
+            <a class="dropdown-item" href="{{ url_for('progress.progress') }}">
+                <i class="fas fa-flag-checkered text-muted"></i> Campaign Progress
+            </a>
+            {% endif %}
             {% if is_super_admin %}
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="{{ url_for('scout.dashboard') }}">
