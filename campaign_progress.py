@@ -250,6 +250,8 @@ def progress():
                 'consult': (cid in consult) or bool(m.get('consult_done')),
                 'videoshoot': cid in videoshoot,
                 'videoshoot_info': videoshoot.get(cid),
+                'headshot': 'headshot' in videoshoot.get(cid, {}).get('types', set()),
+                'video': 'video' in videoshoot.get(cid, {}).get('types', set()),
                 'survey_orgs': sorted(survey_orgs.get(cid, [])),
                 'survey': bool(survey_orgs.get(cid)),
                 'signal': bool(sig_reg), 'phone_type': phone_type or '',
