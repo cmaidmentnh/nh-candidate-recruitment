@@ -19,3 +19,6 @@ CREATE TABLE IF NOT EXISTS candidate_campaign_progress (
 -- Manual "has a voter list / walkbook" tick (covers lists emailed out, which aren't
 -- otherwise logged); combined with portal walkbook_requests for the Walkbook column.
 ALTER TABLE candidate_campaign_progress ADD COLUMN IF NOT EXISTS walkbook_done BOOLEAN DEFAULT FALSE;
+-- Manual "consulted with Maidment" tick (covers consults done outside the /consult booking page);
+-- combined with consult_requests for the Consult column.
+ALTER TABLE candidate_campaign_progress ADD COLUMN IF NOT EXISTS consult_done BOOLEAN DEFAULT FALSE;

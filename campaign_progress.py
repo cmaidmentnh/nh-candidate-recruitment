@@ -33,7 +33,7 @@ PROGRESS_ACCESS_EMAILS = {
 # 'walkbook' = requested a walkbook via the portal OR an admin ticked the manual box
 # (covers voter lists emailed out, which aren't otherwise logged).
 AUTO_ITEMS = ['website', 'donate', 'socials', 'photo', 'bio',
-              'portal', 'walkbook', 'video', 'survey']
+              'portal', 'walkbook', 'consult', 'survey']
 MANUAL_ITEMS = ['fundraising', 'canvassing_started', 'signs_ordered', 'training_attended']
 SCORED_ITEMS = AUTO_ITEMS + MANUAL_ITEMS
 
@@ -41,9 +41,10 @@ STAGES = [(0, 'Not started'), (1, 'Getting set up'), (26, 'Building'),
           (51, 'Active'), (76, 'Strong')]
 
 MANUAL_FIELDS = {'fundraising_started', 'fundraising_amount', 'canvassing_started',
-                 'signs_ordered', 'training_attended', 'walkbook_done', 'stage_override', 'notes'}
+                 'signs_ordered', 'training_attended', 'walkbook_done', 'consult_done',
+                 'stage_override', 'notes'}
 BOOL_FIELDS = {'fundraising_started', 'canvassing_started', 'signs_ordered',
-               'training_attended', 'walkbook_done'}
+               'training_attended', 'walkbook_done', 'consult_done'}
 
 
 def init_campaign_progress(get_db, release_db, is_super_admin):
@@ -155,12 +156,12 @@ def progress():
 
         cur.execute("""SELECT candidate_id, fundraising_started, fundraising_amount,
                               canvassing_started, signs_ordered, training_attended,
-                              stage_override, notes, walkbook_done
+                              stage_override, notes, walkbook_done, consult_done
                        FROM candidate_campaign_progress""")
         manual = {r[0]: {'fundraising_started': r[1], 'fundraising_amount': r[2],
                          'canvassing_started': r[3], 'signs_ordered': r[4],
                          'training_attended': r[5], 'stage_override': r[6], 'notes': r[7],
-                         'walkbook_done': r[8]}
+                         'walkbook_done': r[8], 'consult_done': r[9]}
                   for r in cur.fetchall()}
 
         now = datetime.now()
@@ -185,7 +186,9 @@ def progress():
                 'voter_list': cid in walk, 'voter_list_status': walk.get(cid),
                 'walkbook_done': bool(m.get('walkbook_done')),
                 'walkbook': (cid in walk) or bool(m.get('walkbook_done')),
-                'video': cid in consult, 'video_status': consult.get(cid),
+                'consult_booked': cid in consult, 'consult_status': consult.get(cid),
+                'consult_done': bool(m.get('consult_done')),
+                'consult': (cid in consult) or bool(m.get('consult_done')),
                 'survey_orgs': sorted(survey_orgs.get(cid, [])),
                 'survey': bool(survey_orgs.get(cid)),
                 'signal': bool(sig_reg), 'phone_type': phone_type or '',

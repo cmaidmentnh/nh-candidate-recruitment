@@ -72,7 +72,7 @@
             <th class="left" style="min-width:200px;">Candidate</th>
             <th>Progress</th>
             <th>Website</th><th>Donate</th><th>Social</th><th>Photo</th><th>Bio</th>
-            <th>Portal</th><th>Walkbook</th><th>Video</th><th>Survey</th>
+            <th>Portal</th><th>Walkbook</th><th>Consult</th><th>Survey</th>
             <th style="border-left:2px solid #e2cf7a;">Fund$</th><th>Canvass</th><th>Signs</th><th>Training</th>
             <th class="left" style="min-width:160px;">Notes</th>
         </tr>
@@ -110,7 +110,7 @@
             <td>{{ yn(r.bio) }}</td>
             <td>{% if r.portal %}<span class="chk-yes">&#10004;</span>{% if r.last_login %}<span class="subtxt">{{ r.last_login.strftime('%-m/%-d') }}</span>{% endif %}{% else %}<span class="chk-no">&ndash;</span>{% endif %}</td>
             <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="walkbook_done" {{ 'checked' if r.walkbook_done }}>{% if r.voter_list %}<span class="pill" title="Requested a walkbook in the portal">portal</span>{% endif %}</td>
-            <td>{{ yn(r.video) }}</td>
+            <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="consult_done" {{ 'checked' if r.consult_done }}>{% if r.consult_booked %}<span class="pill" title="Booked via the consult page">booked</span>{% endif %}</td>
             <td>
                 {% for org in r.survey_orgs %}{% if org in SURVEY_LOGOS %}<img class="survey-logo" src="{{ url_for('static', filename='images/' + SURVEY_LOGOS[org]) }}" title="{{ org }} survey on file" alt="{{ org }}">{% else %}<span class="badge small2 badge-link" title="{{ org }}">{{ org }}</span>{% endif %}{% endfor %}
                 {% if not r.survey_orgs %}<span class="chk-no">&ndash;</span>{% endif %}
