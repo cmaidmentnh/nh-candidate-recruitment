@@ -53,15 +53,15 @@
                 </div>
             </div>
             <div class="info-section">
-                {% if 'Local Issues:' in candidate.other_info %}
+                {% if 'Local Issues:' in (candidate.other_info or '') %}
                     <h4>Local Issues</h4>
                     <pre>{{ candidate.other_info.split('Local Issues: ')[1].split('Flags:')[0].strip() | safe }}</pre>
                 {% endif %}
-                {% if 'Flags:' in candidate.other_info %}
+                {% if 'Flags:' in (candidate.other_info or '') %}
                     <h4>Flags</h4>
                     <pre>{{ candidate.other_info.split('Flags: ')[1].split('Other Info:')[0].strip() | safe }}</pre>
                 {% endif %}
-                {% if 'Other Info:' in candidate.other_info %}
+                {% if 'Other Info:' in (candidate.other_info or '') %}
                     <h4>Other Info</h4>
                     <pre>{{ candidate.other_info.split('Other Info: ')[1].strip() | safe }}</pre>
                 {% endif %}
