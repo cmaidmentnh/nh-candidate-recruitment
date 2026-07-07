@@ -15,3 +15,7 @@ CREATE TABLE IF NOT EXISTS candidate_campaign_progress (
     updated_by          VARCHAR(120),
     updated_at          TIMESTAMP DEFAULT now()
 );
+
+-- Manual "has a voter list / walkbook" tick (covers lists emailed out, which aren't
+-- otherwise logged); combined with portal walkbook_requests for the Walkbook column.
+ALTER TABLE candidate_campaign_progress ADD COLUMN IF NOT EXISTS walkbook_done BOOLEAN DEFAULT FALSE;

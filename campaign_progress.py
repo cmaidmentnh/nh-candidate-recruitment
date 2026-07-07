@@ -30,17 +30,20 @@ PROGRESS_ACCESS_EMAILS = {
 
 # The milestones that make up a candidate's progress score (each worth 1 point).
 # 'filed' is implicit (100% of the cohort has filed) so it isn't scored.
+# 'walkbook' = requested a walkbook via the portal OR an admin ticked the manual box
+# (covers voter lists emailed out, which aren't otherwise logged).
 AUTO_ITEMS = ['website', 'donate', 'socials', 'photo', 'bio',
-              'portal', 'voter_list', 'video', 'survey']
-MANUAL_ITEMS = ['fundraising_started', 'canvassing_started', 'signs_ordered', 'training_attended']
+              'portal', 'walkbook', 'video', 'survey']
+MANUAL_ITEMS = ['fundraising', 'canvassing_started', 'signs_ordered', 'training_attended']
 SCORED_ITEMS = AUTO_ITEMS + MANUAL_ITEMS
 
 STAGES = [(0, 'Not started'), (1, 'Getting set up'), (26, 'Building'),
           (51, 'Active'), (76, 'Strong')]
 
 MANUAL_FIELDS = {'fundraising_started', 'fundraising_amount', 'canvassing_started',
-                 'signs_ordered', 'training_attended', 'stage_override', 'notes'}
-BOOL_FIELDS = {'fundraising_started', 'canvassing_started', 'signs_ordered', 'training_attended'}
+                 'signs_ordered', 'training_attended', 'walkbook_done', 'stage_override', 'notes'}
+BOOL_FIELDS = {'fundraising_started', 'canvassing_started', 'signs_ordered',
+               'training_attended', 'walkbook_done'}
 
 
 def init_campaign_progress(get_db, release_db, is_super_admin):
@@ -111,12 +114,25 @@ def progress():
             SELECT wc.recruitment_candidate_id,
                    bool_or(ws.status IN ('live','custom_domain_live')) AS live,
                    bool_or(COALESCE(ws.donations_enabled,false)
-                           OR COALESCE(ws.stripe_onboarding_complete,false)) AS donate
+                           OR COALESCE(ws.stripe_onboarding_complete,false)) AS donate,
+                   bool_or(COALESCE(ws.stripe_onboarding_complete,false)) AS stripe
             FROM ws_candidates wc JOIN ws_submissions ws ON ws.candidate_id = wc.id
             WHERE wc.recruitment_candidate_id IS NOT NULL
             GROUP BY wc.recruitment_candidate_id
         """)
-        ws = {rid: {'live': live, 'donate': donate} for rid, live, donate in cur.fetchall()}
+        ws = {rid: {'live': live, 'donate': donate, 'stripe': stripe}
+              for rid, live, donate, stripe in cur.fetchall()}
+
+        # Actual dollars raised via the site's Stripe donations (succeeded only).
+        cur.execute("""
+            SELECT wc.recruitment_candidate_id, round(sum(d.amount_cents)/100.0, 2)
+            FROM ws_donations d
+            JOIN ws_submissions ws ON ws.id = d.submission_id
+            JOIN ws_candidates wc ON wc.id = ws.candidate_id
+            WHERE wc.recruitment_candidate_id IS NOT NULL AND d.donation_status = 'succeeded'
+            GROUP BY wc.recruitment_candidate_id
+        """)
+        raised = {rid: float(amt) for rid, amt in cur.fetchall()}
 
         cur.execute("SELECT DISTINCT ON (candidate_id) candidate_id, status FROM walkbook_requests "
                     "WHERE candidate_id IS NOT NULL ORDER BY candidate_id, created_at DESC")
@@ -126,9 +142,12 @@ def progress():
                     "WHERE candidate_id IS NOT NULL ORDER BY candidate_id, created_at DESC")
         consult = dict(cur.fetchall())
 
-        cur.execute("SELECT candidate_id, count(*) FROM candidate_surveys "
-                    "WHERE candidate_id IS NOT NULL GROUP BY candidate_id")
-        survey = dict(cur.fetchall())
+        # Which survey orgs each candidate has on file (for showing org logos).
+        cur.execute("SELECT candidate_id, survey_org FROM candidate_surveys "
+                    "WHERE candidate_id IS NOT NULL AND survey_org IS NOT NULL")
+        survey_orgs = {}
+        for cid, org in cur.fetchall():
+            survey_orgs.setdefault(cid, set()).add(org)
 
         cur.execute("SELECT candidate_id, max(created_at) FROM activity_log "
                     "WHERE candidate_id IS NOT NULL GROUP BY candidate_id")
@@ -136,11 +155,12 @@ def progress():
 
         cur.execute("""SELECT candidate_id, fundraising_started, fundraising_amount,
                               canvassing_started, signs_ordered, training_attended,
-                              stage_override, notes
+                              stage_override, notes, walkbook_done
                        FROM candidate_campaign_progress""")
         manual = {r[0]: {'fundraising_started': r[1], 'fundraising_amount': r[2],
                          'canvassing_started': r[3], 'signs_ordered': r[4],
-                         'training_attended': r[5], 'stage_override': r[6], 'notes': r[7]}
+                         'training_attended': r[5], 'stage_override': r[6], 'notes': r[7],
+                         'walkbook_done': r[8]}
                   for r in cur.fetchall()}
 
         now = datetime.now()
@@ -163,10 +183,18 @@ def progress():
                 'photo': bool((photo or '').strip()), 'bio': bool((bio or '').strip()),
                 'portal': pw_hash is not None, 'last_login': last_login,
                 'voter_list': cid in walk, 'voter_list_status': walk.get(cid),
+                'walkbook_done': bool(m.get('walkbook_done')),
+                'walkbook': (cid in walk) or bool(m.get('walkbook_done')),
                 'video': cid in consult, 'video_status': consult.get(cid),
-                'survey': survey.get(cid, 0) > 0,
+                'survey_orgs': sorted(survey_orgs.get(cid, [])),
+                'survey': bool(survey_orgs.get(cid)),
                 'signal': bool(sig_reg), 'phone_type': phone_type or '',
                 'last_activity': last_act,
+                # fundraising: auto from Stripe (onboarded or $ raised) OR manual box
+                'stripe': bool(wsr.get('stripe')),
+                'raised': raised.get(cid),
+                'fundraising': (bool(m.get('fundraising_started')) or bool(wsr.get('stripe'))
+                                or (raised.get(cid) or 0) > 0),
                 # manual milestones
                 'fundraising_started': bool(m.get('fundraising_started')),
                 'fundraising_amount': m.get('fundraising_amount'),
@@ -194,7 +222,7 @@ def progress():
             'website': sum(1 for r in rows if r['website']),
             'donate': sum(1 for r in rows if r['donate']),
             'portal': sum(1 for r in rows if r['portal']),
-            'fundraising': sum(1 for r in rows if r['fundraising_started']),
+            'fundraising': sum(1 for r in rows if r['fundraising']),
             'behind': sum(1 for r in rows if r['falling_behind']),
         }
         return render_template('campaign_progress.html', rows=rows, stats=stats)

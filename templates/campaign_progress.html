@@ -17,6 +17,10 @@
   .tag-behind { font-size:.6rem; font-weight:700; color:#a01023; background:#fbdde1; border-radius:4px; padding:1px 5px; margin-left:5px; }
   .chk-yes { color:#1e7e34; font-weight:700; } .chk-no { color:#d6d6d6; }
   .badge-live { background:#1e7e34; color:#fff; } .badge-link { background:#b0b7c0; color:#fff; }
+  .survey-logo { height:17px; vertical-align:middle; margin:0 1px; }
+  .raised { color:#1e7e34; font-weight:700; font-size:.76rem; display:block; }
+  .stripe-tag { font-size:.6rem; font-weight:700; color:#635bff; background:#eceafe; border-radius:4px; padding:1px 5px; }
+  .pill { font-size:.58rem; font-weight:700; color:#2f855a; background:#e7f6ec; border-radius:4px; padding:1px 4px; margin-left:3px; }
   .badge.small2 { font-size:.66rem; font-weight:600; padding:.3em .5em; }
   .subtxt { display:block; font-size:.62rem; color:#a0a0a0; }
   .barwrap { width:66px; height:7px; background:#eceff3; border-radius:4px; overflow:hidden; margin:0 auto; }
@@ -68,13 +72,14 @@
             <th class="left" style="min-width:200px;">Candidate</th>
             <th>Progress</th>
             <th>Website</th><th>Donate</th><th>Social</th><th>Photo</th><th>Bio</th>
-            <th>Portal</th><th>Voter&nbsp;list</th><th>Video</th><th>Survey</th>
+            <th>Portal</th><th>Walkbook</th><th>Video</th><th>Survey</th>
             <th style="border-left:2px solid #e2cf7a;">Fund$</th><th>Canvass</th><th>Signs</th><th>Training</th>
             <th class="left" style="min-width:160px;">Notes</th>
         </tr>
     </thead>
     <tbody>
         {% macro yn(v) %}{% if v %}<span class="chk-yes">&#10004;</span>{% else %}<span class="chk-no">&ndash;</span>{% endif %}{% endmacro %}
+        {% set SURVEY_LOGOS = {'AFP': 'afp-logo.svg', 'CANH': 'canh-logo.svg'} %}
         {% set ns = namespace(cur='__none__') %}
         {% for r in rows %}
         {% if r.district != ns.cur %}{% set ns.cur = r.district %}
@@ -104,11 +109,15 @@
             <td>{{ yn(r.photo) }}</td>
             <td>{{ yn(r.bio) }}</td>
             <td>{% if r.portal %}<span class="chk-yes">&#10004;</span>{% if r.last_login %}<span class="subtxt">{{ r.last_login.strftime('%-m/%-d') }}</span>{% endif %}{% else %}<span class="chk-no">&ndash;</span>{% endif %}</td>
-            <td>{{ yn(r.voter_list) }}</td>
+            <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="walkbook_done" {{ 'checked' if r.walkbook_done }}>{% if r.voter_list %}<span class="pill" title="Requested a walkbook in the portal">portal</span>{% endif %}</td>
             <td>{{ yn(r.video) }}</td>
-            <td>{{ yn(r.survey) }}</td>
+            <td>
+                {% for org in r.survey_orgs %}{% if org in SURVEY_LOGOS %}<img class="survey-logo" src="{{ url_for('static', filename='images/' + SURVEY_LOGOS[org]) }}" title="{{ org }} survey on file" alt="{{ org }}">{% else %}<span class="badge small2 badge-link" title="{{ org }}">{{ org }}</span>{% endif %}{% endfor %}
+                {% if not r.survey_orgs %}<span class="chk-no">&ndash;</span>{% endif %}
+            </td>
             <td style="border-left:2px solid #f2e6b8;">
-                <input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="fundraising_started" {{ 'checked' if r.fundraising_started }}>
+                {% if r.raised %}<span class="raised" title="Raised via site donations">${{ '%0.0f'|format(r.raised) }}</span>{% elif r.stripe %}<span class="stripe-tag" title="Stripe connected">Stripe</span>{% endif %}
+                <input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="fundraising_started" {{ 'checked' if r.fundraising_started }} title="Mark fundraising started (manual)">
                 <input class="amt" data-cid="{{ r.candidate_id }}" data-field="fundraising_amount" value="{{ '%0.0f'|format(r.fundraising_amount) if r.fundraising_amount is not none else '' }}" placeholder="$">
             </td>
             <td><input type="checkbox" class="ms" data-cid="{{ r.candidate_id }}" data-field="canvassing_started" {{ 'checked' if r.canvassing_started }}></td>
