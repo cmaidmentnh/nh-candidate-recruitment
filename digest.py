@@ -332,21 +332,32 @@ def render_digest_text(intro, events, unsub_url):
 # --------------------------------------------------------------------------- #
 def _send_worker(send_id, subject, intro, events, recipients):
     import boto3
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.utils import parseaddr
     ses = boto3.client(
         'ses', region_name=os.environ.get('AWS_REGION', 'us-east-1'),
         aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
         aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'))
+    source_addr = parseaddr(DIGEST_FROM)[1] or DIGEST_FROM
     sent = failed = 0
     for name, email in recipients:
         try:
             unsub = f"{DIGEST_BASE_URL}/digest/unsubscribe?u={_unsub_token(email)}"
-            ses.send_email(
-                Source=DIGEST_FROM,
-                Destination={'ToAddresses': [email]},
-                Message={'Subject': {'Data': subject, 'Charset': 'UTF-8'},
-                         'Body': {'Text': {'Data': render_digest_text(intro, events, unsub), 'Charset': 'UTF-8'},
-                                  'Html': {'Data': render_digest_html(intro, events, unsub), 'Charset': 'UTF-8'}}},
-                ReplyToAddresses=[DIGEST_REPLYTO])
+            # Raw MIME so we can set List-Unsubscribe + one-click headers (RFC 8058).
+            # These are a major deliverability signal for Gmail/Comcast on bulk mail —
+            # without them, providers are far likelier to spam-folder or throttle us.
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = DIGEST_FROM
+            msg['To'] = email
+            msg['Reply-To'] = DIGEST_REPLYTO
+            msg['List-Unsubscribe'] = f"<{unsub}>, <mailto:{DIGEST_REPLYTO}?subject=unsubscribe>"
+            msg['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+            msg.attach(MIMEText(render_digest_text(intro, events, unsub), 'plain', 'utf-8'))
+            msg.attach(MIMEText(render_digest_html(intro, events, unsub), 'html', 'utf-8'))
+            ses.send_raw_email(Source=source_addr, Destinations=[email],
+                               RawMessage={'Data': msg.as_string()})
             sent += 1
         except Exception:
             failed += 1
@@ -579,8 +590,10 @@ def digest_submit():
     return render_template('digest_submit.html', categories=CATEGORIES, submitted=False)
 
 
-@digest_bp.route('/digest/unsubscribe')
+@digest_bp.route('/digest/unsubscribe', methods=['GET', 'POST'])
 def digest_unsubscribe():
+    # POST supports RFC 8058 one-click unsubscribe (mail clients POST here with
+    # body "List-Unsubscribe=One-Click"); GET is the human link. Both use ?u=token.
     token = request.args.get('u', '')
     if token == 'PREVIEW':
         return render_template('digest_unsub.html', email='you@example.com', resubscribed=False, preview=True)

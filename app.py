@@ -509,6 +509,8 @@ init_digest(get_db_connection, release_db_connection, SUPER_ADMIN_EMAIL, app.sec
 app.register_blueprint(digest_bp)
 # Public submission form has no admin session, so it's CSRF-exempt (validated server-side instead)
 csrf.exempt(app.view_functions['digest.digest_submit'])
+# One-click List-Unsubscribe (RFC 8058) POSTs come from mail providers with no CSRF token.
+csrf.exempt(app.view_functions['digest.digest_unsubscribe'])
 
 def candidate_restricted(f):
     @wraps(f)
