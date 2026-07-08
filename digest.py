@@ -13,7 +13,7 @@ import os, threading, html as _html
 from urllib.parse import quote_plus
 from datetime import datetime, date
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, abort, current_app)
+                   flash, abort, current_app, jsonify)
 from flask_login import current_user
 from itsdangerous import URLSafeSerializer, BadSignature
 
@@ -529,6 +529,25 @@ def _load_approved(cur):
                       AND (event_date IS NULL OR event_date >= CURRENT_DATE)
                     ORDER BY event_date NULLS LAST, created_at""")
     return [dict(zip(_EVENT_COLS, r)) for r in cur.fetchall()]
+
+
+@digest_bp.route('/api/public/events')
+def public_events():
+    """Public, read-only JSON feed of approved upcoming events (no auth, no PII).
+    Consumed by the CTEHR website's /events page via a same-origin proxy."""
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        events = _load_approved(cur)
+    finally:
+        cur.close()
+        _release_db(conn)
+    for e in events:
+        if e.get('event_date'):
+            e['event_date'] = e['event_date'].isoformat()
+    resp = jsonify({'ok': True, 'events': events})
+    resp.headers['Cache-Control'] = 'public, max-age=300'
+    return resp
 
 
 @digest_bp.route('/private/digest/send', methods=['POST'])
