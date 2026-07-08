@@ -63,6 +63,7 @@ _is_super_admin = None
 # leadership here. Kept intentionally small — this is sensitive campaign intel.
 PROGRESS_ACCESS_EMAILS = {
     'jason@osborne4nh.com',   # Jason Osborne
+    'sayra@sayralynn.com',    # Sayra DeVito
 }
 
 # The milestones that make up a candidate's progress score (each worth 1 point).
