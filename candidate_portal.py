@@ -457,6 +457,39 @@ def login():
         cur.close(); release_db_connection(conn)
 
 
+@portal_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Self-serve recovery: email the candidate a one-click login link (the same
+    portal_access magic link used at signup). Reuses _send_access_link. Always
+    returns a generic success so it can't be used to enumerate accounts. The link
+    is sent to the email ON FILE, never to whatever the requester typed."""
+    data = request.get_json(silent=True) or {}
+    ident = (data.get('identifier') or data.get('email') or data.get('username') or '').strip()
+    generic = jsonify({'ok': True,
+        'message': "If that account exists, we just emailed a one-click login link to the address on file. Check your inbox (and spam)."})
+    if not ident:
+        return generic
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT candidate_id, first_name,
+                              COALESCE(NULLIF(email,''), NULLIF(email1,''), NULLIF(email2,'')) AS email
+                       FROM candidates
+                       WHERE LOWER(username)=LOWER(%s) OR LOWER(email)=LOWER(%s)
+                             OR LOWER(email1)=LOWER(%s) OR LOWER(email2)=LOWER(%s)
+                       ORDER BY candidate_id LIMIT 1""", (ident, ident, ident, ident))
+        row = cur.fetchone()
+    finally:
+        cur.close(); release_db_connection(conn)
+    if row and row[2]:
+        try:
+            _send_access_link(row[0], row[1], row[2])
+            if log_activity:
+                log_activity('portal_password_reset_link', 'Emailed a login link (forgot password)', row[0])
+        except Exception as e:
+            logger.error(f"forgot-password email failed for candidate {row[0]}: {e}")
+    return generic
+
+
 @portal_bp.route('/profile', methods=['GET'])
 def profile_get():
     cid = _cid_from_session()
