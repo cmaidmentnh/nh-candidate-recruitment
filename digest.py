@@ -9,7 +9,7 @@ staying on the main distribution list.
 Private admin routes live under /private/digest (feature slug 'digest').
 Public routes (/digest/submit, /digest/unsubscribe) require no login.
 """
-import os, threading, html as _html
+import os, re, threading, html as _html
 from urllib.parse import quote_plus
 from datetime import datetime, date
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -75,6 +75,20 @@ def _unsub_token(email):
 
 def _esc(s):
     return _html.escape(s or '')
+
+
+def _linkify(s):
+    """Escape text, then turn http(s) URLs into clickable links (for event descriptions)."""
+    s = s or ''
+    out, last = [], 0
+    for m in re.finditer(r'https?://[^\s]+', s):
+        out.append(_esc(s[last:m.start()]))
+        u = m.group(0).rstrip('.,;:)”')
+        tail = m.group(0)[len(u):]
+        out.append(f'<a href="{_esc(u)}" style="color:{RED};font-weight:600">{_esc(u)}</a>{_esc(tail)}')
+        last = m.end()
+    out.append(_esc(s[last:]))
+    return ''.join(out)
 
 
 # --------------------------------------------------------------------------- #
@@ -179,7 +193,7 @@ def render_digest_html(intro, events, unsub_url):
             meta_html = ('<div style="font-size:13px;margin:5px 0 0">' +
                          ' &nbsp;&middot;&nbsp; '.join(meta_bits) + '</div>') if meta_bits else ''
             desc = (f'<div style="color:{INK};font-size:14px;line-height:1.55;margin:7px 0 0">'
-                    f'{_esc(e["description"])}</div>') if e.get('description') else ''
+                    f'{_linkify(e["description"])}</div>') if e.get('description') else ''
             if e.get('url'):
                 lbl = ('Register' if cat == 'Training'
                        else 'Details' if cat in ('Deadline', 'Resource', 'Other')
