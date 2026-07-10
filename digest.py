@@ -10,7 +10,7 @@ Private admin routes live under /private/digest (feature slug 'digest').
 Public routes (/digest/submit, /digest/unsubscribe) require no login.
 """
 import os, re, threading, html as _html
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse as _urlparse
 from datetime import datetime, date
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, abort, current_app, jsonify)
@@ -77,15 +77,30 @@ def _esc(s):
     return _html.escape(s or '')
 
 
+def _short_url(u):
+    """Friendly short label for a URL, e.g. https://us06web.zoom.us/... -> zoom.us"""
+    try:
+        h = _urlparse(u).hostname or u
+        h = re.sub(r'^www\.', '', h)
+        parts = h.split('.')
+        return '.'.join(parts[-2:]) if len(parts) > 2 else h
+    except Exception:
+        return u
+
+
 def _linkify(s):
-    """Escape text, then turn http(s) URLs into clickable links (for event descriptions)."""
+    """Escape text, then turn http(s) URLs into clearly-clickable short links (for event descriptions)."""
     s = s or ''
     out, last = [], 0
     for m in re.finditer(r'https?://[^\s]+', s):
         out.append(_esc(s[last:m.start()]))
         u = m.group(0).rstrip('.,;:)”')
         tail = m.group(0)[len(u):]
-        out.append(f'<a href="{_esc(u)}" style="color:{RED};font-weight:600">{_esc(u)}</a>{_esc(tail)}')
+        label = _short_url(u)
+        out.append(
+            f'<a href="{_esc(u)}" target="_blank" '
+            f'style="color:{RED};font-weight:700;text-decoration:underline">'
+            f'{_esc(label)}&nbsp;&#8599;</a>{_esc(tail)}')
         last = m.end()
     out.append(_esc(s[last:]))
     return ''.join(out)
