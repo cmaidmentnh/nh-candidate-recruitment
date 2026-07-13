@@ -38,6 +38,13 @@ log_activity = None
 
 PORTAL_BASE = os.environ.get('PORTAL_BASE_URL', 'https://electhouserepublicans.com')
 APP_URL = os.environ.get('APP_URL', 'https://nhcandidaterecruitment.com')  # for admin approval links
+# SSO handoff to the campaign-website builder (sites.winthehouse.gop). A shared
+# secret both apps hold signs a short-lived token so a logged-in candidate lands
+# in the builder already authenticated. Distinct from the app's own token signer.
+SITES_SSO_BASE = os.environ.get('SITES_BASE_URL', 'https://sites.winthehouse.gop')
+SSO_SHARED_SECRET = os.environ.get('SSO_SHARED_SECRET', '')
+SSO_SALT = 'ws-sso-token'
+SSO_TTL = 300  # 5 min — the handoff is used immediately
 ACCESS_TTL = 7 * 24 * 3600          # email confirmation link
 SESSION_TTL = 12 * 3600             # logged-in session token
 SIGNAL_CLI_HOST = os.environ.get('SIGNAL_CLI_HOST', '127.0.0.1')
@@ -767,6 +774,32 @@ def consult_info():
                         'last_request': last})
     finally:
         cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/sso/sites', methods=['GET'])
+def sso_sites():
+    """Mint a short-lived shared-secret SSO token and return the builder URL that
+    logs this candidate straight into sites.winthehouse.gop."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    if not SSO_SHARED_SECRET:
+        return jsonify({'ok': False, 'error': 'SSO not configured.'}), 503
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT COALESCE(NULLIF(email,''), email1), first_name, last_name
+                       FROM candidates WHERE candidate_id=%s""", (cid,))
+        row = cur.fetchone()
+    finally:
+        cur.close(); release_db_connection(conn)
+    email = (row[0] or '').strip().lower() if row else ''
+    if not email:
+        return jsonify({'ok': False, 'error': 'We need an email on your profile first.'}), 400
+    from itsdangerous import URLSafeTimedSerializer
+    tok = URLSafeTimedSerializer(SSO_SHARED_SECRET).dumps(
+        {'cid': cid, 'email': email, 'first_name': row[1] or '', 'last_name': row[2] or ''},
+        salt=SSO_SALT)
+    return jsonify({'ok': True, 'url': f"{SITES_SSO_BASE}/sso?token={tok}"})
 
 
 @portal_bp.route('/consult/slots', methods=['GET'])
