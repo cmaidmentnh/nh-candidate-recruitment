@@ -717,6 +717,52 @@ def walkbook_request_create():
 
 
 CRM_DATABASE_URL = os.environ.get('CRM_DATABASE_URL', '')
+# Voter-list export — same backend the Signal !voterlist command uses.
+VOTER_FILE_API = os.environ.get('VOTER_FILE_API', '')
+VOTER_FILE_API_KEY = os.environ.get('VOTER_FILE_API_KEY', '')
+VOTER_EXPORT_BUCKET = os.environ.get('VOTER_EXPORT_BUCKET', 'nhhouse-voter-lists')
+VOTER_LINK_TTL = int(os.environ.get('VOTER_LINK_TTL', str(14 * 24 * 3600)))  # 14-day link for candidates
+
+
+def _build_voterlist_csv(district, parties):
+    """Pull a voter CSV for a House district + party mix via VOTER_FILE_API (the same
+    /api/export the !voterlist Signal command uses). Loops parties (API takes one at a
+    time) and concatenates. Returns (path, total) or (None, 0)."""
+    import urllib.request, urllib.parse, tempfile, csv as _csv
+    if not (VOTER_FILE_API and VOTER_FILE_API_KEY and district):
+        return None, 0
+    fd, path = tempfile.mkstemp(suffix='.csv', prefix='voterlist_')
+    total = 0
+    try:
+        with os.fdopen(fd, 'w', newline='', encoding='utf-8') as out:
+            writer = None
+            for party in (parties or ['REP', 'UND']):
+                qs = urllib.parse.urlencode({'district': district, 'party': party, 'format': 'csv'})
+                req = urllib.request.Request(f"{VOTER_FILE_API}/api/export?{qs}",
+                                             headers={'X-API-Key': VOTER_FILE_API_KEY})
+                resp = urllib.request.urlopen(req, timeout=600)
+                text = resp.read().decode('utf-8', 'replace').splitlines()
+                resp.close()
+                if not text:
+                    continue
+                header, rows = text[0], text[1:]
+                if writer is None:
+                    out.write(header + '\n')
+                    writer = True
+                for r in rows:
+                    if r.strip():
+                        out.write(r + '\n'); total += 1
+        if total == 0:
+            os.path.exists(path) and os.remove(path)
+            return None, 0
+        return path, total
+    except Exception:
+        logger.exception("voterlist CSV build failed")
+        try:
+            os.path.exists(path) and os.remove(path)
+        except OSError:
+            pass
+        return None, 0
 
 
 def _has_walkbooks(emails):
@@ -815,18 +861,91 @@ def voterlist_request_create():
         conn.commit()
         if log_activity:
             log_activity('voterlist_requested', f'Requested a voter list for {district}', cid)
+        approve_link = f"{APP_URL}/portal/api/voterlist/approve?token={make_token('voterlist_approve', rid)}"
         _signal_notify(
             f"\U0001F5F3️ NEW voter-list request #{rid}\n"
             f"{name} — {district}\n"
             f"Voters: {' + '.join(parties)}\n"
             + (f"Notes: {notes}\n" if notes else "")
             + f"Email: {email}\n\n"
-            "Approve, then pull the list and email them the CSV link."
+            f"Approve & email the CSV: {approve_link}"
         )
         return jsonify({'ok': True,
                         'message': "Your voter-list request is in! Once it's approved we'll email you a link to download your CSV."})
     finally:
         cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/voterlist/approve', methods=['GET'])
+def voterlist_approve():
+    """Admin taps the approve link from the Signal message -> pull the voter CSV
+    (same export API as !voterlist), host it, and email the candidate the link."""
+    res = read_token(request.args.get('token', ''), 30 * 24 * 3600)
+    if not res or res.get('type') != 'voterlist_approve':
+        return _APPROVE_PAGE.format(body="<p>This approval link is invalid or expired.</p>"), 400
+    rid = res.get('id')
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT candidate_name, email, district_code, parties, status FROM voterlist_requests WHERE id=%s", (rid,))
+        r = cur.fetchone()
+        if not r:
+            return _APPROVE_PAGE.format(body="<p>Request not found.</p>"), 404
+        name, email, district, parties_s, status = r
+        if status == 'fulfilled':
+            return _APPROVE_PAGE.format(body=f"<p>Already sent — {name} ({email}) got their voter list.</p>")
+        parties = [p for p in (parties_s or '').split(',') if p]
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    if not email:
+        return _APPROVE_PAGE.format(body=f"<p>No email on file for {name} — can't send the list.</p>"), 400
+
+    path, total = _build_voterlist_csv(district, parties)
+    if not path:
+        return _APPROVE_PAGE.format(body=f"<p>Couldn't build the voter list for {district} ({', '.join(parties)}). Check the district or try again.</p>"), 502
+
+    try:
+        import boto3, datetime as _d
+        stamp = _d.datetime.now(_d.timezone.utc).strftime('%Y-%m-%d')
+        safe = re.sub(r'[^A-Za-z0-9]+', '', district or 'VoterList') or 'VoterList'
+        key = f"voter-exports/{safe}_{'-'.join(parties)}_{stamp}.csv"
+        s3 = boto3.client('s3', region_name=os.environ.get('AWS_REGION', 'us-east-1'))
+        s3.upload_file(path, VOTER_EXPORT_BUCKET, key, ExtraArgs={'ContentType': 'text/csv'})
+        link = s3.generate_presigned_url('get_object',
+                    Params={'Bucket': VOTER_EXPORT_BUCKET, 'Key': key}, ExpiresIn=VOTER_LINK_TTL)
+    except Exception:
+        logger.exception("voterlist upload failed")
+        return _APPROVE_PAGE.format(body="<p>Built the list but couldn't upload it — logged for review.</p>"), 500
+    finally:
+        try:
+            os.path.exists(path) and os.remove(path)
+        except OSError:
+            pass
+
+    fn = (name or 'there').split(' ')[0]
+    html = (f'<div style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.6">'
+            f'<p>Hi {fn},</p>'
+            f'<p>Here\'s the voter list you requested for <b>{district}</b> ({", ".join(parties)}) — '
+            f'{total:,} voters. Click below to download the CSV:</p>'
+            f'<p style="margin:22px 0"><a href="{link}" style="background:#b91c1c;color:#fff;padding:13px 26px;'
+            f'border-radius:6px;text-decoration:none;font-weight:700">Download my voter list (CSV)</a></p>'
+            f'<p style="font-size:13px;color:#666">This download link works for 14 days. Keep this list secure — '
+            f'it\'s for your campaign\'s use.</p></div>')
+    send_email(email, f"Your voter list — {district}", html,
+               f"Your voter list for {district} ({', '.join(parties)}), {total} voters:\n{link}\n\nThis link works for 14 days.",
+               source=PORTAL_FROM)
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE voterlist_requests SET status='fulfilled', csv_url=%s, fulfilled_at=NOW() WHERE id=%s", (link, rid))
+        conn.commit()
+    finally:
+        cur.close(); release_db_connection(conn)
+    if log_activity:
+        log_activity('voterlist_fulfilled', f'Voter list for {district} emailed to {email}', None)
+
+    return _APPROVE_PAGE.format(body=f"<p><b>Sent!</b> Emailed {name} ({email}) their voter list for "
+                                     f"{district} — {total:,} voters.</p>")
 
 
 # ===========================================================================
