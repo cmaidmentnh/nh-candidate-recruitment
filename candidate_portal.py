@@ -876,34 +876,19 @@ def voterlist_request_create():
         cur.close(); release_db_connection(conn)
 
 
-@portal_bp.route('/voterlist/approve', methods=['GET'])
-def voterlist_approve():
-    """Admin taps the approve link from the Signal message -> pull the voter CSV
-    (same export API as !voterlist), host it, and email the candidate the link."""
-    res = read_token(request.args.get('token', ''), 30 * 24 * 3600)
-    if not res or res.get('type') != 'voterlist_approve':
-        return _APPROVE_PAGE.format(body="<p>This approval link is invalid or expired.</p>"), 400
-    rid = res.get('id')
-    conn = get_db_connection(); cur = conn.cursor()
-    try:
-        cur.execute("SELECT candidate_name, email, district_code, parties, status FROM voterlist_requests WHERE id=%s", (rid,))
-        r = cur.fetchone()
-        if not r:
-            return _APPROVE_PAGE.format(body="<p>Request not found.</p>"), 404
-        name, email, district, parties_s, status = r
-        if status == 'fulfilled':
-            return _APPROVE_PAGE.format(body=f"<p>Already sent — {name} ({email}) got their voter list.</p>")
-        parties = [p for p in (parties_s or '').split(',') if p]
-    finally:
-        cur.close(); release_db_connection(conn)
-
-    if not email:
-        return _APPROVE_PAGE.format(body=f"<p>No email on file for {name} — can't send the list.</p>"), 400
-
+def _voterlist_fulfill_worker(rid, name, email, district, parties):
+    """Build the CSV, host it, email the candidate the link. Runs in a background
+    thread — a big district is far too slow for a web request."""
     path, total = _build_voterlist_csv(district, parties)
     if not path:
-        return _APPROVE_PAGE.format(body=f"<p>Couldn't build the voter list for {district} ({', '.join(parties)}). Check the district or try again.</p>"), 502
-
+        logger.error("voterlist #%s: build failed for %s (%s)", rid, district, parties)
+        try:
+            conn = get_db_connection(); cur = conn.cursor()
+            cur.execute("UPDATE voterlist_requests SET status='failed' WHERE id=%s", (rid,)); conn.commit()
+            cur.close(); release_db_connection(conn)
+        except Exception:
+            logger.exception("voterlist #%s: failed-status update errored", rid)
+        return
     try:
         import boto3, datetime as _d
         stamp = _d.datetime.now(_d.timezone.utc).strftime('%Y-%m-%d')
@@ -914,8 +899,8 @@ def voterlist_approve():
         link = s3.generate_presigned_url('get_object',
                     Params={'Bucket': VOTER_EXPORT_BUCKET, 'Key': key}, ExpiresIn=VOTER_LINK_TTL)
     except Exception:
-        logger.exception("voterlist upload failed")
-        return _APPROVE_PAGE.format(body="<p>Built the list but couldn't upload it — logged for review.</p>"), 500
+        logger.exception("voterlist #%s upload failed", rid)
+        return
     finally:
         try:
             os.path.exists(path) and os.remove(path)
@@ -934,18 +919,46 @@ def voterlist_approve():
     send_email(email, f"Your voter list — {district}", html,
                f"Your voter list for {district} ({', '.join(parties)}), {total} voters:\n{link}\n\nThis link works for 14 days.",
                source=PORTAL_FROM)
-
-    conn = get_db_connection(); cur = conn.cursor()
     try:
+        conn = get_db_connection(); cur = conn.cursor()
         cur.execute("UPDATE voterlist_requests SET status='fulfilled', csv_url=%s, fulfilled_at=NOW() WHERE id=%s", (link, rid))
-        conn.commit()
-    finally:
-        cur.close(); release_db_connection(conn)
+        conn.commit(); cur.close(); release_db_connection(conn)
+    except Exception:
+        logger.exception("voterlist #%s: fulfilled-status update errored", rid)
     if log_activity:
         log_activity('voterlist_fulfilled', f'Voter list for {district} emailed to {email}', None)
 
-    return _APPROVE_PAGE.format(body=f"<p><b>Sent!</b> Emailed {name} ({email}) their voter list for "
-                                     f"{district} — {total:,} voters.</p>")
+
+@portal_bp.route('/voterlist/approve', methods=['GET'])
+def voterlist_approve():
+    """Admin taps the approve link from the Signal message -> kicks off a background
+    build (same export API as !voterlist) that emails the candidate the CSV link."""
+    import threading
+    res = read_token(request.args.get('token', ''), 30 * 24 * 3600)
+    if not res or res.get('type') != 'voterlist_approve':
+        return _APPROVE_PAGE.format(body="<p>This approval link is invalid or expired.</p>"), 400
+    rid = res.get('id')
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT candidate_name, email, district_code, parties, status FROM voterlist_requests WHERE id=%s", (rid,))
+        r = cur.fetchone()
+        if not r:
+            return _APPROVE_PAGE.format(body="<p>Request not found.</p>"), 404
+        name, email, district, parties_s, status = r
+        if status == 'fulfilled':
+            return _APPROVE_PAGE.format(body=f"<p>Already sent — {name} ({email}) got their voter list.</p>")
+        parties = [p for p in (parties_s or '').split(',') if p]
+        if not email:
+            return _APPROVE_PAGE.format(body=f"<p>No email on file for {name} — can't send the list.</p>"), 400
+        cur.execute("UPDATE voterlist_requests SET status='processing' WHERE id=%s", (rid,)); conn.commit()
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    threading.Thread(target=_voterlist_fulfill_worker,
+                     args=(rid, name, email, district, parties), daemon=True).start()
+    return _APPROVE_PAGE.format(body=f"<p><b>On it.</b> Building the voter list for <b>{district}</b> "
+                                     f"({', '.join(parties)}) and emailing it to {name} ({email}). "
+                                     f"A big district takes a minute — you can close this page.</p>")
 
 
 # ===========================================================================
