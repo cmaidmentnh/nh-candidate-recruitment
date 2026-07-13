@@ -716,6 +716,50 @@ def walkbook_request_create():
         cur.close(); release_db_connection(conn)
 
 
+CRM_DATABASE_URL = os.environ.get('CRM_DATABASE_URL', '')
+
+
+def _has_walkbooks(emails):
+    """True if any of these emails already owns/was assigned a walkbook in the
+    Action Center (nh_civic_crm). Best-effort, cross-DB, never raises."""
+    emails = [e.strip().lower() for e in emails if e and e.strip()]
+    if not emails or not CRM_DATABASE_URL:
+        return False
+    try:
+        import psycopg2
+        conn = psycopg2.connect(CRM_DATABASE_URL)
+        try:
+            cur = conn.cursor()
+            cur.execute("""SELECT 1 FROM users u
+                           WHERE LOWER(u.email) = ANY(%s)
+                             AND (EXISTS (SELECT 1 FROM walkbooks w WHERE w.assigned_to_id = u.id)
+                               OR EXISTS (SELECT 1 FROM walkbook_assignments wa WHERE wa.user_id = u.id))
+                           LIMIT 1""", (emails,))
+            return cur.fetchone() is not None
+        finally:
+            conn.close()
+    except Exception:
+        logger.exception("walkbook-status CRM check failed")
+        return False
+
+
+@portal_bp.route('/walkbook-status', methods=['GET'])
+def walkbook_status():
+    """Does this candidate already have walkbooks in the canvassing app? Drives the
+    'Access your Walkbooks' button on the hub."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("SELECT LOWER(email), LOWER(email1), LOWER(email2) FROM candidates WHERE candidate_id=%s", (cid,))
+        row = cur.fetchone() or (None, None, None)
+    finally:
+        cur.close(); release_db_connection(conn)
+    return jsonify({'ok': True, 'has_walkbooks': _has_walkbooks(list(row)),
+                    'url': 'https://walkbooks.winthehouse.gop'})
+
+
 @portal_bp.route('/voterlist-request', methods=['GET'])
 def voterlist_request_info():
     """Prefill the voter-list request form with the candidate's name + district."""
