@@ -393,15 +393,17 @@ def access():
     cid = res.get('id')
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("SELECT first_name, username, password_hash FROM candidates WHERE candidate_id=%s", (cid,))
+        cur.execute("SELECT first_name FROM candidates WHERE candidate_id=%s", (cid,))
         row = cur.fetchone()
         if not row:
             return jsonify({'ok': False, 'error': 'Account not found.'}), 404
-        first_name, username, pwhash = row
-        if username and pwhash:
-            session = make_token('portal_session', cid)
-            return jsonify({'ok': True, 'needs_setup': False, 'session': session, 'first_name': first_name or ''})
-        return jsonify({'ok': True, 'needs_setup': True, 'setup_token': tok, 'first_name': first_name or ''})
+        # Passwordless: the emailed access link IS the login. Issue a session directly —
+        # no username/password setup step. (Password login via /login still works for
+        # anyone who already set one.)
+        cur.execute("UPDATE candidates SET last_login=NOW() WHERE candidate_id=%s", (cid,))
+        conn.commit()
+        return jsonify({'ok': True, 'needs_setup': False, 'session': make_token('portal_session', cid),
+                        'first_name': row[0] or ''})
     finally:
         cur.close(); release_db_connection(conn)
 
