@@ -906,9 +906,10 @@ def consult_info():
         r = cur.fetchone()
         last = None
         if r:
+            is_past = bool(r[2] and r[2] < _dt.datetime.now(_dt.timezone.utc))
             last = {'id': r[0], 'duration_min': r[1],
                     'requested_start': r[2].isoformat() if r[2] else None,
-                    'status': r[3], 'meet_link': r[4],
+                    'status': r[3], 'meet_link': r[4], 'is_past': is_past,
                     'created_at': r[5].isoformat() if r[5] else None}
         return jsonify({'ok': True,
                         'connected': bool(gcal and gcal.is_configured()),
