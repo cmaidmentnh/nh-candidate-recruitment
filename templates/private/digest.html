@@ -79,6 +79,33 @@
   <p class="text-muted">No events yet. Add one below, or approve a submission.</p>
   {% endfor %}
 
+  <!-- Past events (already happened; NOT sent) -->
+  {% if past %}
+  <div class="dg-sec-h" style="color:#8a94a6">Past &mdash; not included in the digest ({{ past|length }})</div>
+  {% for e in past %}
+  <div class="dg-card" style="opacity:.6;border-left:4px solid #9aa4b2">
+    <div class="d-flex justify-content-between">
+      <div>
+        <span class="cat-badge" style="background:#9aa4b2">{{ e.category }}</span>
+        <strong class="ml-1">{{ e.title }}</strong>
+        <div class="dg-meta">
+          {% if e.event_date %}{{ e.event_date.strftime('%a, %b %-d') }}{% endif %}
+          {% if e.event_time %} · {{ e.event_time }}{% endif %}
+          {% if e.location %} · {{ e.location }}{% endif %}
+        </div>
+      </div>
+      <div class="text-nowrap">
+        <form method="POST" action="{{ url_for('digest.digest_event_action', eid=e.id, action='delete') }}" style="display:inline"
+              onsubmit="return confirm('Delete this past event?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
   <!-- Pending submissions -->
   {% if pending %}
   <div class="dg-sec-h">Submitted by candidates &mdash; needs review ({{ pending|length }})</div>

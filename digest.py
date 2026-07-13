@@ -471,7 +471,13 @@ def digest_home():
         cols = ['id','title','category','event_date','event_time','location','url','description',
                 'status','submitted_by_name','submitted_by_email','created_at']
         rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        approved = [r for r in rows if r['status'] == 'approved']
+        _today = date.today()
+        approved_all = [r for r in rows if r['status'] == 'approved']
+        # Split off past-dated events: they are NOT sent (see _load_approved's
+        # event_date >= CURRENT_DATE filter), so showing them as "will be included"
+        # is misleading. Evergreen (NULL-date) events always send, so they stay.
+        past = [r for r in approved_all if r['event_date'] and r['event_date'] < _today]
+        approved = [r for r in approved_all if not (r['event_date'] and r['event_date'] < _today)]
         pending = [r for r in rows if r['status'] == 'pending']
         recips = _recipients(cur)
         cur.execute("SELECT COUNT(*) FROM digest_unsubscribes")
@@ -483,7 +489,7 @@ def digest_home():
         cur.close()
         _release_db(conn)
     default_subject = 'Committee to Elect House Republicans — Weekly Digest, ' + date.today().strftime('%B %-d')
-    return render_template('private/digest.html', approved=approved, pending=pending,
+    return render_template('private/digest.html', approved=approved, pending=pending, past=past,
                            recipient_count=len(recips), unsub_count=unsub_n, sends=sends,
                            categories=CATEGORIES, default_subject=default_subject)
 
