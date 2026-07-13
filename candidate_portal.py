@@ -716,6 +716,75 @@ def walkbook_request_create():
         cur.close(); release_db_connection(conn)
 
 
+@portal_bp.route('/voterlist-request', methods=['GET'])
+def voterlist_request_info():
+    """Prefill the voter-list request form with the candidate's name + district."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        p = _prefill(cur, cid)
+        if p is None:
+            return jsonify({'ok': False, 'error': 'Profile not found.'}), 404
+        cur.execute("""SELECT district_code, parties, status, created_at FROM voterlist_requests
+                       WHERE candidate_id=%s ORDER BY id DESC LIMIT 1""", (cid,))
+        last = cur.fetchone()
+        return jsonify({'ok': True,
+                        'first_name': p.get('first_name', ''), 'last_name': p.get('last_name', ''),
+                        'district_code': p.get('district_code', ''), 'town': p.get('town', ''),
+                        'last_request': ({'district_code': last[0], 'parties': last[1],
+                                          'status': last[2], 'created_at': last[3].isoformat() if last[3] else None}
+                                         if last else None)})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/voterlist-request', methods=['POST'])
+def voterlist_request_create():
+    """A logged-in candidate requests a voter-list CSV for their district. Saves the
+    request and pings the admin on Signal (who approves, pulls the list, and emails
+    the candidate the CSV download link)."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    data = request.get_json(silent=True) or {}
+    parties = [p for p in (data.get('parties') or []) if p in ('REP', 'UND', 'DEM')]
+    if not parties:
+        parties = ['REP', 'UND']
+    notes = (data.get('notes') or '').strip()[:2000]
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        p = _prefill(cur, cid) or {}
+        district = (p.get('district_code') or '').strip()
+        name = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
+        email = p.get('email', '')
+        if not district:
+            return jsonify({'ok': False, 'error':
+                "We don't have a State House district on your profile yet. Add your town on your "
+                "profile page first (it sets your district), then request your voter list."}), 400
+        cur.execute("""INSERT INTO voterlist_requests
+            (candidate_id, candidate_name, email, district_code, parties, notes, status, created_at)
+            VALUES (%s,%s,%s,%s,%s,%s,'new',NOW()) RETURNING id""",
+            (cid, name, email, district, ','.join(parties), notes))
+        rid = cur.fetchone()[0]
+        conn.commit()
+        if log_activity:
+            log_activity('voterlist_requested', f'Requested a voter list for {district}', cid)
+        _signal_notify(
+            f"\U0001F5F3️ NEW voter-list request #{rid}\n"
+            f"{name} — {district}\n"
+            f"Voters: {' + '.join(parties)}\n"
+            + (f"Notes: {notes}\n" if notes else "")
+            + f"Email: {email}\n\n"
+            "Approve, then pull the list and email them the CSV link."
+        )
+        return jsonify({'ok': True,
+                        'message': "Your voter-list request is in! Once it's approved we'll email you a link to download your CSV."})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
 # ===========================================================================
 # Consult booking — a logged-in candidate requests a short video consult with
 # Chris. Approve-first: candidate picks an open slot -> admin approves -> a
