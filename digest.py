@@ -77,6 +77,9 @@ def _esc(s):
     return _html.escape(s or '')
 
 
+_RED = '#b4262d'  # brand red; RED is only a local inside render_digest_html, so _linkify needs its own
+
+
 def _short_url(u):
     """Friendly short label for a URL, e.g. https://us06web.zoom.us/... -> zoom.us"""
     try:
@@ -99,7 +102,7 @@ def _linkify(s):
         label = _short_url(u)
         out.append(
             f'<a href="{_esc(u)}" target="_blank" '
-            f'style="color:{RED};font-weight:700;text-decoration:underline">'
+            f'style="color:{_RED};font-weight:700;text-decoration:underline">'
             f'{_esc(label)}&nbsp;&#8599;</a>{_esc(tail)}')
         last = m.end()
     out.append(_esc(s[last:]))
