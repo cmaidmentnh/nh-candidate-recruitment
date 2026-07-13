@@ -632,7 +632,7 @@ try:
     init_candidate_portal(get_db_connection, release_db_connection, upload_file_to_storage,
                           send_email, generate_invite_token, verify_invite_token, log_activity)
     app.register_blueprint(portal_bp)
-    for _ep in ('portal.register_start', 'portal.access', 'portal.setup',
+    for _ep in ('portal.register_start', 'portal.login_link', 'portal.access', 'portal.setup',
                 'portal.login', 'portal.forgot_password', 'portal.profile_get', 'portal.profile_post',
                 'portal.approve', 'portal.approve_do', 'portal.walkbook_request_create',
                 'portal.consult_request', 'portal.consult_approve_do'):
