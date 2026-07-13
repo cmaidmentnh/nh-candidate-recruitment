@@ -381,6 +381,30 @@ def approve_do():
         cur.close(); release_db_connection(conn)
 
 
+@portal_bp.route('/login-link', methods=['POST'])
+def login_link():
+    """Passwordless login: email on file -> email a one-click login link; unknown ->
+    tell them to register. The single entry point for the unified login (post-cutover)."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    if not EMAIL_RE.match(email):
+        return jsonify({'ok': False, 'error': 'Please enter a valid email address.'}), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT candidate_id, first_name FROM candidates
+                       WHERE LOWER(email)=%s OR LOWER(email1)=%s OR LOWER(email2)=%s
+                       ORDER BY candidate_id LIMIT 1""", (email, email, email))
+        row = cur.fetchone()
+    finally:
+        cur.close(); release_db_connection(conn)
+    if row:
+        _send_access_link(row[0], row[1], email)
+        return jsonify({'ok': True, 'sent': True,
+                        'message': f"We've emailed a login link to {email}. Click it to sign in — no password needed."})
+    return jsonify({'ok': True, 'sent': False, 'unknown': True,
+                    'message': "We don't have that email on file. Register below and we'll get you set up."})
+
+
 @portal_bp.route('/access', methods=['POST'])
 def access():
     """Validate an emailed access token. Tells the front-end whether to show
