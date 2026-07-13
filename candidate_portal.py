@@ -151,20 +151,25 @@ def _towns_list(cur):
     return [{'town': r[0], 'district_code': r[1]} for r in cur.fetchall()]
 
 
+PORTAL_FROM = os.environ.get('PORTAL_FROM',
+                             '"Committee to Elect House Republicans" <info@electhouserepublicans.com>')
+
+
 def _send_access_link(cid, fn, email):
     token = make_token('portal_access', cid)
     link = f"{PORTAL_BASE}/candidates.html?token={token}"
     html = f"""<div style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.6">
         <p>Hi {fn or 'there'},</p>
-        <p>Your candidate profile with the Committee to Elect House Republicans is ready. Click below to
-        set your username and password and update your information.</p>
+        <p>Here's your secure login link for your candidate profile with the Committee to Elect House
+        Republicans. Click below to sign in and manage your information &mdash; no password needed.</p>
         <p style="margin:24px 0"><a href="{link}" style="background:#b91c1c;color:#fff;padding:14px 28px;
-        border-radius:6px;text-decoration:none;font-weight:700">Access My Profile</a></p>
+        border-radius:6px;text-decoration:none;font-weight:700">Sign in to my profile</a></p>
         <p style="font-size:13px;color:#444">Or paste this link into your browser:<br>
         <a href="{link}" style="color:#b91c1c;word-break:break-all">{link}</a></p>
-        <p style="color:#666;font-size:13px">This link expires in 7 days.</p></div>"""
-    send_email(email, "Access your candidate profile", html,
-               f"Access your candidate profile: {link}\nThis link expires in 7 days.")
+        <p style="color:#666;font-size:13px">This link expires in 7 days. If you didn't request it, you can ignore this email.</p></div>"""
+    send_email(email, "Your login link — CTEHR candidate profile", html,
+               f"Your login link (no password needed): {link}\nThis link expires in 7 days.",
+               source=PORTAL_FROM)
 
 
 # Equivalence groups of given names so nicknames match their formal names

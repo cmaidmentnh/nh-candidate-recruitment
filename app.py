@@ -190,8 +190,9 @@ def get_ses_client():
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY
     )
 
-def send_email(to_email, subject, html_body, text_body=None):
-    """Send an email via AWS SES."""
+def send_email(to_email, subject, html_body, text_body=None, source=None):
+    """Send an email via AWS SES. `source` overrides the default From (e.g. so the
+    candidate-portal login link comes from electhouserepublicans.com)."""
     ses = get_ses_client()
     if not ses:
         logger.error("SES not configured - missing AWS credentials")
@@ -202,7 +203,7 @@ def send_email(to_email, subject, html_body, text_body=None):
 
     try:
         ses.send_email(
-            Source=f'"{SES_SENDER_NAME}" <{SES_SENDER_EMAIL}>',
+            Source=source or f'"{SES_SENDER_NAME}" <{SES_SENDER_EMAIL}>',
             Destination={"ToAddresses": [to_email]},
             Message={
                 "Subject": {"Data": subject, "Charset": "UTF-8"},
