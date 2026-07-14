@@ -547,6 +547,63 @@ def profile_get():
         cur.close(); release_db_connection(conn)
 
 
+@portal_bp.route('/my-progress', methods=['GET'])
+def my_progress():
+    """The logged-in candidate's own campaign-progress checklist — the same auto-derived
+    signals the admin /progress tracker uses, scoped to this one candidate. Surveys report
+    COMPLETION ONLY (a returned survey); the admin rating/notes text is never exposed here."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT NULLIF(TRIM(COALESCE(photo_url,'')),''),
+                              NULLIF(TRIM(COALESCE(bio,'')),''),
+                              NULLIF(TRIM(COALESCE(facebook,'')),''),
+                              NULLIF(TRIM(COALESCE(twitter_x,'')),''),
+                              NULLIF(TRIM(COALESCE(instagram,'')),''),
+                              NULLIF(TRIM(COALESCE(external_campaign_url,'')),''),
+                              NULLIF(TRIM(COALESCE(website_url,'')),''),
+                              NULLIF(TRIM(COALESCE(donate_url,'')),'')
+                       FROM candidates WHERE candidate_id=%s""", (cid,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'Profile not found.'}), 404
+        photo, bio, fb, tw, ig, ext, wsite, donate_url = row
+        # Website live + donations from the website-builder tables (same logic as /progress).
+        cur.execute("""SELECT bool_or(ws.status IN ('live','custom_domain_live')),
+                              bool_or(COALESCE(ws.donations_enabled,false)
+                                      OR COALESCE(ws.stripe_onboarding_complete,false))
+                       FROM ws_candidates wc JOIN ws_submissions ws ON ws.candidate_id=wc.id
+                       WHERE wc.recruitment_candidate_id=%s""", (cid,))
+        wr = cur.fetchone() or (None, None)
+        website = bool(wr[0]) or bool(ext) or bool(wsite)
+        donate = bool(donate_url) or bool(wr[1])
+        cur.execute("SELECT 1 FROM walkbook_requests WHERE candidate_id=%s LIMIT 1", (cid,))
+        walkbook = cur.fetchone() is not None
+        cur.execute("SELECT 1 FROM consult_requests WHERE candidate_id=%s LIMIT 1", (cid,))
+        consult = cur.fetchone() is not None
+        # Surveys: COMPLETION ONLY. A non-blank rating means the survey came back. Never the text.
+        cur.execute("SELECT count(*) FILTER (WHERE COALESCE(TRIM(rating),'') <> '') "
+                    "FROM candidate_surveys WHERE candidate_id=%s", (cid,))
+        survey = (cur.fetchone()[0] or 0) > 0
+        items = [
+            {'key': 'photo',    'label': 'Professional headshots',    'done': bool(photo)},
+            {'key': 'website',  'label': 'Campaign website',          'done': website,  'link': 'https://sites.winthehouse.gop'},
+            {'key': 'bio',      'label': 'Candidate bio',             'done': bool(bio)},
+            {'key': 'socials',  'label': 'Social media links',        'done': bool(fb or tw or ig)},
+            {'key': 'donate',   'label': 'Online donations',          'done': donate},
+            {'key': 'walkbook', 'label': 'Walkbook requested',        'done': walkbook, 'link': '/walkbooks'},
+            {'key': 'consult',  'label': 'Strategy consult booked',   'done': consult,  'link': '/consult'},
+            {'key': 'survey',   'label': 'Candidate surveys returned','done': survey,   'link': 'https://surveys.winthehouse.gop'},
+        ]
+        done = sum(1 for i in items if i['done'])
+        return jsonify({'ok': True, 'items': items, 'done': done, 'total': len(items),
+                        'score': int(round(100 * done / len(items)))})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
 @portal_bp.route('/profile', methods=['POST'])
 def profile_post():
     cid = _cid_from_session()
