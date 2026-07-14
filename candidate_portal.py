@@ -45,6 +45,10 @@ SITES_SSO_BASE = os.environ.get('SITES_BASE_URL', 'https://sites.winthehouse.gop
 SSO_SHARED_SECRET = os.environ.get('SSO_SHARED_SECRET', '')
 SSO_SALT = 'ws-sso-token'
 SSO_TTL = 300  # 5 min — the handoff is used immediately
+# Same shared-secret handoff into the yard-sign location finder, which otherwise
+# sits behind a site password for anyone arriving from outside.
+YARDSIGNS_SSO_BASE = os.environ.get('YARDSIGNS_BASE_URL', 'https://yardsigns.winthehouse.gop')
+YARDSIGNS_SSO_SALT = 'ys-sso-token'
 ACCESS_TTL = 7 * 24 * 3600          # email confirmation link
 SESSION_TTL = 12 * 3600             # logged-in session token
 SIGNAL_CLI_HOST = os.environ.get('SIGNAL_CLI_HOST', '127.0.0.1')
@@ -1077,6 +1081,21 @@ def sso_sites():
         {'cid': cid, 'email': email, 'first_name': row[1] or '', 'last_name': row[2] or ''},
         salt=SSO_SALT)
     return jsonify({'ok': True, 'url': f"{SITES_SSO_BASE}/sso?token={tok}"})
+
+
+@portal_bp.route('/sso/yardsigns', methods=['GET'])
+def sso_yardsigns():
+    """Mint a short-lived token that walks this candidate past the yard-sign
+    finder's site password. Nothing but a signed token opens that door."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    if not SSO_SHARED_SECRET:
+        return jsonify({'ok': False, 'error': 'SSO not configured.'}), 503
+    from itsdangerous import URLSafeTimedSerializer
+    tok = URLSafeTimedSerializer(SSO_SHARED_SECRET).dumps(
+        {'cid': cid}, salt=YARDSIGNS_SSO_SALT)
+    return jsonify({'ok': True, 'url': f"{YARDSIGNS_SSO_BASE}/api/sso?token={tok}"})
 
 
 @portal_bp.route('/consult/slots', methods=['GET'])
