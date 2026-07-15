@@ -859,12 +859,22 @@ def walkbook_status():
         return jsonify({'ok': False}), 401
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("SELECT LOWER(email), LOWER(email1), LOWER(email2) FROM candidates WHERE candidate_id=%s", (cid,))
-        row = cur.fetchone() or (None, None, None)
+        cur.execute("SELECT LOWER(email), LOWER(email1), LOWER(email2), first_name, last_name FROM candidates WHERE candidate_id=%s", (cid,))
+        row = cur.fetchone() or (None, None, None, None, None)
     finally:
         cur.close(); release_db_connection(conn)
-    return jsonify({'ok': True, 'has_walkbooks': _has_walkbooks(list(row)),
-                    'url': 'https://walkbooks.winthehouse.gop'})
+    emails = [e for e in row[:3] if e]
+    # Return an SSO auto-login URL so the "Access your Walkbooks" button logs the
+    # candidate straight into walkbooks.winthehouse.gop (no separate login prompt).
+    url = 'https://walkbooks.winthehouse.gop'
+    if SSO_SHARED_SECRET and emails:
+        from itsdangerous import URLSafeTimedSerializer
+        tok = URLSafeTimedSerializer(SSO_SHARED_SECRET).dumps(
+            {'cid': cid, 'email': emails[0], 'emails': emails,
+             'first_name': row[3] or '', 'last_name': row[4] or ''},
+            salt='wb-sso-token')
+        url = f"https://walkbooks.winthehouse.gop/sso?token={tok}"
+    return jsonify({'ok': True, 'has_walkbooks': _has_walkbooks(emails), 'url': url})
 
 
 @portal_bp.route('/voterlist-request', methods=['GET'])
