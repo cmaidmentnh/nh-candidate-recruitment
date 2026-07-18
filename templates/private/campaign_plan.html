@@ -18,6 +18,8 @@
   .pbadge.r{background:#c6312d;color:#fff}.pbadge.d{background:#1d4e89;color:#fff}
   tr.rprim td:first-child{box-shadow:inset 4px 0 0 #c6312d}
   .pvi-gop{color:#a8261f;font-weight:700}.pvi-dem{color:#1d4e89;font-weight:700}.pvi-swing{color:#8a6400;font-weight:700}
+  .spendsel.spend-spend{background:#e6f4ec;color:#1a7f43;font-weight:700;border-color:#bfe3cd}
+  .spendsel.spend-no{background:#fdeaea;color:#b4262d;font-weight:700;border-color:#f0c4c4}
   .no-r{background:#fff3f2}
   .kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px}
   .kcol{flex:0 0 230px;background:#f1f4f9;border-radius:10px;padding:8px;min-height:120px}
@@ -102,12 +104,12 @@
     <div style="max-height:70vh;overflow:auto">
     <table class="table table-sm plan">
       <thead><tr>
-        <th>District</th><th>Towns</th><th>Seats</th><th>PVI</th><th>Matchup (R&nbsp;v&nbsp;D)</th><th>Bucket</th><th>Channels</th><th>Pri</th><th>Notes</th>
+        <th>District</th><th>Towns</th><th>Seats</th><th>PVI</th><th>Matchup (R&nbsp;v&nbsp;D)</th><th>Bucket</th><th>Spend</th><th>Channels</th><th>Pri</th><th>Notes</th>
       </tr></thead>
       <tbody>
         {% for d in districts %}
         <tr class="prow {{ 'no-r' if d.r_filers==0 }} {{ 'rprim' if d.r_filers > d.seats }}" data-code="{{ d.code }}" data-county="{{ d.county }}" data-rating="{{ d.rating }}"
-            data-bucket="{{ d.bucket }}" data-channels="{{ d.channels|join(',') }}" data-nor="{{ 1 if d.r_filers==0 else 0 }}"
+            data-bucket="{{ d.bucket }}" data-channels="{{ d.channels|join(',') }}" data-spend="{{ d.spend }}" data-nor="{{ 1 if d.r_filers==0 else 0 }}"
             data-rprim="{{ 1 if d.r_filers > d.seats else 0 }}" data-dprim="{{ 1 if d.d_filers > d.seats else 0 }}"
             data-search="{{ (d.code ~ ' ' ~ d.towns)|lower }}">
           <td><b>{{ d.code }}</b></td>
@@ -126,6 +128,14 @@
           <td>
             <select class="form-control form-control-sm bsel" style="min-width:150px" onchange="save('{{ d.code }}','bucket',this.value);this.closest('tr').dataset.bucket=this.value">
               {% for grp, keys in plan_groups %}<optgroup label="{{ grp }}">{% for key in keys %}<option value="{{ key }}" {{ 'selected' if d.bucket==key }}>{{ bucket_label[key] }}</option>{% endfor %}</optgroup>{% endfor %}
+            </select>
+          </td>
+          <td>
+            <select class="form-control form-control-sm spendsel spend-{{ d.spend or 'none' }}" style="width:108px"
+                    onchange="save('{{ d.code }}','spend',this.value); this.className='form-control form-control-sm spendsel spend-'+(this.value||'none'); this.closest('tr').dataset.spend=this.value">
+              <option value="" {{ 'selected' if not d.spend }}>—</option>
+              <option value="spend" {{ 'selected' if d.spend=='spend' }}>Spend</option>
+              <option value="no" {{ 'selected' if d.spend=='no' }}>No Spend</option>
             </select>
           </td>
           <td style="min-width:200px">

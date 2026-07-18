@@ -1147,7 +1147,7 @@ def campaign_plan():
     try:
         cur.execute("""
             SELECT d.full_district_code, d.county_name, d.seats, d.pvi, d.pvi_rating, d.towns,
-                   p.bucket, p.channels, p.priority, p.notes
+                   p.bucket, p.channels, p.priority, p.notes, p.spend
             FROM (
                 SELECT full_district_code,
                        MAX(county_name) AS county_name,
@@ -1176,7 +1176,7 @@ def campaign_plan():
             filers[dc][party] = {'n': n, 'names': names or ''}
 
         districts = []
-        for code, county, seats, pvi, rating, towns, bucket, channels, priority, notes in rows:
+        for code, county, seats, pvi, rating, towns, bucket, channels, priority, notes, spend in rows:
             f = filers.get(code, {})
             r, d, ind = f.get('R', {}), f.get('D', {}), f.get('I', {})
             districts.append({
@@ -1184,7 +1184,7 @@ def campaign_plan():
                 'pvi': float(pvi) if pvi is not None else None, 'rating': rating or '',
                 'towns': towns or '',
                 'bucket': bucket or 'unassigned', 'channels': channels or [],
-                'priority': priority, 'notes': notes or '',
+                'priority': priority, 'notes': notes or '', 'spend': spend or '',
                 'r_filers': r.get('n', 0), 'd_filers': d.get('n', 0),
                 'r_names': r.get('names', ''), 'd_names': d.get('names', ''), 'i_names': ind.get('names', ''),
             })
@@ -1242,7 +1242,7 @@ def campaign_plan_save():
     code = data.get('district_code')
     field = data.get('field')
     value = data.get('value')
-    if not code or field not in ('bucket', 'channels', 'priority', 'notes'):
+    if not code or field not in ('bucket', 'channels', 'priority', 'notes', 'spend'):
         return jsonify(ok=False, error='bad request'), 400
     if field == 'bucket' and value not in PLAN_BUCKET_KEYS:
         return jsonify(ok=False, error='bad bucket'), 400
@@ -1250,6 +1250,8 @@ def campaign_plan_save():
         value = [c for c in (value or []) if c in PLAN_CHANNELS]
     if field == 'priority':
         value = int(value) if value in (1, 2, 3, '1', '2', '3') else None
+    if field == 'spend':
+        value = value if value in ('spend', 'no') else None
 
     conn = get_db_connection()
     cur = conn.cursor()
