@@ -122,7 +122,7 @@ def _real_client_ip():
 limiter = Limiter(
     app=app,
     key_func=_real_client_ip,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["20000 per day", "2000 per hour"]
 )
 
 # Flask-Login Setup
