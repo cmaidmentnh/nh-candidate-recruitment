@@ -696,9 +696,23 @@ def walkbook_request_info():
         cur.execute("""SELECT district_code, parties, status, created_at FROM walkbook_requests
                        WHERE candidate_id=%s ORDER BY id DESC LIMIT 1""", (cid,))
         last = cur.fetchone()
+        # Do they ALREADY have walkbooks waiting in the canvassing app? Lots of candidates
+        # re-request because they never found the ones they were given, so tell them up
+        # front and hand them the direct link instead of queueing a duplicate.
+        emails, wb_url = _walkbook_identity(cur, cid)
+        count = _walkbook_count(emails)
+        # A request that is in the queue but not yet built/declined.
+        cur.execute("""SELECT id, created_at FROM walkbook_requests
+                       WHERE candidate_id=%s AND status NOT IN ('built','declined')
+                       ORDER BY id DESC LIMIT 1""", (cid,))
+        pend = cur.fetchone()
         return jsonify({'ok': True,
                         'first_name': p.get('first_name', ''), 'last_name': p.get('last_name', ''),
                         'district_code': p.get('district_code', ''), 'town': p.get('town', ''),
+                        'has_walkbooks': count > 0, 'walkbook_count': count, 'walkbooks_url': wb_url,
+                        'pending_request': ({'id': pend[0],
+                                             'created_at': pend[1].isoformat() if pend[1] else None}
+                                            if pend else None),
                         'last_request': ({'district_code': last[0], 'parties': last[1],
                                           'status': last[2], 'created_at': last[3].isoformat() if last[3] else None}
                                          if last else None)})
@@ -748,6 +762,28 @@ def walkbook_request_create():
                 "We don't have a State House district on your profile yet. Add your town on your "
                 "profile page first (it sets your district), then request your walkbook."}), 400
 
+        # Already have walkbooks, or one already in the queue? Say so and hand them the
+        # direct link instead of filing a duplicate. `confirm` lets them ask anyway (a
+        # second district, a bigger list, a refreshed pull) without being stuck.
+        confirmed = bool(data.get('confirm'))
+        emails, wb_url = _walkbook_identity(cur, cid)
+        existing = _walkbook_count(emails)
+        if existing and not confirmed:
+            return jsonify({'ok': False, 'code': 'already_have', 'walkbook_count': existing,
+                            'walkbooks_url': wb_url, 'error':
+                            f"You already have {existing} walkbook{'s' if existing != 1 else ''} "
+                            "ready to go in the canvassing app. Open them with the button below. "
+                            "If you need a different list, you can still send this request."}), 409
+        if not confirmed:
+            cur.execute("""SELECT id FROM walkbook_requests
+                           WHERE candidate_id=%s AND status NOT IN ('built','declined')
+                           ORDER BY id DESC LIMIT 1""", (cid,))
+            if cur.fetchone():
+                return jsonify({'ok': False, 'code': 'already_requested', 'walkbooks_url': wb_url,
+                                'error': "You already have a walkbook request in the queue. We're "
+                                "building it now and will email you when it's ready. Send it again "
+                                "only if you need a different list."}), 409
+
         cur.execute("""INSERT INTO walkbook_requests
             (candidate_id, candidate_name, email, district_code, parties, book_size, notes, status, created_at, teammates)
             VALUES (%s,%s,%s,%s,%s,%s,%s,'new',NOW(),%s) RETURNING id""",
@@ -762,9 +798,12 @@ def walkbook_request_create():
         if teammates:
             team_line = "Also for: " + ", ".join(
                 f"{t['name']} <{t['email']}>" if t['name'] else t['email'] for t in teammates) + "\n"
+        dupe_line = (f"⚠️ Already has {existing} walkbook{'s' if existing != 1 else ''} "
+                     "in the app, asked anyway\n") if existing else ""
         _signal_notify(
             f"\U0001F6B6 NEW walkbook request #{rid}\n"
             f"{name} — {district}\n"
+            + dupe_line +
             f"Voters: {' + '.join(parties)}  ·  ~{size}/book\n"
             + team_line
             + (f"Notes: {notes}\n" if notes else "")
@@ -826,28 +865,53 @@ def _build_voterlist_csv(district, parties):
         return None, 0
 
 
-def _has_walkbooks(emails):
-    """True if any of these emails already owns/was assigned a walkbook in the
-    Action Center (nh_civic_crm). Best-effort, cross-DB, never raises."""
+def _walkbook_count(emails):
+    """How many walkbooks these emails already own/are assigned in the Action Center
+    (nh_civic_crm). Best-effort, cross-DB, never raises. 0 on any failure."""
     emails = [e.strip().lower() for e in emails if e and e.strip()]
     if not emails or not CRM_DATABASE_URL:
-        return False
+        return 0
     try:
         import psycopg2
         conn = psycopg2.connect(CRM_DATABASE_URL)
         try:
             cur = conn.cursor()
-            cur.execute("""SELECT 1 FROM users u
-                           WHERE LOWER(u.email) = ANY(%s)
-                             AND (EXISTS (SELECT 1 FROM walkbooks w WHERE w.assigned_to_id = u.id)
-                               OR EXISTS (SELECT 1 FROM walkbook_assignments wa WHERE wa.user_id = u.id))
-                           LIMIT 1""", (emails,))
-            return cur.fetchone() is not None
+            cur.execute("""SELECT COUNT(DISTINCT x.walkbook_id) FROM users u JOIN (
+                               SELECT id AS walkbook_id, assigned_to_id AS uid FROM walkbooks
+                                WHERE assigned_to_id IS NOT NULL
+                               UNION
+                               SELECT walkbook_id, user_id FROM walkbook_assignments
+                           ) x ON x.uid = u.id
+                           WHERE LOWER(u.email) = ANY(%s)""", (emails,))
+            return int((cur.fetchone() or [0])[0] or 0)
         finally:
             conn.close()
     except Exception:
         logger.exception("walkbook-status CRM check failed")
-        return False
+        return 0
+
+
+def _has_walkbooks(emails):
+    """True if any of these emails already owns/was assigned a walkbook."""
+    return _walkbook_count(emails) > 0
+
+
+def _walkbook_identity(cur, cid):
+    """(emails, sso_url) for a candidate. The URL logs them straight into
+    walkbooks.winthehouse.gop with no separate login prompt."""
+    cur.execute("SELECT LOWER(email), LOWER(email1), LOWER(email2), first_name, last_name "
+                "FROM candidates WHERE candidate_id=%s", (cid,))
+    row = cur.fetchone() or (None, None, None, None, None)
+    emails = [e for e in row[:3] if e]
+    url = 'https://walkbooks.winthehouse.gop'
+    if SSO_SHARED_SECRET and emails:
+        from itsdangerous import URLSafeTimedSerializer
+        tok = URLSafeTimedSerializer(SSO_SHARED_SECRET).dumps(
+            {'cid': cid, 'email': emails[0], 'emails': emails,
+             'first_name': row[3] or '', 'last_name': row[4] or ''},
+            salt='wb-sso-token')
+        url = f"https://walkbooks.winthehouse.gop/sso?token={tok}"
+    return emails, url
 
 
 @portal_bp.route('/walkbook-status', methods=['GET'])
@@ -859,22 +923,11 @@ def walkbook_status():
         return jsonify({'ok': False}), 401
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("SELECT LOWER(email), LOWER(email1), LOWER(email2), first_name, last_name FROM candidates WHERE candidate_id=%s", (cid,))
-        row = cur.fetchone() or (None, None, None, None, None)
+        emails, url = _walkbook_identity(cur, cid)
     finally:
         cur.close(); release_db_connection(conn)
-    emails = [e for e in row[:3] if e]
-    # Return an SSO auto-login URL so the "Access your Walkbooks" button logs the
-    # candidate straight into walkbooks.winthehouse.gop (no separate login prompt).
-    url = 'https://walkbooks.winthehouse.gop'
-    if SSO_SHARED_SECRET and emails:
-        from itsdangerous import URLSafeTimedSerializer
-        tok = URLSafeTimedSerializer(SSO_SHARED_SECRET).dumps(
-            {'cid': cid, 'email': emails[0], 'emails': emails,
-             'first_name': row[3] or '', 'last_name': row[4] or ''},
-            salt='wb-sso-token')
-        url = f"https://walkbooks.winthehouse.gop/sso?token={tok}"
-    return jsonify({'ok': True, 'has_walkbooks': _has_walkbooks(emails), 'url': url})
+    count = _walkbook_count(emails)
+    return jsonify({'ok': True, 'has_walkbooks': count > 0, 'walkbook_count': count, 'url': url})
 
 
 @portal_bp.route('/voterlist-request', methods=['GET'])
