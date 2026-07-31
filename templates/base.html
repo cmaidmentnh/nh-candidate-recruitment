@@ -664,7 +664,8 @@
     </button>
 
     <!-- Private Features Icon (bottom-left, only shown to users with access) -->
-    {% if user_private_features %}
+    {# whips have no private-feature grants, so they must be admitted explicitly #}
+    {% if user_private_features or can_whip or is_super_admin %}
     <div class="dropup" style="position:fixed; bottom:20px; left:20px; z-index:1000;">
         <button class="btn btn-sm" type="button" id="privateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="background:rgba(0,0,0,0.1); border:none; padding:8px; border-radius:8px; opacity:0.4; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#666;">
@@ -674,6 +675,12 @@
         </button>
         <div class="dropdown-menu dropdown-menu-left" aria-labelledby="privateDropdown">
             <h6 class="dropdown-header"><i class="fas fa-lock"></i> Private</h6>
+            {% if can_whip %}
+            <a class="dropdown-item" href="{{ url_for('progress.whip_list') }}">
+                <i class="fas fa-headset text-muted"></i> Whip Check-ins
+            </a>
+            <div class="dropdown-divider"></div>
+            {% endif %}
             {% if 'speaker_votes' in user_private_features %}
             <a class="dropdown-item" href="{{ url_for('private.speaker_votes') }}">
                 <i class="fas fa-gavel text-muted"></i> Speaker Votes
@@ -708,6 +715,12 @@
             {% endif %}
             {% if is_super_admin %}
             <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="{{ url_for('filings') }}">
+                <i class="fas fa-file-signature text-muted"></i> Filings Tracker
+            </a>
+            <a class="dropdown-item" href="{{ url_for('activity') }}">
+                <i class="fas fa-history text-muted"></i> Activity Log
+            </a>
             <a class="dropdown-item" href="{{ url_for('scout.dashboard') }}">
                 <i class="fas fa-binoculars text-muted"></i> Candidate Scout
             </a>
