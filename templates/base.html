@@ -715,10 +715,10 @@
             {% endif %}
             {% if is_super_admin %}
             <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="{{ url_for('filings') }}">
+            <a class="dropdown-item" href="{{ url_for('filings_list') }}">
                 <i class="fas fa-file-signature text-muted"></i> Filings Tracker
             </a>
-            <a class="dropdown-item" href="{{ url_for('activity') }}">
+            <a class="dropdown-item" href="{{ url_for('activity_log_page') }}">
                 <i class="fas fa-history text-muted"></i> Activity Log
             </a>
             <a class="dropdown-item" href="{{ url_for('scout.dashboard') }}">
