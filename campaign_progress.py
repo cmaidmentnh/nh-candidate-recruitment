@@ -550,26 +550,33 @@ def whip_checkin():
 
         # Roll the answers up into current state. 'yes' sets the flag; a later
         # 'not_yet' can clear it, so the tracker reflects the last thing we heard.
-        sets, vals = ["last_contact_at = now()"], []
+        #
+        # The columns must appear in the INSERT as well as the DO UPDATE: most
+        # candidates have no progress row yet, so the insert succeeds, the
+        # conflict clause never fires, and putting the values only in DO UPDATE
+        # silently discarded every answer on a candidate's first check-in.
+        cols = ['candidate_id', 'last_contact_at', 'updated_by', 'updated_at']
+        ph   = ['%s', 'now()', '%s', 'now()']
+        vals = [cid, uname]
+
         for form_key, col in (('fundraising', 'fundraising_started'),
                               ('canvassing', 'canvassing_started'),
                               ('signs', 'signs_ordered'),
                               ('training', 'training_attended')):
             if ans[form_key] in ('yes', 'not_yet'):
-                sets.append(f"{col} = %s")
+                cols.append(col); ph.append('%s')
                 vals.append(ans[form_key] == 'yes')
         if needs:
-            sets.append("needs = %s"); vals.append(needs)
+            cols.append('needs'); ph.append('%s'); vals.append(needs)
         if followup:
-            sets.append("next_followup_at = %s"); vals.append(followup)
-        sets.append("updated_by = %s"); vals.append(uname)
-        sets.append("updated_at = now()")
+            cols.append('next_followup_at'); ph.append('%s'); vals.append(followup)
 
+        updates = ', '.join(f"{c} = EXCLUDED.{c}" for c in cols if c != 'candidate_id')
         cur.execute(f"""
-            INSERT INTO candidate_campaign_progress (candidate_id, last_contact_at, updated_by)
-            VALUES (%s, now(), %s)
-            ON CONFLICT (candidate_id) DO UPDATE SET {', '.join(sets)}
-        """, [cid, uname] + vals)
+            INSERT INTO candidate_campaign_progress ({', '.join(cols)})
+            VALUES ({', '.join(ph)})
+            ON CONFLICT (candidate_id) DO UPDATE SET {updates}
+        """, vals)
         conn.commit()
         return jsonify({'ok': True})
     except Exception as e:
