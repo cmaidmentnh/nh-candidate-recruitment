@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Check-ins{% endblock %}
+
+{% block head %}
+<style>
+/* Mobile-first: cards, not a matrix. The desktop tracker stays at /progress. */
+.wl-wrap { max-width: 760px; margin: 0 auto; padding: 0 12px 96px; }
+.wl-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+           margin: 10px 0 6px; }
+.wl-head h1 { font-size: 20px; margin:0; }
+.wl-sub { color:#6c757d; font-size:13px; }
+
+.wl-tabs { display:flex; gap:8px; overflow-x:auto; padding:8px 0 12px; -webkit-overflow-scrolling:touch; }
+.wl-tab { flex:0 0 auto; padding:8px 14px; border-radius:999px; border:1px solid #d5d7db;
+          background:#fff; color:#20242c; font-size:14px; text-decoration:none; white-space:nowrap; }
+.wl-tab.on { background:#b52b18; border-color:#b52b18; color:#fff; font-weight:600; }
+
+.wl-card { display:block; border:1px solid #e3e5e8; border-left-width:5px; border-radius:10px;
+           padding:12px 14px; margin-bottom:10px; background:#fff; text-decoration:none;
+           color:inherit; }
+.wl-card:active { background:#f6f7f9; }
+.wl-card.never { border-left-color:#b52b18; }
+.wl-card.gaps  { border-left-color:#d9a441; }
+.wl-card.ok    { border-left-color:#2e7d32; }
+
+.wl-row1 { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.wl-name { font-weight:700; font-size:16px; }
+.wl-dist { color:#6c757d; font-size:13px; white-space:nowrap; }
+.wl-row2 { margin-top:4px; color:#5a6068; font-size:13px; }
+.wl-gaps { margin-top:6px; font-size:13px; color:#8a4b12; }
+.wl-meta { margin-top:6px; font-size:12px; color:#8a8f97; }
+.wl-empty { padding:28px 8px; text-align:center; color:#6c757d; }
+
+@media (min-width: 720px) {
+  .wl-name { font-size:17px; }
+  .wl-wrap { padding-bottom:40px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wl-wrap">
+  <div class="wl-head">
+    <h1>Check-ins</h1>
+    <span class="wl-sub">{{ rows|length }} shown</span>
+  </div>
+
+  <div class="wl-tabs">
+    <a class="wl-tab {% if view=='mine' %}on{% endif %}"
+       href="{{ url_for('progress.whip_list', view='mine') }}">Mine ({{ mine_count }})</a>
+    <a class="wl-tab {% if view=='todo' %}on{% endif %}"
+       href="{{ url_for('progress.whip_list', view='todo') }}">Never contacted</a>
+    <a class="wl-tab {% if view=='all' %}on{% endif %}"
+       href="{{ url_for('progress.whip_list', view='all') }}">Everyone ({{ total }})</a>
+  </div>
+
+  {% for d in rows %}
+  <a class="wl-card {% if not d.last_contact_at %}never{% elif d.gaps %}gaps{% else %}ok{% endif %}"
+     href="{{ url_for('progress.whip_candidate', candidate_id=d.candidate_id) }}">
+    <div class="wl-row1">
+      <span class="wl-name">{{ d.name }}</span>
+      <span class="wl-dist">{{ d.district }}</span>
+    </div>
+    <div class="wl-row2">{{ d.stage }} &middot; {{ d.score }}%</div>
+
+    {% if d.gaps %}
+    <div class="wl-gaps">{{ d.gaps[:3]|join(' &middot; ')|safe }}{% if d.gaps|length > 3 %}
+      &middot; +{{ d.gaps|length - 3 }} more{% endif %}</div>
+    {% endif %}
+
+    <div class="wl-meta">
+      {% if d.last_contact_at %}Last contact {{ d.last_contact_at.strftime('%b %-d') }}
+      {% else %}<strong>Never contacted</strong>{% endif %}
+      {% if d.assigned_name %} &middot; {{ d.assigned_name }}{% endif %}
+    </div>
+  </a>
+  {% else %}
+  <div class="wl-empty">
+    {% if view == 'mine' %}
+      Nothing assigned to you yet. Try <a href="{{ url_for('progress.whip_list', view='all') }}">Everyone</a>.
+    {% else %}
+      No candidates match.
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -90,11 +90,39 @@ def init_campaign_progress(get_db, release_db, is_super_admin):
     _get_db, _release_db, _is_super_admin = get_db, release_db, is_super_admin
 
 
+def _role():
+    return (getattr(current_user, 'role', '') or '').lower() if current_user.is_authenticated else ''
+
+
+def is_whip():
+    """Whips get the mobile check-in workflow but not the desktop matrix."""
+    return _role() == 'whip'
+
+
 def can_access_progress():
+    """Desktop matrix: super admin + the named leadership allowlist."""
     if _is_super_admin and _is_super_admin():
         return True
     email = getattr(current_user, 'email', None) if current_user.is_authenticated else None
     return bool(email) and email.lower() in PROGRESS_ACCESS_EMAILS
+
+
+def can_whip():
+    """Whip screens: anyone who can see the matrix, plus role='whip'."""
+    return can_access_progress() or is_whip()
+
+
+def whip_required(f):
+    @wraps(f)
+    def wrapper(*a, **k):
+        if not current_user.is_authenticated:
+            flash("Please log in.", "warning")
+            return redirect(url_for('login'))
+        if not can_whip():
+            flash("You don't have access to this page.", "danger")
+            return redirect(url_for('index'))
+        return f(*a, **k)
+    return wrapper
 
 
 def progress_access_required(f):
@@ -127,12 +155,13 @@ def _dkey(d):
     return (d.lower(), 0)
 
 
-@progress_bp.route('/progress')
-@progress_access_required
-def progress():
-    conn = _get_db()
-    cur = conn.cursor()
-    try:
+def _build_rows(cur):
+    """Every filed 2026 R State Rep candidate with their derived signals.
+
+    Extracted from the /progress route so the whip screens work off exactly the
+    same data as the desktop matrix instead of a second, drifting copy.
+    """
+    if True:
         # Base roster: every filed 2026 R State Rep candidate, plus their asset columns.
         cur.execute("""
             SELECT f.candidate_id, f.first_name, f.last_name, f.district_code, f.filed_at,
@@ -283,17 +312,31 @@ def progress():
         rows.sort(key=lambda x: (_dkey(x['district']),
                                  x['name'].split()[-1].lower() if x['name'] else '',
                                  x['name'].lower()))
+        return rows
 
-        stats = {
-            'total': len(rows),
-            'website': sum(1 for r in rows if r['website']),
-            'donate': sum(1 for r in rows if r['donate']),
-            'portal': sum(1 for r in rows if r['portal']),
-            'fundraising': sum(1 for r in rows if r['fundraising']),
-            'videoshoot': sum(1 for r in rows if r['videoshoot']),
-            'behind': sum(1 for r in rows if r['falling_behind']),
-        }
-        return render_template('campaign_progress.html', rows=rows, stats=stats)
+
+def _stats_for(rows):
+    return {
+        'total': len(rows),
+        'website': sum(1 for r in rows if r['website']),
+        'donate': sum(1 for r in rows if r['donate']),
+        'portal': sum(1 for r in rows if r['portal']),
+        'fundraising': sum(1 for r in rows if r['fundraising']),
+        'videoshoot': sum(1 for r in rows if r['videoshoot']),
+        'behind': sum(1 for r in rows if r['falling_behind']),
+    }
+
+
+@progress_bp.route('/progress')
+@progress_access_required
+def progress():
+    """Desktop matrix. Unchanged - kept for Chris and leadership."""
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        rows = _build_rows(cur)
+        return render_template('campaign_progress.html', rows=rows,
+                               stats=_stats_for(rows))
     finally:
         cur.close()
         _release_db(conn)
@@ -333,6 +376,224 @@ def progress_update():
     except Exception as e:
         conn.rollback()
         return jsonify({'error': str(e)[:120]}), 500
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+# =====================================================================
+# Whip workflow — mobile-first. Three screens: my list, candidate, check-in.
+# =====================================================================
+
+METHODS = ['call', 'text', 'email', 'in_person', 'voicemail']
+ANSWERS = ['yes', 'not_yet', 'planning']
+NEEDS = ['walkbook', 'video', 'palm_cards', 'website', 'yard_signs', 'training', 'other']
+
+
+def _attach_whip_state(cur, rows):
+    """Merge assignment + last-contact onto the shared row set."""
+    cur.execute("""
+        SELECT candidate_id, assigned_whip, last_contact_at, next_followup_at, needs
+        FROM candidate_campaign_progress
+    """)
+    state = {r[0]: r for r in cur.fetchall()}
+    cur.execute("SELECT user_id, COALESCE(username, email) FROM users")
+    names = dict(cur.fetchall())
+    for d in rows:
+        st = state.get(d['candidate_id'])
+        d['assigned_whip'] = st[1] if st else None
+        d['assigned_name'] = names.get(st[1]) if st and st[1] else None
+        d['last_contact_at'] = st[2] if st else None
+        d['next_followup_at'] = st[3] if st else None
+        d['needs'] = list(st[4]) if st and st[4] else []
+    return rows
+
+
+def _gaps(d):
+    """The two or three things this candidate is missing — the call script."""
+    out = []
+    if not d.get('website'):    out.append('No website')
+    if not d.get('portal'):     out.append('Portal account not activated')
+    if not d.get('survey'):     out.append('Survey not returned')
+    if not d.get('walkbook'):   out.append('No walkbook requested')
+    if not d.get('photo'):      out.append('No photo')
+    if not d.get('donate'):     out.append('No donate link')
+    if not d.get('fundraising'): out.append('Fundraising not started')
+    if not d.get('canvassing_started'): out.append('Not door-knocking yet')
+    return out
+
+
+def _priority(d, uid):
+    """Lower sorts first. Chris's rule: if it isn't done, it's overdue —
+    so there is no grace period, only 'never talked to' before 'talked to'."""
+    mine = 0 if d.get('assigned_whip') == uid else 1
+    never = 0 if not d.get('last_contact_at') else 1
+    return (mine, never, -len(_gaps(d)), d.get('last_contact_at') or datetime.min)
+
+
+@progress_bp.route('/whip')
+@whip_required
+def whip_list():
+    """Screen A — my list first, then everyone else."""
+    uid = getattr(current_user, 'id', None)
+    try:
+        uid = int(uid)
+    except (TypeError, ValueError):
+        uid = None
+    view = request.args.get('view', 'mine')
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        rows = _attach_whip_state(cur, _build_rows(cur))
+        for d in rows:
+            d['gaps'] = _gaps(d)
+        rows.sort(key=lambda d: _priority(d, uid))
+        mine = [d for d in rows if d.get('assigned_whip') == uid]
+        if view == 'mine' and mine:
+            shown = mine
+        elif view == 'todo':
+            shown = [d for d in rows if not d.get('last_contact_at')]
+        else:
+            shown = rows
+        return render_template('whip_list.html', rows=shown, view=view,
+                               mine_count=len(mine), total=len(rows), uid=uid)
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+@progress_bp.route('/whip/c/<int:candidate_id>')
+@whip_required
+def whip_candidate(candidate_id):
+    """Screen B — one candidate, contact buttons, the ask, recent check-ins."""
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        rows = _attach_whip_state(cur, _build_rows(cur))
+        d = next((r for r in rows if r['candidate_id'] == candidate_id), None)
+        if not d:
+            flash("Candidate not found in the 2026 filed cohort.", "warning")
+            return redirect(url_for('progress.whip_list'))
+        d['gaps'] = _gaps(d)
+        cur.execute("""
+            SELECT contacted_at, contacted_by_name, method, reached, notes, needs
+            FROM campaign_checkins WHERE candidate_id = %s
+            ORDER BY contacted_at DESC LIMIT 10
+        """, (candidate_id,))
+        checkins = [{'at': r[0], 'by': r[1], 'method': r[2], 'reached': r[3],
+                     'notes': r[4], 'needs': list(r[5]) if r[5] else []}
+                    for r in cur.fetchall()]
+        cur.execute("SELECT phone1, phone2, email, email1 FROM candidates WHERE candidate_id=%s",
+                    (candidate_id,))
+        c = cur.fetchone() or (None, None, None, None)
+        contact = {'phone': c[0] or c[1], 'email': c[2] or c[3]}
+        return render_template('whip_candidate.html', d=d, checkins=checkins,
+                               contact=contact, methods=METHODS,
+                               answers=ANSWERS, needs_options=NEEDS)
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+@progress_bp.route('/whip/checkin', methods=['POST'])
+@whip_required
+def whip_checkin():
+    """Screen C — log a conversation. Milestones are captured here as a
+    by-product of the call, which is why the standalone checkboxes stayed empty."""
+    f = request.form
+    try:
+        cid = int(f.get('candidate_id') or 0)
+    except ValueError:
+        cid = 0
+    if not cid:
+        return jsonify({'ok': False, 'error': 'missing candidate'}), 400
+
+    method = f.get('method') if f.get('method') in METHODS else None
+    reached = f.get('reached') == 'yes'
+    notes = (f.get('notes') or '').strip() or None
+    needs = [n for n in f.getlist('needs') if n in NEEDS]
+    ans = {k: (f.get(k) if f.get(k) in ANSWERS else None)
+           for k in ('fundraising', 'canvassing', 'signs', 'training')}
+
+    uid = getattr(current_user, 'id', None)
+    try:
+        uid = int(uid)
+    except (TypeError, ValueError):
+        uid = None
+    uname = (getattr(current_user, 'username', None)
+             or getattr(current_user, 'email', None) or 'unknown')
+
+    followup = None
+    days = f.get('followup')
+    if days and days.isdigit():
+        followup = (datetime.utcnow() + timedelta(days=int(days))).date()
+
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO campaign_checkins
+                (candidate_id, contacted_by, contacted_by_name, method, reached,
+                 needs, notes, fundraising, canvassing, signs, training)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (cid, uid, uname, method, reached, needs or None, notes,
+              ans['fundraising'], ans['canvassing'], ans['signs'], ans['training']))
+
+        # Roll the answers up into current state. 'yes' sets the flag; a later
+        # 'not_yet' can clear it, so the tracker reflects the last thing we heard.
+        sets, vals = ["last_contact_at = now()"], []
+        for form_key, col in (('fundraising', 'fundraising_started'),
+                              ('canvassing', 'canvassing_started'),
+                              ('signs', 'signs_ordered'),
+                              ('training', 'training_attended')):
+            if ans[form_key] in ('yes', 'not_yet'):
+                sets.append(f"{col} = %s")
+                vals.append(ans[form_key] == 'yes')
+        if needs:
+            sets.append("needs = %s"); vals.append(needs)
+        if followup:
+            sets.append("next_followup_at = %s"); vals.append(followup)
+        sets.append("updated_by = %s"); vals.append(uname)
+        sets.append("updated_at = now()")
+
+        cur.execute(f"""
+            INSERT INTO candidate_campaign_progress (candidate_id, last_contact_at, updated_by)
+            VALUES (%s, now(), %s)
+            ON CONFLICT (candidate_id) DO UPDATE SET {', '.join(sets)}
+        """, [cid, uname] + vals)
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+@progress_bp.route('/whip/assign', methods=['POST'])
+@progress_access_required
+def whip_assign():
+    """Admin only — Chris assigns candidates to whips."""
+    f = request.form
+    try:
+        cid = int(f.get('candidate_id') or 0)
+    except ValueError:
+        cid = 0
+    whip = f.get('assigned_whip')
+    whip = int(whip) if (whip or '').isdigit() else None
+    if not cid:
+        return jsonify({'ok': False, 'error': 'missing candidate'}), 400
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO candidate_campaign_progress (candidate_id, assigned_whip)
+            VALUES (%s, %s)
+            ON CONFLICT (candidate_id) DO UPDATE SET assigned_whip = EXCLUDED.assigned_whip
+        """, (cid, whip))
+        conn.commit()
+        return jsonify({'ok': True})
     finally:
         cur.close()
         _release_db(conn)
