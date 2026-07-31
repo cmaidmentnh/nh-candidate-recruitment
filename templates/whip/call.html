@@ -1,0 +1,76 @@
+{% extends "whip/base.html" %}
+{% block title %}{{ d.name }}{% endblock %}
+{% block whip %}
+<a class="crumb" href="{{ url_for('whip.my_list') }}">&larr; My List</a>
+<div class="hd"><h1>{{ d.name }}</h1>
+  <div class="sub">{{ d.district }}{% if d.seats and d.seats>1 %} &middot; {{ d.seats }} seats{% endif %}
+    {% if d.rating %} &middot; <b>{{ d.rating|title }}</b>{% endif %}
+    {% if d.pvi is not none %} ({{ 'R+' if d.pvi>0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }}){% endif %}</div></div>
+
+<div class="acts">
+  {% if contact.phone %}<a class="act act-call" href="tel:{{ contact.phone }}">Call {{ contact.phone }}</a>
+    {% if d.phone1_type != 'landline' %}<a class="act act-text" href="sms:{{ contact.phone }}">Text</a>{% endif %}{% endif %}
+  {% if contact.email %}<a class="act act-mail" href="mailto:{{ contact.email }}">Email</a>{% endif %}
+</div>
+
+{% if not rnd %}<div class="card empty">No round is open.</div>{% else %}
+<form method="POST" action="{{ url_for('whip.answer', cid=d.candidate_id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% set a = d.answer or {} %}
+
+  {% for key, question, opts in questions %}
+  <div class="item {% if a.get(key) %}done{% else %}need{% endif %}" style="margin-bottom:12px;">
+    <div class="item-t" style="margin-bottom:9px;">{{ question }}</div>
+    <div class="chips">
+      {% for val, lbl in opts %}
+      <label class="chip"><input type="radio" name="{{ key }}" value="{{ val }}"
+        {% if a.get(key)==val %}checked{% endif %}><span>{{ lbl }}</span></label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="item {% if a.get('raised') %}done{% else %}need{% endif %}" style="margin-bottom:12px;">
+    <div class="item-t" style="margin-bottom:9px;">Roughly how much have they raised?</div>
+    <input type="text" name="raised" inputmode="numeric" placeholder="$0"
+      value="{{ '%.0f'|format(a.raised) if a.get('raised') else '' }}"
+      style="width:100%;padding:13px;border:1.5px solid var(--line);border-radius:11px;font-size:16px;">
+  </div>
+
+  <div class="item {% if a.get('needs') %}done{% else %}need{% endif %}" style="margin-bottom:12px;">
+    <div class="item-t" style="margin-bottom:9px;">What do they need from us?</div>
+    <div class="chips">
+      {% for val, lbl in needs %}
+      <label class="chip"><input type="checkbox" name="needs" value="{{ val }}"
+        {% if val in (a.get('needs') or []) %}checked{% endif %}><span>{{ lbl }}</span></label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="item" style="margin-bottom:14px;">
+    <div class="item-t" style="margin-bottom:9px;">Notes</div>
+    <textarea class="ta" name="notes" placeholder="Anything worth knowing…">{{ a.get('notes') or '' }}</textarea>
+  </div>
+
+  <button class="btn btn-red btn-wide" type="submit">
+    {% if a %}Update{% else %}Save{% endif %} &amp; next</button>
+</form>
+
+{% if a %}<div style="text-align:center;font-size:12.5px;color:var(--mute);margin-top:10px;">
+  Answered by {{ a.by }} on {{ a.at.strftime('%b %-d') }}</div>{% endif %}
+{% endif %}
+
+{% if history %}
+<div class="grp" style="margin-top:26px;">
+  <div class="grp-h" style="color:var(--mute)">Earlier rounds</div>
+  <div class="card">
+  {% for h in history %}
+    <div class="feed"><b>{{ h.round }}</b> —
+      {{ (h.campaigning or '?')|replace('_',' ') }}, {{ h.concern or '?' }}
+      <span class="when">· {{ h.by }} · {{ h.at.strftime('%b %-d') }}</span>
+      {% if h.notes %}<br>{{ h.notes }}{% endif %}</div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

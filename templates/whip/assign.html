@@ -40,8 +40,8 @@
     <input type="checkbox" name="cand" value="{{ d.candidate_id }}" style="margin-top:4px;width:20px;height:20px;flex:0 0 20px;">
     <span style="flex:1;">
       <span class="lrow-1"><span class="lrow-n">{{ d.name }}</span><span class="lrow-d">{{ d.district }}</span></span>
-      <span class="lrow-meta" style="display:block;">{{ d.n_have }}/{{ d.n_total }} collected
-        {% if d.assigned_name %} &middot; {{ d.assigned_name }}{% else %} &middot; <b>unassigned</b>{% endif %}</span>
+      <span class="lrow-meta" style="display:block;">{{ d.rating|title if d.rating else 'unrated' }}
+        {% if d.owner_name %} &middot; {{ d.owner_name }}{% else %} &middot; <b>unassigned</b>{% endif %}</span>
     </span>
   </label>
   {% else %}<div class="card empty">No candidates match.</div>{% endfor %}

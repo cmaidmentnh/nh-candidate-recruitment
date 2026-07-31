@@ -23,8 +23,8 @@
     <span class="lrow-d">{{ p.assigned }} assigned</span>
   </div>
   <div class="lrow-2">
-    <div class="minibar"><i style="width:{{ p.pct }}%"></i></div>
-    <span class="cnt">{{ p.contacted }} called</span>
+    <div class="minibar"><i style="width:{{ p.pct if p.pct is defined else 0 }}%"></i></div>
+    <span class="cnt">{{ p.done if p.done is defined else 0 }} done this round</span>
   </div>
   <div class="lrow-meta">{{ p.email }}
     {% if p.last_login %} &middot; last in {{ p.last_login.strftime('%b %-d') }}

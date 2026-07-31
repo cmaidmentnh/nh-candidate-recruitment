@@ -1,21 +1,17 @@
 {% extends "base.html" %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='whip.css') }}?v=3">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='whip.css') }}?v=5">{% endblock %}
 {% block content %}
 <div class="wk {% block wide %}{% endblock %}">
   <nav class="wknav">
-    <a href="{{ url_for('whip.dashboard') }}" class="{{ 'on' if request.endpoint=='whip.dashboard' }}">Overview</a>
-    <a href="{{ url_for('whip.board') }}" class="{{ 'on' if request.endpoint in ['whip.board','whip.candidate'] }}">Candidates</a>
+    <a href="{{ url_for('whip.my_list') }}" class="{{ 'on' if request.endpoint in ['whip.my_list','whip.candidate'] }}">My List</a>
     {% if can_admin_whip %}
+    <a href="{{ url_for('whip.results') }}" class="{{ 'on' if request.endpoint=='whip.results' }}">Results</a>
     <a href="{{ url_for('whip.assign') }}" class="{{ 'on' if request.endpoint=='whip.assign' }}">Assign</a>
     <a href="{{ url_for('whip.roster') }}" class="{{ 'on' if request.endpoint=='whip.roster' }}">Whips</a>
+    <a href="{{ url_for('whip.rounds') }}" class="{{ 'on' if request.endpoint=='whip.rounds' }}">Rounds</a>
     <a href="{{ url_for('whip.export') }}">Export</a>
     {% endif %}
   </nav>
   {% block whip %}{% endblock %}
 </div>
-<div class="toast" id="toast"></div>
-<script>
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;
-  t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200);}
-</script>
 {% endblock %}
