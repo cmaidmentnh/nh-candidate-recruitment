@@ -489,12 +489,15 @@ def whip_candidate(candidate_id):
             return redirect(url_for('progress.whip_list'))
         d['gaps'] = _gaps(d)
         cur.execute("""
-            SELECT contacted_at, contacted_by_name, method, reached, notes, needs
+            SELECT id, contacted_at, contacted_by_name, method, reached, notes,
+                   needs, contacted_by
             FROM campaign_checkins WHERE candidate_id = %s
             ORDER BY contacted_at DESC LIMIT 10
         """, (candidate_id,))
-        checkins = [{'at': r[0], 'by': r[1], 'method': r[2], 'reached': r[3],
-                     'notes': r[4], 'needs': list(r[5]) if r[5] else []}
+        checkins = [{'id': r[0], 'at': r[1], 'by': r[2], 'method': r[3],
+                     'reached': r[4], 'notes': r[5],
+                     'needs': list(r[6]) if r[6] else [],
+                     'can_edit': _may_edit_checkin(r[7])}
                     for r in cur.fetchall()]
         cur.execute("SELECT phone1, phone2, email, email1 FROM candidates WHERE candidate_id=%s",
                     (candidate_id,))
@@ -610,6 +613,132 @@ def whip_assign():
         """, (cid, whip))
         conn.commit()
         return jsonify({'ok': True})
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+def _may_edit_checkin(row_contacted_by):
+    """You can fix your own check-in; admins can fix anyone's."""
+    return can_access_progress() or (row_contacted_by is not None
+                                     and row_contacted_by == _uid())
+
+
+@progress_bp.route('/whip/checkin/<int:checkin_id>/edit', methods=['POST'])
+@whip_required
+def whip_checkin_edit(checkin_id):
+    """Correct a mis-tapped check-in. Without this a wrong chip is permanent,
+    which is enough on its own to stop people using the tool."""
+    f = request.form
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT candidate_id, contacted_by FROM campaign_checkins WHERE id=%s",
+                    (checkin_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'not found'}), 404
+        cid, by = row
+        if not _may_edit_checkin(by):
+            return jsonify({'ok': False, 'error': 'not yours'}), 403
+
+        sets, vals = [], []
+        if f.get('method') in METHODS:
+            sets.append("method = %s"); vals.append(f.get('method'))
+        if f.get('reached') in ('yes', 'no'):
+            sets.append("reached = %s"); vals.append(f.get('reached') == 'yes')
+        if 'notes' in f:
+            sets.append("notes = %s"); vals.append((f.get('notes') or '').strip() or None)
+        if not sets:
+            return jsonify({'ok': True})
+        cur.execute(f"UPDATE campaign_checkins SET {', '.join(sets)} WHERE id=%s",
+                    vals + [checkin_id])
+        conn.commit()
+        return jsonify({'ok': True})
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+@progress_bp.route('/whip/checkin/<int:checkin_id>/delete', methods=['POST'])
+@whip_required
+def whip_checkin_delete(checkin_id):
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT candidate_id, contacted_by FROM campaign_checkins WHERE id=%s",
+                    (checkin_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'not found'}), 404
+        cid, by = row
+        if not _may_edit_checkin(by):
+            return jsonify({'ok': False, 'error': 'not yours'}), 403
+
+        cur.execute("DELETE FROM campaign_checkins WHERE id=%s", (checkin_id,))
+        # last_contact_at must fall back to the newest surviving check-in, or
+        # clear entirely if that was the only one - otherwise a deleted entry
+        # leaves the candidate looking contacted.
+        cur.execute("""
+            UPDATE candidate_campaign_progress SET last_contact_at =
+                (SELECT MAX(contacted_at) FROM campaign_checkins WHERE candidate_id=%s)
+            WHERE candidate_id=%s
+        """, (cid, cid))
+        conn.commit()
+        return jsonify({'ok': True})
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+@progress_bp.route('/whip/dashboard')
+@whip_required
+def whip_dashboard():
+    """Coverage at a glance: how much of the field has been worked, by whom."""
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        rows = _attach_whip_state(cur, _build_rows(cur))
+        for d in rows:
+            d['gaps'] = _gaps(d)
+        total = len(rows)
+        contacted = sum(1 for d in rows if d['last_contact_at'])
+        assigned = sum(1 for d in rows if d['assigned_whip'])
+        behind = sum(1 for d in rows if d['falling_behind'])
+
+        cur.execute("""
+            SELECT COALESCE(u.username, u.email, 'unassigned') AS who,
+                   COUNT(*) AS assigned,
+                   COUNT(p.last_contact_at) AS contacted
+            FROM candidate_campaign_progress p
+            LEFT JOIN users u ON u.user_id = p.assigned_whip
+            WHERE p.assigned_whip IS NOT NULL
+            GROUP BY 1 ORDER BY 2 DESC
+        """)
+        per_whip = [{'who': r[0], 'assigned': r[1], 'contacted': r[2],
+                     'pct': int(round(100 * r[2] / r[1])) if r[1] else 0}
+                    for r in cur.fetchall()]
+
+        cur.execute("""
+            SELECT c.contacted_at, c.contacted_by_name, c.method, c.reached,
+                   cand.first_name, cand.last_name
+            FROM campaign_checkins c
+            JOIN candidates cand ON cand.candidate_id = c.candidate_id
+            ORDER BY c.contacted_at DESC LIMIT 15
+        """)
+        recent = [{'at': r[0], 'by': r[1], 'method': r[2], 'reached': r[3],
+                   'name': f"{r[4]} {r[5]}".strip()} for r in cur.fetchall()]
+
+        cur.execute("SELECT COUNT(*) FROM campaign_checkins")
+        checkins = cur.fetchone()[0]
+
+        stats = {'total': total, 'contacted': contacted,
+                 'never': total - contacted, 'assigned': assigned,
+                 'unassigned': total - assigned, 'behind': behind,
+                 'checkins': checkins,
+                 'pct': int(round(100 * contacted / total)) if total else 0}
+        return render_template('whip_dashboard.html', stats=stats,
+                               per_whip=per_whip, recent=recent)
     finally:
         cur.close()
         _release_db(conn)

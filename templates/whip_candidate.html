@@ -35,6 +35,9 @@ textarea { width:100%; min-height:80px; padding:10px; border:1px solid #d5d7db; 
 .wc-save button { width:100%; padding:16px; font-size:17px; font-weight:700; border:0;
                   border-radius:10px; background:#b52b18; color:#fff; }
 .wc-save button:disabled { background:#9aa0a6; }
+.ci-actions { margin-top:6px; display:flex; gap:14px; }
+.lnk { background:none; border:0; padding:0; font-size:13px; color:#183e91; text-decoration:underline; }
+.lnk.danger { color:#b52b18; }
 .hist { font-size:13px; color:#5a6068; border-top:1px solid #eee; padding-top:8px; margin-top:8px; }
 </style>
 {% endblock %}
@@ -138,13 +141,19 @@ textarea { width:100%; min-height:80px; padding:10px; border:1px solid #d5d7db; 
   <div class="wc-sec">
     <h3>Recent check-ins</h3>
     {% for c in checkins %}
-    <div class="hist">
+    <div class="hist" id="ci-{{ c.id }}">
       <strong>{{ c.at.strftime('%b %-d') }}</strong>
       &middot; {{ (c.method or '').replace('_',' ')|title }}
       &middot; {% if c.reached %}reached{% else %}no answer{% endif %}
       {% if c.by %} &middot; {{ c.by }}{% endif %}
       {% if c.needs %}<br>Needs: {{ c.needs|join(', ') }}{% endif %}
-      {% if c.notes %}<br>{{ c.notes }}{% endif %}
+      {% if c.notes %}<br><span class="ci-notes">{{ c.notes }}</span>{% endif %}
+      {% if c.can_edit %}
+      <div class="ci-actions">
+        <button type="button" class="lnk" onclick="editNote({{ c.id }})">Edit note</button>
+        <button type="button" class="lnk danger" onclick="delCheckin({{ c.id }})">Delete</button>
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
@@ -167,5 +176,27 @@ document.getElementById('save').addEventListener('click', async function () {
     btn.disabled = false; btn.textContent = 'Save check-in'; alert('Could not save: ' + e);
   }
 });
+
+async function post(url, body) {
+  const r = await fetch(url, {method:'POST', body: body,
+                              headers: {'X-CSRFToken': '{{ csrf_token() }}'}});
+  return r.json();
+}
+async function delCheckin(id) {
+  if (!confirm('Delete this check-in?')) return;
+  const j = await post('/whip/checkin/' + id + '/delete', new FormData());
+  if (j.ok) { document.getElementById('ci-' + id).remove(); }
+  else { alert('Could not delete: ' + (j.error || 'unknown')); }
+}
+async function editNote(id) {
+  const el = document.querySelector('#ci-' + id + ' .ci-notes');
+  const cur = el ? el.textContent.trim() : '';
+  const next = prompt('Edit the note', cur);
+  if (next === null) return;
+  const fd = new FormData(); fd.append('notes', next);
+  const j = await post('/whip/checkin/' + id + '/edit', fd);
+  if (j.ok) { window.location.reload(); }
+  else { alert('Could not save: ' + (j.error || 'unknown')); }
+}
 </script>
 {% endblock %}

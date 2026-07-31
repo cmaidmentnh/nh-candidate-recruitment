@@ -42,7 +42,8 @@
 <div class="wl-wrap">
   <div class="wl-head">
     <h1>Check-ins</h1>
-    <span class="wl-sub">{{ rows|length }} shown</span>
+    <span class="wl-sub">{{ rows|length }} shown &middot;
+      <a href="{{ url_for('progress.whip_dashboard') }}">Dashboard</a></span>
   </div>
 
   <div class="wl-tabs">
