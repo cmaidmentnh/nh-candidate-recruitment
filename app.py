@@ -1489,12 +1489,17 @@ def login():
         cur = conn.cursor()
 
         # Check candidates table first
+        # The form field is called "email" but accepts an email OR a username.
+        # An exact email match is preferred so a username can never shadow
+        # somebody else's address.
         cur.execute("""
             SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url,
                    COALESCE(totp_enabled, FALSE) as totp_enabled
             FROM candidates
-            WHERE LOWER(email) = %s OR LOWER(email1) = %s
-        """, (email, email))
+            WHERE LOWER(email) = %s OR LOWER(email1) = %s OR LOWER(username) = %s
+            ORDER BY (LOWER(email) = %s OR LOWER(email1) = %s) DESC
+            LIMIT 1
+        """, (email, email, email, email, email))
         user_row = cur.fetchone()
 
         if user_row:
@@ -1526,8 +1531,10 @@ def login():
             SELECT user_id, username, email, password_hash, role,
                    COALESCE(totp_enabled, FALSE) as totp_enabled
             FROM users
-            WHERE LOWER(email) = %s
-        """, (email,))
+            WHERE LOWER(email) = %s OR LOWER(username) = %s
+            ORDER BY (LOWER(email) = %s) DESC
+            LIMIT 1
+        """, (email, email, email))
         admin_row = cur.fetchone()
         cur.close()
         release_db_connection(conn)
@@ -1550,7 +1557,7 @@ def login():
             next_page = request.args.get('next')
             return redirect(get_safe_redirect(next_page, 'index'))
 
-        flash("Invalid email or password.", "danger")
+        flash("Invalid email/username or password.", "danger")
     return render_template("login.html")
 
 @app.route('/logout')

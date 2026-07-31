@@ -12,8 +12,8 @@
         <form method="POST" action="{{ url_for('login', next=request.args.get('next', '')) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
           <div class="form-group">
-            <label style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d;">Email</label>
-            <input type="email" name="email" class="form-control" placeholder="you@example.com"
+            <label style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d;">Email or Username</label>
+            <input type="email" name="email" class="form-control" placeholder="you@example.com or username"
                    required autofocus
                    autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false"
                    inputmode="email"
