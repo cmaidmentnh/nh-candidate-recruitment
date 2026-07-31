@@ -390,6 +390,23 @@ ANSWERS = ['yes', 'not_yet', 'planning']
 NEEDS = ['walkbook', 'video', 'palm_cards', 'website', 'yard_signs', 'training', 'other']
 
 
+def _uid():
+    """The integer users.user_id for the signed-in admin/whip.
+
+    AdminUser.id is the flask-login key "u_12", not an integer - int() on it
+    throws, which would have left every whip's assigned list silently empty.
+    The real column is exposed as .user_id.
+    """
+    uid = getattr(current_user, 'user_id', None)
+    if uid is None:
+        raw = str(getattr(current_user, 'id', '') or '')
+        uid = raw[2:] if raw.startswith('u_') else raw
+    try:
+        return int(uid)
+    except (TypeError, ValueError):
+        return None
+
+
 def _attach_whip_state(cur, rows):
     """Merge assignment + last-contact onto the shared row set."""
     cur.execute("""
@@ -435,11 +452,7 @@ def _priority(d, uid):
 @whip_required
 def whip_list():
     """Screen A — my list first, then everyone else."""
-    uid = getattr(current_user, 'id', None)
-    try:
-        uid = int(uid)
-    except (TypeError, ValueError):
-        uid = None
+    uid = _uid()
     view = request.args.get('view', 'mine')
     conn = _get_db()
     cur = conn.cursor()
@@ -515,11 +528,7 @@ def whip_checkin():
     ans = {k: (f.get(k) if f.get(k) in ANSWERS else None)
            for k in ('fundraising', 'canvassing', 'signs', 'training')}
 
-    uid = getattr(current_user, 'id', None)
-    try:
-        uid = int(uid)
-    except (TypeError, ValueError):
-        uid = None
+    uid = _uid()
     uname = (getattr(current_user, 'username', None)
              or getattr(current_user, 'email', None) or 'unknown')
 
