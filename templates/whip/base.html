@@ -9,7 +9,6 @@
     <a href="{{ url_for('whip.assign') }}" class="{{ 'on' if request.endpoint=='whip.assign' }}">Assign</a>
     <a href="{{ url_for('whip.roster') }}" class="{{ 'on' if request.endpoint=='whip.roster' }}">Whips</a>
     <a href="{{ url_for('whip.rounds') }}" class="{{ 'on' if request.endpoint=='whip.rounds' }}">Rounds</a>
-    <a href="{{ url_for('whip.export') }}">Export</a>
     {% endif %}
   </nav>
   {% block whip %}{% endblock %}
