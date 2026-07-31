@@ -1,0 +1,50 @@
+{% extends "whip/base.html" %}
+{% block title %}Assign{% endblock %}
+{% block wide %}wk-wide{% endblock %}
+{% block whip %}
+<div class="hd"><h1>Assign</h1><div class="sub">Pick candidates, choose a whip, assign in one go</div></div>
+
+<form method="get" class="card" style="margin-bottom:16px;">
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="fld" style="margin:0;"><label>County</label>
+      <select name="county" onchange="this.form.submit()">
+        <option value="">All counties</option>
+        {% for c in counties %}<option value="{{ c }}" {% if county==c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select></div>
+    <div class="fld" style="margin:0;"><label>Currently</label>
+      <select name="owner" onchange="this.form.submit()">
+        <option value="">Anyone</option>
+        <option value="none" {% if owner=='none' %}selected{% endif %}>Unassigned</option>
+        {% for w in whips %}<option value="{{ w.user_id }}" {% if owner==w.user_id|string %}selected{% endif %}>{{ w.name }}</option>{% endfor %}
+      </select></div>
+  </div>
+</form>
+
+<form method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="county" value="{{ county }}">
+  <input type="hidden" name="owner" value="{{ owner }}">
+
+  <div class="card" style="position:sticky;top:8px;z-index:5;display:flex;gap:10px;align-items:center;margin-bottom:14px;">
+    <label style="font-size:14px;font-weight:700;white-space:nowrap;">
+      <input type="checkbox" onclick="all(this)"> All {{ rows|length }}</label>
+    <select name="assigned_whip" style="flex:1;padding:11px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;">
+      <option value="">— unassign —</option>
+      {% for w in whips %}<option value="{{ w.user_id }}">{{ w.name }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-navy" type="submit">Assign</button>
+  </div>
+
+  {% for d in rows %}
+  <label class="lrow" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer;">
+    <input type="checkbox" name="cand" value="{{ d.candidate_id }}" style="margin-top:4px;width:20px;height:20px;flex:0 0 20px;">
+    <span style="flex:1;">
+      <span class="lrow-1"><span class="lrow-n">{{ d.name }}</span><span class="lrow-d">{{ d.district }}</span></span>
+      <span class="lrow-meta" style="display:block;">{{ d.n_have }}/{{ d.n_total }} collected
+        {% if d.assigned_name %} &middot; {{ d.assigned_name }}{% else %} &middot; <b>unassigned</b>{% endif %}</span>
+    </span>
+  </label>
+  {% else %}<div class="card empty">No candidates match.</div>{% endfor %}
+</form>
+<script>function all(cb){document.querySelectorAll('input[name=cand]').forEach(x=>x.checked=cb.checked);}</script>
+{% endblock %}

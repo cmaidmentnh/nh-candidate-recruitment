@@ -1,0 +1,32 @@
+{% extends "whip/base.html" %}
+{% block title %}Candidates{% endblock %}
+{% block whip %}
+<div class="hd"><h1>Candidates</h1><div class="sub">{{ rows|length }} shown &middot; emptiest records first</div></div>
+
+<form method="get" style="margin-bottom:14px;">
+  <div class="chips" style="margin-bottom:10px;">
+    {% for k,l in [('mine','Mine ('~mine_n~')'),('never','Never called'),('empty','Most missing'),('all','Everyone')] %}
+    <label class="chip"><input type="radio" name="view" value="{{ k }}" {% if view==k %}checked{% endif %}
+      onchange="this.form.submit()"><span>{{ l }}</span></label>{% endfor %}
+  </div>
+  <input type="search" name="q" value="{{ q }}" placeholder="Search name or district"
+    style="width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;font-size:16px;">
+</form>
+
+{% for d in rows %}
+<a class="lrow {% if not d.last_contact_at %}hot{% elif d.missing %}warm{% else %}cool{% endif %}"
+   href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">
+  <div class="lrow-1"><span class="lrow-n">{{ d.name }}</span><span class="lrow-d">{{ d.district }}</span></div>
+  <div class="lrow-2">
+    <div class="minibar"><i style="width:{{ d.pct }}%"></i></div>
+    <span class="cnt">{{ d.n_have }}/{{ d.n_total }}</span>
+  </div>
+  <div class="lrow-meta">
+    {% if d.missing %}Missing: {{ d.missing[:4]|map('replace','_',' ')|join(', ') }}{% if d.missing|length>4 %} +{{ d.missing|length-4 }}{% endif %}
+    {% else %}<span style="color:var(--green);font-weight:700;">Everything collected</span>{% endif %}
+    {% if not d.last_contact_at %} &middot; <b>never called</b>{% endif %}
+    {% if d.assigned_name %} &middot; {{ d.assigned_name }}{% endif %}
+  </div>
+</a>
+{% else %}<div class="card empty">Nothing here.</div>{% endfor %}
+{% endblock %}

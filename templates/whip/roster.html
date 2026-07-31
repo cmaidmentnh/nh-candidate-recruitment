@@ -1,0 +1,41 @@
+{% extends "whip/base.html" %}
+{% block title %}Whips{% endblock %}
+{% block whip %}
+<div class="hd"><h1>Whips</h1><div class="sub">Who is working the list</div></div>
+
+<form class="card" method="POST" action="{{ url_for('whip.roster_add') }}" style="margin-bottom:22px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="fld"><label>Add a whip</label>
+    <input type="email" name="email" required placeholder="them@example.com"></div>
+  <div class="fld"><label>Username <span style="font-weight:400;color:var(--mute)">(optional)</span></label>
+    <input type="text" name="username" placeholder="defaults to the email prefix"></div>
+  <button class="btn btn-navy btn-wide" type="submit">Add whip</button>
+  <div style="font-size:12.5px;color:var(--mute);margin-top:9px;">
+    If they already have an account they're switched to the whip role.
+    Otherwise we create one and email them a setup link.</div>
+</form>
+
+{% for p in people %}
+<div class="lrow {{ 'cool' if p.assigned else '' }}" style="cursor:default;">
+  <div class="lrow-1">
+    <span class="lrow-n">{{ p.username or p.email }}
+      <span class="pill {{ 'pill-green' if p.role=='whip' else 'pill-grey' }}">{{ p.role }}</span></span>
+    <span class="lrow-d">{{ p.assigned }} assigned</span>
+  </div>
+  <div class="lrow-2">
+    <div class="minibar"><i style="width:{{ p.pct }}%"></i></div>
+    <span class="cnt">{{ p.contacted }} called</span>
+  </div>
+  <div class="lrow-meta">{{ p.email }}
+    {% if p.last_login %} &middot; last in {{ p.last_login.strftime('%b %-d') }}
+    {% else %} &middot; <b>never logged in</b>{% endif %}
+    {% if p.role=='whip' %}
+    <form method="POST" action="{{ url_for('whip.roster_remove', user_id=p.user_id) }}"
+      style="display:inline" onsubmit="return confirm('Remove whip role?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button style="background:none;border:0;color:var(--red);font-size:12px;text-decoration:underline;">remove</button>
+    </form>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends "whip/base.html" %}
+{% block title %}{{ d.name }}{% endblock %}
+{% block whip %}
+<a class="crumb" href="{{ url_for('whip.board') }}">&larr; Candidates</a>
+<div class="hd"><h1>{{ d.name }}</h1>
+  <div class="sub">{{ d.district }}{% if d.assigned_name %} &middot; {{ d.assigned_name }}{% endif %}
+    {% if d.last_contact_at %} &middot; last called {{ d.last_contact_at.strftime('%b %-d') }}
+    {% else %} &middot; never called{% endif %}</div></div>
+
+<div class="prog">
+  <div class="ring">
+    <svg width="64" height="64"><circle class="bg" cx="32" cy="32" r="27" fill="none" stroke-width="7"/>
+      <circle class="fg" id="ring" cx="32" cy="32" r="27" fill="none" stroke-width="7"
+        stroke-dasharray="169.6" stroke-dashoffset="{{ 169.6*(1-d.pct/100) }}"/></svg>
+    <b id="ringn">{{ d.n_have }}/{{ d.n_total }}</b></div>
+  <div class="txt">Collected <b id="pctn">{{ d.pct }}%</b> of what we need.<br>
+    {% if need %}Ask about the {{ need|length }} below.{% else %}Nothing left to collect.{% endif %}</div>
+</div>
+
+<div class="acts">
+  {% if contact.phone %}<a class="act act-call" href="tel:{{ contact.phone }}">Call</a>
+    {% if d.phone1_type != 'landline' %}<a class="act act-text" href="sms:{{ contact.phone }}">Text</a>{% endif %}{% endif %}
+  {% if contact.email %}<a class="act act-mail" href="mailto:{{ contact.email }}">Email</a>{% endif %}
+</div>
+
+{% if need %}
+<div class="grp grp-need">
+  <div class="grp-h">Still needed <span class="n">{{ need|length }}</span></div>
+  {% for i in need %}
+  <div class="item need" id="it-{{ i.key }}">
+    <div class="item-h"><span class="item-t">{{ i.label }}</span></div>
+    <div class="item-hint">{{ i.hint }}</div>
+    {% if i.kind == 'photo' %}
+      <div class="filewrap">
+        <label class="filebtn" for="f-{{ i.key }}">Choose a photo…</label>
+        <input type="file" id="f-{{ i.key }}" accept="image/*" onchange="upload('{{ d.candidate_id }}','{{ i.key }}',this)">
+      </div>
+    {% elif i.kind == 'text' %}
+      <textarea class="ta" id="v-{{ i.key }}" placeholder="A sentence or two…"></textarea>
+      <button class="save btn-wide" style="margin-top:9px;" onclick="save('{{ d.candidate_id }}','{{ i.key }}',this)">Save</button>
+    {% else %}
+      <div class="row">
+        <input id="v-{{ i.key }}"
+          type="{{ 'url' if i.kind=='url' else 'tel' if i.kind=='tel' else 'text' }}"
+          inputmode="{{ 'numeric' if i.kind in ['number','money'] else 'url' if i.kind=='url' else 'text' }}"
+          placeholder="{{ '$0' if i.kind=='money' else '0' if i.kind=='number' else 'https://…' if i.kind=='url' else '' }}"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.click();}">
+        <button class="save" onclick="save('{{ d.candidate_id }}','{{ i.key }}',this)">Save</button>
+      </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if have %}
+<div class="grp grp-done">
+  <div class="grp-h">Collected <span class="n">{{ have|length }}</span></div>
+  {% for i in have %}
+  <div class="item done">
+    <div class="item-h"><span class="tick">&#10003;</span><span class="item-t">{{ i.label }}</span></div>
+    <div class="val">{% if i.kind=='url' %}<a href="{{ i.value }}" target="_blank" rel="noopener">{{ i.value }}</a>
+      {% elif i.kind=='money' %}${{ '{:,.0f}'.format(i.value) }}
+      {% else %}{{ i.value }}{% endif %}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="grp">
+  <div class="grp-h" style="color:var(--mute)">Log the call</div>
+  <form class="card" method="POST" action="{{ url_for('whip.log_call', cid=d.candidate_id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="fld"><label>How</label><div class="chips">
+      {% for m in methods %}<label class="chip"><input type="radio" name="method" value="{{ m }}"
+        {% if loop.first %}checked{% endif %}><span>{{ m.replace('_',' ')|title }}</span></label>{% endfor %}
+    </div></div>
+    <div class="fld"><label>Reached them?</label><div class="chips">
+      <label class="chip"><input type="radio" name="reached" value="yes" checked><span>Yes</span></label>
+      <label class="chip"><input type="radio" name="reached" value="no"><span>No</span></label>
+    </div></div>
+    <div class="fld"><label>Notes</label><textarea class="ta" name="notes" placeholder="What did they say?"></textarea></div>
+    <button class="btn btn-navy btn-wide" type="submit">Log it</button>
+  </form>
+</div>
+
+{% if log %}
+<div class="grp">
+  <div class="grp-h" style="color:var(--mute)">History</div>
+  <div class="card">
+  {% for c in log %}
+    <div class="feed"><b>{{ c.at.strftime('%b %-d') }}</b> — {{ (c.method or '')|replace('_',' ') }},
+      {% if c.reached %}reached{% else %}no answer{% endif %}
+      <span class="when">· {{ c.by }}</span>
+      {% if c.notes %}<br>{{ c.notes }}{% endif %}
+      {% if c.mine %}
+      <form method="POST" action="{{ url_for('whip.log_delete', log_id=c.id) }}" style="display:inline"
+        onsubmit="return confirm('Delete this?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button style="background:none;border:0;color:var(--red);font-size:12px;padding:2px 0;text-decoration:underline;">delete</button></form>
+      {% endif %}</div>
+  {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if can_admin_whip %}
+<div class="grp">
+  <div class="grp-h" style="color:var(--mute)">Assignment</div>
+  <form class="card" method="POST" action="{{ url_for('whip.assign') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="cand" value="{{ d.candidate_id }}">
+    <div class="fld"><select name="assigned_whip">
+      <option value="">— unassigned —</option>
+      {% for w in whips %}<option value="{{ w.user_id }}" {% if d.assigned_whip==w.user_id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}
+    </select></div>
+    <button class="btn btn-out btn-wide" type="submit">Save assignment</button>
+  </form>
+</div>
+{% endif %}
+
+<script>
+const CSRF='{{ csrf_token() }}';
+async function post(url, fd){ fd.append('csrf_token',CSRF);
+  const r=await fetch(url,{method:'POST',body:fd,headers:{'X-CSRFToken':CSRF}}); return r.json(); }
+function done(key){
+  const el=document.getElementById('it-'+key); if(el) el.remove();
+  const n=document.getElementById('ringn'); let [a,b]=n.textContent.split('/').map(Number);
+  a++; n.textContent=a+'/'+b; const p=Math.round(100*a/b);
+  document.getElementById('pctn').textContent=p+'%';
+  document.getElementById('ring').setAttribute('stroke-dashoffset', 169.6*(1-p/100));
+  toast('Saved');
+}
+async function save(cid,key,btn){
+  const inp=document.getElementById('v-'+key); const v=(inp.value||'').trim();
+  if(!v){ inp.focus(); return; }
+  btn.disabled=true; btn.textContent='…';
+  const fd=new FormData(); fd.append('key',key); fd.append('value',v);
+  const j=await post('/whip/c/'+cid+'/collect',fd);
+  if(j.ok){ done(key); } else { btn.disabled=false; btn.textContent='Save'; toast(j.error||'Failed'); }
+}
+async function upload(cid,key,input){
+  if(!input.files.length) return;
+  const lab=input.previousElementSibling; lab.textContent='Uploading…';
+  const fd=new FormData(); fd.append('key',key); fd.append('file',input.files[0]);
+  const j=await post('/whip/c/'+cid+'/collect',fd);
+  if(j.ok){ done(key); } else { lab.textContent='Choose a photo…'; toast(j.error||'Upload failed'); }
+}
+</script>
+{% endblock %}
