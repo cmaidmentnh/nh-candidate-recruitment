@@ -40,6 +40,7 @@
                 <select name="role" class="form-control">
                     <option value="admin" {% if user[3] == 'admin' %}selected{% endif %}>Admin</option>
                     <option value="staff" {% if user[3] == 'staff' %}selected{% endif %}>Staff</option>
+                    <option value="whip" {% if user[3] == 'whip' %}selected{% endif %}>Whip &mdash; check-ins only</option>
                 </select>
             </div>
         {% endif %}

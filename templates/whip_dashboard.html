@@ -91,6 +91,10 @@ table.wd td.r { text-align:right; }
 
   <p style="margin-top:22px;">
     <a href="{{ url_for('progress.whip_list') }}">&larr; Back to check-ins</a>
+    {% if can_access_progress %}
+    &nbsp;&middot;&nbsp;
+    <a href="{{ url_for('progress.whip_export') }}">Export check-ins (CSV)</a>
+    {% endif %}
   </p>
 </div>
 {% endblock %}

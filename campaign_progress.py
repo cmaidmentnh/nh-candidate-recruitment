@@ -742,3 +742,37 @@ def whip_dashboard():
     finally:
         cur.close()
         _release_db(conn)
+
+
+@progress_bp.route('/whip/export.csv')
+@progress_access_required
+def whip_export():
+    """Everything a whip has recorded, as CSV. Admin only."""
+    import csv as _csv, io
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT cand.first_name, cand.last_name, f.district_code,
+                   k.contacted_at, k.contacted_by_name, k.method, k.reached,
+                   k.fundraising, k.canvassing, k.signs, k.training,
+                   array_to_string(k.needs, '; '), k.notes
+            FROM campaign_checkins k
+            JOIN candidates cand ON cand.candidate_id = k.candidate_id
+            LEFT JOIN filings f ON f.candidate_id = k.candidate_id
+                 AND f.election_year = 2026 AND f.office = 'State Representative'
+            ORDER BY k.contacted_at DESC
+        """)
+        buf = io.StringIO()
+        w = _csv.writer(buf)
+        w.writerow(['first_name', 'last_name', 'district', 'contacted_at',
+                    'contacted_by', 'method', 'reached', 'fundraising',
+                    'canvassing', 'signs', 'training', 'needs', 'notes'])
+        for r in cur.fetchall():
+            w.writerow(r)
+        from flask import Response
+        return Response(buf.getvalue(), mimetype='text/csv', headers={
+            'Content-Disposition': 'attachment; filename=whip_checkins.csv'})
+    finally:
+        cur.close()
+        _release_db(conn)
