@@ -407,6 +407,13 @@ def _uid():
         return None
 
 
+def _whips(cur):
+    """Accounts that can be assigned candidates: whips and admins."""
+    cur.execute("""SELECT user_id, COALESCE(username, email) FROM users
+                   WHERE role IN ('whip','admin') ORDER BY 2""")
+    return [{'user_id': r[0], 'name': r[1]} for r in cur.fetchall()]
+
+
 def _attach_whip_state(cur, rows):
     """Merge assignment + last-contact onto the shared row set."""
     cur.execute("""
@@ -453,7 +460,7 @@ def _priority(d, uid):
 def whip_list():
     """Screen A — my list first, then everyone else."""
     uid = _uid()
-    view = request.args.get('view', 'mine')
+    view = request.args.get('view', 'need')
     conn = _get_db()
     cur = conn.cursor()
     try:
@@ -462,10 +469,12 @@ def whip_list():
             d['gaps'] = _gaps(d)
         rows.sort(key=lambda d: _priority(d, uid))
         mine = [d for d in rows if d.get('assigned_whip') == uid]
-        if view == 'mine' and mine:
+        if view == 'mine':
             shown = mine
-        elif view == 'todo':
+        elif view == 'never':
             shown = [d for d in rows if not d.get('last_contact_at')]
+        elif view == 'need':
+            shown = [d for d in rows if not d.get('last_contact_at') or d['gaps']]
         else:
             shown = rows
         return render_template('whip_list.html', rows=shown, view=view,
@@ -505,7 +514,8 @@ def whip_candidate(candidate_id):
         contact = {'phone': c[0] or c[1], 'email': c[2] or c[3]}
         return render_template('whip_candidate.html', d=d, checkins=checkins,
                                contact=contact, methods=METHODS,
-                               answers=ANSWERS, needs_options=NEEDS)
+                               answers=ANSWERS, needs_options=NEEDS,
+                               whips=_whips(cur))
     finally:
         cur.close()
         _release_db(conn)
@@ -581,10 +591,12 @@ def whip_checkin():
             ON CONFLICT (candidate_id) DO UPDATE SET {updates}
         """, vals)
         conn.commit()
-        return jsonify({'ok': True})
+        flash("Check-in saved.", "success")
+        return redirect(url_for('progress.whip_candidate', candidate_id=cid))
     except Exception as e:
         conn.rollback()
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        flash(f"Could not save the check-in: {e}", "danger")
+        return redirect(url_for('progress.whip_candidate', candidate_id=cid))
     finally:
         cur.close()
         _release_db(conn)
@@ -612,7 +624,8 @@ def whip_assign():
             ON CONFLICT (candidate_id) DO UPDATE SET assigned_whip = EXCLUDED.assigned_whip
         """, (cid, whip))
         conn.commit()
-        return jsonify({'ok': True})
+        flash("Assignment saved.", "success")
+        return redirect(url_for('progress.whip_candidate', candidate_id=cid))
     finally:
         cur.close()
         _release_db(conn)
@@ -685,7 +698,8 @@ def whip_checkin_delete(checkin_id):
             WHERE candidate_id=%s
         """, (cid, cid))
         conn.commit()
-        return jsonify({'ok': True})
+        flash("Check-in deleted.", "success")
+        return redirect(url_for('progress.whip_candidate', candidate_id=cid))
     finally:
         cur.close()
         _release_db(conn)
@@ -776,3 +790,99 @@ def whip_export():
     finally:
         cur.close()
         _release_db(conn)
+
+
+@progress_bp.route('/whip/mine')
+@whip_required
+def whip_mine():
+    """Just your assignments, with your own completion bar."""
+    uid = _uid()
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        rows = _attach_whip_state(cur, _build_rows(cur))
+        rows = [d for d in rows if d.get('assigned_whip') == uid]
+        for d in rows:
+            d['gaps'] = _gaps(d)
+        rows.sort(key=lambda d: _priority(d, uid))
+        done = sum(1 for d in rows if d['last_contact_at'])
+        pct = int(round(100 * done / len(rows))) if rows else 0
+        return render_template('whip_mine.html', rows=rows, done=done, pct=pct)
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+@progress_bp.route('/whip/tasks')
+@whip_required
+def whip_tasks():
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT t.id, t.title, t.due_date, t.done, t.done_at,
+                   COALESCE(u.username, u.email),
+                   CASE WHEN c.candidate_id IS NULL THEN NULL
+                        ELSE c.first_name || ' ' || c.last_name END
+            FROM whip_tasks t
+            LEFT JOIN users u ON u.user_id = t.assigned_to
+            LEFT JOIN candidates c ON c.candidate_id = t.candidate_id
+            ORDER BY t.done, COALESCE(t.due_date, '2099-12-31'), t.created_at DESC
+        """)
+        all_t = [{'id': r[0], 'title': r[1], 'due_date': r[2], 'done': r[3],
+                  'done_at': r[4], 'assigned_name': r[5], 'cand_name': r[6]}
+                 for r in cur.fetchall()]
+        return render_template('whip_tasks.html',
+                               open_tasks=[t for t in all_t if not t['done']],
+                               done_tasks=[t for t in all_t if t['done']],
+                               whips=_whips(cur))
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
+@progress_bp.route('/whip/tasks/new', methods=['POST'])
+@whip_required
+def whip_task_new():
+    f = request.form
+    title = (f.get('title') or '').strip()
+    if not title:
+        flash("A task needs a title.", "warning")
+        return redirect(url_for('progress.whip_tasks'))
+    assigned = f.get('assigned_to')
+    assigned = int(assigned) if (assigned or '').isdigit() else None
+    due = f.get('due_date') or None
+    uname = (getattr(current_user, 'username', None)
+             or getattr(current_user, 'email', None) or 'unknown')
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO whip_tasks (title, assigned_to, due_date, created_by, created_by_name)
+            VALUES (%s,%s,%s,%s,%s)
+        """, (title, assigned, due, _uid(), uname))
+        conn.commit()
+        flash("Task added.", "success")
+    finally:
+        cur.close()
+        _release_db(conn)
+    return redirect(url_for('progress.whip_tasks'))
+
+
+@progress_bp.route('/whip/tasks/<int:task_id>/toggle', methods=['POST'])
+@whip_required
+def whip_task_toggle(task_id):
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE whip_tasks
+               SET done = NOT done,
+                   done_at = CASE WHEN done THEN NULL ELSE now() END
+             WHERE id = %s
+        """, (task_id,))
+        conn.commit()
+    finally:
+        cur.close()
+        _release_db(conn)
+    return redirect(url_for('progress.whip_tasks'))

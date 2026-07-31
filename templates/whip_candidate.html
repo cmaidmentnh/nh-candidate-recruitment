@@ -1,202 +1,107 @@
-{% extends "base.html" %}
+{% extends "whip_base.html" %}
 {% block title %}{{ d.name }}{% endblock %}
+{% block whip %}
+<p style="margin-bottom:6px;"><a href="{{ url_for('progress.whip_list') }}" style="color:#6c757d;">&larr; Back to board</a></p>
+<div class="wk-h1">{{ d.name }}
+  {% if d.incumbent %}<span class="tag">Incumbent</span>{% endif %}
+  {% if d.falling_behind %}<span class="tag bad">Falling behind</span>{% endif %}
+</div>
+<div class="wk-sub">{{ d.district }} &middot; {{ d.stage }} &middot; {{ d.score }}%
+  {% if d.assigned_name %} &middot; assigned to {{ d.assigned_name }}{% endif %}</div>
 
-{% block head %}
-<style>
-.wc-wrap { max-width: 760px; margin: 0 auto; padding: 0 12px 120px; }
-.wc-back { display:inline-block; margin:10px 0 4px; color:#5a6068; font-size:14px; text-decoration:none; }
-.wc-name { font-size:22px; font-weight:700; margin:2px 0 2px; }
-.wc-dist { color:#6c757d; font-size:14px; margin-bottom:12px; }
-
-/* Contact buttons: thumb-reachable, full width on a phone. */
-.wc-contact { display:flex; gap:10px; margin-bottom:16px; }
-.wc-btn { flex:1; text-align:center; padding:14px 10px; border-radius:10px; font-weight:600;
-          font-size:16px; text-decoration:none; border:1px solid transparent; }
-.wc-call { background:#183e91; color:#fff; }
-.wc-text { background:#fff; color:#183e91; border-color:#183e91; }
-.wc-mail { background:#fff; color:#5a6068; border-color:#d5d7db; }
-
-.wc-sec { border:1px solid #e3e5e8; border-radius:10px; padding:14px; margin-bottom:12px; background:#fff; }
-.wc-sec h3 { margin:0 0 8px; font-size:14px; text-transform:uppercase; letter-spacing:.4px; color:#6c757d; }
-.wc-ask li { margin-bottom:4px; }
-
-/* Check-in form */
-.chips { display:flex; flex-wrap:wrap; gap:8px; }
-.chip { position:relative; }
-.chip input { position:absolute; opacity:0; pointer-events:none; }
-.chip span { display:inline-block; padding:10px 14px; border:1px solid #d5d7db; border-radius:999px;
-             font-size:15px; background:#fff; cursor:pointer; }
-.chip input:checked + span { background:#b52b18; border-color:#b52b18; color:#fff; font-weight:600; }
-.q { margin:14px 0 0; }
-.q label.qt { display:block; font-size:15px; font-weight:600; margin-bottom:6px; }
-textarea { width:100%; min-height:80px; padding:10px; border:1px solid #d5d7db; border-radius:8px;
-           font-size:16px; font-family:inherit; }
-.wc-save { position:sticky; bottom:0; padding:12px 0 16px; background:linear-gradient(transparent,#fff 22%); }
-.wc-save button { width:100%; padding:16px; font-size:17px; font-weight:700; border:0;
-                  border-radius:10px; background:#b52b18; color:#fff; }
-.wc-save button:disabled { background:#9aa0a6; }
-.ci-actions { margin-top:6px; display:flex; gap:14px; }
-.lnk { background:none; border:0; padding:0; font-size:13px; color:#183e91; text-decoration:underline; }
-.lnk.danger { color:#b52b18; }
-.hist { font-size:13px; color:#5a6068; border-top:1px solid #eee; padding-top:8px; margin-top:8px; }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="wc-wrap">
-  <a class="wc-back" href="{{ url_for('progress.whip_list') }}">&larr; Back to list</a>
-  <div class="wc-name">{{ d.name }}</div>
-  <div class="wc-dist">{{ d.district }} &middot; {{ d.stage }} &middot; {{ d.score }}%
-    {% if d.assigned_name %} &middot; {{ d.assigned_name }}{% endif %}</div>
-
-  <div class="wc-contact">
-    {% if contact.phone %}
-      <a class="wc-btn wc-call" href="tel:{{ contact.phone }}">Call</a>
-      {% if d.phone1_type != 'landline' %}
-      <a class="wc-btn wc-text" href="sms:{{ contact.phone }}">Text</a>
-      {% endif %}
-    {% endif %}
-    {% if contact.email %}
-      <a class="wc-btn wc-mail" href="mailto:{{ contact.email }}">Email</a>
-    {% endif %}
-  </div>
-
-  {% if d.gaps %}
-  <div class="wc-sec">
-    <h3>What they still need</h3>
-    <ul class="wc-ask" style="margin:0; padding-left:18px;">
-      {% for g in d.gaps %}<li>{{ g }}</li>{% endfor %}
-    </ul>
-  </div>
+<div style="display:flex;gap:9px;margin-bottom:16px;">
+  {% if contact.phone %}
+    <a class="btn btn-navy" style="flex:1;text-align:center;" href="tel:{{ contact.phone }}">Call</a>
+    {% if d.phone1_type != 'landline' %}
+    <a class="btn btn-out" style="flex:1;text-align:center;" href="sms:{{ contact.phone }}">Text</a>{% endif %}
   {% endif %}
-
-  <form class="wc-sec" id="ci" onsubmit="return false;">
-    <h3>Log a check-in</h3>
-    <input type="hidden" name="candidate_id" value="{{ d.candidate_id }}">
-
-    <div class="q">
-      <label class="qt">How did you reach out?</label>
-      <div class="chips">
-        {% for m in methods %}
-        <label class="chip"><input type="radio" name="method" value="{{ m }}"
-          {% if loop.first %}checked{% endif %}><span>{{ m.replace('_',' ')|title }}</span></label>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="q">
-      <label class="qt">Did you actually reach them?</label>
-      <div class="chips">
-        <label class="chip"><input type="radio" name="reached" value="yes" checked><span>Yes</span></label>
-        <label class="chip"><input type="radio" name="reached" value="no"><span>No</span></label>
-      </div>
-    </div>
-
-    {% for key, question in [('fundraising','Fundraising started?'),
-                             ('canvassing','Door-knocking started?'),
-                             ('signs','Signs ordered?'),
-                             ('training','Been to a training?')] %}
-    <div class="q">
-      <label class="qt">{{ question }}</label>
-      <div class="chips">
-        {% for a in answers %}
-        <label class="chip"><input type="radio" name="{{ key }}" value="{{ a }}">
-          <span>{{ {'yes':'Yes','not_yet':'Not yet','planning':'Planning to'}[a] }}</span></label>
-        {% endfor %}
-      </div>
-    </div>
-    {% endfor %}
-
-    <div class="q">
-      <label class="qt">Anything they need from us?</label>
-      <div class="chips">
-        {% for n in needs_options %}
-        <label class="chip"><input type="checkbox" name="needs" value="{{ n }}">
-          <span>{{ n.replace('_',' ')|title }}</span></label>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="q">
-      <label class="qt">Follow up in</label>
-      <div class="chips">
-        {% for days, lbl in [('7','1 week'),('14','2 weeks'),('30','1 month'),('','No date')] %}
-        <label class="chip"><input type="radio" name="followup" value="{{ days }}"
-          {% if days=='14' %}checked{% endif %}><span>{{ lbl }}</span></label>
-        {% endfor %}
-      </div>
-    </div>
-
-    <div class="q">
-      <label class="qt">Notes</label>
-      <textarea name="notes" placeholder="What did they say?"></textarea>
-    </div>
-
-    <div class="wc-save">
-      <button id="save" type="button">Save check-in</button>
-    </div>
-  </form>
-
-  {% if checkins %}
-  <div class="wc-sec">
-    <h3>Recent check-ins</h3>
-    {% for c in checkins %}
-    <div class="hist" id="ci-{{ c.id }}">
-      <strong>{{ c.at.strftime('%b %-d') }}</strong>
-      &middot; {{ (c.method or '').replace('_',' ')|title }}
-      &middot; {% if c.reached %}reached{% else %}no answer{% endif %}
-      {% if c.by %} &middot; {{ c.by }}{% endif %}
-      {% if c.needs %}<br>Needs: {{ c.needs|join(', ') }}{% endif %}
-      {% if c.notes %}<br><span class="ci-notes">{{ c.notes }}</span>{% endif %}
-      {% if c.can_edit %}
-      <div class="ci-actions">
-        <button type="button" class="lnk" onclick="editNote({{ c.id }})">Edit note</button>
-        <button type="button" class="lnk danger" onclick="delCheckin({{ c.id }})">Delete</button>
-      </div>
-      {% endif %}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
+  {% if contact.email %}<a class="btn btn-out" style="flex:1;text-align:center;" href="mailto:{{ contact.email }}">Email</a>{% endif %}
 </div>
 
-<script>
-document.getElementById('save').addEventListener('click', async function () {
-  const btn = this;
-  btn.disabled = true; btn.textContent = 'Saving…';
-  const fd = new FormData(document.getElementById('ci'));
-  try {
-    const r = await fetch('{{ url_for("progress.whip_checkin") }}', {
-      method: 'POST', body: fd, headers: {'X-CSRFToken': '{{ csrf_token() }}'}
-    });
-    const j = await r.json();
-    if (j.ok) { window.location = '{{ url_for("progress.whip_list") }}'; }
-    else { btn.disabled = false; btn.textContent = 'Save check-in'; alert('Could not save: ' + (j.error || 'unknown')); }
-  } catch (e) {
-    btn.disabled = false; btn.textContent = 'Save check-in'; alert('Could not save: ' + e);
-  }
-});
+<div class="split">
+  <div>
+    {% if d.gaps %}
+    <div class="card" style="margin-bottom:12px;">
+      <div class="sec-h" style="margin-top:0;">What they still need</div>
+      <ul style="margin:0;padding-left:18px;">{% for g in d.gaps %}<li>{{ g }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
 
-async function post(url, body) {
-  const r = await fetch(url, {method:'POST', body: body,
-                              headers: {'X-CSRFToken': '{{ csrf_token() }}'}});
-  return r.json();
-}
-async function delCheckin(id) {
-  if (!confirm('Delete this check-in?')) return;
-  const j = await post('/whip/checkin/' + id + '/delete', new FormData());
-  if (j.ok) { document.getElementById('ci-' + id).remove(); }
-  else { alert('Could not delete: ' + (j.error || 'unknown')); }
-}
-async function editNote(id) {
-  const el = document.querySelector('#ci-' + id + ' .ci-notes');
-  const cur = el ? el.textContent.trim() : '';
-  const next = prompt('Edit the note', cur);
-  if (next === null) return;
-  const fd = new FormData(); fd.append('notes', next);
-  const j = await post('/whip/checkin/' + id + '/edit', fd);
-  if (j.ok) { window.location.reload(); }
-  else { alert('Could not save: ' + (j.error || 'unknown')); }
-}
-</script>
+    {% if can_access_progress %}
+    <form class="card" method="POST" action="{{ url_for('progress.whip_assign') }}" style="margin-bottom:12px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="candidate_id" value="{{ d.candidate_id }}">
+      <div class="sec-h" style="margin-top:0;">Assigned whip</div>
+      <div class="fld"><select name="assigned_whip">
+        <option value="">— unassigned —</option>
+        {% for w in whips %}<option value="{{ w.user_id }}" {% if d.assigned_whip==w.user_id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}
+      </select></div>
+      <button class="btn btn-out btn-wide" type="submit">Save assignment</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div>
+    <form class="card" method="POST" action="{{ url_for('progress.whip_checkin') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="candidate_id" value="{{ d.candidate_id }}">
+      <div class="sec-h" style="margin-top:0;">Log a check-in</div>
+
+      <div class="fld"><label>How did you reach out?</label><div class="chips">
+        {% for m in methods %}<label class="chip"><input type="radio" name="method" value="{{ m }}"
+          {% if loop.first %}checked{% endif %}><span>{{ m.replace('_',' ')|title }}</span></label>{% endfor %}
+      </div></div>
+
+      <div class="fld"><label>Did you reach them?</label><div class="chips">
+        <label class="chip"><input type="radio" name="reached" value="yes" checked><span>Yes</span></label>
+        <label class="chip"><input type="radio" name="reached" value="no"><span>No</span></label>
+      </div></div>
+
+      {% for key, q in [('fundraising','Fundraising started?'),('canvassing','Door-knocking started?'),
+                        ('signs','Signs ordered?'),('training','Been to a training?')] %}
+      <div class="fld"><label>{{ q }}</label><div class="chips">
+        {% for a in answers %}<label class="chip"><input type="radio" name="{{ key }}" value="{{ a }}">
+          <span>{{ {'yes':'Yes','not_yet':'Not yet','planning':'Planning'}[a] }}</span></label>{% endfor %}
+      </div></div>
+      {% endfor %}
+
+      <div class="fld"><label>Anything they need?</label><div class="chips">
+        {% for n in needs_options %}<label class="chip"><input type="checkbox" name="needs" value="{{ n }}">
+          <span>{{ n.replace('_',' ')|title }}</span></label>{% endfor %}
+      </div></div>
+
+      <div class="fld"><label>Follow up in</label><div class="chips">
+        {% for days, lbl in [('7','1 week'),('14','2 weeks'),('30','1 month'),('','No date')] %}
+        <label class="chip"><input type="radio" name="followup" value="{{ days }}"
+          {% if days=='14' %}checked{% endif %}><span>{{ lbl }}</span></label>{% endfor %}
+      </div></div>
+
+      <div class="fld"><label>Notes</label><textarea name="notes" placeholder="What did they say?"></textarea></div>
+      <button class="btn btn-red btn-wide" type="submit">Save check-in</button>
+    </form>
+
+    {% if checkins %}
+    <div class="card" style="margin-top:12px;">
+      <div class="sec-h" style="margin-top:0;">History</div>
+      {% for c in checkins %}
+      <div class="feed">
+        <strong>{{ c.at.strftime('%b %-d') }}</strong> &middot; {{ (c.method or '')|replace('_',' ')|title }}
+        &middot; {% if c.reached %}reached{% else %}no answer{% endif %}
+        {% if c.by %} &middot; {{ c.by }}{% endif %}
+        {% if c.needs %}<br>Needs: {{ c.needs|join(', ') }}{% endif %}
+        {% if c.notes %}<br>{{ c.notes }}{% endif %}
+        {% if c.can_edit %}
+        <form method="POST" action="{{ url_for('progress.whip_checkin_delete', checkin_id=c.id) }}"
+              style="display:inline;" onsubmit="return confirm('Delete this check-in?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" style="background:none;border:0;padding:0;color:#b52b18;
+                  font-size:12.5px;text-decoration:underline;margin-top:4px;">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

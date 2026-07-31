@@ -1,100 +1,45 @@
-{% extends "base.html" %}
+{% extends "whip_base.html" %}
 {% block title %}Whip Dashboard{% endblock %}
+{% block whip %}
+<div class="wk-h1">Campaign Check-ins</div>
+<div class="wk-sub">{{ stats.total }} filed 2026 Republican State Rep candidates</div>
 
-{% block head %}
-<style>
-.wd-wrap { max-width: 860px; margin: 0 auto; padding: 0 12px 80px; }
-.wd-h { font-size: 20px; font-weight: 700; margin: 12px 0 2px; }
-.wd-sub { color:#6c757d; font-size:13px; margin-bottom:14px; }
+<div class="bar"><i style="width:{{ stats.pct }}%"></i></div>
+<div style="display:flex;gap:16px;font-size:12.5px;color:#5a6068;margin-top:6px;">
+  <span><b style="color:#141821">{{ stats.contacted }}</b> contacted ({{ stats.pct }}%)</span>
+  <span><b style="color:#141821">{{ stats.never }}</b> never contacted</span>
+</div>
 
-.wd-bar { height: 26px; border-radius: 6px; background:#eceef1; overflow:hidden; display:flex; }
-.wd-bar i { display:block; height:100%; }
-.wd-done { background:#183e91; }
-.wd-legend { display:flex; gap:14px; font-size:12px; color:#5a6068; margin-top:6px; }
-.wd-legend b { color:#141821; }
+<div class="grid g4" style="margin:16px 0;">
+  <div class="card stat"><div class="n">{{ stats.total }}</div><div class="l">Candidates</div></div>
+  <div class="card stat"><div class="n">{{ stats.checkins }}</div><div class="l">Check-ins</div></div>
+  <div class="card stat {% if stats.unassigned %}warn{% endif %}"><div class="n">{{ stats.unassigned }}</div><div class="l">Unassigned</div></div>
+  <div class="card stat {% if stats.behind %}warn{% endif %}"><div class="n">{{ stats.behind }}</div><div class="l">Falling behind</div></div>
+</div>
 
-.wd-cards { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:16px 0; }
-@media (min-width: 620px) { .wd-cards { grid-template-columns:repeat(4,1fr); } }
-.wd-card { border:1px solid #e3e5e8; border-radius:10px; padding:12px; background:#fff; text-align:center; }
-.wd-num { font-size:24px; font-weight:700; line-height:1.1; }
-.wd-lbl { font-size:12px; color:#6c757d; margin-top:2px; }
-.wd-card.warn .wd-num { color:#b52b18; }
+<div class="sec-h">By whip</div>
+{% if per_whip %}
+<div class="card" style="padding:4px 10px;">
+<table class="t">
+  <tr><th>Whip</th><th class="r">Assigned</th><th class="r">Contacted</th><th style="width:30%">Progress</th></tr>
+  {% for w in per_whip %}
+  <tr><td>{{ w.who }}</td><td class="r">{{ w.assigned }}</td><td class="r">{{ w.contacted }}</td>
+      <td><div class="mini"><i style="width:{{ w.pct }}%"></i></div></td></tr>
+  {% endfor %}
+</table>
+</div>
+{% else %}
+<div class="card empty">Nobody assigned yet. Open a candidate from the Board to assign them.</div>
+{% endif %}
 
-table.wd { width:100%; border-collapse:collapse; font-size:14px; }
-table.wd th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.4px;
-              color:#6c757d; padding:6px 8px; border-bottom:1px solid #e3e5e8; }
-table.wd td { padding:8px; border-bottom:1px solid #f0f1f3; }
-table.wd td.r { text-align:right; }
-.mini { height:6px; border-radius:3px; background:#eceef1; overflow:hidden; min-width:60px; }
-.mini i { display:block; height:100%; background:#183e91; }
-.sec { margin-top:22px; }
-.sec h2 { font-size:14px; text-transform:uppercase; letter-spacing:.4px; color:#6c757d; margin-bottom:8px; }
-.feed { font-size:13px; color:#5a6068; border-bottom:1px solid #f0f1f3; padding:7px 0; }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="wd-wrap">
-  <div class="wd-h">Whip Dashboard</div>
-  <div class="wd-sub">{{ stats.total }} filed 2026 Republican State Rep candidates</div>
-
-  <div class="wd-bar">
-    <i class="wd-done" style="width: {{ stats.pct }}%"></i>
-  </div>
-  <div class="wd-legend">
-    <span><b>{{ stats.contacted }}</b> contacted ({{ stats.pct }}%)</span>
-    <span><b>{{ stats.never }}</b> never contacted</span>
-  </div>
-
-  <div class="wd-cards">
-    <div class="wd-card"><div class="wd-num">{{ stats.total }}</div><div class="wd-lbl">Candidates</div></div>
-    <div class="wd-card"><div class="wd-num">{{ stats.checkins }}</div><div class="wd-lbl">Check-ins logged</div></div>
-    <div class="wd-card {% if stats.unassigned %}warn{% endif %}">
-      <div class="wd-num">{{ stats.unassigned }}</div><div class="wd-lbl">Unassigned</div></div>
-    <div class="wd-card {% if stats.behind %}warn{% endif %}">
-      <div class="wd-num">{{ stats.behind }}</div><div class="wd-lbl">Falling behind</div></div>
-  </div>
-
-  <div class="sec">
-    <h2>By whip</h2>
-    {% if per_whip %}
-    <table class="wd">
-      <tr><th>Whip</th><th class="r">Assigned</th><th class="r">Contacted</th><th style="width:34%">Progress</th></tr>
-      {% for w in per_whip %}
-      <tr>
-        <td>{{ w.who }}</td>
-        <td class="r">{{ w.assigned }}</td>
-        <td class="r">{{ w.contacted }}</td>
-        <td><div class="mini"><i style="width:{{ w.pct }}%"></i></div></td>
-      </tr>
-      {% endfor %}
-    </table>
-    {% else %}
-    <p class="wd-sub">Nobody assigned yet. Assign candidates from the
-      <a href="{{ url_for('progress.progress') }}">desktop tracker</a>.</p>
-    {% endif %}
-  </div>
-
-  <div class="sec">
-    <h2>Latest check-ins</h2>
-    {% for c in recent %}
-    <div class="feed">
-      <strong>{{ c.name }}</strong> &middot; {{ (c.method or '')|replace('_',' ')|title }}
-      &middot; {% if c.reached %}reached{% else %}no answer{% endif %}
-      &middot; {{ c.by or 'unknown' }}
-      &middot; {{ c.at.strftime('%b %-d, %-I:%M%p') }}
-    </div>
-    {% else %}
-    <p class="wd-sub">No check-ins logged yet.</p>
-    {% endfor %}
-  </div>
-
-  <p style="margin-top:22px;">
-    <a href="{{ url_for('progress.whip_list') }}">&larr; Back to check-ins</a>
-    {% if can_access_progress %}
-    &nbsp;&middot;&nbsp;
-    <a href="{{ url_for('progress.whip_export') }}">Export check-ins (CSV)</a>
-    {% endif %}
-  </p>
+<div class="sec-h">Latest check-ins</div>
+<div class="card">
+{% for c in recent %}
+  <div class="feed"><strong>{{ c.name }}</strong> &middot; {{ (c.method or '')|replace('_',' ')|title }}
+    &middot; {% if c.reached %}reached{% else %}no answer{% endif %}
+    &middot; {{ c.by or 'unknown' }} &middot; {{ c.at.strftime('%b %-d, %-I:%M%p') }}</div>
+{% else %}
+  <div class="empty">No check-ins logged yet.</div>
+{% endfor %}
 </div>
 {% endblock %}
