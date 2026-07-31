@@ -1,51 +1,53 @@
 {% extends "whip/base.html" %}
 {% block title %}Results{% endblock %}
 {% block whip %}
-<div class="hd"><h1>{{ rnd.title if rnd else 'Results' }}</h1>
-  <div class="sub">{{ stats.answered }} of {{ stats.total }} candidates answered</div></div>
+<h1 class="page-title">{{ rnd.title if rnd else 'Results' }}</h1>
+<p class="page-sub">{{ stats.answered }} of {{ stats.total }} candidates logged</p>
 
-<div class="bar" style="margin-bottom:8px;"><i style="width:{{ stats.pct }}%"></i></div>
-<div style="font-size:13px;color:var(--mute);margin-bottom:20px;">{{ stats.pct }}% complete</div>
+<div class="bar"><i style="width:{{ stats.pct }}%"></i></div>
+<div class="legend"><span><b>{{ stats.pct }}%</b> complete</span></div>
 
-<div class="grid g4" style="margin-bottom:22px;">
-  <div class="card stat"><div class="n">{{ stats.answered }}</div><div class="l">Answered</div></div>
-  <div class="card stat"><div class="n">{{ stats.fine }}</div><div class="l">Fine</div></div>
-  <div class="card stat warn"><div class="n">{{ watch|length }}</div><div class="l">Watch</div></div>
-  <div class="card stat warn"><div class="n">{{ problems|length }}</div><div class="l">Problem</div></div>
+<div class="grid cols-4" style="margin-bottom:26px;">
+  <div class="card stat"><div class="num">{{ stats.answered }}</div><div class="lbl">Logged</div></div>
+  <div class="card stat"><div class="num">{{ stats.fine }}</div><div class="lbl">Fine</div></div>
+  <div class="card stat alert"><div class="num">{{ watch|length }}</div><div class="lbl">Watch</div></div>
+  <div class="card stat alert"><div class="num">{{ problems|length }}</div><div class="lbl">Problem</div></div>
 </div>
 
 {% if problems or watch %}
-<div class="grp"><div class="grp-h" style="color:var(--red)">Needs attention</div>
+<div class="section-head">Needs attention</div>
 {% for d in problems + watch %}
-<a class="lrow {{ 'hot' if d.answer.concern=='problem' else 'warm' }}"
+<a class="mrow {{ 'swing' if d.answer.concern=='problem' else 'lean' }}"
    href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">
-  <div class="lrow-1"><span class="lrow-n">{{ d.name }}</span><span class="lrow-d">{{ d.district }}</span></div>
-  <div class="lrow-2"><span class="pill {{ 'pill-red' if d.answer.concern=='problem' else 'pill-amber' }}">{{ d.answer.concern|title }}</span>
-    {% if d.rating %}<span class="pill pill-grey">{{ d.rating|title }}</span>{% endif %}</div>
-  {% if d.answer.notes %}<div class="lrow-meta">{{ d.answer.notes }}</div>{% endif %}
+  <div class="top"><span class="nm">{{ d.name }}</span><span class="dist">{{ d.district }}</span></div>
+  <div class="mid"><span class="pill {{ d.answer.concern }}">{{ d.answer.concern|title }}</span>
+    {% if d.rating %}<span class="pill safe">{{ d.rating }}</span>{% endif %}</div>
+  {% if d.answer.notes %}<div class="foot">{{ d.answer.notes }}</div>{% endif %}
 </a>
-{% endfor %}</div>
+{% endfor %}
 {% endif %}
 
 {% if not_running %}
-<div class="grp"><div class="grp-h" style="color:var(--amber)">Barely or not campaigning ({{ not_running|length }})</div>
-<div class="card">{% for d in not_running %}
-  <div class="feed"><b>{{ d.name }}</b> — {{ d.district }}
-    <span class="when">· {{ d.answer.campaigning|replace('_',' ') }}</span></div>
-{% endfor %}</div></div>
+<div class="section-head">Barely or not campaigning ({{ not_running|length }})</div>
+<table class="tbl"><tr><th>Candidate</th><th>District</th><th>Status</th></tr>
+{% for d in not_running %}<tr><td class="name-link">{{ d.name }}</td><td>{{ d.district }}</td>
+  <td>{{ d.answer.campaigning|replace('_',' ')|title }}</td></tr>{% endfor %}
+</table>
 {% endif %}
 
 {% if needs_count %}
-<div class="grp"><div class="grp-h" style="color:var(--mute)">What they're asking for</div>
-<div class="card" style="padding:6px 10px;"><table class="t">
-  {% for n, c in needs_count %}<tr><td>{{ n|replace('_',' ')|title }}</td><td class="r"><b>{{ c }}</b></td></tr>{% endfor %}
-</table></div></div>
+<div class="section-head">What they're asking for</div>
+<table class="tbl"><tr><th>Need</th><th class="r">Candidates</th></tr>
+{% for n, c in needs_count %}<tr><td>{{ n|replace('_',' ')|title }}</td><td class="r"><b>{{ c }}</b></td></tr>{% endfor %}
+</table>
 {% endif %}
 
 {% if per_whip %}
-<div class="grp"><div class="grp-h" style="color:var(--mute)">Who's done what</div>
-<div class="card" style="padding:6px 10px;"><table class="t">
-  {% for w in per_whip %}<tr><td>{{ w.who }}</td><td class="r"><b>{{ w.n }}</b></td></tr>{% endfor %}
-</table></div></div>
+<div class="section-head">Who's logged what</div>
+<table class="tbl"><tr><th>Whip</th><th class="r">Logged</th></tr>
+{% for w in per_whip %}<tr><td>{{ w.who }}</td><td class="r"><b>{{ w.n }}</b></td></tr>{% endfor %}
+</table>
 {% endif %}
+
+<p style="margin-top:22px;"><a class="btn btn-ghost btn-sm" href="{{ url_for('whip.export') }}">Download CSV</a></p>
 {% endblock %}

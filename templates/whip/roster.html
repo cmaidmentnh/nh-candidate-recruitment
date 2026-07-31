@@ -1,46 +1,40 @@
 {% extends "whip/base.html" %}
 {% block title %}Whips{% endblock %}
+{% block narrow %}wk-narrow{% endblock %}
 {% block whip %}
-<div class="hd"><h1>Whips</h1><div class="sub">{{ people|length }} whip{{ '' if people|length==1 else 's' }}{% if rnd %} &middot; {{ rnd.title }}{% endif %}</div></div>
+<h1 class="page-title">Whips</h1>
+<p class="page-sub">{{ people|length }} whip{{ '' if people|length==1 else 's' }}{% if rnd %} &middot; {{ rnd.title }}{% endif %}</p>
 
-<form class="card" method="POST" action="{{ url_for('whip.roster_add') }}" style="margin-bottom:22px;">
+<div class="card" style="margin-bottom:24px;"><div class="pad">
+<form method="POST" action="{{ url_for('whip.roster_add') }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="fld"><label>Add a whip</label>
     <input type="email" name="email" required placeholder="them@example.com"></div>
-  <div class="fld"><label>Username <span style="font-weight:400;color:var(--mute)">(optional)</span></label>
+  <div class="fld"><label>Username (optional)</label>
     <input type="text" name="username" placeholder="defaults to the email prefix"></div>
-  <button class="btn btn-navy btn-wide" type="submit">Add whip</button>
-  <div style="font-size:12.5px;color:var(--mute);margin-top:9px;">
-    If they already have an account they're switched to the whip role.
-    Otherwise we create one and email them a setup link.</div>
+  <button class="btn btn-navy btn-block" type="submit">Add whip</button>
+  <p class="page-sub" style="margin:10px 0 0;font-size:.82rem;">
+    Existing accounts are switched to the whip role. New ones get an email to set a password.</p>
 </form>
+</div></div>
 
 {% for p in people %}
-<div class="lrow {{ 'cool' if p.assigned else '' }}" style="cursor:default;">
-  <div class="lrow-1">
-    <span class="lrow-n">{{ p.username or p.email }}
-      <span class="pill {{ 'pill-green' if p.role=='whip' else 'pill-grey' }}">{{ p.role }}</span></span>
-    <span class="lrow-d">{{ p.assigned }} assigned</span>
+<div class="mrow {% if p.assigned %}done{% endif %}">
+  <div class="top"><span class="nm">{{ p.username or p.email }}</span>
+    <span class="dist">{{ p.assigned }} assigned</span></div>
+  <div class="mid">
+    {% if p.done is defined %}<span class="pill {{ 'ok' if p.pct>=100 else 'watch' if p.pct else 'safe' }}">{{ p.done }} logged</span>{% endif %}
+    {% if not p.last_login %}<span class="pill problem">Never logged in</span>{% endif %}
   </div>
-  <div class="lrow-2">
-    <div class="minibar"><i style="width:{{ p.pct if p.pct is defined else 0 }}%"></i></div>
-    <span class="cnt">{{ p.done if p.done is defined else 0 }} done this round</span>
-  </div>
-  <div class="lrow-meta">{{ p.email }}
-    {% if p.last_login %} &middot; last in {{ p.last_login.strftime('%b %-d') }}
-    {% else %} &middot; <b>never logged in</b>{% endif %}
-    {% if p.role=='whip' %}
+  <div class="foot">{{ p.email }}
+    {% if p.last_login %} &middot; last in {{ p.last_login.strftime('%b %-d') }}{% endif %}
     <form method="POST" action="{{ url_for('whip.roster_remove', user_id=p.user_id) }}"
       style="display:inline" onsubmit="return confirm('Remove whip role?')">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button style="background:none;border:0;color:var(--red);font-size:12px;text-decoration:underline;">remove</button>
-    </form>{% endif %}
+      <button class="btn btn-sm btn-ghost" style="margin-left:8px;">Remove</button></form>
   </div>
 </div>
 {% else %}
-<div class="card empty">
-  <b>No whips yet.</b><br>
-  Add one above and they'll get an email to set a password.
-</div>
+<div class="card empty"><b>No whips yet.</b><br>Add one above — they'll get an email to set a password.</div>
 {% endfor %}
 {% endblock %}

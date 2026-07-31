@@ -1,16 +1,29 @@
 {% extends "base.html" %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='whip.css') }}?v=5">{% endblock %}
+{% block head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='whip.css') }}?v=10">
+{% endblock %}
 {% block content %}
-<div class="wk {% block wide %}{% endblock %}">
-  <nav class="wknav">
-    <a href="{{ url_for('whip.my_list') }}" class="{{ 'on' if request.endpoint in ['whip.my_list','whip.candidate'] }}">My List</a>
-    {% if can_admin_whip %}
-    <a href="{{ url_for('whip.results') }}" class="{{ 'on' if request.endpoint=='whip.results' }}">Results</a>
-    <a href="{{ url_for('whip.assign') }}" class="{{ 'on' if request.endpoint=='whip.assign' }}">Assign</a>
-    <a href="{{ url_for('whip.roster') }}" class="{{ 'on' if request.endpoint=='whip.roster' }}">Whips</a>
-    <a href="{{ url_for('whip.rounds') }}" class="{{ 'on' if request.endpoint=='whip.rounds' }}">Rounds</a>
-    {% endif %}
-  </nav>
-  {% block whip %}{% endblock %}
+<div class="wkapp">
+  <div class="wtop">
+    <div class="in">
+      <a class="brand" href="{{ url_for('whip.my_list') }}">Candidate&nbsp;<span>Whip</span></a>
+      <nav class="wnav">
+        <a href="{{ url_for('whip.my_list') }}" class="{{ 'on' if request.endpoint in ['whip.my_list','whip.candidate'] }}">My List</a>
+        {% if can_admin_whip %}
+        <a href="{{ url_for('whip.results') }}" class="{{ 'on' if request.endpoint=='whip.results' }}">Results</a>
+        <a href="{{ url_for('whip.assign') }}" class="{{ 'on' if request.endpoint=='whip.assign' }}">Assign</a>
+        <a href="{{ url_for('whip.roster') }}" class="{{ 'on' if request.endpoint=='whip.roster' }}">Whips</a>
+        <a href="{{ url_for('whip.rounds') }}" class="{{ 'on' if request.endpoint=='whip.rounds' }}">Rounds</a>
+        {% endif %}
+      </nav>
+      <span class="who">{{ current_user.username or current_user.email }}</span>
+    </div>
+  </div>
+  <div class="wk {% block narrow %}{% endblock %}">
+    {% block whip %}{% endblock %}
+  </div>
 </div>
 {% endblock %}

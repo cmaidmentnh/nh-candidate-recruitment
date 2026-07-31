@@ -1,46 +1,41 @@
 {% extends "whip/base.html" %}
 {% block title %}My List{% endblock %}
+{% block narrow %}wk-narrow{% endblock %}
 {% block whip %}
 {% if not rnd %}
-  <div class="card empty">No round is open.{% if can_admin_whip %}
-    <br><a href="{{ url_for('whip.rounds') }}">Open one</a>{% endif %}</div>
+  <div class="card empty"><b>No round is open.</b>
+    {% if can_admin_whip %}<br><a href="{{ url_for('whip.rounds') }}">Open one</a>{% endif %}</div>
 {% else %}
-<div class="hd"><h1>{{ rnd.title }}</h1>
-  <div class="sub">Call your list. Closest races first.</div></div>
+<h1 class="page-title">{{ rnd.title }}</h1>
+<p class="page-sub">Closest races first. Call them and log what they say.</p>
 
-<div class="prog">
-  <div class="ring">
-    <svg width="64" height="64"><circle class="bg" cx="32" cy="32" r="27" fill="none" stroke-width="7"/>
-      <circle class="fg" cx="32" cy="32" r="27" fill="none" stroke-width="7"
-        stroke-dasharray="169.6" stroke-dashoffset="{{ 169.6*(1-pct/100) }}"/></svg>
-    <b>{{ pct }}%</b></div>
-  <div class="txt"><b>{{ done }} of {{ of }}</b> done{% if mine_n %} on your list{% endif %}.<br>
-    {{ of - done }} to go.</div>
-</div>
+<div class="bar"><i style="width:{{ pct }}%"></i></div>
+<div class="legend"><span><b>{{ done }} of {{ of }}</b> done</span>
+  <span>{{ of - done }} to go</span><span>{{ pct }}%</span></div>
 
-<form method="get" style="margin-bottom:14px;"><div class="chips">
-  {% for k,l in [('mine','Mine ('~mine_n~')'),('todo','Not done'),('all','Everyone ('~total~')')] %}
-  <label class="chip"><input type="radio" name="scope" value="{{ k }}" {% if scope==k %}checked{% endif %}
-    onchange="this.form.submit()"><span>{{ l }}</span></label>{% endfor %}
-</div></form>
+<form method="get" class="toolbar">
+  <div class="fld"><label>Show</label>
+    <select name="scope" onchange="this.form.submit()">
+      <option value="mine" {% if scope=='mine' %}selected{% endif %}>My list ({{ mine_n }})</option>
+      <option value="todo" {% if scope=='todo' %}selected{% endif %}>Not called yet</option>
+      <option value="all"  {% if scope=='all'  %}selected{% endif %}>Everyone ({{ total }})</option>
+    </select></div>
+</form>
 
 {% for d in rows %}
-<a class="lrow {% if d.answer %}cool{% elif d.rank==0 %}hot{% elif d.rank==1 %}warm{% endif %}"
+<a class="mrow {% if d.answer %}done{% elif d.rank==0 %}swing{% elif d.rank==1 %}lean{% endif %}"
    href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">
-  <div class="lrow-1"><span class="lrow-n">{{ d.name }}</span>
-    <span class="lrow-d">{{ d.district }}{% if d.seats and d.seats>1 %} · {{ d.seats }} seats{% endif %}</span></div>
-  <div class="lrow-2">
-    {% if d.rating %}<span class="pill {% if d.rank==0 %}pill-red{% elif d.rank==1 %}pill-amber{% else %}pill-grey{% endif %}">{{ d.rating|title }}</span>{% endif %}
-    {% if d.answer %}
-      <span class="pill {% if d.answer.concern=='problem' %}pill-red{% elif d.answer.concern=='watch' %}pill-amber{% else %}pill-green{% endif %}">
-        {{ (d.answer.concern or 'done')|title }}</span>
-    {% endif %}
+  <div class="top"><span class="nm">{{ d.name }}</span>
+    <span class="dist">{{ d.district }}{% if d.seats and d.seats>1 %} &middot; {{ d.seats }} seats{% endif %}</span></div>
+  <div class="mid">
+    {% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
+    {% if d.answer %}<span class="pill {{ d.answer.concern or 'ok' }}">{{ (d.answer.concern or 'done')|title }}</span>{% endif %}
   </div>
-  <div class="lrow-meta">
-    {% if d.answer %}Answered by {{ d.answer.by }}{% if d.answer.campaigning %} · {{ d.answer.campaigning|replace('_',' ') }}{% endif %}
+  <div class="foot">
+    {% if d.answer %}{{ (d.answer.campaigning or '')|replace('_',' ')|title }} &middot; logged by {{ d.answer.by }}
     {% else %}<b>Not called yet</b>{% endif %}
-    {% if d.owner_name %} · {{ d.owner_name }}{% endif %}</div>
+    {% if d.owner_name %} &middot; {{ d.owner_name }}{% endif %}</div>
 </a>
-{% else %}<div class="card empty">Nothing here.</div>{% endfor %}
+{% else %}<div class="card empty"><b>Nothing here.</b></div>{% endfor %}
 {% endif %}
 {% endblock %}

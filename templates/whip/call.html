@@ -1,76 +1,65 @@
 {% extends "whip/base.html" %}
 {% block title %}{{ d.name }}{% endblock %}
+{% block narrow %}wk-narrow{% endblock %}
 {% block whip %}
-<a class="crumb" href="{{ url_for('whip.my_list') }}">&larr; My List</a>
-<div class="hd"><h1>{{ d.name }}</h1>
-  <div class="sub">{{ d.district }}{% if d.seats and d.seats>1 %} &middot; {{ d.seats }} seats{% endif %}
-    {% if d.rating %} &middot; <b>{{ d.rating|title }}</b>{% endif %}
-    {% if d.pvi is not none %} ({{ 'R+' if d.pvi>0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }}){% endif %}</div></div>
+<a class="crumb" href="{{ url_for('whip.my_list') }}">&larr; Back to my list</a>
+<h1 class="page-title">{{ d.name }}</h1>
+<p class="page-sub">{{ d.district }}{% if d.seats and d.seats>1 %} &middot; {{ d.seats }} seats{% endif %}
+  {% if d.rating %} &middot; <span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
+  {% if d.pvi is not none %} {{ 'R+' if d.pvi>0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }}{% endif %}</p>
 
-<div class="acts">
-  {% if contact.phone %}<a class="act act-call" href="tel:{{ contact.phone }}">Call {{ contact.phone }}</a>
-    {% if d.phone1_type != 'landline' %}<a class="act act-text" href="sms:{{ contact.phone }}">Text</a>{% endif %}{% endif %}
-  {% if contact.email %}<a class="act act-mail" href="mailto:{{ contact.email }}">Email</a>{% endif %}
+<div class="grid cols-3" style="margin-bottom:22px;">
+  {% if contact.phone %}<a class="btn btn-navy" href="tel:{{ contact.phone }}">Call {{ contact.phone }}</a>
+    {% if d.phone1_type != 'landline' %}<a class="btn btn-ghost" href="sms:{{ contact.phone }}">Text</a>{% endif %}{% endif %}
+  {% if contact.email %}<a class="btn btn-ghost" href="mailto:{{ contact.email }}">Email</a>{% endif %}
 </div>
 
-{% if not rnd %}<div class="card empty">No round is open.</div>{% else %}
+{% if not rnd %}<div class="card empty"><b>No round is open.</b></div>{% else %}
 <form method="POST" action="{{ url_for('whip.answer', cid=d.candidate_id) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   {% set a = d.answer or {} %}
 
   {% for key, question, opts in questions %}
-  <div class="item {% if a.get(key) %}done{% else %}need{% endif %}" style="margin-bottom:12px;">
-    <div class="item-t" style="margin-bottom:9px;">{{ question }}</div>
-    <div class="chips">
-      {% for val, lbl in opts %}
-      <label class="chip"><input type="radio" name="{{ key }}" value="{{ val }}"
+  <div class="qcard {% if a.get(key) %}answered{% endif %}">
+    <div class="q">{{ question }}</div>
+    <div class="opts">{% for val, lbl in opts %}
+      <label class="opt"><input type="radio" name="{{ key }}" value="{{ val }}"
         {% if a.get(key)==val %}checked{% endif %}><span>{{ lbl }}</span></label>
-      {% endfor %}
-    </div>
+    {% endfor %}</div>
   </div>
   {% endfor %}
 
-  <div class="item {% if a.get('raised') %}done{% else %}need{% endif %}" style="margin-bottom:12px;">
-    <div class="item-t" style="margin-bottom:9px;">Roughly how much have they raised?</div>
+  <div class="qcard {% if a.get('raised') %}answered{% endif %}">
+    <div class="q">Roughly how much have they raised?</div>
     <input type="text" name="raised" inputmode="numeric" placeholder="$0"
-      value="{{ '%.0f'|format(a.raised) if a.get('raised') else '' }}"
-      style="width:100%;padding:13px;border:1.5px solid var(--line);border-radius:11px;font-size:16px;">
+      value="{{ '%.0f'|format(a.raised) if a.get('raised') else '' }}">
   </div>
 
-  <div class="item {% if a.get('needs') %}done{% else %}need{% endif %}" style="margin-bottom:12px;">
-    <div class="item-t" style="margin-bottom:9px;">What do they need from us?</div>
-    <div class="chips">
-      {% for val, lbl in needs %}
-      <label class="chip"><input type="checkbox" name="needs" value="{{ val }}"
+  <div class="qcard {% if a.get('needs') %}answered{% endif %}">
+    <div class="q">What do they need from us?</div>
+    <div class="opts">{% for val, lbl in needs %}
+      <label class="opt"><input type="checkbox" name="needs" value="{{ val }}"
         {% if val in (a.get('needs') or []) %}checked{% endif %}><span>{{ lbl }}</span></label>
-      {% endfor %}
-    </div>
+    {% endfor %}</div>
   </div>
 
-  <div class="item" style="margin-bottom:14px;">
-    <div class="item-t" style="margin-bottom:9px;">Notes</div>
-    <textarea class="ta" name="notes" placeholder="Anything worth knowing…">{{ a.get('notes') or '' }}</textarea>
-  </div>
+  <div class="qcard"><div class="q">Notes</div>
+    <textarea name="notes" placeholder="Anything worth knowing…">{{ a.get('notes') or '' }}</textarea></div>
 
-  <button class="btn btn-red btn-wide" type="submit">
-    {% if a %}Update{% else %}Save{% endif %} &amp; next</button>
+  <button class="btn btn-red btn-block" type="submit">{% if a %}Update{% else %}Save{% endif %} &amp; back to list</button>
 </form>
-
-{% if a %}<div style="text-align:center;font-size:12.5px;color:var(--mute);margin-top:10px;">
-  Answered by {{ a.by }} on {{ a.at.strftime('%b %-d') }}</div>{% endif %}
+{% if a %}<p class="page-sub" style="text-align:center;margin-top:12px;">
+  Logged by {{ a.by }} on {{ a.at.strftime('%b %-d') }}</p>{% endif %}
 {% endif %}
 
 {% if history %}
-<div class="grp" style="margin-top:26px;">
-  <div class="grp-h" style="color:var(--mute)">Earlier rounds</div>
-  <div class="card">
-  {% for h in history %}
-    <div class="feed"><b>{{ h.round }}</b> —
-      {{ (h.campaigning or '?')|replace('_',' ') }}, {{ h.concern or '?' }}
-      <span class="when">· {{ h.by }} · {{ h.at.strftime('%b %-d') }}</span>
-      {% if h.notes %}<br>{{ h.notes }}{% endif %}</div>
-  {% endfor %}
-  </div>
-</div>
+<div class="section-head">Earlier rounds</div>
+<div class="card"><div class="pad">
+{% for h in history %}
+  <div class="feed"><b>{{ h.round }}</b> — {{ (h.campaigning or '?')|replace('_',' ') }},
+    {{ h.concern or '?' }} <span class="when">&middot; {{ h.by }} &middot; {{ h.at.strftime('%b %-d') }}</span>
+    {% if h.notes %}<br>{{ h.notes }}{% endif %}</div>
+{% endfor %}
+</div></div>
 {% endif %}
 {% endblock %}

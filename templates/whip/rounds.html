@@ -1,29 +1,32 @@
 {% extends "whip/base.html" %}
 {% block title %}Rounds{% endblock %}
+{% block narrow %}wk-narrow{% endblock %}
 {% block whip %}
-<div class="hd"><h1>Rounds</h1><div class="sub">Opening a new round closes the current one</div></div>
+<h1 class="page-title">Rounds</h1>
+<p class="page-sub">Opening a new round closes the current one</p>
 
-<form class="card" method="POST" style="margin-bottom:22px;">
+<div class="card" style="margin-bottom:24px;"><div class="pad">
+<form method="POST">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="action" value="open">
   <div class="fld"><label>Start a new round</label>
     <input type="text" name="title" required placeholder="e.g. September Check-In"></div>
-  <button class="btn btn-red btn-wide" type="submit">Open round</button>
+  <button class="btn btn-red btn-block" type="submit">Open round</button>
 </form>
+</div></div>
 
 {% for r in rounds %}
-<div class="lrow {{ 'cool' if r.is_open }}">
-  <div class="lrow-1"><span class="lrow-n">{{ r.title }}
-    {% if r.is_open %}<span class="pill pill-green">Open</span>{% endif %}</span>
-    <span class="lrow-d">{{ r.n }} answered</span></div>
-  <div class="lrow-meta">Opened {{ r.opened_at.strftime('%b %-d') }}
-    {% if r.closed_at %} · closed {{ r.closed_at.strftime('%b %-d') }}{% endif %}
+<div class="mrow {% if r.is_open %}done{% endif %}">
+  <div class="top"><span class="nm">{{ r.title }}</span>
+    <span class="dist">{{ r.n }} logged</span></div>
+  <div class="mid">{% if r.is_open %}<span class="pill ok">Open</span>{% else %}<span class="pill safe">Closed</span>{% endif %}</div>
+  <div class="foot">Opened {{ r.opened_at.strftime('%b %-d') }}
+    {% if r.closed_at %} &middot; closed {{ r.closed_at.strftime('%b %-d') }}{% endif %}
     {% if r.is_open %}
     <form method="POST" style="display:inline" onsubmit="return confirm('Close this round?')">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="close">
-      <button style="background:none;border:0;color:var(--red);font-size:12px;text-decoration:underline;">close</button>
-    </form>{% endif %}</div>
+      <button class="btn btn-sm btn-ghost" style="margin-left:8px;">Close</button></form>{% endif %}</div>
 </div>
 {% endfor %}
 {% endblock %}
