@@ -1,7 +1,7 @@
 {% extends "whip/base.html" %}
 {% block title %}Whips{% endblock %}
 {% block whip %}
-<div class="hd"><h1>Whips</h1><div class="sub">Who is working the list</div></div>
+<div class="hd"><h1>Whips</h1><div class="sub">{{ people|length }} whip{{ '' if people|length==1 else 's' }}{% if rnd %} &middot; {{ rnd.title }}{% endif %}</div></div>
 
 <form class="card" method="POST" action="{{ url_for('whip.roster_add') }}" style="margin-bottom:22px;">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

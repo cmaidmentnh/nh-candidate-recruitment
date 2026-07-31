@@ -168,9 +168,13 @@ def _sorted(rows, uid):
 
 
 def _whips(cur):
-    cur.execute("""SELECT user_id, COALESCE(username, email) FROM users
-                   WHERE role IN ('whip','admin') ORDER BY 2""")
-    return [{'user_id': r[0], 'name': r[1]} for r in cur.fetchall()]
+    """Assignable people: whips first, then admins who can take a slice."""
+    cur.execute("""SELECT user_id, COALESCE(username, email), role FROM users
+                   WHERE role IN ('whip','admin')
+                   ORDER BY (role='whip') DESC, 2""")
+    return [{'user_id': r[0],
+             'name': r[1] + ('' if r[2] == 'whip' else ' (admin)'),
+             'role': r[2]} for r in cur.fetchall()]
 
 
 # ------------------------------------------------------------- my list
@@ -333,13 +337,15 @@ def rounds():
 def roster():
     conn = _get_db(); cur = conn.cursor()
     try:
+        # Whips only. Listing every admin here meant the roster showed all 47
+        # accounts when the actual whip count was zero.
         cur.execute("""
             SELECT u.user_id, COALESCE(u.username,''), COALESCE(u.email,''), u.role,
                    u.last_login, COUNT(p.candidate_id)
             FROM users u
             LEFT JOIN candidate_campaign_progress p ON p.assigned_whip=u.user_id
-            WHERE u.role IN ('whip','admin')
-            GROUP BY 1,2,3,4,5 ORDER BY (u.role='whip') DESC, 6 DESC, 2""")
+            WHERE u.role = 'whip'
+            GROUP BY 1,2,3,4,5 ORDER BY 6 DESC, 2""")
         people = [{'user_id': r[0], 'username': r[1], 'email': r[2], 'role': r[3],
                    'last_login': r[4], 'assigned': r[5]} for r in cur.fetchall()]
         rnd = _open_round(cur)
