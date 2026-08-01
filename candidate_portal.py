@@ -282,6 +282,44 @@ def _match_by_name_town(cur, name, town):
     return None
 
 
+# Candidates who tick the SMS consent box are recorded in CTEHR's CRM, which is
+# where the 10DLC registration and the actual sending live. Consent only - no
+# candidate is forwarded without ticking the box.
+CRM_WEBHOOK_URL = os.environ.get('CRM_WEBHOOK_URL', 'https://actioncenter.winthehouse.gop/api/webhook/contact')
+CRM_WEBHOOK_API_KEY = os.environ.get('CRM_WEBHOOK_API_KEY', '')
+CRM_ORG_ID = os.environ.get('CRM_ORG_ID', '1')
+
+
+def _consented(value):
+    return str(value or '').lower() in ('true', '1', 'on', 'yes')
+
+
+def _forward_sms_optin(first_name, last_name, email, phone, source):
+    """Record an SMS consent in CTEHR's CRM. Never raises."""
+    if not CRM_WEBHOOK_API_KEY:
+        logger.warning('SMS opt-in not forwarded: CRM_WEBHOOK_API_KEY unset')
+        return False
+    try:
+        import requests
+        r = requests.post(
+            CRM_WEBHOOK_URL,
+            headers={'X-API-Key': CRM_WEBHOOK_API_KEY, 'X-Org-Id': str(CRM_ORG_ID),
+                     'Content-Type': 'application/json'},
+            json={'org_id': int(CRM_ORG_ID), 'email': email,
+                  'first_name': first_name or '', 'last_name': last_name or '',
+                  'mobile': phone or '', 'sms_opt_in': True,
+                  'sms_opt_in_source': source[:100], 'source': source,
+                  'tags': ['Candidate Portal']},
+            timeout=10)
+        if r.status_code >= 300:
+            logger.warning(f'CRM opt-in forward failed {r.status_code}: {r.text[:200]}')
+            return False
+        return True
+    except Exception as e:
+        logger.warning(f'CRM opt-in forward error: {e}')
+        return False
+
+
 @portal_bp.route('/register-start', methods=['POST'])
 def register_start():
     data = request.get_json(silent=True) or {}
@@ -291,6 +329,13 @@ def register_start():
     email = (data.get('email') or '').strip().lower()
     if not EMAIL_RE.match(email):
         return jsonify({'ok': False, 'error': 'Please enter a valid email address.'}), 400
+
+    # Recorded on both paths below - whether we already have them on file or the
+    # registration is going to an admin for approval, the consent was given now.
+    if _consented(data.get('sms_opt_in')) and phone:
+        _parts = name.split(None, 1)
+        _forward_sms_optin(_parts[0] if _parts else '', _parts[1] if len(_parts) > 1 else '',
+                           email, phone, 'candidate portal registration')
 
     conn = get_db_connection(); cur = conn.cursor()
     try:
@@ -623,6 +668,20 @@ def profile_post():
            'notes': (request.form.get('notes') or '').strip()[:5000]}
     if not sub['first_name'] or not sub['last_name']:
         return jsonify({'ok': False, 'error': 'First and last name are required.'}), 400
+
+    if _consented(request.form.get('sms_opt_in')) and sub['phone1']:
+        _email = ''
+        try:
+            _c = get_db_connection(); _cur = _c.cursor()
+            _cur.execute("SELECT COALESCE(email, email1, email2) FROM candidates WHERE candidate_id=%s", (cid,))
+            _row = _cur.fetchone()
+            _email = (_row[0] or '') if _row else ''
+            _cur.close(); release_db_connection(_c)
+        except Exception as e:
+            logger.warning(f'could not resolve email for candidate {cid}: {e}')
+        if _email:
+            _forward_sms_optin(sub['first_name'], sub['last_name'], _email,
+                               sub['phone1'], 'candidate portal profile')
 
     conn = get_db_connection(); cur = conn.cursor()
     try:
