@@ -254,3 +254,72 @@ table.tbl td.r,table.tbl th.r{ text-align:right; }
   .ti .tv{ grid-column:1; grid-row:2; }
   .ti .tbtn{ grid-column:2; grid-row:1 / span 2; }
 }
+
+/* ==========================================================
+   My Week — one tight line per candidate. What they need is
+   on the row; you should never have to open someone to find
+   out what they asked for.
+   ========================================================== */
+
+.wkhead{ display:flex; align-items:flex-start; justify-content:space-between;
+         gap:16px; flex-wrap:wrap; margin-bottom:10px; }
+.wkhead .page-title{ font-size:1.45rem; }
+.wkhead .page-sub{ margin:2px 0 0; }
+.wkfilter{ display:flex; gap:8px; align-items:center; }
+.wkfilter select{ width:auto; min-width:190px; padding:8px 10px; font-size:.9rem; }
+
+.asksum{ margin:14px 0 4px; font-size:.86rem; color:var(--gray);
+         display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.asksum b{ font-family:var(--font-head); color:var(--navy); font-size:.74rem;
+           text-transform:uppercase; letter-spacing:.05em; }
+
+/* ------------------------------------------------------- the week table */
+.wtbl{ width:100%; border-collapse:collapse; background:#fff; margin-top:16px;
+       border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.wtbl thead th{ background:var(--navy); color:#fff; font-family:var(--font-head);
+       font-size:.66rem; text-transform:uppercase; letter-spacing:.06em;
+       padding:8px 10px; text-align:left; font-weight:700; }
+.wtbl tr.grp td{ background:#eef1f6; font-family:var(--font-head); font-weight:700;
+       font-size:.68rem; text-transform:uppercase; letter-spacing:.07em;
+       color:var(--gray); padding:6px 10px; }
+.wtbl td{ padding:7px 10px; border-bottom:1px solid #eef1f5; font-size:.88rem;
+       vertical-align:middle; }
+.wtbl tbody tr:last-child td{ border-bottom:none; }
+.wtbl tbody tr:hover td{ background:#f6f9fe; }
+.wtbl tr.is-swing td:first-child{ box-shadow:inset 3px 0 0 var(--red); }
+.wtbl tr.is-done td{ background:#fcfdfc; }
+.wtbl tr.is-done:hover td{ background:#f4faf6; }
+
+.c-call{ width:52px; }
+.calla{ display:inline-block; background:var(--navy); color:#fff; border-radius:6px;
+        padding:5px 10px; font-family:var(--font-head); font-weight:700;
+        font-size:.68rem; text-transform:uppercase; letter-spacing:.04em;
+        text-decoration:none; }
+.calla:hover{ background:var(--red); color:#fff; }
+.nophone{ color:#c3cad6; padding-left:10px; }
+
+.c-name{ min-width:180px; }
+.c-name a{ font-family:var(--font-head); font-weight:700; color:var(--navy);
+           text-decoration:none; font-size:.92rem; }
+.c-name a:hover{ color:var(--red); text-decoration:underline; }
+.c-name .sub{ display:block; color:var(--gray); font-size:.75rem; margin-top:1px; }
+
+.c-race{ width:104px; }
+.c-needs{ min-width:230px; }
+.c-needs .chip{ margin:1px 3px 1px 0; }
+.c-needs .detail{ display:block; color:var(--gray); font-size:.76rem;
+                  font-style:italic; margin-top:2px; }
+.c-needs .none{ color:#b6bec9; font-size:.82rem; }
+.c-status{ width:104px; }
+.c-when{ width:104px; color:var(--gray); font-size:.8rem; white-space:nowrap; }
+.c-when .never{ color:var(--red-dark); font-weight:700; }
+.done-tick{ color:var(--green); font-weight:700; }
+.pill.faded{ background:#f1f3f7; color:#9aa4b2; }
+
+/* Narrow screens: drop the columns a whip can live without, keep the ask. */
+@media(max-width:760px){
+  .wtbl thead{ display:none; }
+  .wtbl .c-race, .wtbl .c-when{ display:none; }
+  .wtbl td{ padding:9px 8px; }
+  .c-needs{ min-width:0; }
+}

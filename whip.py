@@ -293,16 +293,24 @@ def my_week():
         base = mine if mine else rows
         done = [d for d in base if d['checkin']]
         todo = [d for d in shown if not d['checkin']]
+
+        # One line at the top of the page answering "what does my list need?"
+        # without opening anybody.
+        tally = {}
+        for d in shown:
+            for a in ((d['checkin'] or {}).get('asks') or d['open_asks']):
+                tally[a] = tally.get(a, 0) + 1
+        need_summary = [(k, ASK_LABEL.get(k, k), n)
+                        for k, n in sorted(tally.items(), key=lambda x: -x[1])]
+
         return render_template(
             'whip/week.html',
             week=week, week_label=_week_label(week), rows=shown,
             todo=todo, done_rows=[d for d in shown if d['checkin']],
             scope=scope, mine_n=len(mine), total=len(rows),
-            done=len(done), of=len(base),
-            pct=int(round(100 * len(done) / len(base))) if base else 0,
-            flagged=[d for d in base if (d['checkin'] or {}).get('status')
-                     in ('at_risk', 'not_running')],
-            asks_open=sum(1 for d in base if (d['checkin'] or {}).get('asks')))
+            done=len(done), of=len(base), need_summary=need_summary,
+            ask_label=ASK_LABEL,
+            pct=int(round(100 * len(done) / len(base))) if base else 0)
     finally:
         cur.close()
         _release_db(conn)
