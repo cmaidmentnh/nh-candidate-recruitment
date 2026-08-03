@@ -1528,6 +1528,17 @@ def login():
                 user = CandidateUser(candidate_id, cand_email or email, password_hash, first_name, last_name, password_changed, photo_url)
                 login_user(user)
                 cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s", (candidate_id,))
+
+                # Same address, two accounts. Signing in by email always lands
+                # on the candidate profile, so a staff member who is also a
+                # candidate gets silently confined to /profile and reads it as
+                # having lost access. Say so instead of leaving them guessing.
+                cur.execute("SELECT username FROM users WHERE LOWER(email) = %s", (email,))
+                staff = cur.fetchone()
+                if staff:
+                    flash(f"You're signed in to your candidate profile. Your staff account "
+                          f"is separate — sign out and sign back in with the username "
+                          f"\"{staff[0]}\" to reach the whip tool and admin screens.", "info")
                 conn.commit()
                 session.permanent = True
                 flash("Logged in successfully.", "success")
@@ -1782,10 +1793,18 @@ def verify_reset_token(token, max_age=3600):
     except (SignatureExpired, BadSignature):
         return None
 
-def send_password_reset_email(email, name, user_type, user_id):
-    """Send password reset email."""
+def send_password_reset_email(email, name, user_type, user_id, account_hint=None):
+    """Send password reset email.
+
+    account_hint names which of a person's accounts this link is for. Some
+    people hold both a candidate profile and a staff account on one address,
+    and an unlabelled "reset your password" mail is impossible to tell apart.
+    """
     token = generate_reset_token(user_type, user_id)
     reset_url = f"{APP_URL}/reset-password/{token}"
+    hint_html = (f'<p style="background:#f5f6f8;border-left:3px solid #d91720;'
+                 f'padding:10px 14px;font-size:14px;">{account_hint}</p>'
+                 if account_hint else '')
 
     html_body = f"""
     <html>
@@ -1793,6 +1812,7 @@ def send_password_reset_email(email, name, user_type, user_id):
         <h2 style="color: #d91720;">Password Reset Request</h2>
         <p>Hi {name},</p>
         <p>We received a request to reset your password for the NH Candidate Recruitment system.</p>
+        {hint_html}
         <p>Click the button below to reset your password:</p>
         <p style="margin: 30px 0;">
             <a href="{reset_url}" style="background-color: #d91720; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
@@ -1805,9 +1825,14 @@ def send_password_reset_email(email, name, user_type, user_id):
     </html>
     """
 
-    text_body = f"Hi {name},\n\nReset your password here: {reset_url}\n\nThis link expires in 1 hour."
+    text_body = (f"Hi {name},\n\n"
+                 + (account_hint + "\n\n" if account_hint else "")
+                 + f"Reset your password here: {reset_url}\n\nThis link expires in 1 hour.")
 
-    return send_email(email, "Password Reset Request", html_body, text_body)
+    subject = "Password Reset Request"
+    if account_hint:
+        subject += " — staff account" if user_type == 'admin' else " — candidate profile"
+    return send_email(email, subject, html_body, text_body)
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 @limiter.limit("3 per minute")
@@ -1824,21 +1849,32 @@ def forgot_password():
         cur = conn.cursor()
 
         try:
-            # Check candidates table
-            cur.execute("SELECT candidate_id, first_name FROM candidates WHERE LOWER(email) = %s", (email,))
+            # Both tables, always. One address can hold a candidate profile AND
+            # a staff account — two whips are candidates themselves. Returning
+            # after the candidate match meant those people could only ever reset
+            # the profile password, never the staff one, so the staff account
+            # was unreachable by any self-service route.
+            cur.execute("SELECT candidate_id, first_name FROM candidates "
+                        "WHERE LOWER(email) = %s OR LOWER(email1) = %s", (email, email))
             candidate = cur.fetchone()
 
-            if candidate:
-                send_password_reset_email(email, candidate[1], 'candidate', candidate[0])
-                flash("If an account exists with that email, you'll receive a password reset link shortly.", "success")
-                return redirect(url_for('login'))
-
-            # Check users table
             cur.execute("SELECT user_id, username FROM users WHERE LOWER(email) = %s", (email,))
             user = cur.fetchone()
 
+            both = bool(candidate and user)
+            if candidate:
+                send_password_reset_email(
+                    email, candidate[1], 'candidate', candidate[0],
+                    account_hint=("This link is for your CANDIDATE PROFILE. You also have a "
+                                  "staff account on this address — that one is a separate "
+                                  "password, in its own email.") if both else None)
             if user:
-                send_password_reset_email(email, user[1], 'admin', user[0])
+                send_password_reset_email(
+                    email, user[1], 'admin', user[0],
+                    account_hint=(f"This link is for your STAFF ACCOUNT (username "
+                                  f"\"{user[1]}\"). Sign in with that username rather than "
+                                  f"your email address, or you'll land on your candidate "
+                                  f"profile instead.") if both else None)
 
             # Always show success to prevent email enumeration
             flash("If an account exists with that email, you'll receive a password reset link shortly.", "success")
