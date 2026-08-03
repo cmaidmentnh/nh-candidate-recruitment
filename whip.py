@@ -311,12 +311,38 @@ def _order(rows, sort='district'):
 
 
 def _whips(cur):
-    """Assignable people: whips first, then admins who take a slice themselves."""
-    cur.execute("""SELECT user_id, COALESCE(username, email), role FROM users
-                   WHERE role IN ('whip','admin') ORDER BY (role='whip') DESC, 2""")
-    return [{'user_id': r[0],
-             'name': r[1] + ('' if r[2] == 'whip' else ' (admin)'),
-             'role': r[2]} for r in cur.fetchall()]
+    """Assignable people: the named whip roster, plus anyone already holding a list.
+
+    Deliberately NOT every admin. All 49 accounts are role='admin', so the old
+    `role IN ('whip','admin')` put the entire user table in the picker, which is
+    what made the assign screen unusable. `is_whip` is the explicit roster;
+    people carrying assignments are included so nobody vanishes from the picker
+    if their flag is cleared while they still own candidates.
+    """
+    cur.execute("""
+        SELECT u.user_id, COALESCE(NULLIF(u.username,''), u.email),
+               COUNT(p.candidate_id)
+        FROM users u
+        LEFT JOIN candidate_campaign_progress p ON p.assigned_whip = u.user_id
+        WHERE u.is_whip OR p.candidate_id IS NOT NULL
+        GROUP BY 1, 2
+        ORDER BY 2""")
+    return [{'user_id': r[0], 'name': r[1], 'assigned': r[2]}
+            for r in cur.fetchall()]
+
+
+def _coverage(cur):
+    """Who is carrying what, plus what nobody owns — shown while you assign."""
+    whips = _whips(cur)
+    cur.execute("""
+        SELECT COUNT(*) FROM filings f
+        WHERE f.election_year=2026 AND f.office='State Representative'
+          AND f.party='R'
+          AND NOT EXISTS (SELECT 1 FROM candidate_campaign_progress p
+                          WHERE p.candidate_id = f.candidate_id
+                            AND p.assigned_whip IS NOT NULL)""")
+    return {'whips': whips, 'unassigned': cur.fetchone()[0],
+            'assigned': sum(w['assigned'] for w in whips)}
 
 
 # -------------------------------------------------------------- my week
@@ -366,6 +392,11 @@ def my_week():
         need_summary = [(k, ASK_LABEL.get(k, k), n)
                         for k, n in sorted(tally.items(), key=lambda x: -x[1])]
 
+        # Admins assign inline from this screen, so they need the picker and a
+        # running picture of who is carrying what. Whips get neither.
+        admin = can_admin_whip()
+        cov = _coverage(cur) if admin else None
+
         return render_template(
             'whip/week.html',
             week=week, week_label=_week_label(week), rows=shown,
@@ -373,6 +404,7 @@ def my_week():
             scope=scope, mine_n=len(mine), total=len(rows),
             done=len(done), of=len(base), need_summary=need_summary,
             ask_label=ASK_LABEL, sort=sort, county=county, counties=counties,
+            whips=(cov['whips'] if cov else []), coverage=cov,
             pct=int(round(100 * len(done) / len(base))) if base else 0)
     finally:
         cur.close()
@@ -624,6 +656,47 @@ def needs():
         _release_db(conn)
 
 
+# ------------------------------------------------- assign one, from the board
+@whip_bp.route('/whip/c/<int:cid>/assign', methods=['POST'])
+@admin_required
+def assign_one(cid):
+    """Set one candidate's whip without leaving the board.
+
+    The bulk screen is still there for mass moves, but the common case is
+    reassigning a single person while you're looking at the list, and that
+    should not cost a page load.
+    """
+    data = request.get_json(silent=True) or {}
+    raw = data.get('whip')
+    whip = int(raw) if str(raw or '').isdigit() else None
+
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        if whip is not None:
+            cur.execute("SELECT 1 FROM users WHERE user_id=%s", (whip,))
+            if not cur.fetchone():
+                return jsonify({'error': 'no such user'}), 400
+
+        cur.execute("""INSERT INTO candidate_campaign_progress
+                            (candidate_id, assigned_whip)
+                       VALUES (%s,%s) ON CONFLICT (candidate_id)
+                       DO UPDATE SET assigned_whip=EXCLUDED.assigned_whip""",
+                    (cid, whip))
+        conn.commit()
+
+        cov = _coverage(cur)
+        name = next((w['name'] for w in cov['whips'] if w['user_id'] == whip), None)
+        return jsonify({'ok': True, 'whip': whip, 'name': name,
+                        'coverage': cov})
+    except Exception as e:                                   # pragma: no cover
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
 # -------------------------------------------------------------- assign
 @whip_bp.route('/whip/assign', methods=['GET', 'POST'])
 @admin_required
@@ -682,7 +755,7 @@ def roster():
                    u.role, u.last_login, COUNT(p.candidate_id)
             FROM users u
             LEFT JOIN candidate_campaign_progress p ON p.assigned_whip = u.user_id
-            WHERE u.role='whip' OR p.candidate_id IS NOT NULL
+            WHERE u.is_whip OR p.candidate_id IS NOT NULL
             GROUP BY 1,2,3,4,5 ORDER BY 6 DESC, 2""")
         people = [{'user_id': r[0], 'username': r[1], 'email': r[2], 'role': r[3],
                    'last_login': r[4], 'assigned': r[5]} for r in cur.fetchall()]
@@ -715,13 +788,20 @@ def roster_add():
         cur.execute("SELECT user_id FROM users WHERE LOWER(email)=%s", (email,))
         row = cur.fetchone()
         if row:
-            cur.execute("UPDATE users SET role='whip' WHERE user_id=%s", (row[0],))
+            # Flag them, never overwrite role. This used to be
+            # `SET role='whip'`, which dropped an existing admin out of
+            # role='admin' and cost them the whole rest of the app
+            # (app.py gates every admin screen on that exact string).
+            cur.execute("UPDATE users SET is_whip=TRUE WHERE user_id=%s", (row[0],))
             conn.commit()
             flash(f"{email} is now a whip.", "success")
             return redirect(url_for('whip.roster'))
         username = (request.form.get('username') or email.split('@')[0]).strip()
-        cur.execute("""INSERT INTO users (username,email,password_hash,role,created_at)
-                       VALUES (%s,%s,NULL,'whip',now()) RETURNING user_id""",
+        # Somebody brand new gets the narrow role, not admin. `is_whip` decides
+        # who appears in the picker; `role` still decides what they can reach,
+        # and a new caller has no business on the rest of the admin surface.
+        cur.execute("""INSERT INTO users (username,email,password_hash,role,is_whip,created_at)
+                       VALUES (%s,%s,NULL,'whip',TRUE,now()) RETURNING user_id""",
                     (username, email))
         uid = cur.fetchone()[0]
         conn.commit()
@@ -744,8 +824,7 @@ def roster_remove(user_id):
     conn = _get_db()
     cur = conn.cursor()
     try:
-        cur.execute("UPDATE users SET role='admin' WHERE user_id=%s AND role='whip'",
-                    (user_id,))
+        cur.execute("UPDATE users SET is_whip=FALSE WHERE user_id=%s", (user_id,))
         conn.commit()
         flash("Whip role removed. Their assignments are untouched.", "success")
     finally:

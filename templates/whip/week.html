@@ -53,7 +53,17 @@
     </span>
   </td>
 
-  <td class="c-whip">{% if d.owner_name %}{{ d.owner_name }}{% else %}<span class="dim">&mdash;</span>{% endif %}</td>
+  <td class="c-whip">
+    {% if can_admin_whip %}
+      <select class="whipsel" data-cid="{{ d.candidate_id }}"
+              aria-label="Assign {{ d.name }} to a whip">
+        <option value="">&mdash; unassigned &mdash;</option>
+        {% for w in whips %}
+        <option value="{{ w.user_id }}" {% if d.owner==w.user_id %}selected{% endif %}>{{ w.name }}</option>
+        {% endfor %}
+      </select>
+    {% elif d.owner_name %}{{ d.owner_name }}{% else %}<span class="dim">&mdash;</span>{% endif %}
+  </td>
 </tr>
 {% endmacro %}
 
@@ -86,6 +96,21 @@
 {% if need_summary %}
 <p class="asksum"><b>Asked for:</b>
   {% for key, label, n in need_summary %}{{ label }} &times;{{ n }}{{ ' · ' if not loop.last }}{% endfor %}</p>
+{% endif %}
+
+{% if can_admin_whip and coverage %}
+<div class="covbar" id="covbar">
+  <b>Coverage</b>
+  <span class="cov-unassigned" id="cov-unassigned"
+        title="Filed 2026 Republicans with no whip">{{ coverage.unassigned }} unassigned</span>
+  {% for w in coverage.whips %}
+    <span class="cov-w" data-uid="{{ w.user_id }}">{{ w.name }}
+      <b class="cov-n">{{ w.assigned }}</b></span>
+  {% else %}
+    <span class="cov-none">No whips named yet &mdash;
+      <a href="{{ url_for('whip.roster') }}">add them</a> to fill the picker.</span>
+  {% endfor %}
+</div>
 {% endif %}
 
 {% if rows %}
@@ -122,5 +147,75 @@
   {% elif scope == 'needs' %}<b>Nobody has asked for anything yet.</b><br>Asks appear here as whips log their calls.
   {% else %}<b>Nothing here.</b>{% endif %}
 </div>
+{% endif %}
+
+{% if can_admin_whip %}
+<style>
+  .covbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;
+          margin:0 0 14px;padding:10px 14px;background:#f5f6f8;
+          border:1px solid #e2e5ea;border-radius:4px;font-size:.88rem;}
+  .covbar b{font-weight:700;}
+  .cov-w{white-space:nowrap;color:#3c4250;}
+  .cov-w .cov-n{margin-left:4px;font-variant-numeric:tabular-nums;}
+  .cov-unassigned{white-space:nowrap;font-weight:700;color:#b3261e;}
+  .cov-unassigned.clear{color:#1b7f3b;}
+  .cov-none{color:#6b7280;}
+  select.whipsel{max-width:150px;font-size:.85rem;padding:2px 4px;}
+  select.whipsel.saving{opacity:.5;}
+  select.whipsel.saved{outline:2px solid #1b7f3b;outline-offset:1px;}
+  select.whipsel.failed{outline:2px solid #b3261e;outline-offset:1px;}
+</style>
+<script>
+(function () {
+  // Same pattern the call screen uses for /fix: token rendered straight into
+  // the script. CSRFProtect is global, so an unsigned JSON POST gets a 400.
+  var CSRF = "{{ csrf_token() }}";
+
+  function paint(sel, cls) {
+    sel.classList.remove('saving', 'saved', 'failed');
+    if (cls) { sel.classList.add(cls); }
+    if (cls === 'saved') { setTimeout(function () { sel.classList.remove('saved'); }, 1200); }
+  }
+
+  function redrawCoverage(cov) {
+    if (!cov) { return; }
+    var un = document.getElementById('cov-unassigned');
+    if (un) {
+      un.textContent = cov.unassigned + ' unassigned';
+      un.classList.toggle('clear', cov.unassigned === 0);
+    }
+    (cov.whips || []).forEach(function (w) {
+      var el = document.querySelector('.cov-w[data-uid="' + w.user_id + '"] .cov-n');
+      if (el) { el.textContent = w.assigned; }
+    });
+  }
+
+  document.querySelectorAll('select.whipsel').forEach(function (sel) {
+    sel.dataset.prev = sel.value;
+    sel.addEventListener('change', function () {
+      paint(sel, 'saving');
+      fetch('/whip/c/' + sel.dataset.cid + '/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        credentials: 'same-origin',
+        body: JSON.stringify({ whip: sel.value || null })
+      })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (j) {
+          if (j.error) { return Promise.reject(j.error); }
+          sel.dataset.prev = sel.value;
+          paint(sel, 'saved');
+          redrawCoverage(j.coverage);
+        })
+        .catch(function () {
+          // Put the control back to the truth we last knew, so the screen
+          // never claims an assignment the server did not take.
+          sel.value = sel.dataset.prev;
+          paint(sel, 'failed');
+        });
+    });
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}
