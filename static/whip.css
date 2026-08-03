@@ -92,18 +92,6 @@
 .mrow .mid{ margin-top:7px; display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
 .mrow .foot{ margin-top:7px; font-size:.8rem; color:var(--gray); }
 
-/* -------------------------------------------------------------- pills */
-.pill{ display:inline-block; font-family:var(--font-head); font-weight:700;
-       font-size:.68rem; padding:3px 9px; border-radius:999px;
-       text-transform:uppercase; letter-spacing:.04em; }
-.pill.swing  { background:var(--red); color:#fff; }
-.pill.lean   { background:#e0a33a; color:#fff; }
-.pill.likely { background:#7a8aa3; color:#fff; }
-.pill.safe   { background:#eef1f6; color:var(--gray); }
-.pill.ok     { background:var(--green-bg); color:var(--green); }
-.pill.watch  { background:var(--amber-bg); color:var(--amber); }
-.pill.problem{ background:#fdeaea; color:var(--red-dark); }
-
 /* ------------------------------------------------------------- tables */
 table.tbl{ width:100%; border-collapse:collapse; background:#fff;
            border:1px solid var(--line); border-radius:12px; overflow:hidden; }
@@ -235,16 +223,6 @@ table.tbl td.r,table.tbl th.r{ text-align:right; }
 .surveys{ margin-top:12px; display:flex; flex-wrap:wrap; gap:6px; }
 .anote{ font-size:.92rem; margin:10px 0 0; white-space:pre-wrap; }
 
-/* ---------------------------------------------------------------- chips */
-.chip{ display:inline-block; background:#eef1f6; color:var(--navy); border-radius:999px;
-       padding:3px 10px; font-size:.74rem; font-weight:700; font-family:var(--font-head); }
-.chip.big{ background:#fff; border:1px solid #e5d3a8; color:var(--amber);
-           padding:6px 13px; font-size:.82rem; }
-.inc{ font-family:var(--font-head); font-size:.62rem; font-weight:700; color:var(--gray);
-      background:#eef1f6; border-radius:4px; padding:2px 5px; text-transform:uppercase;
-      vertical-align:middle; letter-spacing:.05em; }
-.seats{ color:var(--gray); font-size:.78rem; }
-
 .wkapp input[type=date]{ font-family:var(--font-body); font-size:1rem; padding:11px 12px;
       border:1px solid var(--line); border-radius:8px; background:#fff; width:100%; }
 
@@ -273,53 +251,83 @@ table.tbl td.r,table.tbl th.r{ text-align:right; }
 .asksum b{ font-family:var(--font-head); color:var(--navy); font-size:.74rem;
            text-transform:uppercase; letter-spacing:.05em; }
 
-/* ------------------------------------------------------- the week table */
-.wtbl{ width:100%; border-collapse:collapse; background:#fff; margin-top:16px;
-       border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+/* ------------------------------------------------------- the week table
+   No pills anywhere. Distinctions are carried by the type itself —
+   weight, case and colour on the text — so the row stays a row of facts
+   instead of a row of lozenges.
+   ---------------------------------------------------------------------- */
+.wtbl{ width:100%; border-collapse:collapse; background:#fff; margin-top:14px;
+       border:1px solid var(--line); font-size:.86rem; }
 .wtbl thead th{ background:var(--navy); color:#fff; font-family:var(--font-head);
-       font-size:.66rem; text-transform:uppercase; letter-spacing:.06em;
-       padding:8px 10px; text-align:left; font-weight:700; }
-.wtbl tr.grp td{ background:#eef1f6; font-family:var(--font-head); font-weight:700;
-       font-size:.68rem; text-transform:uppercase; letter-spacing:.07em;
-       color:var(--gray); padding:6px 10px; }
-.wtbl td{ padding:7px 10px; border-bottom:1px solid #eef1f5; font-size:.88rem;
-       vertical-align:middle; }
-.wtbl tbody tr:last-child td{ border-bottom:none; }
+       font-size:.63rem; text-transform:uppercase; letter-spacing:.07em;
+       padding:7px 9px; text-align:left; font-weight:700; white-space:nowrap; }
+.wtbl tr.grp td{ background:#eaeef4; font-family:var(--font-head); font-weight:800;
+       font-size:.68rem; text-transform:uppercase; letter-spacing:.08em;
+       color:var(--navy); padding:6px 9px; }
+.wtbl td{ padding:6px 9px; border-bottom:1px solid #eef1f5; vertical-align:top;
+       line-height:1.35; }
 .wtbl tbody tr:hover td{ background:#f6f9fe; }
-.wtbl tr.is-swing td:first-child{ box-shadow:inset 3px 0 0 var(--red); }
-.wtbl tr.is-done td{ background:#fcfdfc; }
-.wtbl tr.is-done:hover td{ background:#f4faf6; }
+.wtbl tr.is-done td{ background:#fbfdfb; }
+.wtbl tr.is-done:hover td{ background:#f3faf5; }
 
-.c-call{ width:52px; }
-.calla{ display:inline-block; background:var(--navy); color:#fff; border-radius:6px;
-        padding:5px 10px; font-family:var(--font-head); font-weight:700;
-        font-size:.68rem; text-transform:uppercase; letter-spacing:.04em;
-        text-decoration:none; }
-.calla:hover{ background:var(--red); color:#fff; }
-.nophone{ color:#c3cad6; padding-left:10px; }
+.wtbl .sub{ display:block; color:#8a93a0; font-size:.74rem; margin-top:1px; }
+.wtbl .dim{ color:#c0c7d1; }
+.wtbl .more{ color:#a8b0bb; font-size:.76rem; }
+.good{ color:var(--green); }
+.mid { color:var(--amber); }
+.bad { color:var(--red-dark); font-weight:700; }
 
-.c-name{ min-width:180px; }
+.c-call{ width:46px; }
+.calla{ display:inline-block; color:var(--navy); border:1px solid #ccd5e2;
+        border-radius:4px; padding:3px 8px; font-family:var(--font-head);
+        font-weight:700; font-size:.66rem; text-transform:uppercase;
+        letter-spacing:.04em; text-decoration:none; }
+.calla:hover{ background:var(--navy); color:#fff; border-color:var(--navy); }
+
+.c-name{ min-width:150px; }
 .c-name a{ font-family:var(--font-head); font-weight:700; color:var(--navy);
-           text-decoration:none; font-size:.92rem; }
+           text-decoration:none; }
 .c-name a:hover{ color:var(--red); text-decoration:underline; }
-.c-name .sub{ display:block; color:var(--gray); font-size:.75rem; margin-top:1px; }
+.inc{ color:#98a1ad; font-size:.66rem; font-style:italic; margin-left:5px;
+      font-family:var(--font-body); }
 
-.c-race{ width:104px; }
-.c-needs{ min-width:230px; }
-.c-needs .chip{ margin:1px 3px 1px 0; }
-.c-needs .detail{ display:block; color:var(--gray); font-size:.76rem;
-                  font-style:italic; margin-top:2px; }
-.c-needs .none{ color:#b6bec9; font-size:.82rem; }
-.c-status{ width:104px; }
-.c-when{ width:104px; color:var(--gray); font-size:.8rem; white-space:nowrap; }
-.c-when .never{ color:var(--red-dark); font-weight:700; }
-.done-tick{ color:var(--green); font-weight:700; }
-.pill.faded{ background:#f1f3f7; color:#9aa4b2; }
+.c-dist{ min-width:96px; white-space:nowrap; }
+.c-race{ min-width:86px; }
+.rate{ font-family:var(--font-head); font-weight:800; font-size:.68rem;
+       text-transform:uppercase; letter-spacing:.05em; }
+.rate.swing { color:var(--red); }
+.rate.lean  { color:#a5761b; }
+.rate.likely{ color:#5a6b85; }
+.rate.safe  { color:#98a1ad; }
 
-/* Narrow screens: drop the columns a whip can live without, keep the ask. */
-@media(max-width:760px){
+.c-ready{ width:52px; font-family:var(--font-head); font-weight:800; }
+.c-gaps{ min-width:210px; color:var(--ink); }
+.c-asked{ min-width:150px; }
+.asked{ color:var(--navy); font-weight:700; }
+.c-last{ min-width:110px; }
+.st{ font-family:var(--font-head); font-weight:800; font-size:.7rem;
+     text-transform:uppercase; letter-spacing:.04em; }
+.c-whip{ min-width:88px; color:var(--gray); }
+
+.asksum{ margin:14px 0 0; font-size:.85rem; color:var(--gray); }
+.asksum b{ font-family:var(--font-head); color:var(--navy); font-size:.72rem;
+           text-transform:uppercase; letter-spacing:.05em; margin-right:5px; }
+
+.wkhead{ display:flex; align-items:flex-start; justify-content:space-between;
+         gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+.wkhead .page-title{ font-size:1.4rem; }
+.wkhead .page-sub{ margin:2px 0 0; }
+.wkfilter{ display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.wkfilter select{ width:auto; min-width:150px; padding:7px 9px; font-size:.85rem; }
+
+@media(max-width:1100px){ .c-whip, .c-ready{ display:none; } }
+@media(max-width:820px){
   .wtbl thead{ display:none; }
-  .wtbl .c-race, .wtbl .c-when{ display:none; }
-  .wtbl td{ padding:9px 8px; }
-  .c-needs{ min-width:0; }
+  .wtbl .c-dist, .wtbl .c-race{ display:none; }
+  .wtbl td{ padding:8px; }
 }
+
+/* Asks on the dossier — plain emphasised text, no lozenges. */
+.askbig{ font-family:var(--font-head); font-weight:800; color:var(--amber);
+         font-size:.88rem; margin-right:14px; }
+.feed .asked{ margin-right:10px; }

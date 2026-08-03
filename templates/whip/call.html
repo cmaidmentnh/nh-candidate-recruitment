@@ -31,7 +31,7 @@
 <p class="page-sub">
   {{ d.district }}{% if d.seats and d.seats > 1 %} &middot; {{ d.seats }} seats{% endif %}
   &middot; {{ 'Incumbent' if d.incumbent else 'Challenger' }}
-  {% if d.rating %} &middot; <span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
+  {% if d.rating %} &middot; <span class="rate {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
   {% if d.pvi is not none %} {{ 'R+' if d.pvi > 0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }}{% endif %}
   {% if d.owner_name %} &middot; whip: {{ d.owner_name }}{% endif %}
 </p>
@@ -57,7 +57,7 @@
 {% if history and history[0].asks %}
 <div class="lastask">
   <div class="lah">Last time ({{ history[0].week.strftime('%b %-d') }}) they asked for</div>
-  <div class="lab">{% for a in history[0].asks %}<span class="chip big">{{ ask_label.get(a, a) }}</span>{% endfor %}</div>
+  <div class="lab">{% for a in history[0].asks %}<span class="askbig">{{ ask_label.get(a, a) }}</span>{% endfor %}</div>
   {% if history[0].ask_detail %}<div class="lad">{{ history[0].ask_detail }}</div>{% endif %}
   {% if history[0].notes %}<div class="lad quote">{{ history[0].notes }}</div>{% endif %}
   <div class="lam">Open with this. Did it show up?</div>
@@ -160,7 +160,7 @@
 {% if admin_note %}
 <div class="section-head">Recruitment file</div>
 <div class="card"><div class="pad">
-  {% if admin_note.assessment %}<span class="pill safe">{{ admin_note.assessment|title }}</span>{% endif %}
+  {% if admin_note.assessment %}<b>{{ admin_note.assessment|title }}</b>{% endif %}
   {% if admin_note.notes %}<p class="anote">{{ admin_note.notes }}</p>{% endif %}
   <p class="ballotsub">{{ admin_note.by }}{% if admin_note.at %} &middot; {{ admin_note.at.strftime('%b %-d, %Y') }}{% endif %}</p>
 </div></div>
@@ -223,7 +223,7 @@
     <b>Week of {{ h.week.strftime('%b %-d') }}</b> &mdash;
     {{ OUTCOME.get(h.outcome, '—') }}{% if h.status %}, {{ STATUS.get(h.status, h.status) }}{% endif %}
     <span class="when">&middot; {{ h.by }}</span>
-    {% if h.asks %}<br>{% for x in h.asks %}<span class="chip">{{ ask_label.get(x, x) }}</span>{% endfor %}{% endif %}
+    {% if h.asks %}<br>{% for x in h.asks %}<span class="asked">{{ ask_label.get(x, x) }}</span>{% endfor %}{% endif %}
     {% if h.ask_detail %}<br><i>{{ h.ask_detail }}</i>{% endif %}
     {% if h.notes %}<br>{{ h.notes }}{% endif %}
   </div>

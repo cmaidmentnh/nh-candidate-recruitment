@@ -23,8 +23,8 @@
   <div class="top"><span class="nm">{{ p.username or p.email }}</span>
     <span class="dist">{{ p.assigned }} assigned</span></div>
   <div class="mid">
-    <span class="pill {{ 'ok' if p.pct>=100 else 'watch' if p.pct else 'safe' }}">{{ p.done }} of {{ p.assigned }} called this week</span>
-    {% if not p.last_login %}<span class="pill problem">Never logged in</span>{% endif %}
+    <span class="{{ 'good' if p.pct>=100 else 'mid' if p.pct else 'dim' }}">{{ p.done }} of {{ p.assigned }} called this week</span>
+    {% if not p.last_login %}<span class="bad">Never logged in</span>{% endif %}
   </div>
   <div class="foot">{{ p.email }}
     {% if p.last_login %} &middot; last in {{ p.last_login.strftime('%b %-d') }}{% endif %}

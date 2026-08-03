@@ -244,6 +244,7 @@ def _roster(cur, week):
         d['ago'] = _ago(d['last_contact'])
         # Open asks carry forward until a later check-in stops listing them.
         d['open_asks'] = (d['latest'] or {}).get('asks') or []
+        d['gaps'] = _gaps(d)
     return rows, by_id
 
 
@@ -251,6 +252,32 @@ def _checkin(r):
     return {'week': r[1], 'by': r[2], 'at': r[3], 'outcome': r[4],
             'status': r[5], 'asks': list(r[6]) if r[6] else [],
             'ask_detail': r[7], 'notes': r[8]}
+
+
+# What to talk about, derived from the tracking we already hold. This is the
+# column that makes the tool useful on day one: before anybody has logged a
+# single call, the tracker already knows this candidate has no website, never
+# collected a voter list and isn't raising money. Ordered by what actually
+# costs a campaign the race, so the first three shown are the three worth
+# raising on the phone.
+GAP_CHECKS = [
+    ('website',    lambda d: not d['website'],            'No website'),
+    ('walkbook',   lambda d: not d['walkbook'],           'No voter list'),
+    ('fundraising', lambda d: not d['fundraising'],       'Not fundraising'),
+    ('canvassing', lambda d: not d['canvassing_started'], 'Not knocking'),
+    ('portal',     lambda d: not d['portal'],             'No portal account'),
+    ('login',      lambda d: d['portal'] and not d['last_login'], 'Never logged in'),
+    ('signs',      lambda d: not d['signs_ordered'],      'No signs'),
+    ('photo',      lambda d: not d['photo'],              'No photo'),
+    ('donate',     lambda d: not d['donate'],             'No donate page'),
+    ('socials',    lambda d: not d['socials'],            'No socials'),
+    ('bio',        lambda d: not d['bio'],                'No bio'),
+    ('training',   lambda d: not d['training_attended'],  'No training'),
+]
+
+
+def _gaps(d):
+    return [label for _k, test, label in GAP_CHECKS if test(d)]
 
 
 def _dkey(district):
@@ -278,6 +305,8 @@ def _order(rows, sort='district'):
             d['rank'],
             -(d['seats'] or 1),
             _lastname(d)))
+    if sort == 'behind':
+        return sorted(rows, key=lambda d: (d['score'], d['rank'], _lastname(d)))
     return sorted(rows, key=lambda d: (_dkey(d['district']), _lastname(d)))
 
 

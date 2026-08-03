@@ -21,7 +21,7 @@
   <tr>
     <td><a href="{{ url_for('whip.candidate', cid=it.d.candidate_id) }}">{{ it.d.name }}</a></td>
     <td>{{ it.d.district }}{% if it.d.seats > 1 %} ({{ it.d.seats }}){% endif %}</td>
-    <td>{% if it.d.rating %}<span class="pill {% if it.d.rank==0 %}swing{% elif it.d.rank==1 %}lean{% elif it.d.rank==2 %}likely{% else %}safe{% endif %}">{{ it.d.rating }}</span>{% endif %}</td>
+    <td>{% if it.d.rating %}<span class="rate {% if it.d.rank==0 %}swing{% elif it.d.rank==1 %}lean{% elif it.d.rank==2 %}likely{% else %}safe{% endif %}">{{ it.d.rating }}</span>{% endif %}</td>
     <td>{{ it.ago }}</td>
     <td>{{ it.who or '' }}</td>
     <td>{{ it.detail or '' }}</td>
@@ -40,8 +40,8 @@
   <tr>
     <td><a href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">{{ d.name }}</a></td>
     <td>{{ d.district }}</td>
-    <td>{% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}</td>
-    <td><span class="pill problem">{{ status_label.get(d.checkin.status, d.checkin.status) }}</span></td>
+    <td>{% if d.rating %}<span class="rate {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}</td>
+    <td><span class="st bad">{{ status_label.get(d.checkin.status, d.checkin.status) }}</span></td>
     <td>{{ d.checkin.by or '' }}</td>
     <td>{{ d.checkin.notes or '' }}</td>
   </tr>
@@ -57,7 +57,7 @@
   <tr>
     <td><a href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">{{ d.name }}</a></td>
     <td>{{ d.district }}</td>
-    <td>{% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}</td>
+    <td>{% if d.rating %}<span class="rate {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}</td>
     <td>{{ d.owner_name or '' }}</td>
   </tr>
   {% endfor %}
