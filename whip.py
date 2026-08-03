@@ -340,17 +340,21 @@ def candidate(cid):
                        ORDER BY week_start DESC LIMIT 12""", (cid, week))
         history = [_checkin(r) for r in cur.fetchall()]
 
-        # What the recruitment team has written about them, and any survey
-        # ratings — context a whip would otherwise never see.
-        cur.execute("""SELECT assessment, notes, updated_by, updated_at
-                       FROM candidate_admin_notes WHERE candidate_id=%s""", (cid,))
-        n = cur.fetchone()
-        admin_note = ({'assessment': n[0], 'notes': n[1], 'by': n[2], 'at': n[3]}
-                      if n and (n[0] or n[1]) else None)
+        # SURVEY CONTENT IS NEVER SHOWN HERE. Survey ratings and notes (AFP,
+        # CANH) are restricted to Chris and Osborne on /surveys. A whip sees
+        # only whether a survey came back at all — the same completion-only
+        # rule the candidate-facing /my-progress follows. Do not add
+        # survey_org, rating or notes to this screen.
 
-        cur.execute("""SELECT survey_org, rating FROM candidate_surveys
-                       WHERE candidate_id=%s ORDER BY survey_org""", (cid,))
-        surveys = [{'org': r[0], 'rating': r[1]} for r in cur.fetchall()]
+        # The recruitment team's internal assessment is admin-only too; a whip
+        # doesn't need our private read on the person they're about to ring.
+        admin_note = None
+        if can_admin_whip():
+            cur.execute("""SELECT assessment, notes, updated_by, updated_at
+                           FROM candidate_admin_notes WHERE candidate_id=%s""", (cid,))
+            n = cur.fetchone()
+            admin_note = ({'assessment': n[0], 'notes': n[1], 'by': n[2], 'at': n[3]}
+                          if n and (n[0] or n[1]) else None)
 
         cur.execute("""SELECT field, old_value, new_value, changed_by_name, changed_at
                        FROM whip_field_log WHERE candidate_id=%s
@@ -361,7 +365,7 @@ def candidate(cid):
         return render_template('whip/call.html', d=d, week=week,
                                week_label=_week_label(week), ballot=ballot,
                                history=history, admin_note=admin_note,
-                               surveys=surveys, fixes=fixes,
+                               fixes=fixes,
                                outcomes=OUTCOMES, statuses=STATUSES, asks=ASKS,
                                ask_label=ASK_LABEL)
     finally:

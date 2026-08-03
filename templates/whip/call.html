@@ -104,7 +104,8 @@
   {{ fact(d.videoshoot, 'Video / headshot',
           ((d.videoshoot_info.types|join(', ')|title ~ ' on ' ~ d.videoshoot_info.date) if d.videoshoot_info else 'Not booked')) }}
 
-  {{ fact(d.survey, 'Survey', d.survey_orgs|join(', ') if d.survey_orgs else 'None returned') }}
+  {# Completion only. Survey orgs, ratings and notes are private to /surveys. #}
+  {{ fact(d.survey, 'Survey', 'Returned' if d.survey else 'Not returned') }}
 
   {{ fact(d.consult, 'Strategy consult',
           (d.consult_status|title if d.consult_status else ('Done' if d.consult_done else 'Not booked')),
@@ -153,9 +154,6 @@
   <p class="ballotsub">Also filed in this district.</p>
   {% else %}
   <p class="ballotsub">No one else has filed in this district.</p>
-  {% endif %}
-  {% if surveys %}
-  <div class="surveys">{% for s in surveys %}<span class="chip">{{ s.org }}{% if s.rating %}: {{ s.rating }}{% endif %}</span>{% endfor %}</div>
   {% endif %}
 </div></div>
 
