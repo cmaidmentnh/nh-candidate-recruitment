@@ -233,10 +233,18 @@ def verify_invite_token(token, max_age=86400 * 7):
     except BadSignature:
         return None
 
-def send_welcome_email(email, name, user_type, user_id):
-    """Send welcome email with secure setup link."""
+def send_welcome_email(email, name, user_type, user_id, note=None):
+    """Send welcome email with secure setup link.
+
+    `note` carries anything the person needs in order for the account to be
+    usable — most often that they hold a candidate profile on the same address
+    and must sign in with their username to reach the staff side.
+    """
     token = generate_invite_token(user_type, user_id)
     setup_link = f"{APP_URL}/setup-account/{token}"
+    note_html = (f'<p style="background:#fff6e2;border-left:4px solid #e0a33a;'
+                 f'padding:12px 16px;font-size:14px;margin:20px 0;">{note}</p>'
+                 if note else '')
 
     subject = "Welcome to NH GOP Candidate Recruitment"
 
@@ -256,6 +264,8 @@ def send_welcome_email(email, name, user_type, user_id):
             <h2 style="color: #333; margin-top: 0;">Welcome, {name}!</h2>
 
             <p>You've been invited to join the NH GOP Candidate Recruitment system. Click the button below to set up your account and create your password.</p>
+
+            {note_html}
 
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{setup_link}" style="background: #d91720; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
@@ -280,7 +290,7 @@ def send_welcome_email(email, name, user_type, user_id):
 Welcome to NH GOP Candidate Recruitment, {name}!
 
 You've been invited to join the system. Please visit the following link to set up your account:
-
+{(chr(10) + note + chr(10)) if note else ''}
 {setup_link}
 
 This link will expire in 7 days.
