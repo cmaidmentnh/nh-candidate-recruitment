@@ -253,13 +253,32 @@ def _checkin(r):
             'ask_detail': r[7], 'notes': r[8]}
 
 
-def _order(rows):
-    """Not-yet-called first, then the closest races, then the most seats."""
-    return sorted(rows, key=lambda d: (
-        0 if not d['checkin'] else 1,
-        d['rank'],
-        -(d['seats'] or 1),
-        (d['name'] or '').split()[-1].lower() if d['name'] else ''))
+def _dkey(district):
+    """Natural district sort: 'Cheshire 2' before 'Cheshire 10'."""
+    d = (district or '~').strip()
+    head, _, tail = d.rpartition(' ')
+    if head and tail.isdigit():
+        return (head.lower(), int(tail))
+    return (d.lower(), 0)
+
+
+def _lastname(d):
+    return (d['name'] or '').split()[-1].lower() if d['name'] else ''
+
+
+def _order(rows, sort='district'):
+    """District order by default — that's how a board of 365 is read.
+
+    'priority' is the other useful order: whoever hasn't been called, in the
+    races that decide the majority, most seats first.
+    """
+    if sort == 'priority':
+        return sorted(rows, key=lambda d: (
+            0 if not d['checkin'] else 1,
+            d['rank'],
+            -(d['seats'] or 1),
+            _lastname(d)))
+    return sorted(rows, key=lambda d: (_dkey(d['district']), _lastname(d)))
 
 
 def _whips(cur):
@@ -277,16 +296,22 @@ def _whips(cur):
 def my_week():
     uid = _uid()
     week = _monday()
-    scope = request.args.get('scope', 'mine')
+    # An admin runs the whole board, so that's what they open on. A whip opens
+    # on their own list, which is the only thing they can act on.
+    scope = request.args.get('scope') or ('all' if can_admin_whip() else 'mine')
+    sort = request.args.get('sort', 'district')
+    county = request.args.get('county', '')
     conn = _get_db()
     cur = conn.cursor()
     try:
         rows, _ = _roster(cur, week)
         mine = [d for d in rows if d['owner'] == uid]
+        counties = sorted({(d['district'] or '').rsplit(' ', 1)[0]
+                           for d in rows if d['district']})
 
         # Scope is taken literally. An earlier version fell back to the whole
-        # 365-candidate board when you had nothing assigned, which meant the
-        # page opened as a wall of rows that were nobody's job.
+        # 365-candidate board when you had nothing assigned, which meant a
+        # whip's page opened as a wall of rows that were nobody's job.
         if scope == 'all':
             shown = rows
         elif scope == 'unassigned':
@@ -295,7 +320,9 @@ def my_week():
             shown = [d for d in rows if (d['checkin'] or {}).get('asks') or d['open_asks']]
         else:
             shown = mine
-        shown = _order(shown)
+        if county:
+            shown = [d for d in shown if (d['district'] or '').startswith(county + ' ')]
+        shown = _order(shown, sort)
 
         base = shown
         done = [d for d in base if d['checkin']]
@@ -316,7 +343,7 @@ def my_week():
             todo=todo, done_rows=[d for d in shown if d['checkin']],
             scope=scope, mine_n=len(mine), total=len(rows),
             done=len(done), of=len(base), need_summary=need_summary,
-            ask_label=ASK_LABEL,
+            ask_label=ASK_LABEL, sort=sort, county=county, counties=counties,
             pct=int(round(100 * len(done) / len(base))) if base else 0)
     finally:
         cur.close()

@@ -50,10 +50,18 @@
   </div>
   <form method="get" class="wkfilter">
     <select name="scope" onchange="this.form.submit()">
+      <option value="all" {% if scope=='all' %}selected{% endif %}>Everyone ({{ total }})</option>
       <option value="mine" {% if scope=='mine' %}selected{% endif %}>My candidates ({{ mine_n }})</option>
       <option value="needs" {% if scope=='needs' %}selected{% endif %}>Anyone who asked for something</option>
       <option value="unassigned" {% if scope=='unassigned' %}selected{% endif %}>Unassigned</option>
-      <option value="all" {% if scope=='all' %}selected{% endif %}>Everyone ({{ total }})</option>
+    </select>
+    <select name="county" onchange="this.form.submit()">
+      <option value="">All counties</option>
+      {% for ct in counties %}<option value="{{ ct }}" {% if ct==county %}selected{% endif %}>{{ ct }}</option>{% endfor %}
+    </select>
+    <select name="sort" onchange="this.form.submit()">
+      <option value="district" {% if sort=='district' %}selected{% endif %}>By district</option>
+      <option value="priority" {% if sort=='priority' %}selected{% endif %}>By priority</option>
     </select>
     {% if can_admin_whip %}<a class="btn btn-ghost btn-sm" href="{{ url_for('whip.assign') }}">Assign</a>{% endif %}
   </form>
@@ -73,13 +81,28 @@
   <thead><tr>
     <th></th><th>Candidate</th><th>Race</th><th>What they need</th><th>Status</th><th>Last</th>
   </tr></thead>
-  {% if todo %}
-    <tbody><tr class="grp"><td colspan="6">To call &mdash; {{ todo|length }}</td></tr>
-    {% for d in todo %}{{ row(d) }}{% endfor %}</tbody>
-  {% endif %}
-  {% if done_rows %}
-    <tbody><tr class="grp"><td colspan="6">Called this week &mdash; {{ done_rows|length }}</td></tr>
-    {% for d in done_rows %}{{ row(d) }}{% endfor %}</tbody>
+  {% if sort == 'district' %}
+    {# One list in district order, broken by county so a 365-row board scans. #}
+    <tbody>
+    {% set ns = namespace(county='') %}
+    {% for d in rows %}
+      {% set ct = (d.district or '').rsplit(' ', 1)[0] %}
+      {% if ct != ns.county %}
+        {% set ns.county = ct %}
+        <tr class="grp"><td colspan="6">{{ ct or 'No district' }}</td></tr>
+      {% endif %}
+      {{ row(d) }}
+    {% endfor %}
+    </tbody>
+  {% else %}
+    {% if todo %}
+      <tbody><tr class="grp"><td colspan="6">To call &mdash; {{ todo|length }}</td></tr>
+      {% for d in todo %}{{ row(d) }}{% endfor %}</tbody>
+    {% endif %}
+    {% if done_rows %}
+      <tbody><tr class="grp"><td colspan="6">Called this week &mdash; {{ done_rows|length }}</td></tr>
+      {% for d in done_rows %}{{ row(d) }}{% endfor %}</tbody>
+    {% endif %}
   {% endif %}
 </table>
 {% else %}
