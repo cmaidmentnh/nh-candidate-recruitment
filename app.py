@@ -360,13 +360,18 @@ class CandidateUser(UserMixin):
         self.is_candidate = True
 
 class AdminUser(UserMixin):
-    def __init__(self, user_id, username, email, password_hash, role):
+    def __init__(self, user_id, username, email, password_hash, role, is_whip=False):
         self.id = f"u_{user_id}"
         self.user_id = user_id
         self.username = username
         self.email = email
         self.password_hash = password_hash
         self.role = role
+        # Separate from role on purpose: role says what you can reach, is_whip
+        # says whether you carry a call list. Optional so the login paths that
+        # build an AdminUser from a 5-column row keep working; load_user runs
+        # on every request after that and fills it in.
+        self.is_whip = bool(is_whip)
         self.is_candidate = False
 
 @login_manager.user_loader
@@ -388,7 +393,7 @@ def load_user(user_id):
         elif user_id.startswith('u_'):
             uid = int(user_id[2:])
             cur.execute("""
-                SELECT user_id, username, email, password_hash, role
+                SELECT user_id, username, email, password_hash, role, is_whip
                 FROM users
                 WHERE user_id = %s
             """, (uid,))

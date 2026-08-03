@@ -103,7 +103,17 @@ def can_admin_whip():
 
 
 def can_whip():
-    return can_admin_whip() or _role() == 'whip'
+    """Admins, plus anyone flagged as a whip.
+
+    Migration 013 split `is_whip` out of `role` so naming someone a whip stops
+    demoting them out of the rest of the admin app. This gate was left checking
+    role only, so everyone added through the new roster came out as
+    role='admin', is_whip=true — a whip holding a call list who could not open
+    the whip tool.
+    """
+    return (can_admin_whip()
+            or bool(getattr(current_user, 'is_whip', False))
+            or _role() == 'whip')
 
 
 def whip_required(f):
