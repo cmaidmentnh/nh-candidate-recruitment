@@ -3,7 +3,7 @@
 {% block narrow %}wk-narrow{% endblock %}
 {% block whip %}
 <h1 class="page-title">Whips</h1>
-<p class="page-sub">{{ people|length }} whip{{ '' if people|length==1 else 's' }}{% if rnd %} &middot; {{ rnd.title }}{% endif %}</p>
+<p class="page-sub">{{ people|length }} whip{{ '' if people|length==1 else 's' }} &middot; week of {{ week_label }}</p>
 
 <div class="card" style="margin-bottom:24px;"><div class="pad">
 <form method="POST" action="{{ url_for('whip.roster_add') }}">
@@ -23,7 +23,7 @@
   <div class="top"><span class="nm">{{ p.username or p.email }}</span>
     <span class="dist">{{ p.assigned }} assigned</span></div>
   <div class="mid">
-    {% if p.done is defined %}<span class="pill {{ 'ok' if p.pct>=100 else 'watch' if p.pct else 'safe' }}">{{ p.done }} logged</span>{% endif %}
+    <span class="pill {{ 'ok' if p.pct>=100 else 'watch' if p.pct else 'safe' }}">{{ p.done }} of {{ p.assigned }} called this week</span>
     {% if not p.last_login %}<span class="pill problem">Never logged in</span>{% endif %}
   </div>
   <div class="foot">{{ p.email }}

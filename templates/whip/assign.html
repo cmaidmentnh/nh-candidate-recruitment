@@ -44,8 +44,10 @@
     <span style="flex:1;">
       <span class="top"><span class="nm">{{ d.name }}</span>
         <span class="dist">{{ d.district }}{% if d.seats and d.seats>1 %} &middot; {{ d.seats }} seats{% endif %}</span></span>
-      <span class="mid">{% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}</span>
-      <span class="foot" style="display:block;">{% if d.owner_name %}{{ d.owner_name }}{% else %}<b>Unassigned</b>{% endif %}</span>
+      <span class="mid">{% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
+        {% if d.falling_behind %}<span class="pill watch">Behind</span>{% endif %}</span>
+      <span class="foot" style="display:block;">{% if d.owner_name %}{{ d.owner_name }}{% else %}<b>Unassigned</b>{% endif %}
+        &middot; {{ d.score }}% set up &middot; {% if d.ago %}last contact {{ d.ago }}{% else %}never contacted{% endif %}</span>
     </span>
   </label>
   {% else %}<div class="card empty"><b>No candidates match.</b></div>{% endfor %}

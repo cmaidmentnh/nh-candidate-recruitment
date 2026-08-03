@@ -1,65 +1,294 @@
 {% extends "whip/base.html" %}
 {% block title %}{{ d.name }}{% endblock %}
 {% block narrow %}wk-narrow{% endblock %}
-{% block whip %}
-<a class="crumb" href="{{ url_for('whip.my_list') }}">&larr; Back to my list</a>
-<h1 class="page-title">{{ d.name }}</h1>
-<p class="page-sub">{{ d.district }}{% if d.seats and d.seats>1 %} &middot; {{ d.seats }} seats{% endif %}
-  {% if d.rating %} &middot; <span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
-  {% if d.pvi is not none %} {{ 'R+' if d.pvi>0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }}{% endif %}</p>
 
-<div class="grid cols-3" style="margin-bottom:22px;">
-  {% if contact.phone %}<a class="btn btn-navy" href="tel:{{ contact.phone }}">Call {{ contact.phone }}</a>
-    {% if d.phone1_type != 'landline' %}<a class="btn btn-ghost" href="sms:{{ contact.phone }}">Text</a>{% endif %}{% endif %}
-  {% if contact.email %}<a class="btn btn-ghost" href="mailto:{{ contact.email }}">Email</a>{% endif %}
+{% set STATUS = {'rolling':'Rolling along','needs_help':'Needs help','at_risk':'In trouble','not_running':'Not really running'} %}
+{% set OUTCOME = {'talked':'Talked','voicemail':'Left voicemail','texted':'Texted','emailed':'Emailed','no_answer':"Couldn't reach"} %}
+{% set c = d.contact %}
+
+{# ---------------------------------------------------------- one tracked fact #}
+{% macro fact(on, key, val, field=None, kind='text', current='') %}
+<div class="ti {{ 'on' if on else 'off' }}">
+  <div class="tk">{{ key }}</div>
+  <div class="tv">{{ val }}</div>
+  {% if field and kind == 'bool' %}
+    <button type="button" class="tbtn" data-field="{{ field }}" data-bool="{{ 0 if on else 1 }}">{{ 'Undo' if on else 'Mark done' }}</button>
+  {% elif field %}
+    <button type="button" class="tbtn" onclick="wtoggle(this)">Fix</button>
+    <div class="tedit">
+      <input type="{{ 'text' if kind=='text' else 'number' }}" value="{{ current or '' }}"
+             placeholder="{{ 'https://…' if kind=='url' else '' }}" data-field="{{ field }}">
+      <button type="button" class="btn btn-navy btn-sm" onclick="wsave(this)">Save</button>
+    </div>
+  {% endif %}
 </div>
+{% endmacro %}
 
-{% if not rnd %}<div class="card empty"><b>No round is open.</b></div>{% else %}
-<form method="POST" action="{{ url_for('whip.answer', cid=d.candidate_id) }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  {% set a = d.answer or {} %}
+{% block whip %}
+<a class="crumb" href="{{ url_for('whip.my_week') }}">&larr; My week</a>
 
-  {% for key, question, opts in questions %}
-  <div class="qcard {% if a.get(key) %}answered{% endif %}">
-    <div class="q">{{ question }}</div>
-    <div class="opts">{% for val, lbl in opts %}
-      <label class="opt"><input type="radio" name="{{ key }}" value="{{ val }}"
-        {% if a.get(key)==val %}checked{% endif %}><span>{{ lbl }}</span></label>
-    {% endfor %}</div>
-  </div>
-  {% endfor %}
+<h1 class="page-title">{{ d.name }}</h1>
+<p class="page-sub">
+  {{ d.district }}{% if d.seats and d.seats > 1 %} &middot; {{ d.seats }} seats{% endif %}
+  &middot; {{ 'Incumbent' if d.incumbent else 'Challenger' }}
+  {% if d.rating %} &middot; <span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
+  {% if d.pvi is not none %} {{ 'R+' if d.pvi > 0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }}{% endif %}
+  {% if d.owner_name %} &middot; whip: {{ d.owner_name }}{% endif %}
+</p>
 
-  <div class="qcard {% if a.get('raised') %}answered{% endif %}">
-    <div class="q">Roughly how much have they raised?</div>
-    <input type="text" name="raised" inputmode="numeric" placeholder="$0"
-      value="{{ '%.0f'|format(a.raised) if a.get('raised') else '' }}">
-  </div>
+{# ------------------------------------------------------------------ dial #}
+<div class="dial">
+  {% if c.phone1 %}
+    <a class="btn btn-navy" href="tel:{{ c.phone1 }}">Call {{ c.phone1 }}</a>
+    {% if c.phone1_type != 'landline' %}<a class="btn btn-ghost" href="sms:{{ c.phone1 }}">Text</a>{% endif %}
+  {% endif %}
+  {% if c.email %}<a class="btn btn-ghost" href="mailto:{{ c.email }}">Email</a>{% endif %}
+  {% if not c.phone1 and not c.email %}<span class="nocontact">No phone or email on file.</span>{% endif %}
+</div>
+<p class="dialsub">
+  {% if c.phone2 %}Second number: <a href="tel:{{ c.phone2 }}">{{ c.phone2 }}</a> &middot; {% endif %}
+  {% if c.email %}{{ c.email }} &middot; {% endif %}
+  {% if c.town %}{{ c.town }} &middot; {% endif %}
+  {% if c.signal %}On Signal &middot; {% endif %}
+  {% if d.ago %}last contact {{ d.ago }}{% else %}never contacted{% endif %}
+</p>
 
-  <div class="qcard {% if a.get('needs') %}answered{% endif %}">
-    <div class="q">What do they need from us?</div>
-    <div class="opts">{% for val, lbl in needs %}
-      <label class="opt"><input type="checkbox" name="needs" value="{{ val }}"
-        {% if val in (a.get('needs') or []) %}checked{% endif %}><span>{{ lbl }}</span></label>
-    {% endfor %}</div>
-  </div>
-
-  <div class="qcard"><div class="q">Notes</div>
-    <textarea name="notes" placeholder="Anything worth knowing…">{{ a.get('notes') or '' }}</textarea></div>
-
-  <button class="btn btn-red btn-block" type="submit">{% if a %}Update{% else %}Save{% endif %} &amp; back to list</button>
-</form>
-{% if a %}<p class="page-sub" style="text-align:center;margin-top:12px;">
-  Logged by {{ a.by }} on {{ a.at.strftime('%b %-d') }}</p>{% endif %}
+{# ------------------------------------------------------- what they asked for #}
+{% if history and history[0].asks %}
+<div class="lastask">
+  <div class="lah">Last time ({{ history[0].week.strftime('%b %-d') }}) they asked for</div>
+  <div class="lab">{% for a in history[0].asks %}<span class="chip big">{{ ask_label.get(a, a) }}</span>{% endfor %}</div>
+  {% if history[0].ask_detail %}<div class="lad">{{ history[0].ask_detail }}</div>{% endif %}
+  {% if history[0].notes %}<div class="lad quote">{{ history[0].notes }}</div>{% endif %}
+  <div class="lam">Open with this. Did it show up?</div>
+</div>
 {% endif %}
 
+{# ----------------------------------------------------------- where they stand #}
+<div class="section-head">Where they stand &mdash; {{ d.score }}% &middot; {{ d.stage }}</div>
+<div class="track">
+  {{ fact(d.website,
+          'Website',
+          ('<a href="%s" target="_blank" rel="noopener">Live site</a>'|format(c.website_url) if d.website_live and c.website_url
+           else ('<a href="%s" target="_blank" rel="noopener">Has a link</a>'|format(c.website_url) if c.website_url else 'None'))|safe,
+          'external_campaign_url', 'url', c.website_url) }}
+
+  {{ fact(d.donate,
+          'Donate page',
+          ('<a href="%s" target="_blank" rel="noopener">Yes</a>'|format(c.donate_url) if c.donate_url
+           else ('Yes, on their site' if d.donate else 'None'))|safe,
+          'donate_url', 'url', c.donate_url) }}
+
+  {{ fact(d.raised and d.raised > 0, 'Raised online',
+          '$%s'|format('{:,.0f}'.format(d.raised)) if d.raised else 'Nothing yet') }}
+
+  {% set sl = [] %}
+  {% if c.facebook_url %}{% set _ = sl.append('<a href="%s" target="_blank" rel="noopener">Facebook</a>'|format(c.facebook_url)) %}{% endif %}
+  {% if c.instagram_url %}{% set _ = sl.append('<a href="%s" target="_blank" rel="noopener">Instagram</a>'|format(c.instagram_url)) %}{% endif %}
+  {% if c.twitter_url %}{% set _ = sl.append('<a href="%s" target="_blank" rel="noopener">X</a>'|format(c.twitter_url)) %}{% endif %}
+  {{ fact(d.socials, 'Social media',
+          (sl|join(' &middot; ') if sl else ('On file, no links saved' if d.socials else 'None'))|safe,
+          'facebook_url', 'url', c.facebook_url) }}
+
+  {{ fact(d.photo, 'Photo', 'On file' if d.photo else 'None') }}
+  {{ fact(d.bio, 'Bio', 'On file' if d.bio else 'None') }}
+
+  {{ fact(d.portal, 'Portal account',
+          ('Active, last in ' ~ d.last_login.strftime('%b %-d')) if d.last_login
+           else ('Set up, never logged in' if d.portal else 'Never set up')) }}
+
+  {{ fact(d.walkbook, 'Voter list',
+          (d.voter_list_status|title if d.voter_list_status else ('Sent' if d.walkbook_done else 'Not requested')),
+          'walkbook_done', 'bool') }}
+
+  {{ fact(d.videoshoot, 'Video / headshot',
+          ((d.videoshoot_info.types|join(', ')|title ~ ' on ' ~ d.videoshoot_info.date) if d.videoshoot_info else 'Not booked')) }}
+
+  {{ fact(d.survey, 'Survey', d.survey_orgs|join(', ') if d.survey_orgs else 'None returned') }}
+
+  {{ fact(d.consult, 'Strategy consult',
+          (d.consult_status|title if d.consult_status else ('Done' if d.consult_done else 'Not booked')),
+          'consult_done', 'bool') }}
+</div>
+
+{# ------------------------------------------- the things only a call turns up #}
+<div class="section-head">Only a call tells us &mdash; correct anything that's wrong</div>
+<div class="track">
+  {{ fact(d.fundraising_started, 'Fundraising started',
+          ('$%s raised'|format('{:,.0f}'.format(d.fundraising_amount)) if d.fundraising_amount
+           else ('Yes' if d.fundraising_started else 'Not yet')),
+          'fundraising_started', 'bool') }}
+  {{ fact(d.fundraising_amount, 'Amount raised',
+          '$%s'|format('{:,.0f}'.format(d.fundraising_amount)) if d.fundraising_amount else 'Unknown',
+          'fundraising_amount', 'number', d.fundraising_amount|round|int if d.fundraising_amount else '') }}
+
+  {{ fact(d.canvassing_started, 'Knocking doors',
+          'Yes' if d.canvassing_started else 'Not yet', 'canvassing_started', 'bool') }}
+
+  {{ fact(d.signs_ordered, 'Yard signs', 'Ordered' if d.signs_ordered else 'Not yet',
+          'signs_ordered', 'bool') }}
+
+  {{ fact(d.training_attended, 'Training', 'Attended' if d.training_attended else 'Not yet',
+          'training_attended', 'bool') }}
+
+  {{ fact(c.phone1, 'Phone', c.phone1 or 'None on file', 'phone1', 'text', c.phone1) }}
+  {{ fact(c.email, 'Email', c.email or 'None on file', 'email', 'text', c.email) }}
+</div>
+<p class="fixnote">Fixes here update the candidate's master record, so every other tool gets them too.</p>
+
+{# --------------------------------------------------------------- the race #}
+<div class="section-head">The race</div>
+<div class="card"><div class="pad">
+  <p class="racehead">
+    {{ d.district }} &mdash; {{ d.seats }} seat{{ 's' if d.seats > 1 }}
+    {% if d.rating %}&middot; {{ d.rating }}{% endif %}
+    {% if d.pvi is not none %}&middot; PVI {{ 'R+' if d.pvi > 0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }}{% endif %}
+  </p>
+  {% if ballot %}
+  <div class="ballot">
+    {% for b in ballot %}
+      <span class="bal p{{ b.party }}">{{ b.name }} <i>({{ b.party }})</i></span>
+    {% endfor %}
+  </div>
+  <p class="ballotsub">Also filed in this district.</p>
+  {% else %}
+  <p class="ballotsub">No one else has filed in this district.</p>
+  {% endif %}
+  {% if surveys %}
+  <div class="surveys">{% for s in surveys %}<span class="chip">{{ s.org }}{% if s.rating %}: {{ s.rating }}{% endif %}</span>{% endfor %}</div>
+  {% endif %}
+</div></div>
+
+{% if admin_note %}
+<div class="section-head">Recruitment file</div>
+<div class="card"><div class="pad">
+  {% if admin_note.assessment %}<span class="pill safe">{{ admin_note.assessment|title }}</span>{% endif %}
+  {% if admin_note.notes %}<p class="anote">{{ admin_note.notes }}</p>{% endif %}
+  <p class="ballotsub">{{ admin_note.by }}{% if admin_note.at %} &middot; {{ admin_note.at.strftime('%b %-d, %Y') }}{% endif %}</p>
+</div></div>
+{% endif %}
+
+{# ------------------------------------------------------- this week's check-in #}
+<div class="section-head" id="checkin">This week &mdash; {{ week_label }}</div>
+{% set a = d.checkin or {} %}
+<form method="POST" action="{{ url_for('whip.checkin', cid=d.candidate_id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="qcard {% if a.get('outcome') %}answered{% endif %}">
+    <div class="q">How did the contact go?</div>
+    <div class="opts">{% for val, lbl in outcomes %}
+      <label class="opt"><input type="radio" name="outcome" value="{{ val }}"
+        {% if a.get('outcome')==val %}checked{% endif %}><span>{{ lbl }}</span></label>
+    {% endfor %}</div>
+  </div>
+
+  <div class="qcard {% if a.get('status') %}answered{% endif %}">
+    <div class="q">How is the campaign actually going?</div>
+    <div class="opts">{% for val, lbl in statuses %}
+      <label class="opt"><input type="radio" name="status" value="{{ val }}"
+        {% if a.get('status')==val %}checked{% endif %}><span>{{ lbl }}</span></label>
+    {% endfor %}</div>
+  </div>
+
+  <div class="qcard {% if a.get('asks') %}answered{% endif %}">
+    <div class="q">What do they need from us?</div>
+    <div class="opts">{% for val, lbl in asks %}
+      <label class="opt"><input type="checkbox" name="asks" value="{{ val }}"
+        {% if val in (a.get('asks') or []) %}checked{% endif %}><span>{{ lbl }}</span></label>
+    {% endfor %}</div>
+    <input type="text" name="ask_detail" placeholder="Specifics — how many signs, which streets, what date…"
+           value="{{ a.get('ask_detail') or '' }}" style="margin-top:12px;">
+  </div>
+
+  <div class="qcard {% if a.get('notes') %}answered{% endif %}">
+    <div class="q">Call notes</div>
+    <textarea name="notes" placeholder="What they said, in their words. Anything leadership should know.">{{ a.get('notes') or '' }}</textarea>
+  </div>
+
+  <div class="qcard">
+    <div class="q">Call them back on</div>
+    <input type="date" name="next_followup" value="{{ d.followup or '' }}">
+  </div>
+
+  <button class="btn btn-red btn-block" type="submit">{{ 'Update this week' if a else 'Save check-in' }}</button>
+  <button class="btn btn-ghost btn-block" type="submit" name="stay" value="1" style="margin-top:10px;">Save and stay here</button>
+</form>
+{% if a %}<p class="page-sub" style="text-align:center;margin-top:12px;">
+  Logged by {{ a.by }}{% if a.at %} on {{ a.at.strftime('%b %-d') }}{% endif %}. Editable all week.</p>{% endif %}
+
+{# ------------------------------------------------------------------ history #}
 {% if history %}
-<div class="section-head">Earlier rounds</div>
+<div class="section-head">Earlier weeks</div>
 <div class="card"><div class="pad">
 {% for h in history %}
-  <div class="feed"><b>{{ h.round }}</b> — {{ (h.campaigning or '?')|replace('_',' ') }},
-    {{ h.concern or '?' }} <span class="when">&middot; {{ h.by }} &middot; {{ h.at.strftime('%b %-d') }}</span>
-    {% if h.notes %}<br>{{ h.notes }}{% endif %}</div>
+  <div class="feed">
+    <b>Week of {{ h.week.strftime('%b %-d') }}</b> &mdash;
+    {{ OUTCOME.get(h.outcome, '—') }}{% if h.status %}, {{ STATUS.get(h.status, h.status) }}{% endif %}
+    <span class="when">&middot; {{ h.by }}</span>
+    {% if h.asks %}<br>{% for x in h.asks %}<span class="chip">{{ ask_label.get(x, x) }}</span>{% endfor %}{% endif %}
+    {% if h.ask_detail %}<br><i>{{ h.ask_detail }}</i>{% endif %}
+    {% if h.notes %}<br>{{ h.notes }}{% endif %}
+  </div>
 {% endfor %}
 </div></div>
 {% endif %}
+
+{% if fixes %}
+<div class="section-head">Recent corrections</div>
+<div class="card"><div class="pad">
+{% for x in fixes %}
+  <div class="feed"><b>{{ x.field|replace('_',' ')|title }}</b>
+    {{ (x.old or 'blank') }} &rarr; {{ (x.new or 'blank') }}
+    <span class="when">&middot; {{ x.by }} &middot; {{ x.at.strftime('%b %-d') }}</span></div>
+{% endfor %}
+</div></div>
+{% endif %}
+
+<script>
+const WFIX = "{{ url_for('whip.fix', cid=d.candidate_id) }}";
+const WCSRF = "{{ csrf_token() }}";
+
+async function post(field, value, btn) {
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch(WFIX, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': WCSRF},
+      body: JSON.stringify({field: field, value: value})
+    });
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(j.error || 'save failed');
+    location.reload();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = label;
+    alert('Could not save: ' + e.message);
+  }
+}
+
+// Boolean milestones save on the spot.
+document.querySelectorAll('.tbtn[data-bool]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    post(b.dataset.field, b.dataset.bool === '1', b);
+  });
+});
+
+// Text and number corrections open an inline field.
+function wtoggle(btn) {
+  const box = btn.parentElement.querySelector('.tedit');
+  box.classList.toggle('open');
+  if (box.classList.contains('open')) box.querySelector('input').focus();
+}
+
+function wsave(btn) {
+  const input = btn.parentElement.querySelector('input');
+  post(input.dataset.field, input.value, btn);
+}
+
+document.querySelectorAll('.tedit input').forEach(function (i) {
+  i.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); wsave(i.nextElementSibling); }
+  });
+});
+</script>
 {% endblock %}

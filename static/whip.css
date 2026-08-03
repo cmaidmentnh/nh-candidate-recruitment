@@ -171,3 +171,86 @@ table.tbl td.r,table.tbl th.r{ text-align:right; }
 .feed:last-child{ border-bottom:0; }
 .feed b{ color:var(--navy); }
 .feed .when{ font-size:.78rem; }
+
+/* ==========================================================
+   Dossier — the call screen. Everything we know, above the
+   questions, so the whip opens with a specific ask instead of
+   "so, how's it going?".
+   ========================================================== */
+
+/* --------------------------------------------------------- dial strip */
+.dial{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+.dial .btn{ flex:1 1 auto; min-width:120px; }
+.dialsub{ color:var(--gray); font-size:.85rem; margin:0 0 22px; }
+.nocontact{ color:var(--red-dark); font-weight:700; font-family:var(--font-head);
+            font-size:.85rem; padding:12px 0; }
+
+/* ---------------------------------------------------- last week's ask */
+.lastask{ background:var(--amber-bg); border:1px solid #f0dcae; border-left:4px solid #e0a33a;
+          border-radius:12px; padding:15px 18px; margin-bottom:24px; }
+.lah{ font-family:var(--font-head); font-weight:700; font-size:.73rem; color:var(--amber);
+      text-transform:uppercase; letter-spacing:.06em; margin-bottom:9px; }
+.lab{ display:flex; flex-wrap:wrap; gap:6px; }
+.lad{ margin-top:9px; font-size:.9rem; color:var(--ink); }
+.lad.quote{ font-style:italic; color:var(--gray); border-left:2px solid #e5d3a8; padding-left:10px; }
+.lam{ margin-top:10px; font-size:.8rem; font-weight:700; color:var(--amber);
+      font-family:var(--font-head); }
+
+/* -------------------------------------------------------- tracked facts */
+.track{ background:#fff; border:1px solid var(--line); border-radius:12px;
+        overflow:hidden; margin-bottom:8px; }
+.ti{ display:grid; grid-template-columns:150px 1fr auto; gap:12px; align-items:center;
+     padding:11px 16px; border-bottom:1px solid var(--line); position:relative; }
+.ti:last-child{ border-bottom:0; }
+.ti .tk{ font-family:var(--font-head); font-weight:700; font-size:.76rem; color:var(--gray);
+         text-transform:uppercase; letter-spacing:.04em; }
+.ti .tv{ font-size:.94rem; color:var(--ink); min-width:0; word-break:break-word; }
+.ti .tv a{ color:var(--navy); font-weight:700; }
+.ti.on  .tk{ color:var(--green); }
+.ti.on  { background:linear-gradient(90deg,var(--green-bg) 0 3px,#fff 3px); }
+.ti.off .tv{ color:#9aa4b2; }
+
+.tbtn{ background:#fff; border:1px solid var(--line); border-radius:7px; cursor:pointer;
+       font-family:var(--font-head); font-weight:700; font-size:.7rem; color:var(--navy);
+       padding:6px 11px; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+.tbtn:hover{ background:var(--navy); color:#fff; border-color:var(--navy); }
+.tbtn:disabled{ opacity:.5; cursor:default; }
+
+.tedit{ display:none; grid-column:1 / -1; gap:8px; margin-top:9px; }
+.tedit.open{ display:flex; }
+.tedit input{ flex:1; min-width:0; }
+
+.fixnote{ font-size:.8rem; color:var(--gray); margin:0 0 8px; }
+
+/* ------------------------------------------------------------ the race */
+.racehead{ font-family:var(--font-head); font-weight:700; color:var(--navy);
+           font-size:.98rem; margin:0 0 12px; }
+.ballot{ display:flex; flex-wrap:wrap; gap:7px; }
+.bal{ display:inline-block; padding:6px 12px; border-radius:8px; font-size:.88rem;
+      border:1px solid var(--line); background:#fafbfd; }
+.bal i{ font-style:normal; color:var(--gray); font-size:.8rem; }
+.bal.pR{ border-color:#f0c9c7; background:#fdf3f2; }
+.bal.pD{ border-color:#c7d4f0; background:#f2f5fd; }
+.ballotsub{ font-size:.8rem; color:var(--gray); margin:10px 0 0; }
+.surveys{ margin-top:12px; display:flex; flex-wrap:wrap; gap:6px; }
+.anote{ font-size:.92rem; margin:10px 0 0; white-space:pre-wrap; }
+
+/* ---------------------------------------------------------------- chips */
+.chip{ display:inline-block; background:#eef1f6; color:var(--navy); border-radius:999px;
+       padding:3px 10px; font-size:.74rem; font-weight:700; font-family:var(--font-head); }
+.chip.big{ background:#fff; border:1px solid #e5d3a8; color:var(--amber);
+           padding:6px 13px; font-size:.82rem; }
+.inc{ font-family:var(--font-head); font-size:.62rem; font-weight:700; color:var(--gray);
+      background:#eef1f6; border-radius:4px; padding:2px 5px; text-transform:uppercase;
+      vertical-align:middle; letter-spacing:.05em; }
+.seats{ color:var(--gray); font-size:.78rem; }
+
+.wkapp input[type=date]{ font-family:var(--font-body); font-size:1rem; padding:11px 12px;
+      border:1px solid var(--line); border-radius:8px; background:#fff; width:100%; }
+
+@media(max-width:560px){
+  .ti{ grid-template-columns:1fr auto; }
+  .ti .tk{ grid-column:1; }
+  .ti .tv{ grid-column:1; grid-row:2; }
+  .ti .tbtn{ grid-column:2; grid-row:1 / span 2; }
+}

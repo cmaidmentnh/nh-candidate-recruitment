@@ -1,0 +1,67 @@
+{% extends "whip/base.html" %}
+{% block title %}What They Need{% endblock %}
+{% block whip %}
+
+<h1 class="page-title">What they need</h1>
+<p class="page-sub">Everything candidates have asked for in the last {{ weeks_back }} weeks, grouped by
+  what we'd have to deliver. Most recent ask per candidate.</p>
+
+<div class="grid cols-4" style="margin-bottom:26px;">
+  <div class="card stat"><div class="num">{{ total }}</div><div class="lbl">Open asks</div></div>
+  <div class="card stat"><div class="num">{{ status_counts.get('rolling', 0) }}</div><div class="lbl">Rolling along</div></div>
+  <div class="card stat"><div class="num">{{ status_counts.get('needs_help', 0) }}</div><div class="lbl">Need help</div></div>
+  <div class="card stat alert"><div class="num">{{ (status_counts.get('at_risk', 0) + status_counts.get('not_running', 0)) }}</div><div class="lbl">In trouble</div></div>
+</div>
+
+{% for key, label, items in buckets %}
+<div class="section-head">{{ label }} &mdash; {{ items|length }}</div>
+<table class="tbl" style="margin-bottom:20px;">
+  <tr><th>Candidate</th><th>District</th><th>Rating</th><th>Asked</th><th>Heard by</th><th>Specifics</th></tr>
+  {% for it in items %}
+  <tr>
+    <td><a href="{{ url_for('whip.candidate', cid=it.d.candidate_id) }}">{{ it.d.name }}</a></td>
+    <td>{{ it.d.district }}{% if it.d.seats > 1 %} ({{ it.d.seats }}){% endif %}</td>
+    <td>{% if it.d.rating %}<span class="pill {% if it.d.rank==0 %}swing{% elif it.d.rank==1 %}lean{% elif it.d.rank==2 %}likely{% else %}safe{% endif %}">{{ it.d.rating }}</span>{% endif %}</td>
+    <td>{{ it.ago }}</td>
+    <td>{{ it.who or '' }}</td>
+    <td>{{ it.detail or '' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card empty"><b>No asks logged yet.</b><br>They show up here as whips finish their calls.</div>
+{% endfor %}
+
+{% if flagged %}
+<div class="section-head">Flagged this week</div>
+<table class="tbl" style="margin-bottom:20px;">
+  <tr><th>Candidate</th><th>District</th><th>Rating</th><th>Call said</th><th>Whip</th><th>Notes</th></tr>
+  {% for d in flagged %}
+  <tr>
+    <td><a href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">{{ d.name }}</a></td>
+    <td>{{ d.district }}</td>
+    <td>{% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}</td>
+    <td><span class="pill problem">{{ status_label.get(d.checkin.status, d.checkin.status) }}</span></td>
+    <td>{{ d.checkin.by or '' }}</td>
+    <td>{{ d.checkin.notes or '' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% if silent %}
+<div class="section-head">Assigned but never contacted &mdash; {{ silent|length }}</div>
+<table class="tbl">
+  <tr><th>Candidate</th><th>District</th><th>Rating</th><th>Whip</th></tr>
+  {% for d in silent[:60] %}
+  <tr>
+    <td><a href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">{{ d.name }}</a></td>
+    <td>{{ d.district }}</td>
+    <td>{% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}</td>
+    <td>{{ d.owner_name or '' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% endblock %}

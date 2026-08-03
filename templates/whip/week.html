@@ -1,0 +1,69 @@
+{% extends "whip/base.html" %}
+{% block title %}My Week{% endblock %}
+{% block narrow %}wk-narrow{% endblock %}
+
+{% set STATUS = {'rolling':'Rolling','needs_help':'Needs help','at_risk':'In trouble','not_running':'Not running'} %}
+{% set OUTCOME = {'talked':'Talked','voicemail':'Left voicemail','texted':'Texted','emailed':'Emailed','no_answer':"Couldn't reach"} %}
+
+{% macro row(d) %}
+<a class="mrow {% if d.checkin %}done{% elif d.rank==0 %}swing{% elif d.rank==1 %}lean{% endif %}"
+   href="{{ url_for('whip.candidate', cid=d.candidate_id) }}">
+  <div class="top">
+    <span class="nm">{{ d.name }}{% if d.incumbent %} <span class="inc">inc</span>{% endif %}</span>
+    <span class="dist">{{ d.district }}{% if d.seats and d.seats > 1 %} &middot; {{ d.seats }} seats{% endif %}</span>
+  </div>
+  <div class="mid">
+    {% if d.rating %}<span class="pill {% if d.rank==0 %}swing{% elif d.rank==1 %}lean{% elif d.rank==2 %}likely{% else %}safe{% endif %}">{{ d.rating }}</span>{% endif %}
+    {% set c = d.checkin %}
+    {% if c and c.status %}
+      <span class="pill {% if c.status=='rolling' %}ok{% elif c.status=='needs_help' %}watch{% else %}problem{% endif %}">{{ STATUS.get(c.status, c.status) }}</span>
+    {% endif %}
+    {% if d.falling_behind and not c %}<span class="pill watch">Behind</span>{% endif %}
+    {% for a in (c.asks if c else d.open_asks) %}<span class="chip">{{ a|replace('_',' ')|title }}</span>{% endfor %}
+  </div>
+  <div class="foot">
+    {% if c %}{{ OUTCOME.get(c.outcome, 'Logged') }} by {{ c.by }}
+    {% elif d.ago %}Last contact {{ d.ago }}
+    {% else %}<b>Never contacted</b>{% endif %}
+    {% if d.owner_name %} &middot; {{ d.owner_name }}{% endif %}
+  </div>
+</a>
+{% endmacro %}
+
+{% block whip %}
+<h1 class="page-title">Week of {{ week_label }}</h1>
+<p class="page-sub">Call each of your candidates once this week. Closest races first.</p>
+
+<div class="bar"><i style="width:{{ pct }}%"></i></div>
+<div class="legend">
+  <span><b>{{ done }} of {{ of }}</b> called</span>
+  <span>{{ of - done }} to go</span>
+  {% if flagged %}<span><b>{{ flagged|length }}</b> flagged</span>{% endif %}
+  {% if asks_open %}<span><b>{{ asks_open }}</b> asked for help</span>{% endif %}
+</div>
+
+<form method="get" class="toolbar">
+  <div class="fld"><label>Show</label>
+    <select name="scope" onchange="this.form.submit()">
+      <option value="mine" {% if scope=='mine' %}selected{% endif %}>My candidates ({{ mine_n }})</option>
+      <option value="all" {% if scope=='all' %}selected{% endif %}>Everyone ({{ total }})</option>
+      <option value="unassigned" {% if scope=='unassigned' %}selected{% endif %}>Unassigned</option>
+    </select></div>
+  <div class="spacer"></div>
+  {% if can_admin_whip %}<a class="btn btn-ghost btn-sm" href="{{ url_for('whip.assign') }}">Assign</a>{% endif %}
+</form>
+
+{% if todo %}<div class="section-head">To call &mdash; {{ todo|length }}</div>{% endif %}
+{% for d in todo %}{{ row(d) }}{% endfor %}
+
+{% if done_rows %}<div class="section-head">Called this week &mdash; {{ done_rows|length }}</div>{% endif %}
+{% for d in done_rows %}{{ row(d) }}{% endfor %}
+
+{% if not rows %}
+<div class="card empty">
+  <b>Nothing assigned to you yet.</b><br>
+  {% if can_admin_whip %}<a href="{{ url_for('whip.assign') }}">Assign candidates to whips</a> to get started.
+  {% else %}An admin needs to assign you some candidates.{% endif %}
+</div>
+{% endif %}
+{% endblock %}
