@@ -51,8 +51,9 @@
   <form method="get" class="wkfilter">
     <select name="scope" onchange="this.form.submit()">
       <option value="mine" {% if scope=='mine' %}selected{% endif %}>My candidates ({{ mine_n }})</option>
-      <option value="all" {% if scope=='all' %}selected{% endif %}>Everyone ({{ total }})</option>
+      <option value="needs" {% if scope=='needs' %}selected{% endif %}>Anyone who asked for something</option>
       <option value="unassigned" {% if scope=='unassigned' %}selected{% endif %}>Unassigned</option>
+      <option value="all" {% if scope=='all' %}selected{% endif %}>Everyone ({{ total }})</option>
     </select>
     {% if can_admin_whip %}<a class="btn btn-ghost btn-sm" href="{{ url_for('whip.assign') }}">Assign</a>{% endif %}
   </form>
@@ -83,9 +84,18 @@
 </table>
 {% else %}
 <div class="card empty">
-  <b>Nothing assigned to you yet.</b><br>
-  {% if can_admin_whip %}<a href="{{ url_for('whip.assign') }}">Assign candidates to whips</a> to get started.
-  {% else %}An admin needs to assign you some candidates.{% endif %}
+  {% if scope == 'mine' %}
+    <b>Nothing assigned to you.</b><br>
+    {% if can_admin_whip %}
+      Nobody has been given a list yet &mdash; the tool stays empty until they are.<br>
+      <a class="btn btn-red btn-sm" style="margin-top:14px;" href="{{ url_for('whip.roster') }}">Add whips</a>
+      <a class="btn btn-ghost btn-sm" style="margin-top:14px;" href="{{ url_for('whip.assign') }}">Assign candidates</a>
+    {% else %}An admin needs to assign you some candidates.{% endif %}
+  {% elif scope == 'needs' %}
+    <b>Nobody has asked for anything yet.</b><br>Asks appear here as whips log their calls.
+  {% else %}
+    <b>Nothing here.</b>
+  {% endif %}
 </div>
 {% endif %}
 {% endblock %}

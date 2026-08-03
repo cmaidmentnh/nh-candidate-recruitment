@@ -283,14 +283,21 @@ def my_week():
     try:
         rows, _ = _roster(cur, week)
         mine = [d for d in rows if d['owner'] == uid]
-        # An admin with no assignments of their own sees the whole board rather
-        # than an empty page.
-        shown = mine if (scope == 'mine' and mine) else rows
-        if scope == 'unassigned':
+
+        # Scope is taken literally. An earlier version fell back to the whole
+        # 365-candidate board when you had nothing assigned, which meant the
+        # page opened as a wall of rows that were nobody's job.
+        if scope == 'all':
+            shown = rows
+        elif scope == 'unassigned':
             shown = [d for d in rows if not d['owner']]
+        elif scope == 'needs':
+            shown = [d for d in rows if (d['checkin'] or {}).get('asks') or d['open_asks']]
+        else:
+            shown = mine
         shown = _order(shown)
 
-        base = mine if mine else rows
+        base = shown
         done = [d for d in base if d['checkin']]
         todo = [d for d in shown if not d['checkin']]
 
