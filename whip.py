@@ -99,7 +99,23 @@ def _role():
 
 
 def can_admin_whip():
-    return bool(_can_admin and _can_admin())
+    """Who runs the whip tool: assign, the needs board, the roster, export.
+
+    Deliberately NOT the same question as /progress access. `_can_admin` is
+    campaign_progress.can_access_progress — Chris plus the tiny leadership
+    allowlist — and /progress and /surveys stay exactly that restricted.
+
+    On top of that, anyone on the whip roster who is already an admin of this
+    app runs the whip tool too. They can reach the candidate dashboard and
+    admin notes anyway, so withholding the assign screen bought nothing and
+    meant only two people could hand out lists.
+
+    A volunteer whip (role='whip', is_whip) is a different case and stays on
+    the narrow view: their own list and the call screen, nothing else.
+    """
+    if _can_admin and _can_admin():
+        return True
+    return bool(getattr(current_user, 'is_whip', False)) and _role() == 'admin'
 
 
 def can_whip():
