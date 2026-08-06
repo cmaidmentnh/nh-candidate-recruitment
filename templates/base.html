@@ -96,6 +96,29 @@
     {% endif %}
 
     <div class="container mt-3 mt-md-4">
+        {% if not admin_twofa_on and admin_twofa_days_left is not none %}
+        <div class="alert d-flex flex-wrap align-items-center justify-content-between mb-3"
+             style="border:1px solid {{ '#b91c1c' if admin_twofa_days_left <= 7 else '#d97706' }};
+                    background:{{ '#fef2f2' if admin_twofa_days_left <= 7 else '#fffbeb' }};
+                    border-radius:4px;">
+          <div class="mr-3">
+            <strong style="color:{{ '#991b1b' if admin_twofa_days_left <= 7 else '#92400e' }};">
+              {% if admin_twofa_days_left == 0 %}
+                Two-factor sign-in is required on your account now.
+              {% else %}
+                Two-factor sign-in will be required on your account in
+                {{ admin_twofa_days_left }} day{{ '' if admin_twofa_days_left == 1 else 's' }}.
+              {% endif %}
+            </strong>
+            <div class="small text-muted mt-1">
+              Your account can reach candidate records and contact details. Setting
+              this up takes about a minute with Google Authenticator, Microsoft
+              Authenticator, or any authenticator app.
+            </div>
+          </div>
+          <a href="{{ url_for('admin_security') }}" class="btn btn-sm btn-dark mt-2 mt-sm-0">Set it up</a>
+        </div>
+        {% endif %}
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}

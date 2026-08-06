@@ -1597,7 +1597,14 @@ def login():
             login_user(user)
             conn2 = get_db_connection()
             cur2 = conn2.cursor()
-            cur2.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (admin_row[0],))
+            cur2.execute("""UPDATE users
+                               SET last_login = NOW(),
+                                   twofa_required_by = CASE
+                                       WHEN COALESCE(totp_enabled, FALSE) = FALSE
+                                        AND twofa_required_by IS NULL
+                                       THEN NOW() + interval '30 days'
+                                       ELSE twofa_required_by END
+                             WHERE user_id = %s""", (admin_row[0],))
             conn2.commit()
             cur2.close()
             release_db_connection(conn2)
@@ -1607,6 +1614,42 @@ def login():
 
         flash("Invalid email/username or password.", "danger")
     return render_template("login.html")
+
+@app.context_processor
+def inject_admin_twofa_state():
+    """Tell every admin page whether a second factor is set and what is left of
+    the deadline.
+
+    Done here rather than in each admin route so a page added later cannot
+    quietly skip the prompt. Candidates are excluded: the clock is only ever set
+    on an admin sign-in, so their column stays NULL and there is nothing to show.
+    A failure returns the quiet state — a broken banner must never be the reason
+    an admin cannot reach the dashboard.
+    """
+    if not current_user.is_authenticated or getattr(current_user, 'is_candidate', True):
+        return {'admin_twofa_on': True, 'admin_twofa_days_left': None}
+    conn = cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""SELECT COALESCE(totp_enabled, FALSE), twofa_required_by
+                         FROM users WHERE user_id = %s""",
+                    (current_user.user_id,))
+        row = cur.fetchone()
+        if not row:
+            return {'admin_twofa_on': True, 'admin_twofa_days_left': None}
+        days_left = None
+        if row[1] and not row[0]:
+            days_left = max(0, (row[1] - datetime.utcnow()).days)
+        return {'admin_twofa_on': bool(row[0]), 'admin_twofa_days_left': days_left}
+    except Exception:
+        return {'admin_twofa_on': True, 'admin_twofa_days_left': None}
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)
+
 
 @app.route('/logout')
 @login_required
@@ -1678,7 +1721,14 @@ def google_oauth_callback():
                 return redirect(url_for('admin_login_verify'))
             user = AdminUser(*row[:5])
             login_user(user)
-            cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (row[0],))
+            cur.execute("""UPDATE users
+                               SET last_login = NOW(),
+                                   twofa_required_by = CASE
+                                       WHEN COALESCE(totp_enabled, FALSE) = FALSE
+                                        AND twofa_required_by IS NULL
+                                       THEN NOW() + interval '30 days'
+                                       ELSE twofa_required_by END
+                             WHERE user_id = %s""", (row[0],))
             conn.commit()
             session.permanent = True
             flash("Signed in with Google.", "success")
