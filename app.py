@@ -2587,8 +2587,14 @@ def admin_login():
                     session['pending_admin_at'] = datetime.utcnow().isoformat()
                     conn2.commit()
                     return redirect(url_for('admin_login_verify'))
-                c2.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s",
-                           (user_row[0],))
+                c2.execute("""UPDATE users
+                                 SET last_login = NOW(),
+                                     twofa_required_by = CASE
+                                         WHEN COALESCE(totp_enabled, FALSE) = FALSE
+                                          AND twofa_required_by IS NULL
+                                         THEN NOW() + interval '30 days'
+                                         ELSE twofa_required_by END
+                               WHERE user_id = %s""", (user_row[0],))
                 conn2.commit()
             finally:
                 c2.close(); release_db_connection(conn2)
