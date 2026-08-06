@@ -1640,7 +1640,11 @@ def inject_admin_twofa_state():
             return {'admin_twofa_on': True, 'admin_twofa_days_left': None}
         days_left = None
         if row[1] and not row[0]:
-            days_left = max(0, (row[1] - datetime.utcnow()).days)
+            # Rounded up, not truncated: a deadline set thirty days out is 29.99
+            # days away a second later, and reading "29 days" immediately after
+            # being told the policy is thirty looks like the clock is wrong.
+            secs = (row[1] - datetime.utcnow()).total_seconds()
+            days_left = int(-(-secs // 86400)) if secs > 0 else 0
         return {'admin_twofa_on': bool(row[0]), 'admin_twofa_days_left': days_left}
     except Exception:
         return {'admin_twofa_on': True, 'admin_twofa_days_left': None}
