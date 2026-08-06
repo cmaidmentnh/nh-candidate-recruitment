@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Security</h2>
+{% if new_codes %}
+<div class="alert alert-warning">
+    <strong>Save these backup codes now — they are shown once.</strong>
+    <p class="mb-2" style="font-size:0.9rem;">
+        Each works one time, and they are how you get in if you lose your phone.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;
+                font-family:monospace;">
+        {% for c in new_codes %}<div class="p-1 text-center" style="background:#fff;border:1px solid #dee2e6;">{{ c }}</div>{% endfor %}
+    </div>
+</div>
+{% endif %}
+{% if enabled %}
+<div class="alert alert-success">
+    <strong>Two-factor is on.</strong> Authenticator app &middot; {{ backup_left }} backup code{{ '' if backup_left == 1 else 's' }} left.
+</div>
+<p class="text-muted" style="font-size:0.9rem;">
+    To turn it off or reset it, ask a super admin.
+</p>
+{% else %}
+<p>
+    Your account can reach candidate records for the whole programme. A second step
+    at sign-in means a stolen or reused password is not enough on its own.
+</p>
+<form method="POST" action="{{ url_for('admin_security_start') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <button type="submit" class="btn btn-primary">Set up authenticator app</button>
+</form>
+{% endif %}
+{% endblock %}

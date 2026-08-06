@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Set up two-factor</h2>
+<p class="text-muted">
+    Scan this with Google Authenticator, Microsoft Authenticator, 1Password or Authy.
+</p>
+{# Inline data URI: the secret never travels to a third-party QR service. #}
+<div class="text-center my-3">
+    <img src="{{ qr }}" alt="QR code" width="220" height="220"
+         style="border:1px solid #dee2e6;padding:8px;background:#fff;">
+</div>
+<details class="mb-3">
+    <summary style="cursor:pointer;">Can't scan it? Type the key instead</summary>
+    <code class="d-block p-2 mt-2" style="background:#f1f3f5;word-break:break-all;">{{ secret }}</code>
+</details>
+<form method="POST" action="{{ url_for('admin_security_confirm') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <div class="form-group">
+        <label>Enter the 6-digit code it shows:</label>
+        <input type="text" name="code" class="form-control" required autofocus
+               inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"
+               style="font-size:1.4rem;letter-spacing:0.5em;text-align:center;padding-left:0.5em;">
+    </div>
+    <button type="submit" class="btn btn-primary">Confirm and turn on</button>
+</form>
+<p class="text-muted mt-3" style="font-size:0.85rem;">
+    Nothing changes on your account until you enter a working code, so you cannot
+    lock yourself out by leaving this page.
+</p>
+{% endblock %}

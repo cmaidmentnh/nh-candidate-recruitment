@@ -1,4 +1,5 @@
 import os
+import recruit_twofa as twofa
 import re
 import json
 import csv
@@ -99,6 +100,19 @@ def release_voter_db_connection(conn):
         pool.putconn(conn)
 
 app = Flask(__name__)
+
+# Session cookie hardening.
+#   SECURE   - never send the session cookie over an unencrypted connection.
+#              Flask's default is False, which means one plain http:// request,
+#              made before the redirect to https, leaks the cookie to anyone on
+#              the network path. Whoever copies it is logged in as that user.
+#   HTTPONLY - JavaScript cannot read it, so injected script cannot steal it.
+#   SAMESITE - not sent when another site triggers a request here, which stops a
+#              malicious page acting as a logged-in user.
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 _secret_key = os.environ.get("SECRET_KEY")
 if not _secret_key:
     logger.warning("WARNING: SECRET_KEY not set! Using insecure default. Set SECRET_KEY environment variable in production.")
@@ -1648,12 +1662,21 @@ def google_oauth_callback():
         # more privileged identity. The `intent` param only controls where
         # we land after login, not which row we match.
         cur.execute("""
-            SELECT user_id, username, email, password_hash, role
+            SELECT user_id, username, email, password_hash, role,
+                   COALESCE(totp_enabled, FALSE)
             FROM users WHERE LOWER(email) = %s LIMIT 1
         """, (email,))
         row = cur.fetchone()
         if row:
-            user = AdminUser(*row)
+            if row[5]:
+                # This account carries a second factor, so Google verifying the
+                # address is not enough on its own — otherwise the password path
+                # is guarded and this one is a way straight past it.
+                session['pending_admin_2fa'] = row[0]
+                session['pending_admin_at'] = datetime.utcnow().isoformat()
+                conn.commit()
+                return redirect(url_for('admin_login_verify'))
+            user = AdminUser(*row[:5])
             login_user(user)
             cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s", (row[0],))
             conn.commit()
@@ -2474,27 +2497,186 @@ def admin_login():
             local = email.split('@')[0].replace('.', '')
             normalized = f"{local}@gmail.com"
             cur.execute("""
-                SELECT user_id, username, email, password_hash, role
+                SELECT user_id, username, email, password_hash, role,
+                       COALESCE(totp_enabled, FALSE), totp_secret,
+                       twofa_backup_codes, locked_until
                 FROM users
                 WHERE LOWER(email) = %s OR (LOWER(email) LIKE '%%@gmail.com' AND REPLACE(LOWER(SPLIT_PART(email, '@', 1)), '.', '') || '@gmail.com' = %s)
             """, (email, normalized))
         else:
             cur.execute("""
-                SELECT user_id, username, email, password_hash, role
+                SELECT user_id, username, email, password_hash, role,
+                       COALESCE(totp_enabled, FALSE), totp_secret,
+                       twofa_backup_codes, locked_until
                 FROM users
                 WHERE LOWER(email) = %s
             """, (email,))
         user_row = cur.fetchone()
         cur.close()
         release_db_connection(conn)
+        # Lockout is checked before the password, so a locked account cannot be
+        # used to test password guesses.
+        if user_row:
+            locked, mins = twofa.is_locked(user_row[8])
+            if locked:
+                conn2 = get_db_connection(); c2 = conn2.cursor()
+                c2.close(); release_db_connection(conn2)
+                flash("Too many failed sign-in attempts. Try again in %d minute%s."
+                      % (mins, "" if mins == 1 else "s"), "danger")
+                return render_template("admin_login.html")
+
         if user_row and check_password_hash(user_row[3], password):
-            user = AdminUser(*user_row)
+            conn2 = get_db_connection(); c2 = conn2.cursor()
+            try:
+                twofa.clear_failures(c2, user_row[0])
+                if user_row[5]:
+                    # Correct password, but this account has a second factor.
+                    # Hold the identity in the session WITHOUT logging in, so
+                    # nothing behind @login_required opens early.
+                    session['pending_admin_2fa'] = user_row[0]
+                    session['pending_admin_at'] = datetime.utcnow().isoformat()
+                    conn2.commit()
+                    return redirect(url_for('admin_login_verify'))
+                c2.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s",
+                           (user_row[0],))
+                conn2.commit()
+            finally:
+                c2.close(); release_db_connection(conn2)
+            user = AdminUser(*user_row[:5])
             login_user(user)
             session.permanent = True
             flash("Admin logged in successfully.", "success")
             return redirect(url_for('admin_dashboard'))
+
+        if user_row:
+            conn2 = get_db_connection(); c2 = conn2.cursor()
+            try:
+                failures, locked_mins = twofa.register_failure(c2, user_row[0])
+                conn2.commit()
+            finally:
+                c2.close(); release_db_connection(conn2)
+            if locked_mins:
+                flash("Too many failed sign-in attempts. This account is locked "
+                      "for %d minutes." % locked_mins, "danger")
+                return render_template("admin_login.html")
+        # Same wording either way, so the form does not confirm which emails exist.
         flash("Invalid email or password.", "danger")
     return render_template("admin_login.html")
+
+@app.route('/admin/login/verify', methods=['GET', 'POST'])
+@limiter.limit("20 per minute")
+def admin_login_verify():
+    """Second factor for admin sign-in. Only reachable after a correct password."""
+    pending = session.get('pending_admin_2fa')
+    started = session.get('pending_admin_at')
+    if not pending or not started:
+        return redirect(url_for('admin_login'))
+    try:
+        age = datetime.utcnow() - datetime.fromisoformat(started)
+    except (TypeError, ValueError):
+        age = timedelta(hours=1)
+    if age > timedelta(minutes=10):
+        session.pop('pending_admin_2fa', None)
+        session.pop('pending_admin_at', None)
+        flash("That sign-in attempt timed out. Please start again.", "warning")
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT user_id, username, email, password_hash, role,
+                              totp_secret, twofa_backup_codes
+                         FROM users WHERE user_id = %s""", (pending,))
+        row = cur.fetchone()
+        if not row:
+            session.pop('pending_admin_2fa', None)
+            return redirect(url_for('admin_login'))
+
+        if request.method == 'POST':
+            code = request.form.get('code', '').strip()
+            ok = twofa.totp_ok(row[5], code)
+            if not ok:
+                # Backup codes work whatever the configured method — that is
+                # the point of them.
+                used, remaining = twofa.use_backup_code(row[6], code)
+                if used:
+                    cur.execute("UPDATE users SET twofa_backup_codes = %s "
+                                "WHERE user_id = %s", (remaining, row[0]))
+                    left = twofa.backup_codes_left(remaining)
+                    flash("Backup code accepted. %d remaining." % left,
+                          "warning" if left <= 2 else "success")
+                    ok = True
+            if ok:
+                session.pop('pending_admin_2fa', None)
+                session.pop('pending_admin_at', None)
+                cur.execute("UPDATE users SET last_login = NOW() WHERE user_id = %s",
+                            (row[0],))
+                conn.commit()
+                login_user(AdminUser(*row[:5]))
+                session.permanent = True
+                return redirect(url_for('admin_dashboard'))
+            twofa.register_failure(cur, row[0])
+            conn.commit()
+            flash("That code is not correct.", "danger")
+        return render_template("admin_2fa_verify.html")
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@app.route('/admin/security', methods=['GET'])
+@admin_required
+def admin_security():
+    """Where an admin turns two-factor on."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT COALESCE(totp_enabled, FALSE), twofa_backup_codes, email
+                         FROM users WHERE user_id = %s""", (current_user.user_id,))
+        row = cur.fetchone() or (False, None, "")
+        return render_template("admin_security.html",
+                               enabled=row[0],
+                               backup_left=twofa.backup_codes_left(row[1]),
+                               new_codes=session.pop('fresh_admin_codes', None))
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@app.route('/admin/security/start', methods=['POST'])
+@admin_required
+@limiter.limit("10 per hour")
+def admin_security_start():
+    """Show a QR. The secret lives in the session until a code proves it works,
+    so an abandoned setup cannot lock anybody out."""
+    secret = twofa.new_secret()
+    session['admin_totp_pending'] = secret
+    return render_template("admin_2fa_setup.html",
+                           qr=twofa.qr_data_uri(secret, current_user.email),
+                           secret=secret)
+
+
+@app.route('/admin/security/confirm', methods=['POST'])
+@admin_required
+@limiter.limit("20 per hour")
+def admin_security_confirm():
+    secret = session.get('admin_totp_pending')
+    if not secret or not twofa.totp_ok(secret, request.form.get('code', '')):
+        flash("That code did not match. Check the time on your phone and try again.",
+              "danger")
+        return redirect(url_for('admin_security'))
+    plain, hashed = twofa.new_backup_codes()
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""UPDATE users SET totp_secret = %s, totp_enabled = TRUE,
+                              totp_confirmed_at = NOW(), twofa_backup_codes = %s,
+                              twofa_enrolled_at = NOW()
+                        WHERE user_id = %s""",
+                    (secret, hashed, current_user.user_id))
+        conn.commit()
+    finally:
+        cur.close(); release_db_connection(conn)
+    session.pop('admin_totp_pending', None)
+    session['fresh_admin_codes'] = plain
+    flash("Two-factor enabled.", "success")
+    return redirect(url_for('admin_security'))
+
 
 @app.route('/admin/dashboard')
 @super_admin_required
