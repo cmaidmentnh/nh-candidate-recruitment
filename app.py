@@ -1587,7 +1587,8 @@ def login():
                    COALESCE(totp_enabled, FALSE) as totp_enabled
             FROM candidates
             WHERE LOWER(email) = %s OR LOWER(email1) = %s OR LOWER(username) = %s
-            ORDER BY (LOWER(email) = %s OR LOWER(email1) = %s) DESC
+            ORDER BY (LOWER(email) = %s OR LOWER(email1) = %s) DESC,
+                     (password_hash IS NOT NULL) DESC, candidate_id
             LIMIT 1
         """, (email, email, email, email, email))
         user_row = cur.fetchone()
