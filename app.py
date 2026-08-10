@@ -7,6 +7,7 @@ import secrets
 from urllib.parse import urlparse, urljoin
 from collections import defaultdict
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from markupsafe import Markup
 from psycopg2 import pool
 import psycopg2
 from dotenv import load_dotenv
@@ -1525,10 +1526,62 @@ def login():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Check candidates table first
-        # The form field is called "email" but accepts an email OR a username.
-        # An exact email match is preferred so a username can never shadow
-        # somebody else's address.
+        # Staff first. Fifteen people hold both a staff account and a candidate
+        # record on the same address; checking candidates first signed them into
+        # /profile and left the dashboard unreachable. Only a staff password
+        # authenticates here, so a candidate-only password still falls through
+        # to the candidate branch below.
+        cur.execute("""
+            SELECT user_id, username, email, password_hash, role,
+                   COALESCE(totp_enabled, FALSE) as totp_enabled
+            FROM users
+            WHERE LOWER(email) = %s OR LOWER(username) = %s
+            ORDER BY (LOWER(email) = %s) DESC
+            LIMIT 1
+        """, (email, email, email))
+        admin_row = cur.fetchone()
+
+        if admin_row and admin_row[3] and check_password_hash(admin_row[3], password):
+            if admin_row[5]:  # 2FA enrolled
+                session['pending_2fa_user'] = {'type': 'admin', 'id': admin_row[0]}
+                cur.close(); release_db_connection(conn)
+                return redirect(url_for('verify_2fa'))
+
+            user = AdminUser(admin_row[0], admin_row[1], admin_row[2], admin_row[3], admin_row[4])
+            login_user(user)
+            cur.execute("""UPDATE users
+                              SET last_login = NOW(),
+                                  twofa_required_by = CASE
+                                      WHEN COALESCE(totp_enabled, FALSE) = FALSE
+                                       AND twofa_required_by IS NULL
+                                      THEN NOW() + interval '30 days'
+                                      ELSE twofa_required_by END
+                            WHERE user_id = %s""", (admin_row[0],))
+            # Same address, two accounts. Point them at their own candidate record
+            # rather than leaving them to wonder where it went.
+            own = None
+            try:
+                cur.execute("""SELECT candidate_id FROM candidates
+                                WHERE LOWER(email) = %s OR LOWER(email1) = %s
+                                ORDER BY (password_hash IS NOT NULL) DESC, candidate_id
+                                LIMIT 1""",
+                            ((admin_row[2] or '').lower(), (admin_row[2] or '').lower()))
+                own = cur.fetchone()
+            except Exception:
+                logger.exception("own-candidate lookup failed")
+            conn.commit()
+            cur.close(); release_db_connection(conn)
+            if own:
+                flash(Markup('Signed in as staff. Your own candidate profile is '
+                             '<a href="%s" class="alert-link">here</a>.'
+                             % url_for('candidate_profile', candidate_id=own[0])), "info")
+            session.permanent = True
+            next_page = request.args.get('next')
+            return redirect(get_safe_redirect(next_page, 'index'))
+
+        # Candidate accounts. The form field is called "email" but accepts an
+        # email OR a username; an exact email match is preferred so a username
+        # can never shadow somebody else's address.
         cur.execute("""
             SELECT candidate_id, email, password_hash, first_name, last_name, password_changed, photo_url,
                    COALESCE(totp_enabled, FALSE) as totp_enabled
@@ -1542,75 +1595,28 @@ def login():
         if user_row:
             candidate_id, cand_email, password_hash, first_name, last_name, password_changed, photo_url, totp_enabled = user_row
             if password_hash and check_password_hash(password_hash, password):
-                # Check if 2FA is enabled
                 if totp_enabled:
                     session['pending_2fa_user'] = {'type': 'candidate', 'id': candidate_id}
-                    cur.close()
-                    release_db_connection(conn)
+                    cur.close(); release_db_connection(conn)
                     return redirect(url_for('verify_2fa'))
 
-                user = CandidateUser(candidate_id, cand_email or email, password_hash, first_name, last_name, password_changed, photo_url)
+                user = CandidateUser(candidate_id, cand_email or email, password_hash,
+                                     first_name, last_name, password_changed, photo_url)
                 login_user(user)
-                cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s", (candidate_id,))
-
-                # Same address, two accounts. Signing in by email always lands
-                # on the candidate profile, so a staff member who is also a
-                # candidate gets silently confined to /profile and reads it as
-                # having lost access. Say so instead of leaving them guessing.
-                cur.execute("SELECT username FROM users WHERE LOWER(email) = %s", (email,))
-                staff = cur.fetchone()
-                if staff:
-                    flash(f"You're signed in to your candidate profile. Your staff account "
-                          f"is separate — sign out and sign back in with the username "
-                          f"\"{staff[0]}\" to reach the whip tool and admin screens.", "info")
+                cur.execute("UPDATE candidates SET last_login = NOW() WHERE candidate_id = %s",
+                            (candidate_id,))
                 conn.commit()
+                cur.close(); release_db_connection(conn)
                 session.permanent = True
                 flash("Logged in successfully.", "success")
-                cur.close()
-                release_db_connection(conn)
                 if not password_changed:
                     flash("Please change your password on first login.", "warning")
                     return redirect(url_for('change_password'))
                 next_page = request.args.get('next')
                 return redirect(get_safe_redirect(next_page, 'index'))
 
-        # Check admin users table
-        cur.execute("""
-            SELECT user_id, username, email, password_hash, role,
-                   COALESCE(totp_enabled, FALSE) as totp_enabled
-            FROM users
-            WHERE LOWER(email) = %s OR LOWER(username) = %s
-            ORDER BY (LOWER(email) = %s) DESC
-            LIMIT 1
-        """, (email, email, email))
-        admin_row = cur.fetchone()
         cur.close()
         release_db_connection(conn)
-
-        if admin_row and admin_row[3] and check_password_hash(admin_row[3], password):
-            # Check if 2FA is enabled
-            if admin_row[5]:  # totp_enabled
-                session['pending_2fa_user'] = {'type': 'admin', 'id': admin_row[0]}
-                return redirect(url_for('verify_2fa'))
-
-            user = AdminUser(admin_row[0], admin_row[1], admin_row[2], admin_row[3], admin_row[4])
-            login_user(user)
-            conn2 = get_db_connection()
-            cur2 = conn2.cursor()
-            cur2.execute("""UPDATE users
-                               SET last_login = NOW(),
-                                   twofa_required_by = CASE
-                                       WHEN COALESCE(totp_enabled, FALSE) = FALSE
-                                        AND twofa_required_by IS NULL
-                                       THEN NOW() + interval '30 days'
-                                       ELSE twofa_required_by END
-                             WHERE user_id = %s""", (admin_row[0],))
-            conn2.commit()
-            cur2.close()
-            release_db_connection(conn2)
-            session.permanent = True
-            next_page = request.args.get('next')
-            return redirect(get_safe_redirect(next_page, 'index'))
 
         flash("Invalid email/username or password.", "danger")
     return render_template("login.html")
