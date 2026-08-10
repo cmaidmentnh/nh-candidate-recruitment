@@ -16,6 +16,7 @@
 {% if enabled %}
 <div class="alert alert-success">
     <strong>Two-factor is on.</strong> Authenticator app &middot; {{ backup_left }} backup code{{ '' if backup_left == 1 else 's' }} left.
+    <div class="mt-1"><a href="{{ url_for('setup_2fa_sms') }}">Add or change text-message codes</a></div>
 </div>
 <p class="text-muted" style="font-size:0.9rem;">
     To turn it off or reset it, ask a super admin.
@@ -25,9 +26,15 @@
     Your account can reach candidate records for the whole programme. A second step
     at sign-in means a stolen or reused password is not enough on its own.
 </p>
-<form method="POST" action="{{ url_for('admin_security_start') }}">
+<form method="POST" action="{{ url_for('admin_security_start') }}" class="d-inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <button type="submit" class="btn btn-primary">Set up authenticator app</button>
 </form>
+<a href="{{ url_for('setup_2fa_sms') }}" class="btn btn-outline-secondary ms-2">Use text-message codes</a>
+<p class="text-muted mt-2" style="font-size:0.88rem;">
+    An authenticator app is the stronger option and works without signal. Text-message
+    codes are offered because a second factor you actually finish setting up beats one
+    you do not.
+</p>
 {% endif %}
 {% endblock %}

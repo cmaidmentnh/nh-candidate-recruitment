@@ -25,6 +25,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import pyotp
+import sms_2fa
 import qrcode
 import io
 import base64
@@ -1533,7 +1534,7 @@ def login():
         # to the candidate branch below.
         cur.execute("""
             SELECT user_id, username, email, password_hash, role,
-                   COALESCE(totp_enabled, FALSE) as totp_enabled
+                   COALESCE(totp_enabled, FALSE) OR COALESCE(twofa_sms_enabled, FALSE)
             FROM users
             WHERE LOWER(email) = %s OR LOWER(username) = %s
             ORDER BY (LOWER(email) = %s) DESC
@@ -1553,6 +1554,7 @@ def login():
                               SET last_login = NOW(),
                                   twofa_required_by = CASE
                                       WHEN COALESCE(totp_enabled, FALSE) = FALSE
+                                       AND COALESCE(twofa_sms_enabled, FALSE) = FALSE
                                        AND twofa_required_by IS NULL
                                       THEN NOW() + interval '30 days'
                                       ELSE twofa_required_by END
@@ -1639,7 +1641,8 @@ def inject_admin_twofa_state():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("""SELECT COALESCE(totp_enabled, FALSE), twofa_required_by
+        cur.execute("""SELECT COALESCE(totp_enabled, FALSE) OR COALESCE(twofa_sms_enabled, FALSE),
+                              twofa_required_by
                          FROM users WHERE user_id = %s""",
                     (current_user.user_id,))
         row = cur.fetchone()
@@ -1736,6 +1739,7 @@ def google_oauth_callback():
                                SET last_login = NOW(),
                                    twofa_required_by = CASE
                                        WHEN COALESCE(totp_enabled, FALSE) = FALSE
+                                        AND COALESCE(twofa_sms_enabled, FALSE) = FALSE
                                         AND twofa_required_by IS NULL
                                        THEN NOW() + interval '30 days'
                                        ELSE twofa_required_by END
@@ -2226,6 +2230,89 @@ def setup_2fa():
         release_db_connection(conn)
 
 
+@app.route('/setup-2fa/sms', methods=['GET', 'POST'])
+@login_required
+def setup_2fa_sms():
+    """Enrol a phone as a second factor. Two steps on one page: send a code to
+    the number, then confirm it. Nothing is enabled until the code comes back."""
+    if getattr(current_user, 'is_candidate', True):
+        flash("Text-message sign-in codes are for staff accounts.", "warning")
+        return redirect(url_for('index'))
+    uid = current_user.user_id
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT twofa_phone, COALESCE(twofa_sms_enabled, FALSE)
+                         FROM users WHERE user_id = %s""", (uid,))
+        row = cur.fetchone() or (None, False)
+        phone_on_file, enabled = row[0], row[1]
+
+        if request.method == 'POST':
+            action = request.form.get('action')
+
+            if action == 'disable':
+                cur.execute("""UPDATE users SET twofa_sms_enabled = FALSE, twofa_phone = NULL,
+                                      sms_code_hash = NULL, sms_code_expires = NULL
+                                WHERE user_id = %s""", (uid,))
+                conn.commit()
+                flash("Text-message codes turned off for your account.", "info")
+                return redirect(url_for('setup_2fa_sms'))
+
+            if action == 'send':
+                e164 = sms_2fa.normalize_phone(request.form.get('phone'))
+                if not e164:
+                    flash("That does not look like a US mobile number.", "danger")
+                    return redirect(url_for('setup_2fa_sms'))
+                cur.execute("UPDATE users SET twofa_phone = %s WHERE user_id = %s", (e164, uid))
+                conn.commit()
+                ok, msg = sms_2fa.issue_code(cur, uid, e164)
+                conn.commit()
+                flash(msg, "success" if ok else "danger")
+                if ok:
+                    session['sms_enrol_pending'] = True
+                return redirect(url_for('setup_2fa_sms'))
+
+            if action == 'confirm':
+                ok, msg = sms_2fa.check_code(cur, uid, request.form.get('code'))
+                if ok:
+                    cur.execute("""UPDATE users SET twofa_sms_enabled = TRUE,
+                                          twofa_required_by = NULL
+                                    WHERE user_id = %s""", (uid,))
+                    session.pop('sms_enrol_pending', None)
+                conn.commit()
+                flash("Text-message codes are on for your account." if ok else msg,
+                      "success" if ok else "danger")
+                return redirect(url_for('setup_2fa_sms') if not ok else url_for('admin_security'))
+
+        return render_template('setup_2fa_sms.html',
+                               phone_masked=sms_2fa.mask_phone(phone_on_file),
+                               enabled=enabled,
+                               pending=bool(session.get('sms_enrol_pending')))
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@app.route('/verify-2fa/send-sms', methods=['POST'])
+def verify_2fa_send_sms():
+    """Text a fresh code to an admin who is part-way through signing in."""
+    pending = session.get('pending_2fa_user')
+    if not pending or pending.get('type') == 'candidate':
+        return redirect(url_for('login'))
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT twofa_phone, COALESCE(twofa_sms_enabled, FALSE)
+                         FROM users WHERE user_id = %s""", (pending['id'],))
+        row = cur.fetchone()
+        if not row or not row[1] or not row[0]:
+            flash("Text-message codes are not set up on this account.", "danger")
+            return redirect(url_for('verify_2fa'))
+        ok, msg = sms_2fa.issue_code(cur, pending['id'], row[0])
+        conn.commit()
+        flash(msg, "success" if ok else "danger")
+        return redirect(url_for('verify_2fa'))
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
 @app.route('/verify-2fa', methods=['GET', 'POST'])
 def verify_2fa():
     """Verify 2FA code during login."""
@@ -2248,13 +2335,29 @@ def verify_2fa():
                 cur.execute("SELECT totp_secret FROM users WHERE user_id = %s", (user_id,))
 
             row = cur.fetchone()
-            if not row or not row[0]:
+            secret = row[0] if row else None
+            # Admins may hold either factor, or both. A TOTP code is checked
+            # first because it costs nothing; an SMS code is checked when TOTP
+            # is absent or the code did not match one.
+            sms_ok = False
+            if user_type != 'candidate':
+                cur.execute("SELECT COALESCE(twofa_sms_enabled, FALSE) FROM users WHERE user_id = %s",
+                            (user_id,))
+                r2 = cur.fetchone()
+                if r2 and r2[0]:
+                    sms_ok = True
+            if not secret and not sms_ok:
                 flash("2FA not configured properly.", "danger")
                 session.pop('pending_2fa_user', None)
                 return redirect(url_for('login'))
 
-            totp = pyotp.TOTP(row[0])
-            if totp.verify(code):
+            passed = bool(secret) and pyotp.TOTP(secret).verify(code)
+            if not passed and sms_ok:
+                passed, msg = sms_2fa.check_code(cur, user_id, code)
+                conn.commit()
+                if not passed:
+                    session['sms_2fa_msg'] = msg
+            if passed:
                 # 2FA verified - complete login
                 session.pop('pending_2fa_user', None)
 
