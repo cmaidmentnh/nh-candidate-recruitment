@@ -54,15 +54,18 @@ def _client():
     return Client(sid, os.environ.get('TWILIO_AUTH_TOKEN'))
 
 
+# Sign-in codes always leave from the number reserved for them. Sending through
+# the shared Messaging Service let Twilio pick any number in the pool, so a code
+# could arrive from a candidate's number or the campaign blast number - confusing
+# at best, indistinguishable from phishing at worst. Sticky sender made it worse:
+# whoever had been blasted last kept getting auth codes from that number, and a
+# STOP on campaign traffic would have silently blocked their sign-in codes too.
+TWOFA_FROM = os.environ.get('TWOFA_SMS_FROM', '+16039325719')
+
+
 def send_sms(to_e164, body):
-    """Send through the Messaging Service so the 10DLC registration applies."""
-    msid = os.environ.get('TWILIO_MESSAGING_SERVICE_SID')
-    kwargs = {'to': to_e164, 'body': body}
-    if msid:
-        kwargs['messaging_service_sid'] = msid
-    else:
-        kwargs['from_'] = os.environ.get('TWILIO_FROM_NUMBER')
-    msg = _client().messages.create(**kwargs)
+    """Send from the dedicated 2FA number, never the shared campaign pool."""
+    msg = _client().messages.create(to=to_e164, body=body, from_=TWOFA_FROM)
     return msg.sid
 
 
