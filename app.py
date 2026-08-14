@@ -556,6 +556,16 @@ init_whip(get_db_connection, release_db_connection, _build_rows,
 app.register_blueprint(whip_bp)
 csrf.exempt(app.view_functions['progress.progress_update'])  # JSON inline-edit, admin-gated
 
+# Public candidate cross-reference API. Key-authenticated, no session, so CSRF does
+# not apply; exposes name/town/party/office/district from 2026 filings and nothing else.
+from candidate_match_api import match_api_bp, init_match_api, register_cli as _match_cli
+init_match_api(get_db_connection, release_db_connection)
+app.register_blueprint(match_api_bp)
+csrf.exempt(match_api_bp)
+_match_cli(app)
+limiter.limit("60 per minute; 1000 per day")(app.view_functions['match_api.match_members'])
+limiter.limit("30 per minute; 500 per day")(app.view_functions['match_api.list_candidates'])
+
 @app.context_processor
 def inject_progress_access():
     return {'can_access_progress': can_access_progress(),
