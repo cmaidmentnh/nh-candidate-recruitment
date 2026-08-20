@@ -125,11 +125,22 @@
     <script>
         // Auto-focus and format the verification code input
         const input = document.querySelector('.verification-input');
+        // One submission only. The auto-submit below plus an Enter key or a
+        // button click used to send the form twice: the first POST signed the
+        // user in, the second found the pending-2FA marker gone and bounced
+        // them to the login screen mid-navigation.
+        let submitted = false;
+        input.form.addEventListener('submit', function(e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) btn.disabled = true;
+        });
         input.addEventListener('input', function(e) {
             this.value = this.value.replace(/[^0-9]/g, '').substring(0, 6);
             // Auto-submit when 6 digits entered
             if (this.value.length === 6) {
-                setTimeout(() => this.form.submit(), 100);
+                setTimeout(() => this.form.requestSubmit(), 100);
             }
         });
     </script>

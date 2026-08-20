@@ -1531,6 +1531,11 @@ def generate_token():
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def login():
+    # Already signed in — the form would only mislead (it looks like the
+    # session was lost). Straight to their page instead.
+    if request.method == 'GET' and current_user.is_authenticated:
+        return redirect(url_for('profile' if getattr(current_user, 'is_candidate', False)
+                                else 'index'))
     if request.method == 'POST':
         email = (request.form.get('email') or '').strip().lower()
         password = (request.form.get('password') or '').strip()
@@ -2328,6 +2333,12 @@ def verify_2fa():
     """Verify 2FA code during login."""
     pending_2fa = session.get('pending_2fa_user')
     if not pending_2fa:
+        # A duplicate submit lands here after the first one already signed the
+        # user in and consumed the pending marker. Send them to their page, not
+        # back to the login form they no longer need.
+        if current_user.is_authenticated:
+            return redirect(url_for('profile' if getattr(current_user, 'is_candidate', False)
+                                    else 'index'))
         return redirect(url_for('login'))
 
     if request.method == 'POST':
@@ -2661,6 +2672,10 @@ def history(candidate_id):
 @app.route('/admin/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def admin_login():
+    # Already signed in as staff — showing the form reads as a lost session.
+    if request.method == 'GET' and current_user.is_authenticated \
+            and not getattr(current_user, 'is_candidate', False):
+        return redirect(url_for('admin_dashboard'))
     if request.method == 'POST':
         email = request.form.get('email').strip().lower()
         password = request.form.get('password').strip()
@@ -2750,6 +2765,10 @@ def admin_login_verify():
     pending = session.get('pending_admin_2fa')
     started = session.get('pending_admin_at')
     if not pending or not started:
+        # Same duplicate-submit self-heal as verify_2fa: if the first submit
+        # already completed the sign-in, go to the dashboard, not the form.
+        if current_user.is_authenticated and not getattr(current_user, 'is_candidate', False):
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('admin_login'))
     try:
         age = datetime.utcnow() - datetime.fromisoformat(started)
