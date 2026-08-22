@@ -883,44 +883,109 @@ VOTER_EXPORT_BUCKET = os.environ.get('VOTER_EXPORT_BUCKET', 'nhhouse-voter-lists
 VOTER_LINK_TTL = int(os.environ.get('VOTER_LINK_TTL', str(14 * 24 * 3600)))  # 14-day link for candidates
 
 
+def _district_places(district):
+    """The (town, ward) pairs that actually make up a House district.
+
+    Ward 0 means the whole town. Returns [] if the district is unknown, which
+    the caller treats as a reason to stop rather than guess.
+    """
+    conn = cur = None
+    try:
+        conn = get_db_connection(); cur = conn.cursor()
+        cur.execute("""SELECT DISTINCT TRIM(town), COALESCE(ward, 0)
+                         FROM districts
+                        WHERE full_district_code = %s
+                          AND town IS NOT NULL AND TRIM(town) <> ''""",
+                    (district,))
+        return [(t, int(w or 0)) for t, w in cur.fetchall()]
+    except Exception:
+        logger.exception("district->towns lookup failed for %s", district)
+        return []
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_db_connection(conn)
+
+
 def _build_voterlist_csv(district, parties):
-    """Pull a voter CSV for a House district + party mix via VOTER_FILE_API (the same
-    /api/export the !voterlist Signal command uses). Loops parties (API takes one at a
-    time) and concatenates. Returns (path, total) or (None, 0)."""
-    import urllib.request, urllib.parse, tempfile, csv as _csv
+    """Pull a voter CSV for a House district + party mix via VOTER_FILE_API.
+
+    Filtered by TOWN (and ward where the district takes only part of a city),
+    never by ?district=. The voter file's house_district column is years out of
+    date: filtering on it both drops voters who belong to the district and drags
+    in voters from unrelated towns. Belknap 1 came back with 8 other towns
+    attached and only 5 of the 58 voters on its main road.
+
+    One request per town/ward per party, deduplicated on voter id, then sorted
+    into walking order across the whole district. Returns (path, total) or
+    (None, 0).
+    """
+    import urllib.request, urllib.parse, tempfile, csv as _csv, io as _io
     if not (VOTER_FILE_API and VOTER_FILE_API_KEY and district):
         return None, 0
-    fd, path = tempfile.mkstemp(suffix='.csv', prefix='voterlist_')
-    total = 0
+
+    places = _district_places(district)
+    if not places:
+        logger.error("voterlist: no towns on file for district %r; refusing to "
+                     "fall back to the stale district filter", district)
+        return None, 0
+
+    header = None
+    rows = []
+    seen = set()
     try:
-        with os.fdopen(fd, 'w', newline='', encoding='utf-8') as out:
-            writer = None
+        for town, ward in places:
             for party in (parties or ['REP', 'UND']):
-                qs = urllib.parse.urlencode({'district': district, 'party': party, 'format': 'csv'})
-                req = urllib.request.Request(f"{VOTER_FILE_API}/api/export?{qs}",
-                                             headers={'X-API-Key': VOTER_FILE_API_KEY})
+                q = {'city': town, 'party': party, 'format': 'csv', 'active': 'true'}
+                if ward:
+                    q['ward'] = str(ward)
+                req = urllib.request.Request(
+                    f"{VOTER_FILE_API}/api/export?{urllib.parse.urlencode(q)}",
+                    headers={'X-API-Key': VOTER_FILE_API_KEY})
                 resp = urllib.request.urlopen(req, timeout=600)
-                text = resp.read().decode('utf-8', 'replace').splitlines()
+                text = resp.read().decode('utf-8', 'replace')
                 resp.close()
-                if not text:
+                got = list(_csv.reader(_io.StringIO(text)))
+                if not got:
                     continue
-                header, rows = text[0], text[1:]
-                if writer is None:
-                    out.write(header + '\n')
-                    writer = True
-                for r in rows:
-                    if r.strip():
-                        out.write(r + '\n'); total += 1
-        if total == 0:
-            os.path.exists(path) and os.remove(path)
+                if header is None:
+                    header = got[0]
+                for r in got[1:]:
+                    if not r or not any(r):
+                        continue
+                    if r[0] in seen:
+                        continue
+                    seen.add(r[0])
+                    rows.append(r)
+
+        if not rows:
             return None, 0
-        return path, total
+
+        # Walk order across the district: town, then street, then house number
+        # numerically so 9 comes before 10.
+        def _idx(name):
+            try:
+                return header.index(name)
+            except ValueError:
+                return None
+
+        ci, sni, sxi = _idx('city'), _idx('street_name'), _idx('street_number')
+        if None not in (ci, sni, sxi):
+            def _num(v):
+                d = re.sub(r'\D', '', v or '')
+                return int(d) if d else 0
+            rows.sort(key=lambda r: ((r[ci] or '').upper(),
+                                     (r[sni] or '').upper(), _num(r[sxi])))
+
+        fd, path = tempfile.mkstemp(suffix='.csv', prefix='voterlist_')
+        with os.fdopen(fd, 'w', newline='', encoding='utf-8') as out:
+            w = _csv.writer(out)
+            w.writerow(header)
+            w.writerows(rows)
+        return path, len(rows)
     except Exception:
         logger.exception("voterlist CSV build failed")
-        try:
-            os.path.exists(path) and os.remove(path)
-        except OSError:
-            pass
         return None, 0
 
 
