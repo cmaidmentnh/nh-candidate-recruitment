@@ -320,6 +320,34 @@ def _forward_sms_optin(first_name, last_name, email, phone, source):
         return False
 
 
+def _candidate_by_email(cur, email):
+    """Resolve a login / registration email to (candidate_id, first_name).
+
+    Checks the three contact columns first, then falls back to an
+    admin-approved portal registration. That fallback is not a nicety: approval
+    only ever wrote the address onto the record when a contact slot happened to
+    be free, so 31 of the first 65 approvals stored nothing at all. Those people
+    stayed invisible to every lookup, so the portal told them it had never heard
+    of them and invited them to register again. Michael Thornton did that six
+    times. An approved registration is an admin asserting "this address belongs
+    to this candidate", which is precisely what a login lookup needs to know,
+    and honouring it here also avoids copying a registrant's typo into the
+    contact fields we send mail to.
+    """
+    cur.execute("""SELECT candidate_id, first_name FROM candidates
+                    WHERE LOWER(email)=%s OR LOWER(email1)=%s OR LOWER(email2)=%s
+                    ORDER BY candidate_id LIMIT 1""", (email, email, email))
+    row = cur.fetchone()
+    if row:
+        return row
+    cur.execute("""SELECT c.candidate_id, c.first_name
+                     FROM portal_registrations r
+                     JOIN candidates c ON c.candidate_id = r.matched_candidate_id
+                    WHERE r.status = 'approved' AND LOWER(r.email) = %s
+                    ORDER BY r.approved_at DESC NULLS LAST LIMIT 1""", (email,))
+    return cur.fetchone()
+
+
 @portal_bp.route('/register-start', methods=['POST'])
 def register_start():
     data = request.get_json(silent=True) or {}
@@ -339,10 +367,7 @@ def register_start():
 
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("""SELECT candidate_id, first_name FROM candidates
-                       WHERE LOWER(email)=%s OR LOWER(email1)=%s OR LOWER(email2)=%s
-                       ORDER BY candidate_id LIMIT 1""", (email, email, email))
-        row = cur.fetchone()
+        row = _candidate_by_email(cur, email)
         if row:
             _send_access_link(row[0], row[1], email)
             return jsonify({'ok': True, 'found': True,
@@ -414,13 +439,30 @@ def approve_do():
         name, town, email, phone, mid, status = r
         if status == 'approved':
             return _APPROVE_PAGE.format(body=f"<p>Already approved — {name} ({email}).</p>")
+        stored = True
         if mid:
+            # Put the address in the first genuinely empty contact slot. The old
+            # version only considered email1 and email2 and left `email` — usually
+            # the empty one — untouched, so when both were full it quietly wrote
+            # nothing while still reporting success.
+            cur.execute("""SELECT COALESCE(email,''), COALESCE(email1,''), COALESCE(email2,'')
+                             FROM candidates WHERE candidate_id=%s""", (mid,))
+            slots = cur.fetchone() or ('', '', '')
+            if email not in {s.strip().lower() for s in slots}:
+                target = next((col for col, val in zip(('email', 'email1', 'email2'), slots)
+                               if not val.strip()), None)
+                if target:
+                    # Column name comes from the literal tuple above, never input.
+                    cur.execute(f"UPDATE candidates SET {target}=%s WHERE candidate_id=%s",
+                                (email, mid))
+                else:
+                    stored = False
+                    logger.warning("portal approval %s: all three email slots full on "
+                                   "candidate %s; %s not stored", res['id'], mid, email)
             cur.execute("""UPDATE candidates SET
-                             email1 = CASE WHEN COALESCE(email1,'')='' THEN %s ELSE email1 END,
-                             email2 = CASE WHEN COALESCE(email1,'')<>'' AND COALESCE(email2,'')='' THEN %s ELSE email2 END,
                              phone1 = CASE WHEN COALESCE(phone1,'')='' THEN %s ELSE phone1 END,
                              modified_by='portal-approval', modified_at=NOW()
-                           WHERE candidate_id=%s""", (email, email, phone, mid))
+                           WHERE candidate_id=%s""", (phone, mid))
             cur.execute("SELECT first_name FROM candidates WHERE candidate_id=%s", (mid,))
             fn = (cur.fetchone() or [''])[0]
             _send_access_link(mid, fn, email)
@@ -428,8 +470,15 @@ def approve_do():
         conn.commit()
         if log_activity and mid:
             log_activity('portal_registration_approved', f'Approved portal registration for {name} ({email})', mid)
-        msg = (f"Approved. Login email sent to {email}." if mid
-               else f"Recorded {email}. No candidate matched — attach it manually in the recruitment app.")
+        if not mid:
+            msg = f"Recorded {email}. No candidate matched — attach it manually in the recruitment app."
+        elif stored:
+            msg = f"Approved. Login email sent to {email}."
+        else:
+            msg = (f"Approved and login email sent to {email}. Note: all three email fields on "
+                   f"this record are already filled, so the address was not added to their "
+                   f"contact details — sign-in works, but mail we send still goes to the "
+                   f"addresses already on file.")
         return _APPROVE_PAGE.format(body=f"<p>{msg}</p>")
     finally:
         cur.close(); release_db_connection(conn)
@@ -445,10 +494,7 @@ def login_link():
         return jsonify({'ok': False, 'error': 'Please enter a valid email address.'}), 400
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("""SELECT candidate_id, first_name FROM candidates
-                       WHERE LOWER(email)=%s OR LOWER(email1)=%s OR LOWER(email2)=%s
-                       ORDER BY candidate_id LIMIT 1""", (email, email, email))
-        row = cur.fetchone()
+        row = _candidate_by_email(cur, email)
     finally:
         cur.close(); release_db_connection(conn)
     if row:
