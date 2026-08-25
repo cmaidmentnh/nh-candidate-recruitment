@@ -39,7 +39,10 @@ SELECT wc.recruitment_candidate_id AS cid,
        MAX(CASE WHEN s.status='custom_domain_live' AND s.custom_domain <> ''
                      THEN 'https://' || s.custom_domain
                 WHEN s.status='live' AND s.website_slug <> ''
-                     THEN 'https://' || s.website_slug || '.winthehouse.gop' END) AS site,
+                     -- per-slug subdomains were never wired up in DNS; the live
+                     -- form is the path one. Writing the subdomain here put dead
+                     -- links in the directory, digests and palm cards.
+                     THEN 'https://sites.winthehouse.gop/site/' || s.website_slug END) AS site,
        MAX(NULLIF(TRIM(s.donation_url),''))   AS donate,
        MAX(NULLIF(TRIM(s.facebook_url),''))   AS fb,
        MAX(NULLIF(TRIM(s.twitter_url),''))    AS tw,
