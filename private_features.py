@@ -1200,8 +1200,12 @@ def spend_plan():
                     'rate': float(r[3]) if r[3] is not None else None,
                     'qty_label': r[4], 'grp': r[5]} for r in cur.fetchall()]
 
-        cur.execute("SELECT district_code, mask, include, notes FROM district_spend")
-        plan = {r[0]: {'mask': r[1], 'include': r[2], 'notes': r[3] or ''} for r in cur.fetchall()}
+        cur.execute("SELECT district_code, mask, include, notes, tier FROM district_spend")
+        plan = {r[0]: {'mask': r[1], 'include': r[2], 'notes': r[3] or '', 'tier': r[4]}
+                for r in cur.fetchall()}
+
+        cur.execute("SELECT district_code, reg_r, reg_d, reg_u, reg_total FROM district_registration")
+        reg = {r[0]: {'r': r[1], 'd': r[2], 'u': r[3], 'total': r[4]} for r in cur.fetchall()}
 
         cur.execute("SELECT district_code, tactic_key, qty, rate_override FROM district_spend_item")
         qty_by_district = {}
@@ -1226,6 +1230,8 @@ def spend_plan():
             d['mask'] = p.get('mask', 3)
             d['include'] = p.get('include', False)
             d['notes'] = p.get('notes', '')
+            d['tier'] = p.get('tier')
+            d['reg'] = reg.get(code, {'r': 0, 'd': 0, 'u': 0, 'total': 0})
             d['qty'] = qty_by_district.get(code, {})
             d['universe'] = universe.get((code, d['mask']), {'voters': 0, 'households': 0, 'cells': 0})
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
@@ -1251,17 +1257,22 @@ def spend_plan_save():
         return jsonify({'ok': False, 'error': 'district_code required'}), 400
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        if 'mask' in data or 'include' in data or 'notes' in data:
+        if any(k in data for k in ('mask', 'include', 'notes', 'tier')):
             cur.execute("""
-                INSERT INTO district_spend (district_code, mask, include, notes, updated_by, updated_at)
-                VALUES (%s, COALESCE(%s,3), COALESCE(%s,false), %s, %s, now())
+                INSERT INTO district_spend (district_code, mask, include, notes, tier, updated_by, updated_at)
+                VALUES (%s, COALESCE(%s,3), COALESCE(%s,false), %s, %s, %s, now())
                 ON CONFLICT (district_code) DO UPDATE SET
                     mask    = COALESCE(EXCLUDED.mask, district_spend.mask),
                     include = COALESCE(EXCLUDED.include, district_spend.include),
                     notes   = COALESCE(EXCLUDED.notes, district_spend.notes),
+                    -- tier 0 from the UI means "clear it", so it maps to NULL rather than
+                    -- being swallowed by COALESCE and leaving the old tier in place.
+                    tier    = CASE WHEN %s THEN EXCLUDED.tier ELSE district_spend.tier END,
                     updated_by = EXCLUDED.updated_by, updated_at = now()
             """, (code, data.get('mask'), data.get('include'), data.get('notes'),
-                  (current_user.email if current_user.is_authenticated else 'admin')))
+                  (data.get('tier') or None), 
+                  (current_user.email if current_user.is_authenticated else 'admin'),
+                  'tier' in data))
         for tk, qty in (data.get('items') or {}).items():
             try:
                 q = float(qty)

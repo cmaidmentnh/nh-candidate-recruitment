@@ -39,6 +39,31 @@
   .nav button{padding:5px 11px;border:1px solid #cfd6e0;background:#fff;border-radius:4px;
     cursor:pointer;font-size:.78rem;font-weight:600;color:var(--navy)}
   .nav button:hover{background:#f2f6fb}
+  .tierbox{border:1px solid var(--rule);border-radius:6px;padding:12px 14px;margin-bottom:14px}
+  .tierbox .lab{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    display:block;margin-bottom:8px}
+  .tierbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .tierbtns button{flex:1;min-width:120px;text-align:left;padding:9px 12px;border:1px solid #cfd6e0;
+    background:#fff;border-radius:5px;cursor:pointer;font-family:inherit}
+  .tierbtns button .tn{display:block;font-weight:800;font-size:.82rem;color:var(--navy)}
+  .tierbtns button .td{display:block;font-size:.7rem;color:var(--muted);margin-top:1px}
+  .tierbtns button:hover{background:#f4f8fd}
+  .tierbtns button.on{border-color:var(--navy);border-width:2px;background:#eef3fa;padding:8px 11px}
+  .tierbtns button.on .tn{color:#0d2340}
+  .tierbtns button.t1.on{border-color:#a8261f;background:#fdf1f0}
+  .tierbtns button.t1.on .tn{color:#a8261f}
+  .tierbtns button.t2.on{border-color:#8a6400;background:#fdf8ec}
+  .tierbtns button.t2.on .tn{color:#8a6400}
+  .tierbtns button.t3.on{border-color:#1a7f43;background:#f1faf4}
+  .tierbtns button.t3.on .tn{color:#1a7f43}
+  .regline{display:flex;gap:0 26px;flex-wrap:wrap;padding:10px 0 0;margin-top:10px;
+    border-top:1px solid var(--rule);font-variant-numeric:tabular-nums}
+  .regline div{display:flex;flex-direction:column}
+  .regline .rv{font-size:1.05rem;font-weight:800}
+  .regline .rl{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .regline .rp{font-size:.68rem;color:var(--muted)}
+  .t1c{color:#a8261f}.t2c{color:#8a6400}.t3c{color:#1a7f43}
+  .ditem .dt{font-size:.6rem;font-weight:800;width:14px;text-align:center}
   .who{font-size:.84rem;margin-bottom:14px}
   .who .lab{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block}
   .who .none{color:var(--red);font-weight:700}
@@ -91,7 +116,9 @@
   <div class="totals">
     <div class="grp"><span class="big" id="fTotal">$0</span>
       <span class="cap" id="fVsBudget">of the $582,000 base program</span></div>
-    <div class="grp"><span class="unit" id="fDistricts">0 districts</span><span class="sub" id="fSeats">0 seats</span></div>
+    <div class="grp"><span class="unit"><span class="t1c" id="fT1">0</span> /
+      <span class="t2c" id="fT2">0</span> / <span class="t3c" id="fT3">0</span></span>
+      <span class="sub">TIER 1 / 2 / 3 &middot; <span id="fUntiered">203</span> untriaged</span></div>
     <div class="grp"><span class="unit" id="fMail">$0</span><span class="sub">MAIL <span id="fMailPieces">0 pieces</span></span></div>
     <div class="grp"><span class="unit" id="fText">$0</span><span class="sub">TEXT <span id="fTextMsgs">0 messages</span></span></div>
     <div class="grp"><span class="unit" id="fDigital">$0</span><span class="sub">DIGITAL</span></div>
@@ -125,7 +152,8 @@
       <div class="railhead">
         <input type="search" id="q" placeholder="Filter, e.g. Rockingham or Raymond">
         <div class="filters">
-          <a data-f="all" class="on">All 203</a><a data-f="in">In plan</a><a data-f="norep">No R nominee</a>
+          <a data-f="all" class="on">All 203</a><a data-f="untiered">Untiered</a>
+          <a data-f="t1">T1</a><a data-f="t2">T2</a><a data-f="t3">T3</a><a data-f="norep">No R</a>
         </div>
       </div>
       <div id="railList"></div>
@@ -174,6 +202,10 @@
     return DISTRICTS.filter(function(d){
       if(q && (d.code + ' ' + (d.towns||'')).toLowerCase().indexOf(q) < 0) return false;
       if(filter === 'in') return d.include;
+      if(filter === 'untiered') return !d.tier;
+      if(filter === 't1') return d.tier === 1;
+      if(filter === 't2') return d.tier === 2;
+      if(filter === 't3') return d.tier === 3;
       if(filter === 'norep') return !(d.nominees && d.nominees.R);
       return true;
     });
@@ -185,7 +217,8 @@
       if(d.county !== county){ county = d.county; html += '<div class="cty">' + county + '</div>'; }
       var c = cost(d).total;
       html += '<div class="ditem' + (d.include?' inplan':'') + (d === DISTRICTS[idx]?' sel':'') +
-        '" data-code="' + d.code + '"><span class="dn">' + d.code + '</span>' +
+        '" data-code="' + d.code + '"><span class="dt t' + (d.tier||0) + 'c">' +
+        (d.tier ? d.tier : '') + '</span><span class="dn">' + d.code + '</span>' +
         '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
         '<span class="dc">' + (c ? money(c) : '') + '</span></div>';
     });
@@ -202,6 +235,25 @@
       '<button id="nextBtn">Next &rarr;</button></div></div>';
     h += '<div class="who"><span class="lab">Republican nominees</span>' +
       (r ? r : '<span class="none">No Republican on the ballot here</span>') + '</div>';
+    var TIERS = [[1,'Tier 1','Full effort, everything we have'],
+                 [2,'Tier 2','Needs real spend here'],
+                 [3,'Tier 3','Light touch'],
+                 [0,'None','Not spending here']];
+    h += '<div class="tierbox"><span class="lab">Tier &middot; press 1, 2, 3 or 0</span><div class="tierbtns">';
+    TIERS.forEach(function(t){
+      var on = (t[0] === 0) ? !d.tier : d.tier === t[0];
+      h += '<button class="t' + t[0] + (on ? ' on' : '') + '" data-tier="' + t[0] + '">' +
+           '<span class="tn">' + t[1] + '</span><span class="td">' + t[2] + '</span></button>';
+    });
+    var g = d.reg || {r:0,d:0,u:0,total:0};
+    function pct(n){ return g.total ? Math.round(100*n/g.total) + '%' : ''; }
+    h += '</div><div class="regline">' +
+      '<div><span class="rv t1c">' + num(g.r) + '</span><span class="rl">Registered R</span><span class="rp">' + pct(g.r) + '</span></div>' +
+      '<div><span class="rv" style="color:#1d4e89">' + num(g.d) + '</span><span class="rl">Registered D</span><span class="rp">' + pct(g.d) + '</span></div>' +
+      '<div><span class="rv">' + num(g.u) + '</span><span class="rl">Undeclared</span><span class="rp">' + pct(g.u) + '</span></div>' +
+      '<div><span class="rv">' + num(g.total) + '</span><span class="rl">On the checklist</span>' +
+      '<span class="rp">R' + (g.r - g.d >= 0 ? '+' : '') + num(g.r - g.d) + ' over D</span></div>' +
+      '</div></div>';
     h += '<div class="uniblock"><label for="uniSel">Who are you buying in this district</label><select id="uniSel">';
     var known = false;
     PRESETS.forEach(function(p){ if(p[0] === d.mask) known = true;
@@ -247,8 +299,12 @@
     document.getElementById('fVsBudget').textContent = grand > BUDGET
       ? money(grand-BUDGET) + ' over the $582,000 base program'
       : money(BUDGET-grand) + ' left of the $582,000 base program';
-    document.getElementById('fDistricts').textContent = dn + ' district' + (dn===1?'':'s');
-    document.getElementById('fSeats').textContent = seats + ' seats';
+    var tc = {1:0,2:0,3:0,0:0};
+    DISTRICTS.forEach(function(d){ tc[d.tier || 0]++; });
+    document.getElementById('fT1').textContent = tc[1];
+    document.getElementById('fT2').textContent = tc[2];
+    document.getElementById('fT3').textContent = tc[3];
+    document.getElementById('fUntiered').textContent = tc[0];
     document.getElementById('fMail').textContent = money(g.mail);
     document.getElementById('fMailPieces').textContent = num(pieces) + ' pieces';
     document.getElementById('fText').textContent = money(g.text);
@@ -309,9 +365,18 @@
     else if(e.target.id === 'incBox'){ d.include = e.target.checked; queue(d.code,{include:d.include}); redraw(); }
   });
 
+  function setTier(t){
+    var d = DISTRICTS[idx];
+    d.tier = t || null;
+    if(d.tier && !d.include){ d.include = true; queue(d.code, {include: true}); }
+    queue(d.code, {tier: t || 0});
+    redraw();
+  }
   document.getElementById('pane').addEventListener('click', function(e){
-    if(e.target.id === 'nextBtn') go(1);
-    if(e.target.id === 'prevBtn') go(-1);
+    if(e.target.id === 'nextBtn') return go(1);
+    if(e.target.id === 'prevBtn') return go(-1);
+    var b = e.target.closest('button[data-tier]');
+    if(b) setTier(parseInt(b.dataset.tier, 10));
   });
 
   document.getElementById('q').addEventListener('input', function(e){
@@ -327,6 +392,8 @@
     if(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
     if(e.key === 'j' || e.key === 'ArrowDown'){ e.preventDefault(); go(1); }
     if(e.key === 'k' || e.key === 'ArrowUp'){ e.preventDefault(); go(-1); }
+    // Tier then advance: this is the triage loop, so keep the hands on the numbers.
+    if(['0','1','2','3'].indexOf(e.key) >= 0){ e.preventDefault(); setTier(parseInt(e.key,10)); go(1); }
   });
 
   function scopeRows(scope){
