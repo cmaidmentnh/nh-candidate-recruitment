@@ -1,311 +1,363 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  .sp-wrap{font-size:.86rem}
-  .sp-top{display:flex;flex-wrap:wrap;gap:26px;align-items:flex-end;padding:14px 0 16px;border-bottom:2px solid #1e3557;margin-bottom:14px}
-  .sp-fig .n{font-size:1.75rem;font-weight:800;line-height:1;color:#1e3557;font-variant-numeric:tabular-nums}
-  .sp-fig .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#7a8494;margin-top:3px}
-  .sp-fig .s{font-size:.72rem;color:#8a929e}
-  .sp-fig.over .n{color:#b4262d}
-  table.sp{width:100%;border-collapse:collapse}
-  table.sp th{position:sticky;top:0;z-index:3;background:#1e3557;color:#fff;font-size:.63rem;
-    text-transform:uppercase;letter-spacing:.05em;padding:6px 5px;text-align:left;font-weight:700}
-  table.sp th.num,table.sp td.num{text-align:right;font-variant-numeric:tabular-nums}
-  table.sp td{padding:4px 5px;border-bottom:1px solid #eef1f5;vertical-align:middle}
-  table.sp tr.on{background:#f7fbf8}
-  table.sp tr:hover{background:#f4f7fb}
-  .dcode{font-weight:700;color:#1e3557;white-space:nowrap}
-  .dtowns{font-size:.68rem;color:#98a0ab;display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .rating{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+  .sp{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--ink:#22303f;--green:#1a7f43;--red:#b4262d;
+      color:var(--ink);font-size:.9rem}
+  .sp *{box-sizing:border-box}
+  .totals{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 30px;padding:0 0 12px;
+    border-bottom:1px solid var(--rule);margin-bottom:14px}
+  .totals .big{font-size:2.1rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
+  .totals .big.over{color:var(--red)}
+  .totals .cap{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .totals .unit{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .totals .grp{display:flex;flex-direction:column;gap:2px}
+  .totals .sub{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .cols{display:flex;gap:20px;align-items:flex-start}
+  .rail{flex:0 0 330px;max-height:76vh;overflow-y:auto;border:1px solid var(--rule);border-radius:6px}
+  .railhead{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--rule);padding:8px 10px;z-index:2}
+  .railhead input{width:100%;padding:5px 8px;border:1px solid #d6dbe3;border-radius:4px;font-size:.82rem}
+  .railhead .filters{display:flex;gap:12px;margin-top:6px;font-size:.7rem}
+  .railhead .filters a{cursor:pointer;color:var(--muted);border-bottom:1px solid transparent}
+  .railhead .filters a.on{color:var(--navy);font-weight:700;border-bottom-color:var(--navy)}
+  .cty{padding:7px 10px 3px;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;
+    color:var(--muted);font-weight:700;background:#fafbfd;border-top:1px solid var(--rule)}
+  .ditem{display:flex;align-items:baseline;gap:8px;padding:5px 10px;cursor:pointer;border-left:3px solid transparent}
+  .ditem:hover{background:#f5f8fc}
+  .ditem.sel{background:#eef3fa;border-left-color:var(--navy)}
+  .ditem .dn{font-weight:700;color:var(--navy);white-space:nowrap}
+  .ditem.inplan .dn{color:var(--green)}
+  .ditem .dr{font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .ditem .dc{margin-left:auto;font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .ditem.inplan .dc{color:var(--green);font-weight:700}
   .r-gop{color:#a8261f}.r-dem{color:#1d4e89}.r-swing{color:#8a6400}
-  .nom{font-size:.72rem;color:#444;max-width:200px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .nom.none{color:#b4262d;font-weight:700}
-  .qty{width:52px;padding:2px 4px;border:1px solid #d6dbe3;border-radius:3px;font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums}
-  .qty:focus{border-color:#1e3557;outline:none}
-  .qty.set{border-color:#1a7f43;background:#f2fbf5;font-weight:700}
-  .dollars{width:70px}
-  .cost{font-weight:700;color:#1e3557;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .cost.zero{color:#c3c9d2;font-weight:400}
-  .uni{font-size:.68rem;color:#6b7280;white-space:nowrap;font-variant-numeric:tabular-nums}
-  .unisel{font-size:.72rem;padding:2px 3px;border:1px solid #d6dbe3;border-radius:3px;max-width:170px;background:#fff}
-  .unisel:focus{border-color:#1e3557;outline:none}
-  .legend{font-size:.72rem;color:#5b6472;background:#f7f9fc;border-left:3px solid #1e3557;
-    padding:7px 11px;margin:0 0 12px;line-height:1.7}
-  .legend .lgi{display:inline-block;margin-right:14px;color:#6b7280}
-  .legend .lgi b{color:#1e3557}
-  .sp-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 12px;background:#f4f7fb;
-    border:1px solid #e2e8f0;border-radius:6px;margin-bottom:12px;font-size:.8rem}
-  .sp-tools select,.sp-tools input{padding:3px 6px;border:1px solid #d6dbe3;border-radius:3px;font-size:.8rem}
-  .sp-tools button{padding:4px 12px;border:0;border-radius:3px;background:#1e3557;color:#fff;font-weight:700;
-    font-size:.78rem;cursor:pointer}
-  .sp-tools button.ghost{background:#fff;color:#1e3557;border:1px solid #1e3557}
-  .grouphdr{font-size:.6rem;color:#aab2bd;text-transform:uppercase;letter-spacing:.05em}
-  .saved{color:#1a7f43;font-weight:700;font-size:.74rem}
-  .norate{color:#b4262d;font-size:.66rem;font-weight:700}
-  .county-rule td{background:#1e3557;color:#fff;font-weight:800;font-size:.7rem;text-transform:uppercase;
-    letter-spacing:.08em;padding:4px 6px}
+  .pane{flex:1;min-width:0;border:1px solid var(--rule);border-radius:6px;padding:16px 20px}
+  .pane h3{margin:0;font-size:1.5rem;color:var(--navy);font-weight:800}
+  .panesub{font-size:.78rem;color:var(--muted);margin:3px 0 0}
+  .panetop{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+    border-bottom:1px solid var(--rule);padding-bottom:12px;margin-bottom:14px}
+  .nav{display:flex;gap:6px;flex-shrink:0}
+  .nav button{padding:5px 11px;border:1px solid #cfd6e0;background:#fff;border-radius:4px;
+    cursor:pointer;font-size:.78rem;font-weight:600;color:var(--navy)}
+  .nav button:hover{background:#f2f6fb}
+  .who{font-size:.84rem;margin-bottom:14px}
+  .who .lab{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block}
+  .who .none{color:var(--red);font-weight:700}
+  .uniblock{background:#f7f9fc;border-left:3px solid var(--navy);padding:11px 14px;margin-bottom:16px}
+  .uniblock label{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    display:block;margin-bottom:4px}
+  .uniblock select{padding:5px 8px;border:1px solid #cfd6e0;border-radius:4px;font-size:.86rem;min-width:290px}
+  .unicount{margin-top:7px;font-size:.84rem;font-variant-numeric:tabular-nums}
+  .unicount b{color:var(--navy)}
+  .unihint{font-size:.72rem;color:var(--muted);margin-top:3px}
+  table.tac{width:100%;border-collapse:collapse}
+  table.tac td{padding:6px 4px;border-bottom:1px solid #f0f3f7;vertical-align:middle}
+  table.tac tr.grp td{border:0;padding:14px 4px 3px;font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.1em;color:var(--muted);font-weight:700}
+  table.tac .tl{font-weight:600}
+  table.tac .th{font-size:.72rem;color:var(--muted)}
+  table.tac .ti{width:104px}
+  table.tac input{width:96px;padding:5px 7px;border:1px solid #cfd6e0;border-radius:4px;
+    font-size:.9rem;text-align:right;font-variant-numeric:tabular-nums}
+  table.tac input:focus{border-color:var(--navy);outline:none;background:#fbfdff}
+  table.tac input.set{border-color:var(--green);font-weight:700}
+  table.tac .tc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;color:var(--navy);width:112px}
+  table.tac .tc.zero{color:#c9ced6;font-weight:400}
+  .norate{color:var(--red);font-size:.7rem;font-weight:700}
+  .dtot{display:flex;justify-content:space-between;align-items:baseline;
+    border-top:2px solid var(--navy);padding-top:10px;margin-top:8px}
+  .dtot .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .dtot .v{font-size:1.6rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+  .inplan{margin:14px 0 0;font-size:.86rem}
+  .inplan input{width:16px;height:16px;vertical-align:-2px;margin-right:6px}
+  .notes{width:100%;margin-top:10px;padding:7px 9px;border:1px solid #cfd6e0;border-radius:4px;
+    font-size:.84rem;font-family:inherit;resize:vertical}
+  details.bulk{margin-bottom:12px}
+  details.bulk summary{cursor:pointer;color:var(--navy);font-weight:700;font-size:.76rem}
+  .bulkrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;margin-top:8px;
+    background:#f7f9fc;border:1px solid var(--rule);border-radius:5px;font-size:.8rem}
+  .bulkrow select,.bulkrow input{padding:4px 7px;border:1px solid #cfd6e0;border-radius:4px;font-size:.8rem}
+  .bulkrow button{padding:5px 13px;border:0;border-radius:4px;background:var(--navy);color:#fff;
+    font-weight:700;font-size:.78rem;cursor:pointer}
+  .saved{font-size:.74rem;color:var(--green);font-weight:700;margin-left:auto}
 </style>
 
-<div class="sp-wrap">
+<div class="sp">
   <h4 style="margin:0 0 2px">General Election Spend Plan</h4>
-  <p style="color:#7a8494;font-size:.78rem;margin:0 0 6px">
-    Every district in order. Pick who you are buying, pick the tactics, pick how many of each.
-    Mail is priced per household per drop, texts per cell per send, digital in dollars at its CPM.
+  <p style="color:#7b8494;font-size:.78rem;margin:0 0 12px">
+    Pick a district on the left. Choose who you are buying, then how many of each tactic.
+    Press <b>J</b> and <b>K</b>, or the arrow keys, to move down the list.
   </p>
-  <div class="legend">
-    <strong>Universe</strong> is who receives the mail and texts in that district. It sets the
-    HH and Cells counts, which is what the cost is multiplied by.
-    <span class="lgi"><b>Reliable R</b> registered R or R primary voter, turned out in 2024</span>
-    <span class="lgi"><b>R drop-off</b> same voters, but sat out 2024</span>
-    <span class="lgi"><b>Undeclared voters</b> undeclared, not an R, voted 2022 or 2024</span>
-    <span class="lgi"><b>Undeclared drop-off</b> undeclared, voted neither</span>
-    <span class="lgi"><b>Democrats</b> registered D or D primary voter</span>
+
+  <div class="totals">
+    <div class="grp"><span class="big" id="fTotal">$0</span>
+      <span class="cap" id="fVsBudget">of the $582,000 base program</span></div>
+    <div class="grp"><span class="unit" id="fDistricts">0 districts</span><span class="sub" id="fSeats">0 seats</span></div>
+    <div class="grp"><span class="unit" id="fMail">$0</span><span class="sub">MAIL <span id="fMailPieces">0 pieces</span></span></div>
+    <div class="grp"><span class="unit" id="fText">$0</span><span class="sub">TEXT <span id="fTextMsgs">0 messages</span></span></div>
+    <div class="grp"><span class="unit" id="fDigital">$0</span><span class="sub">DIGITAL</span></div>
+    <div class="grp"><span class="unit" id="fField">$0</span><span class="sub">FIELD</span></div>
+    <span class="saved" id="saveMsg"></span>
   </div>
 
-  <div class="sp-top">
-    <div class="sp-fig"><div class="n" id="fTotal">$0</div><div class="l">Planned total</div>
-      <div class="s" id="fVsBudget">against $582,000 base program</div></div>
-    <div class="sp-fig"><div class="n" id="fDistricts">0</div><div class="l">Districts in</div>
-      <div class="s" id="fSeats">0 seats</div></div>
-    <div class="sp-fig"><div class="n" id="fMail">$0</div><div class="l">Mail</div><div class="s" id="fMailPieces">0 pieces</div></div>
-    <div class="sp-fig"><div class="n" id="fText">$0</div><div class="l">Text</div><div class="s" id="fTextMsgs">0 messages</div></div>
-    <div class="sp-fig"><div class="n" id="fDigital">$0</div><div class="l">Digital</div><div class="s">Meta, CTV, display</div></div>
-    <div class="sp-fig"><div class="n" id="fField">$0</div><div class="l">Field</div><div class="s" id="fFieldNote">cards, signs, calls, doors</div></div>
-  </div>
+  <details class="bulk">
+    <summary>Bulk apply to many districts at once</summary>
+    <div class="bulkrow">
+      <select id="bkTactic">{% for t in tactics %}<option value="{{ t.key }}">{{ t.label }}</option>{% endfor %}</select>
+      <input type="number" id="bkQty" placeholder="qty" style="width:64px" step="any">
+      <span>or universe</span>
+      <select id="bkMask">{% for m, name in presets %}<option value="{{ m }}">{{ name }}</option>{% endfor %}</select>
+      <span>applied to</span>
+      <select id="bkScope">
+        <option value="in">districts already in the plan</option>
+        <option value="all">every district</option>
+        <option value="gop">GOP leaning districts</option>
+        <option value="swing">swing districts</option>
+        <option value="dem">Democrat leaning districts</option>
+        <option value="norep">districts with no R nominee</option>
+      </select>
+      <button id="bkGoQty">Set quantity</button>
+      <button id="bkGoMask">Set universe</button>
+    </div>
+  </details>
 
-  <div class="sp-tools">
-    <strong>Bulk apply</strong>
-    <select id="bkTactic">
-      {% for t in tactics %}<option value="{{ t.key }}">{{ t.label }}</option>{% endfor %}
-    </select>
-    <input type="number" id="bkQty" placeholder="qty" style="width:70px" step="any">
-    <span>to</span>
-    <select id="bkScope">
-      <option value="in">districts already in the plan</option>
-      <option value="all">every district</option>
-      <option value="gop">SAFE GOP districts</option>
-      <option value="swing">swing / toss up districts</option>
-      <option value="dem">Democrat leaning districts</option>
-      <option value="norep">districts with no R nominee</option>
-    </select>
-    <button id="bkGo">Apply</button>
-    <span style="margin-left:14px">Universe</span>
-    <select id="bkMask">
-      <option value="1">Reliable R only</option>
-      <option value="3" selected>Modeled R (reliable + drop-off)</option>
-      <option value="7">Modeled R + undeclared voters</option>
-      <option value="15">Modeled R + all undeclared</option>
-    </select>
-    <button class="ghost" id="bkMaskGo">Set universe</button>
-    <span id="saveMsg" class="saved"></span>
+  <div class="cols">
+    <div class="rail" id="rail">
+      <div class="railhead">
+        <input type="search" id="q" placeholder="Filter, e.g. Rockingham or Raymond">
+        <div class="filters">
+          <a data-f="all" class="on">All 203</a><a data-f="in">In plan</a><a data-f="norep">No R nominee</a>
+        </div>
+      </div>
+      <div id="railList"></div>
+    </div>
+    <div class="pane" id="pane"></div>
   </div>
-
-  <table class="sp">
-    <thead>
-      <tr>
-        <th style="width:14px"></th>
-        <th>District</th>
-        <th class="num">Seats</th>
-        <th>Rating</th>
-        <th>R nominees</th>
-        <th>Universe</th>
-        <th class="num">HH</th>
-        <th class="num">Cells</th>
-        {% for t in tactics %}
-        <th class="num" title="{{ t.label }} ({{ t.qty_label }})">
-          {{ t.label }}<br><span class="grouphdr">{{ t.qty_label }}</span>
-        </th>
-        {% endfor %}
-        <th class="num">Cost</th>
-      </tr>
-    </thead>
-    <tbody id="tb">
-      {% set ns = namespace(county='') %}
-      {% for d in districts %}
-        {% if d.county != ns.county %}
-          {% set ns.county = d.county %}
-          <tr class="county-rule"><td colspan="{{ 9 + tactics|length }}">{{ d.county }}</td></tr>
-        {% endif %}
-        <tr data-code="{{ d.code }}" data-seats="{{ d.seats or 0 }}"
-            data-rating="{{ (d.rating or '')|lower }}"
-            data-hasr="{{ 1 if d.nominees.get('R') else 0 }}"
-            class="{{ 'on' if d.include else '' }}">
-          <td><input type="checkbox" class="inc" {{ 'checked' if d.include }}></td>
-          <td><span class="dcode">{{ d.code }}</span><span class="dtowns">{{ d.towns }}</span></td>
-          <td class="num">{{ d.seats }}</td>
-          <td><span class="rating {% if 'GOP' in (d.rating or '') %}r-gop{% elif 'DEM' in (d.rating or '') %}r-dem{% else %}r-swing{% endif %}">{{ d.rating or '' }}</span></td>
-          <td>{% if d.nominees.get('R') %}<span class="nom" title="{{ d.nominees.get('R') }}">{{ d.nominees.get('R') }}</span>{% else %}<span class="nom none">no R nominee</span>{% endif %}</td>
-          <td class="segs">
-            <select class="unisel">
-              {% for m, name in presets %}
-              <option value="{{ m }}" {{ 'selected' if d.mask == m }}>{{ name }}</option>
-              {% endfor %}
-              {% if d.mask not in preset_masks %}
-              <option value="{{ d.mask }}" selected>Custom</option>
-              {% endif %}
-            </select>
-          </td>
-          <td class="num uni hh">{{ '{:,}'.format(d.universe.households) }}</td>
-          <td class="num uni cells">{{ '{:,}'.format(d.universe.cells) }}</td>
-          {% for t in tactics %}
-          <td class="num">
-            <input type="number" class="qty {{ 'set' if d.qty.get(t.key) }}" step="any" min="0"
-                   data-tactic="{{ t.key }}"
-                   value="{{ d.qty.get(t.key, {}).get('qty', '')|int if d.qty.get(t.key) else '' }}">
-          </td>
-          {% endfor %}
-          <td class="num cost zero">$0</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
 </div>
 
 <script>
 (function(){
   var TACTICS = {{ tactics|tojson }};
-  var UNIVERSE = {
-    {% for d in districts %}"{{ d.code }}": {{ d.all_universe|tojson }}{% if not loop.last %},{% endif %}
-    {% endfor %}
-  };
+  var PRESETS = {{ presets|tojson }};
+  var DISTRICTS = {{ districts|tojson }};
   var BUDGET = 582000;
+  var GROUPS = [['mail','Mail and text'],['text',null],['digital','Digital'],['field','Field']];
+  var idx = 0, pending = {}, timer = null, filter = 'all', q = '';
   var saveMsg = document.getElementById('saveMsg');
-  var pending = {}, timer = null;
 
   function money(n){ return '$' + Math.round(n).toLocaleString(); }
-  function maskOf(tr){ return parseInt(tr.querySelector('.unisel').value, 10) || 0; }
-  function uni(tr){
-    var u = UNIVERSE[tr.dataset.code] || {};
-    return u[maskOf(tr)] || {voters:0, households:0, cells:0};
+  function num(n){ return Math.round(n).toLocaleString(); }
+  function uni(d){ return (d.all_universe && d.all_universe[d.mask]) || {voters:0,households:0,cells:0}; }
+  function pvi(d){
+    if(d.pvi === null || d.pvi === undefined) return '';
+    var v = Math.round(d.pvi * 10) / 10;
+    return (v >= 0 ? 'R+' : 'D+') + Math.abs(v).toFixed(1);
   }
+  function rc(r){ r=(r||'').toUpperCase();
+    return r.indexOf('GOP')>=0?'r-gop':r.indexOf('DEM')>=0?'r-dem':'r-swing'; }
 
-  // Cost of one district. Mail multiplies by households, text by cells, digital is
-  // already dollars, field tactics are qty x their unit rate.
-  function rowCost(tr){
-    var u = uni(tr), total = 0, pieces = 0, msgs = 0, byGroup = {};
+  function cost(d){
+    var u = uni(d), out = {total:0,pieces:0,msgs:0,grp:{mail:0,text:0,digital:0,field:0},per:{}};
     TACTICS.forEach(function(t){
-      var el = tr.querySelector('.qty[data-tactic="'+t.key+'"]');
-      var q = parseFloat(el.value); if(!q || q <= 0){ el.classList.remove('set'); return; }
-      el.classList.add('set');
-      var c = 0;
-      if(t.unit === 'per_household'){ c = q * u.households * t.rate; pieces += q * u.households; }
-      else if(t.unit === 'per_cell'){ c = q * u.cells * t.rate; msgs += q * u.cells; }
-      else if(t.unit === 'dollars'){ c = q; }
-      else if(t.unit === 'per_unit'){ c = (t.rate == null) ? 0 : q * t.rate; }
-      total += c;
-      byGroup[t.grp] = (byGroup[t.grp] || 0) + c;
+      var q = (d.qty && d.qty[t.key] && d.qty[t.key].qty) || 0, c = 0;
+      if(q > 0){
+        if(t.unit === 'per_household'){ c = q*u.households*t.rate; out.pieces += q*u.households; }
+        else if(t.unit === 'per_cell'){ c = q*u.cells*t.rate; out.msgs += q*u.cells; }
+        else if(t.unit === 'dollars'){ c = q; }
+        else if(t.unit === 'per_unit'){ c = (t.rate == null) ? 0 : q*t.rate; }
+      }
+      out.per[t.key] = c; out.total += c; out.grp[t.grp] += c;
     });
-    return {total: total, pieces: pieces, msgs: msgs, byGroup: byGroup};
+    return out;
   }
 
-  function repaint(){
-    var grand = 0, dists = 0, seats = 0, pieces = 0, msgs = 0, g = {mail:0,text:0,digital:0,field:0};
-    document.querySelectorAll('#tb tr[data-code]').forEach(function(tr){
-      var u = uni(tr);
-      tr.querySelector('.hh').textContent = u.households.toLocaleString();
-      tr.querySelector('.cells').textContent = u.cells.toLocaleString();
-      var r = rowCost(tr);
-      var cell = tr.querySelector('.cost');
-      cell.textContent = money(r.total);
-      cell.classList.toggle('zero', r.total === 0);
-      var inc = tr.querySelector('.inc').checked;
-      tr.classList.toggle('on', inc);
-      if(inc || r.total > 0){
-        grand += r.total; pieces += r.pieces; msgs += r.msgs;
-        Object.keys(r.byGroup).forEach(function(k){ g[k] = (g[k]||0) + r.byGroup[k]; });
-        if(inc){ dists++; seats += parseInt(tr.dataset.seats,10) || 0; }
-      }
+  function visible(){
+    return DISTRICTS.filter(function(d){
+      if(q && (d.code + ' ' + (d.towns||'')).toLowerCase().indexOf(q) < 0) return false;
+      if(filter === 'in') return d.include;
+      if(filter === 'norep') return !(d.nominees && d.nominees.R);
+      return true;
     });
-    document.getElementById('fTotal').textContent = money(grand);
-    document.getElementById('fDistricts').textContent = dists;
+  }
+
+  function drawRail(){
+    var html = '', county = null;
+    visible().forEach(function(d){
+      if(d.county !== county){ county = d.county; html += '<div class="cty">' + county + '</div>'; }
+      var c = cost(d).total;
+      html += '<div class="ditem' + (d.include?' inplan':'') + (d === DISTRICTS[idx]?' sel':'') +
+        '" data-code="' + d.code + '"><span class="dn">' + d.code + '</span>' +
+        '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
+        '<span class="dc">' + (c ? money(c) : '') + '</span></div>';
+    });
+    document.getElementById('railList').innerHTML = html || '<div class="cty">No match</div>';
+    var s = document.querySelector('.ditem.sel'); if(s) s.scrollIntoView({block:'nearest'});
+  }
+
+  function drawPane(){
+    var d = DISTRICTS[idx], u = uni(d), c = cost(d), r = d.nominees && d.nominees.R;
+    var h = '<div class="panetop"><div><h3>' + d.code + '</h3><p class="panesub">' +
+      (d.seats||0) + ' seat' + (d.seats===1?'':'s') + ' &middot; <span class="' + rc(d.rating) +
+      '" style="font-weight:700">' + pvi(d) + ' ' + (d.rating||'') + '</span> &middot; ' + (d.towns||'') +
+      '</p></div><div class="nav"><button id="prevBtn">&larr; Prev</button>' +
+      '<button id="nextBtn">Next &rarr;</button></div></div>';
+    h += '<div class="who"><span class="lab">Republican nominees</span>' +
+      (r ? r : '<span class="none">No Republican on the ballot here</span>') + '</div>';
+    h += '<div class="uniblock"><label for="uniSel">Who are you buying in this district</label><select id="uniSel">';
+    var known = false;
+    PRESETS.forEach(function(p){ if(p[0] === d.mask) known = true;
+      h += '<option value="' + p[0] + '"' + (p[0]===d.mask?' selected':'') + '>' + p[1] + '</option>'; });
+    if(!known) h += '<option value="' + d.mask + '" selected>Custom</option>';
+    h += '</select><div class="unicount"><b>' + num(u.households) + '</b> mail households &middot; <b>' +
+      num(u.cells) + '</b> textable cells &middot; ' + num(u.voters) + ' voters</div>' +
+      '<div class="unihint">Mail bills against households, texts against cells. Widen this and every drop costs more.</div></div>';
+    h += '<table class="tac">';
+    var last = null;
+    GROUPS.forEach(function(g){
+      TACTICS.filter(function(t){ return t.grp === g[0]; }).forEach(function(t){
+        if(g[1] && last !== g[1]){ h += '<tr class="grp"><td colspan="4">' + g[1] + '</td></tr>'; last = g[1]; }
+        var qv = (d.qty && d.qty[t.key] && d.qty[t.key].qty) || '';
+        var hint = t.unit==='per_household' ? num(u.households)+' households &times; $'+t.rate.toFixed(2)
+                 : t.unit==='per_cell'      ? num(u.cells)+' cells &times; $'+t.rate.toFixed(2)
+                 : t.unit==='dollars'       ? 'dollars, at $'+t.rate.toFixed(0)+' CPM'
+                 : (t.rate==null ? '<span class="norate">no unit cost set</span>' : '&times; $'+t.rate.toFixed(2)+' each');
+        h += '<tr><td class="tl">'+t.label+'</td><td class="ti"><input type="number" min="0" step="any" data-tactic="'+
+          t.key+'"'+(qv?' class="set"':'')+' value="'+qv+'" placeholder="'+t.qty_label+'"></td>'+
+          '<td class="th">'+hint+'</td><td class="tc'+(c.per[t.key]?'':' zero')+'">'+money(c.per[t.key]||0)+'</td></tr>';
+      });
+    });
+    h += '</table><div class="dtot"><span class="l">'+d.code+' total</span><span class="v">'+money(c.total)+'</span></div>';
+    h += '<p class="inplan"><label><input type="checkbox" id="incBox"'+(d.include?' checked':'')+
+      '> Count this district in the plan</label></p>';
+    h += '<textarea class="notes" id="notesBox" rows="2" placeholder="Notes on this district"></textarea>';
+    document.getElementById('pane').innerHTML = h;
+    document.getElementById('notesBox').value = d.notes || '';
+  }
+
+  function totals(){
+    var g={mail:0,text:0,digital:0,field:0}, grand=0, dn=0, seats=0, pieces=0, msgs=0;
+    DISTRICTS.forEach(function(d){
+      var c = cost(d);
+      if(!d.include && c.total === 0) return;
+      grand += c.total; pieces += c.pieces; msgs += c.msgs;
+      Object.keys(g).forEach(function(k){ g[k] += c.grp[k]; });
+      if(d.include){ dn++; seats += d.seats||0; }
+    });
+    var el = document.getElementById('fTotal');
+    el.textContent = money(grand); el.classList.toggle('over', grand > BUDGET);
+    document.getElementById('fVsBudget').textContent = grand > BUDGET
+      ? money(grand-BUDGET) + ' over the $582,000 base program'
+      : money(BUDGET-grand) + ' left of the $582,000 base program';
+    document.getElementById('fDistricts').textContent = dn + ' district' + (dn===1?'':'s');
     document.getElementById('fSeats').textContent = seats + ' seats';
     document.getElementById('fMail').textContent = money(g.mail);
-    document.getElementById('fMailPieces').textContent = Math.round(pieces).toLocaleString() + ' pieces';
+    document.getElementById('fMailPieces').textContent = num(pieces) + ' pieces';
     document.getElementById('fText').textContent = money(g.text);
-    document.getElementById('fTextMsgs').textContent = Math.round(msgs).toLocaleString() + ' messages';
+    document.getElementById('fTextMsgs').textContent = num(msgs) + ' messages';
     document.getElementById('fDigital').textContent = money(g.digital);
     document.getElementById('fField').textContent = money(g.field);
-    var vb = document.getElementById('fVsBudget');
-    var diff = grand - BUDGET;
-    vb.textContent = diff > 0 ? money(diff) + ' over the $582k base program'
-                              : money(-diff) + ' left of the $582k base program';
-    document.getElementById('fTotal').parentElement.classList.toggle('over', diff > 0);
   }
+
+  function redraw(){ drawRail(); drawPane(); totals(); }
 
   function queue(code, payload){
     pending[code] = Object.assign(pending[code] || {district_code: code}, payload);
-    if(payload.items){ pending[code].items = Object.assign(pending[code].items || {}, payload.items); }
-    clearTimeout(timer);
-    timer = setTimeout(flush, 600);
+    if(payload.items) pending[code].items = Object.assign(pending[code].items || {}, payload.items);
+    clearTimeout(timer); timer = setTimeout(flush, 700);
   }
   function flush(){
     var jobs = Object.values(pending); pending = {};
     if(!jobs.length) return;
-    saveMsg.textContent = 'Saving…';
+    saveMsg.textContent = 'Saving...';
     Promise.all(jobs.map(function(j){
       return fetch('/private/spend-plan/save', {method:'POST',
-        headers:{'Content-Type':'application/json'}, body: JSON.stringify(j)});
-    })).then(function(){ saveMsg.textContent = 'Saved'; setTimeout(function(){ saveMsg.textContent=''; }, 1800); })
-      .catch(function(){ saveMsg.textContent = 'Save failed'; });
+        headers:{'Content-Type':'application/json'}, body:JSON.stringify(j)});
+    })).then(function(){ saveMsg.textContent='Saved'; setTimeout(function(){saveMsg.textContent='';},1600); })
+      .catch(function(){ saveMsg.textContent='Save failed'; });
   }
 
-  document.getElementById('tb').addEventListener('input', function(e){
-    if(!e.target.classList.contains('qty')) return;
-    var tr = e.target.closest('tr'); repaint();
-    var items = {}; items[e.target.dataset.tactic] = parseFloat(e.target.value) || 0;
-    queue(tr.dataset.code, {items: items});
+  function go(n){
+    var vis = visible(); if(!vis.length) return;
+    var here = vis.indexOf(DISTRICTS[idx]);
+    var next = vis[Math.max(0, Math.min(vis.length-1, (here<0?0:here)+n))];
+    idx = DISTRICTS.indexOf(next); redraw();
+  }
+
+  document.getElementById('railList').addEventListener('click', function(e){
+    var it = e.target.closest('.ditem'); if(!it) return;
+    idx = DISTRICTS.findIndex(function(d){ return d.code === it.dataset.code; }); redraw();
   });
-  document.getElementById('tb').addEventListener('change', function(e){
-    if(!e.target.classList.contains('inc')) return;
-    var tr = e.target.closest('tr'); repaint();
-    queue(tr.dataset.code, {include: e.target.checked});
+
+  document.getElementById('pane').addEventListener('input', function(e){
+    var d = DISTRICTS[idx];
+    if(e.target.dataset.tactic){
+      var v = parseFloat(e.target.value) || 0;
+      d.qty = d.qty || {}; d.qty[e.target.dataset.tactic] = {qty: v};
+      var i = {}; i[e.target.dataset.tactic] = v; queue(d.code, {items: i});
+      var c = cost(d);
+      e.target.classList.toggle('set', v > 0);
+      var cell = e.target.closest('tr').querySelector('.tc');
+      cell.textContent = money(c.per[e.target.dataset.tactic] || 0);
+      cell.classList.toggle('zero', !c.per[e.target.dataset.tactic]);
+      document.querySelector('.dtot .v').textContent = money(c.total);
+      drawRail(); totals();
+    } else if(e.target.id === 'notesBox'){ d.notes = e.target.value; queue(d.code, {notes: d.notes}); }
   });
-  document.getElementById('tb').addEventListener('change', function(e){
-    if(!e.target.classList.contains('unisel')) return;
-    var tr = e.target.closest('tr'); repaint();
-    queue(tr.dataset.code, {mask: maskOf(tr)});
+
+  document.getElementById('pane').addEventListener('change', function(e){
+    var d = DISTRICTS[idx];
+    if(e.target.id === 'uniSel'){ d.mask = parseInt(e.target.value,10); queue(d.code,{mask:d.mask}); redraw(); }
+    else if(e.target.id === 'incBox'){ d.include = e.target.checked; queue(d.code,{include:d.include}); redraw(); }
+  });
+
+  document.getElementById('pane').addEventListener('click', function(e){
+    if(e.target.id === 'nextBtn') go(1);
+    if(e.target.id === 'prevBtn') go(-1);
+  });
+
+  document.getElementById('q').addEventListener('input', function(e){
+    q = e.target.value.trim().toLowerCase(); drawRail();
+  });
+  document.querySelectorAll('.filters a').forEach(function(a){
+    a.addEventListener('click', function(){
+      document.querySelectorAll('.filters a').forEach(function(x){ x.classList.remove('on'); });
+      a.classList.add('on'); filter = a.dataset.f; drawRail();
+    });
+  });
+  document.addEventListener('keydown', function(e){
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
+    if(e.key === 'j' || e.key === 'ArrowDown'){ e.preventDefault(); go(1); }
+    if(e.key === 'k' || e.key === 'ArrowUp'){ e.preventDefault(); go(-1); }
   });
 
   function scopeRows(scope){
-    var all = Array.from(document.querySelectorAll('#tb tr[data-code]'));
-    if(scope === 'all') return all;
-    if(scope === 'in') return all.filter(function(tr){ return tr.querySelector('.inc').checked; });
-    if(scope === 'norep') return all.filter(function(tr){ return tr.dataset.hasr === '0'; });
-    if(scope === 'gop') return all.filter(function(tr){ return tr.dataset.rating.indexOf('gop') >= 0; });
-    if(scope === 'dem') return all.filter(function(tr){ return tr.dataset.rating.indexOf('dem') >= 0; });
-    return all.filter(function(tr){ var r = tr.dataset.rating;
-      return r.indexOf('gop') < 0 && r.indexOf('dem') < 0; });
+    return DISTRICTS.filter(function(d){
+      var r = (d.rating||'').toUpperCase();
+      if(scope === 'all') return true;
+      if(scope === 'in') return d.include;
+      if(scope === 'norep') return !(d.nominees && d.nominees.R);
+      if(scope === 'gop') return r.indexOf('GOP') >= 0;
+      if(scope === 'dem') return r.indexOf('DEM') >= 0;
+      return r.indexOf('GOP') < 0 && r.indexOf('DEM') < 0;
+    });
   }
-
-  document.getElementById('bkGo').addEventListener('click', function(){
-    var key = document.getElementById('bkTactic').value;
-    var q = parseFloat(document.getElementById('bkQty').value);
-    if(isNaN(q)){ alert('Enter a quantity first.'); return; }
+  document.getElementById('bkGoQty').addEventListener('click', function(){
+    var k = document.getElementById('bkTactic').value;
+    var v = parseFloat(document.getElementById('bkQty').value);
+    if(isNaN(v)){ alert('Enter a quantity first.'); return; }
     var rows = scopeRows(document.getElementById('bkScope').value);
     if(!rows.length){ alert('That scope matched no districts.'); return; }
-    rows.forEach(function(tr){
-      tr.querySelector('.qty[data-tactic="'+key+'"]').value = q > 0 ? q : '';
-      var items = {}; items[key] = q;
-      queue(tr.dataset.code, {items: items});
-    });
-    repaint(); flush();
+    rows.forEach(function(d){ d.qty = d.qty || {}; d.qty[k] = {qty:v};
+      var i = {}; i[k] = v; queue(d.code, {items:i}); });
+    redraw(); flush();
+  });
+  document.getElementById('bkGoMask').addEventListener('click', function(){
+    var m = parseInt(document.getElementById('bkMask').value,10);
+    scopeRows(document.getElementById('bkScope').value).forEach(function(d){
+      d.mask = m; queue(d.code, {mask:m}); });
+    redraw(); flush();
   });
 
-  document.getElementById('bkMaskGo').addEventListener('click', function(){
-    var m = parseInt(document.getElementById('bkMask').value, 10);
-    var rows = scopeRows(document.getElementById('bkScope').value);
-    rows.forEach(function(tr){
-      var sel = tr.querySelector('.unisel');
-      if(!Array.from(sel.options).some(function(o){ return parseInt(o.value,10) === m; })){
-        var o = document.createElement('option'); o.value = m; o.textContent = 'Custom'; sel.appendChild(o);
-      }
-      sel.value = m;
-      queue(tr.dataset.code, {mask: m});
-    });
-    repaint(); flush();
-  });
-
-  repaint();
+  redraw();
 })();
 </script>
 {% endblock %}
