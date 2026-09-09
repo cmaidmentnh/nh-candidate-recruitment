@@ -27,9 +27,12 @@
   .cost{font-weight:700;color:#1e3557;font-variant-numeric:tabular-nums;white-space:nowrap}
   .cost.zero{color:#c3c9d2;font-weight:400}
   .uni{font-size:.68rem;color:#6b7280;white-space:nowrap;font-variant-numeric:tabular-nums}
-  .segbtn{font-size:.62rem;padding:1px 4px;border:1px solid #d6dbe3;background:#fff;color:#6b7280;
-    cursor:pointer;border-radius:2px;font-weight:700;letter-spacing:.03em}
-  .segbtn.on{background:#1e3557;border-color:#1e3557;color:#fff}
+  .unisel{font-size:.72rem;padding:2px 3px;border:1px solid #d6dbe3;border-radius:3px;max-width:170px;background:#fff}
+  .unisel:focus{border-color:#1e3557;outline:none}
+  .legend{font-size:.72rem;color:#5b6472;background:#f7f9fc;border-left:3px solid #1e3557;
+    padding:7px 11px;margin:0 0 12px;line-height:1.7}
+  .legend .lgi{display:inline-block;margin-right:14px;color:#6b7280}
+  .legend .lgi b{color:#1e3557}
   .sp-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 12px;background:#f4f7fb;
     border:1px solid #e2e8f0;border-radius:6px;margin-bottom:12px;font-size:.8rem}
   .sp-tools select,.sp-tools input{padding:3px 6px;border:1px solid #d6dbe3;border-radius:3px;font-size:.8rem}
@@ -46,9 +49,18 @@
 <div class="sp-wrap">
   <h4 style="margin:0 0 2px">General Election Spend Plan</h4>
   <p style="color:#7a8494;font-size:.78rem;margin:0 0 6px">
-    Every district in order. Pick the universe, pick the tactics, pick how many of each.
+    Every district in order. Pick who you are buying, pick the tactics, pick how many of each.
     Mail is priced per household per drop, texts per cell per send, digital in dollars at its CPM.
   </p>
+  <div class="legend">
+    <strong>Universe</strong> is who receives the mail and texts in that district. It sets the
+    HH and Cells counts, which is what the cost is multiplied by.
+    <span class="lgi"><b>Reliable R</b> registered R or R primary voter, turned out in 2024</span>
+    <span class="lgi"><b>R drop-off</b> same voters, but sat out 2024</span>
+    <span class="lgi"><b>Undeclared voters</b> undeclared, not an R, voted 2022 or 2024</span>
+    <span class="lgi"><b>Undeclared drop-off</b> undeclared, voted neither</span>
+    <span class="lgi"><b>Democrats</b> registered D or D primary voter</span>
+  </div>
 
   <div class="sp-top">
     <div class="sp-fig"><div class="n" id="fTotal">$0</div><div class="l">Planned total</div>
@@ -124,10 +136,14 @@
           <td><span class="rating {% if 'GOP' in (d.rating or '') %}r-gop{% elif 'DEM' in (d.rating or '') %}r-dem{% else %}r-swing{% endif %}">{{ d.rating or '' }}</span></td>
           <td>{% if d.nominees.get('R') %}<span class="nom" title="{{ d.nominees.get('R') }}">{{ d.nominees.get('R') }}</span>{% else %}<span class="nom none">no R nominee</span>{% endif %}</td>
           <td class="segs">
-            {% for bit, key, label, hint in segments %}
-            <button class="segbtn {{ 'on' if d.mask and (d.mask|int) // bit % 2 == 1 }}"
-                    data-bit="{{ bit }}" title="{{ label }}: {{ hint }}">{{ label[:3]|upper }}</button>
-            {% endfor %}
+            <select class="unisel">
+              {% for m, name in presets %}
+              <option value="{{ m }}" {{ 'selected' if d.mask == m }}>{{ name }}</option>
+              {% endfor %}
+              {% if d.mask not in preset_masks %}
+              <option value="{{ d.mask }}" selected>Custom</option>
+              {% endif %}
+            </select>
           </td>
           <td class="num uni hh">{{ '{:,}'.format(d.universe.households) }}</td>
           <td class="num uni cells">{{ '{:,}'.format(d.universe.cells) }}</td>
@@ -157,11 +173,7 @@
   var pending = {}, timer = null;
 
   function money(n){ return '$' + Math.round(n).toLocaleString(); }
-  function maskOf(tr){
-    var m = 0;
-    tr.querySelectorAll('.segbtn.on').forEach(function(b){ m += parseInt(b.dataset.bit,10); });
-    return m;
-  }
+  function maskOf(tr){ return parseInt(tr.querySelector('.unisel').value, 10) || 0; }
   function uni(tr){
     var u = UNIVERSE[tr.dataset.code] || {};
     return u[maskOf(tr)] || {voters:0, households:0, cells:0};
@@ -248,9 +260,8 @@
     var tr = e.target.closest('tr'); repaint();
     queue(tr.dataset.code, {include: e.target.checked});
   });
-  document.getElementById('tb').addEventListener('click', function(e){
-    if(!e.target.classList.contains('segbtn')) return;
-    e.target.classList.toggle('on');
+  document.getElementById('tb').addEventListener('change', function(e){
+    if(!e.target.classList.contains('unisel')) return;
     var tr = e.target.closest('tr'); repaint();
     queue(tr.dataset.code, {mask: maskOf(tr)});
   });
@@ -284,9 +295,11 @@
     var m = parseInt(document.getElementById('bkMask').value, 10);
     var rows = scopeRows(document.getElementById('bkScope').value);
     rows.forEach(function(tr){
-      tr.querySelectorAll('.segbtn').forEach(function(b){
-        b.classList.toggle('on', (m & parseInt(b.dataset.bit,10)) > 0);
-      });
+      var sel = tr.querySelector('.unisel');
+      if(!Array.from(sel.options).some(function(o){ return parseInt(o.value,10) === m; })){
+        var o = document.createElement('option'); o.value = m; o.textContent = 'Custom'; sel.appendChild(o);
+      }
+      sel.value = m;
       queue(tr.dataset.code, {mask: m});
     });
     repaint(); flush();

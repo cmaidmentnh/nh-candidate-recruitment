@@ -1142,6 +1142,20 @@ def _dist_sortkey(code):
     return (county, int(m.group(1)) if m else 0)
 
 
+# Named universes. The mask is the bitmask over SEGMENTS; these are the combinations
+# anyone actually buys, so the row control is a plain dropdown rather than five toggles.
+UNIVERSE_PRESETS = [
+    (1,  'Reliable R only'),
+    (2,  'R drop-off only'),
+    (3,  'Modeled R (reliable + drop-off)'),
+    (7,  'Modeled R + undeclared voters'),
+    (11, 'Modeled R + undeclared drop-off'),
+    (15, 'Modeled R + all undeclared'),
+    (4,  'Undeclared voters only'),
+    (12, 'All undeclared only'),
+    (31, 'Everyone on the checklist'),
+]
+
 SEGMENTS = [
     (1,  'r_reliable',  'Reliable R',        'Modeled R who voted the 2024 general'),
     (2,  'r_dropoff',   'R drop-off',        'Modeled R who sat out 2024'),
@@ -1220,7 +1234,9 @@ def spend_plan():
 
         districts.sort(key=lambda d: _district_sort_key(d['code']))
         return render_template('private/spend_plan.html',
-                               districts=districts, tactics=tactics, segments=SEGMENTS)
+                               districts=districts, tactics=tactics, segments=SEGMENTS,
+                               presets=UNIVERSE_PRESETS,
+                               preset_masks=[m for m, _ in UNIVERSE_PRESETS])
     finally:
         cur.close(); release_db_connection(conn)
 
