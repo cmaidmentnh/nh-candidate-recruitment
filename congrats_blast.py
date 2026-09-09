@@ -27,6 +27,9 @@ SUBJECT = 'Congratulations, and what we need from you for November'
 
 FORM_URL = 'https://electhouserepublicans.com/checkin'
 
+# Held back at Chris's direction 2026-09-09. Both Strafford 1.
+EXCLUDE_CIDS = {639, 1798}   # Sue DeLemus, Andy Dow
+
 QUESTIONS = [
     'Yard signs, and roughly how many',
     'Literature: a palm card or walk piece',
@@ -103,8 +106,11 @@ cur.execute("""
 rows = cur.fetchall()
 conn.close()
 
-recips, missing, suppressed, seen = [], [], [], set()
+recips, missing, suppressed, excluded, seen = [], [], [], [], set()
 for cid, first, last, district, *rest in rows:
+    if cid in EXCLUDE_CIDS:
+        excluded.append(f'{first} {last} (cid {cid})')
+        continue
     emails = [e for e in rest[:3] if e]
     dead, unsub = rest[3], rest[4]
     pick = next((e for e in emails if not e.lower().endswith('gc.nh.gov')),
@@ -123,7 +129,10 @@ for cid, first, last, district, *rest in rows:
 
 gov = [r for r in recips if r['email'].lower().endswith('gc.nh.gov')]
 print(f'nominees still running: {len(rows)}  sendable: {len(recips)}  '
-      f'no email: {len(missing)}  suppressed: {len(suppressed)}  on gc.nh.gov: {len(gov)}')
+      f'no email: {len(missing)}  suppressed: {len(suppressed)}  '
+      f'held back: {len(excluded)}  on gc.nh.gov: {len(gov)}')
+for x in excluded:
+    print('  HELD BACK:', x)
 
 ses = boto3.client('ses', region_name='us-east-1')
 
