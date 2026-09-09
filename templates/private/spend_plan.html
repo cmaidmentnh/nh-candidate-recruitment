@@ -133,9 +133,9 @@
           <td class="num uni cells">{{ '{:,}'.format(d.universe.cells) }}</td>
           {% for t in tactics %}
           <td class="num">
-            <input type="number" class="qty {{ 'set' if d.items.get(t.key) }}" step="any" min="0"
+            <input type="number" class="qty {{ 'set' if d.qty.get(t.key) }}" step="any" min="0"
                    data-tactic="{{ t.key }}"
-                   value="{{ d.items.get(t.key, {}).get('qty', '')|int if d.items.get(t.key) else '' }}">
+                   value="{{ d.qty.get(t.key, {}).get('qty', '')|int if d.qty.get(t.key) else '' }}">
           </td>
           {% endfor %}
           <td class="num cost zero">$0</td>

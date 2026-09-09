@@ -1190,10 +1190,10 @@ def spend_plan():
         plan = {r[0]: {'mask': r[1], 'include': r[2], 'notes': r[3] or ''} for r in cur.fetchall()}
 
         cur.execute("SELECT district_code, tactic_key, qty, rate_override FROM district_spend_item")
-        items = {}
-        for dc, tk, qty, ro in cur.fetchall():
-            items.setdefault(dc, {})[tk] = {'qty': float(qty),
-                                            'rate': float(ro) if ro is not None else None}
+        qty_by_district = {}
+        for dc, tk, q, ro in cur.fetchall():
+            qty_by_district.setdefault(dc, {})[tk] = {'qty': float(q),
+                                                      'rate': float(ro) if ro is not None else None}
 
         # Who is actually on the November ballot here, so a district is never planned blind.
         cur.execute("""SELECT district_code, party,
@@ -1212,7 +1212,7 @@ def spend_plan():
             d['mask'] = p.get('mask', 3)
             d['include'] = p.get('include', False)
             d['notes'] = p.get('notes', '')
-            d['items'] = items.get(code, {})
+            d['qty'] = qty_by_district.get(code, {})
             d['universe'] = universe.get((code, d['mask']), {'voters': 0, 'households': 0, 'cells': 0})
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
                                  for m in range(1, 32)}
