@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .sp-wrap{font-size:.86rem}
+  .sp-top{display:flex;flex-wrap:wrap;gap:26px;align-items:flex-end;padding:14px 0 16px;border-bottom:2px solid #1e3557;margin-bottom:14px}
+  .sp-fig .n{font-size:1.75rem;font-weight:800;line-height:1;color:#1e3557;font-variant-numeric:tabular-nums}
+  .sp-fig .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#7a8494;margin-top:3px}
+  .sp-fig .s{font-size:.72rem;color:#8a929e}
+  .sp-fig.over .n{color:#b4262d}
+  table.sp{width:100%;border-collapse:collapse}
+  table.sp th{position:sticky;top:0;z-index:3;background:#1e3557;color:#fff;font-size:.63rem;
+    text-transform:uppercase;letter-spacing:.05em;padding:6px 5px;text-align:left;font-weight:700}
+  table.sp th.num,table.sp td.num{text-align:right;font-variant-numeric:tabular-nums}
+  table.sp td{padding:4px 5px;border-bottom:1px solid #eef1f5;vertical-align:middle}
+  table.sp tr.on{background:#f7fbf8}
+  table.sp tr:hover{background:#f4f7fb}
+  .dcode{font-weight:700;color:#1e3557;white-space:nowrap}
+  .dtowns{font-size:.68rem;color:#98a0ab;display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rating{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+  .r-gop{color:#a8261f}.r-dem{color:#1d4e89}.r-swing{color:#8a6400}
+  .nom{font-size:.72rem;color:#444;max-width:200px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nom.none{color:#b4262d;font-weight:700}
+  .qty{width:52px;padding:2px 4px;border:1px solid #d6dbe3;border-radius:3px;font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums}
+  .qty:focus{border-color:#1e3557;outline:none}
+  .qty.set{border-color:#1a7f43;background:#f2fbf5;font-weight:700}
+  .dollars{width:70px}
+  .cost{font-weight:700;color:#1e3557;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cost.zero{color:#c3c9d2;font-weight:400}
+  .uni{font-size:.68rem;color:#6b7280;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .segbtn{font-size:.62rem;padding:1px 4px;border:1px solid #d6dbe3;background:#fff;color:#6b7280;
+    cursor:pointer;border-radius:2px;font-weight:700;letter-spacing:.03em}
+  .segbtn.on{background:#1e3557;border-color:#1e3557;color:#fff}
+  .sp-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 12px;background:#f4f7fb;
+    border:1px solid #e2e8f0;border-radius:6px;margin-bottom:12px;font-size:.8rem}
+  .sp-tools select,.sp-tools input{padding:3px 6px;border:1px solid #d6dbe3;border-radius:3px;font-size:.8rem}
+  .sp-tools button{padding:4px 12px;border:0;border-radius:3px;background:#1e3557;color:#fff;font-weight:700;
+    font-size:.78rem;cursor:pointer}
+  .sp-tools button.ghost{background:#fff;color:#1e3557;border:1px solid #1e3557}
+  .grouphdr{font-size:.6rem;color:#aab2bd;text-transform:uppercase;letter-spacing:.05em}
+  .saved{color:#1a7f43;font-weight:700;font-size:.74rem}
+  .norate{color:#b4262d;font-size:.66rem;font-weight:700}
+  .county-rule td{background:#1e3557;color:#fff;font-weight:800;font-size:.7rem;text-transform:uppercase;
+    letter-spacing:.08em;padding:4px 6px}
+</style>
+
+<div class="sp-wrap">
+  <h4 style="margin:0 0 2px">General Election Spend Plan</h4>
+  <p style="color:#7a8494;font-size:.78rem;margin:0 0 6px">
+    Every district in order. Pick the universe, pick the tactics, pick how many of each.
+    Mail is priced per household per drop, texts per cell per send, digital in dollars at its CPM.
+  </p>
+
+  <div class="sp-top">
+    <div class="sp-fig"><div class="n" id="fTotal">$0</div><div class="l">Planned total</div>
+      <div class="s" id="fVsBudget">against $582,000 base program</div></div>
+    <div class="sp-fig"><div class="n" id="fDistricts">0</div><div class="l">Districts in</div>
+      <div class="s" id="fSeats">0 seats</div></div>
+    <div class="sp-fig"><div class="n" id="fMail">$0</div><div class="l">Mail</div><div class="s" id="fMailPieces">0 pieces</div></div>
+    <div class="sp-fig"><div class="n" id="fText">$0</div><div class="l">Text</div><div class="s" id="fTextMsgs">0 messages</div></div>
+    <div class="sp-fig"><div class="n" id="fDigital">$0</div><div class="l">Digital</div><div class="s">Meta, CTV, display</div></div>
+    <div class="sp-fig"><div class="n" id="fField">$0</div><div class="l">Field</div><div class="s" id="fFieldNote">cards, signs, calls, doors</div></div>
+  </div>
+
+  <div class="sp-tools">
+    <strong>Bulk apply</strong>
+    <select id="bkTactic">
+      {% for t in tactics %}<option value="{{ t.key }}">{{ t.label }}</option>{% endfor %}
+    </select>
+    <input type="number" id="bkQty" placeholder="qty" style="width:70px" step="any">
+    <span>to</span>
+    <select id="bkScope">
+      <option value="in">districts already in the plan</option>
+      <option value="all">every district</option>
+      <option value="gop">SAFE GOP districts</option>
+      <option value="swing">swing / toss up districts</option>
+      <option value="dem">Democrat leaning districts</option>
+      <option value="norep">districts with no R nominee</option>
+    </select>
+    <button id="bkGo">Apply</button>
+    <span style="margin-left:14px">Universe</span>
+    <select id="bkMask">
+      <option value="1">Reliable R only</option>
+      <option value="3" selected>Modeled R (reliable + drop-off)</option>
+      <option value="7">Modeled R + undeclared voters</option>
+      <option value="15">Modeled R + all undeclared</option>
+    </select>
+    <button class="ghost" id="bkMaskGo">Set universe</button>
+    <span id="saveMsg" class="saved"></span>
+  </div>
+
+  <table class="sp">
+    <thead>
+      <tr>
+        <th style="width:14px"></th>
+        <th>District</th>
+        <th class="num">Seats</th>
+        <th>Rating</th>
+        <th>R nominees</th>
+        <th>Universe</th>
+        <th class="num">HH</th>
+        <th class="num">Cells</th>
+        {% for t in tactics %}
+        <th class="num" title="{{ t.label }} ({{ t.qty_label }})">
+          {{ t.label }}<br><span class="grouphdr">{{ t.qty_label }}</span>
+        </th>
+        {% endfor %}
+        <th class="num">Cost</th>
+      </tr>
+    </thead>
+    <tbody id="tb">
+      {% set ns = namespace(county='') %}
+      {% for d in districts %}
+        {% if d.county != ns.county %}
+          {% set ns.county = d.county %}
+          <tr class="county-rule"><td colspan="{{ 9 + tactics|length }}">{{ d.county }}</td></tr>
+        {% endif %}
+        <tr data-code="{{ d.code }}" data-seats="{{ d.seats or 0 }}"
+            data-rating="{{ (d.rating or '')|lower }}"
+            data-hasr="{{ 1 if d.nominees.get('R') else 0 }}"
+            class="{{ 'on' if d.include else '' }}">
+          <td><input type="checkbox" class="inc" {{ 'checked' if d.include }}></td>
+          <td><span class="dcode">{{ d.code }}</span><span class="dtowns">{{ d.towns }}</span></td>
+          <td class="num">{{ d.seats }}</td>
+          <td><span class="rating {% if 'GOP' in (d.rating or '') %}r-gop{% elif 'DEM' in (d.rating or '') %}r-dem{% else %}r-swing{% endif %}">{{ d.rating or '' }}</span></td>
+          <td>{% if d.nominees.get('R') %}<span class="nom" title="{{ d.nominees.get('R') }}">{{ d.nominees.get('R') }}</span>{% else %}<span class="nom none">no R nominee</span>{% endif %}</td>
+          <td class="segs">
+            {% for bit, key, label, hint in segments %}
+            <button class="segbtn {{ 'on' if d.mask and (d.mask|int) // bit % 2 == 1 }}"
+                    data-bit="{{ bit }}" title="{{ label }}: {{ hint }}">{{ label[:3]|upper }}</button>
+            {% endfor %}
+          </td>
+          <td class="num uni hh">{{ '{:,}'.format(d.universe.households) }}</td>
+          <td class="num uni cells">{{ '{:,}'.format(d.universe.cells) }}</td>
+          {% for t in tactics %}
+          <td class="num">
+            <input type="number" class="qty {{ 'set' if d.items.get(t.key) }}" step="any" min="0"
+                   data-tactic="{{ t.key }}"
+                   value="{{ d.items.get(t.key, {}).get('qty', '')|int if d.items.get(t.key) else '' }}">
+          </td>
+          {% endfor %}
+          <td class="num cost zero">$0</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function(){
+  var TACTICS = {{ tactics|tojson }};
+  var UNIVERSE = {
+    {% for d in districts %}"{{ d.code }}": {{ d.all_universe|tojson }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  };
+  var BUDGET = 582000;
+  var saveMsg = document.getElementById('saveMsg');
+  var pending = {}, timer = null;
+
+  function money(n){ return '$' + Math.round(n).toLocaleString(); }
+  function maskOf(tr){
+    var m = 0;
+    tr.querySelectorAll('.segbtn.on').forEach(function(b){ m += parseInt(b.dataset.bit,10); });
+    return m;
+  }
+  function uni(tr){
+    var u = UNIVERSE[tr.dataset.code] || {};
+    return u[maskOf(tr)] || {voters:0, households:0, cells:0};
+  }
+
+  // Cost of one district. Mail multiplies by households, text by cells, digital is
+  // already dollars, field tactics are qty x their unit rate.
+  function rowCost(tr){
+    var u = uni(tr), total = 0, pieces = 0, msgs = 0, byGroup = {};
+    TACTICS.forEach(function(t){
+      var el = tr.querySelector('.qty[data-tactic="'+t.key+'"]');
+      var q = parseFloat(el.value); if(!q || q <= 0){ el.classList.remove('set'); return; }
+      el.classList.add('set');
+      var c = 0;
+      if(t.unit === 'per_household'){ c = q * u.households * t.rate; pieces += q * u.households; }
+      else if(t.unit === 'per_cell'){ c = q * u.cells * t.rate; msgs += q * u.cells; }
+      else if(t.unit === 'dollars'){ c = q; }
+      else if(t.unit === 'per_unit'){ c = (t.rate == null) ? 0 : q * t.rate; }
+      total += c;
+      byGroup[t.grp] = (byGroup[t.grp] || 0) + c;
+    });
+    return {total: total, pieces: pieces, msgs: msgs, byGroup: byGroup};
+  }
+
+  function repaint(){
+    var grand = 0, dists = 0, seats = 0, pieces = 0, msgs = 0, g = {mail:0,text:0,digital:0,field:0};
+    document.querySelectorAll('#tb tr[data-code]').forEach(function(tr){
+      var u = uni(tr);
+      tr.querySelector('.hh').textContent = u.households.toLocaleString();
+      tr.querySelector('.cells').textContent = u.cells.toLocaleString();
+      var r = rowCost(tr);
+      var cell = tr.querySelector('.cost');
+      cell.textContent = money(r.total);
+      cell.classList.toggle('zero', r.total === 0);
+      var inc = tr.querySelector('.inc').checked;
+      tr.classList.toggle('on', inc);
+      if(inc || r.total > 0){
+        grand += r.total; pieces += r.pieces; msgs += r.msgs;
+        Object.keys(r.byGroup).forEach(function(k){ g[k] = (g[k]||0) + r.byGroup[k]; });
+        if(inc){ dists++; seats += parseInt(tr.dataset.seats,10) || 0; }
+      }
+    });
+    document.getElementById('fTotal').textContent = money(grand);
+    document.getElementById('fDistricts').textContent = dists;
+    document.getElementById('fSeats').textContent = seats + ' seats';
+    document.getElementById('fMail').textContent = money(g.mail);
+    document.getElementById('fMailPieces').textContent = Math.round(pieces).toLocaleString() + ' pieces';
+    document.getElementById('fText').textContent = money(g.text);
+    document.getElementById('fTextMsgs').textContent = Math.round(msgs).toLocaleString() + ' messages';
+    document.getElementById('fDigital').textContent = money(g.digital);
+    document.getElementById('fField').textContent = money(g.field);
+    var vb = document.getElementById('fVsBudget');
+    var diff = grand - BUDGET;
+    vb.textContent = diff > 0 ? money(diff) + ' over the $582k base program'
+                              : money(-diff) + ' left of the $582k base program';
+    document.getElementById('fTotal').parentElement.classList.toggle('over', diff > 0);
+  }
+
+  function queue(code, payload){
+    pending[code] = Object.assign(pending[code] || {district_code: code}, payload);
+    if(payload.items){ pending[code].items = Object.assign(pending[code].items || {}, payload.items); }
+    clearTimeout(timer);
+    timer = setTimeout(flush, 600);
+  }
+  function flush(){
+    var jobs = Object.values(pending); pending = {};
+    if(!jobs.length) return;
+    saveMsg.textContent = 'Saving…';
+    Promise.all(jobs.map(function(j){
+      return fetch('/private/spend-plan/save', {method:'POST',
+        headers:{'Content-Type':'application/json'}, body: JSON.stringify(j)});
+    })).then(function(){ saveMsg.textContent = 'Saved'; setTimeout(function(){ saveMsg.textContent=''; }, 1800); })
+      .catch(function(){ saveMsg.textContent = 'Save failed'; });
+  }
+
+  document.getElementById('tb').addEventListener('input', function(e){
+    if(!e.target.classList.contains('qty')) return;
+    var tr = e.target.closest('tr'); repaint();
+    var items = {}; items[e.target.dataset.tactic] = parseFloat(e.target.value) || 0;
+    queue(tr.dataset.code, {items: items});
+  });
+  document.getElementById('tb').addEventListener('change', function(e){
+    if(!e.target.classList.contains('inc')) return;
+    var tr = e.target.closest('tr'); repaint();
+    queue(tr.dataset.code, {include: e.target.checked});
+  });
+  document.getElementById('tb').addEventListener('click', function(e){
+    if(!e.target.classList.contains('segbtn')) return;
+    e.target.classList.toggle('on');
+    var tr = e.target.closest('tr'); repaint();
+    queue(tr.dataset.code, {mask: maskOf(tr)});
+  });
+
+  function scopeRows(scope){
+    var all = Array.from(document.querySelectorAll('#tb tr[data-code]'));
+    if(scope === 'all') return all;
+    if(scope === 'in') return all.filter(function(tr){ return tr.querySelector('.inc').checked; });
+    if(scope === 'norep') return all.filter(function(tr){ return tr.dataset.hasr === '0'; });
+    if(scope === 'gop') return all.filter(function(tr){ return tr.dataset.rating.indexOf('gop') >= 0; });
+    if(scope === 'dem') return all.filter(function(tr){ return tr.dataset.rating.indexOf('dem') >= 0; });
+    return all.filter(function(tr){ var r = tr.dataset.rating;
+      return r.indexOf('gop') < 0 && r.indexOf('dem') < 0; });
+  }
+
+  document.getElementById('bkGo').addEventListener('click', function(){
+    var key = document.getElementById('bkTactic').value;
+    var q = parseFloat(document.getElementById('bkQty').value);
+    if(isNaN(q)){ alert('Enter a quantity first.'); return; }
+    var rows = scopeRows(document.getElementById('bkScope').value);
+    if(!rows.length){ alert('That scope matched no districts.'); return; }
+    rows.forEach(function(tr){
+      tr.querySelector('.qty[data-tactic="'+key+'"]').value = q > 0 ? q : '';
+      var items = {}; items[key] = q;
+      queue(tr.dataset.code, {items: items});
+    });
+    repaint(); flush();
+  });
+
+  document.getElementById('bkMaskGo').addEventListener('click', function(){
+    var m = parseInt(document.getElementById('bkMask').value, 10);
+    var rows = scopeRows(document.getElementById('bkScope').value);
+    rows.forEach(function(tr){
+      tr.querySelectorAll('.segbtn').forEach(function(b){
+        b.classList.toggle('on', (m & parseInt(b.dataset.bit,10)) > 0);
+      });
+      queue(tr.dataset.code, {mask: m});
+    });
+    repaint(); flush();
+  });
+
+  repaint();
+})();
+</script>
+{% endblock %}

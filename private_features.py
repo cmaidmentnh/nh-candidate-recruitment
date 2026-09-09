@@ -8,6 +8,9 @@ from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 private_bp = Blueprint('private', __name__, url_prefix='/private')
 
@@ -1137,6 +1140,155 @@ def _dist_sortkey(code):
     m = _re.search(r'(\d+)\s*$', code or '')
     county = _re.sub(r'\s*\d+\s*$', '', code or '')
     return (county, int(m.group(1)) if m else 0)
+
+
+SEGMENTS = [
+    (1,  'r_reliable',  'Reliable R',        'Modeled R who voted the 2024 general'),
+    (2,  'r_dropoff',   'R drop-off',        'Modeled R who sat out 2024'),
+    (4,  'und_voter',   'Undeclared voters', 'Undeclared, not modeled R, voted 2022 or 2024'),
+    (8,  'und_dropoff', 'Undeclared drop-off', 'Undeclared, not modeled R, voted neither'),
+    (16, 'dem',         'Democrats',         'Registered D or D primary voter'),
+]
+
+
+def _district_sort_key(code):
+    """Belknap 1, Belknap 2, ... Belknap 10 — county alphabetical, number numeric."""
+    parts = (code or '').rsplit(' ', 1)
+    if len(parts) == 2 and parts[1].isdigit():
+        return (parts[0], int(parts[1]))
+    return (code or '', 0)
+
+
+@private_bp.route('/spend-plan')
+@require_feature_access('campaign_plan')
+def spend_plan():
+    """District-by-district spend planning: pick the universe, pick the tactics, pick how
+    many of each, see what it costs. Every district is listed in district order."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT full_district_code, MAX(county_name), MAX(seat_count),
+                   MAX(pvi), MAX(pvi_rating),
+                   STRING_AGG(DISTINCT CASE WHEN ward IS NOT NULL AND ward <> 0
+                              THEN town || ' Ward ' || ward ELSE town END, ', ') AS towns
+            FROM districts WHERE full_district_code IS NOT NULL
+            GROUP BY full_district_code
+        """)
+        districts = [{'code': r[0], 'county': r[1], 'seats': r[2], 'pvi': float(r[3]) if r[3] is not None else None,
+                      'rating': r[4], 'towns': r[5]} for r in cur.fetchall()]
+
+        cur.execute("SELECT district_code, mask, voters, households, cells FROM district_universe")
+        universe = {(r[0], r[1]): {'voters': r[2], 'households': r[3], 'cells': r[4]} for r in cur.fetchall()}
+
+        cur.execute("""SELECT tactic_key, label, unit, rate, qty_label, grp, sort_order
+                       FROM spend_tactic WHERE active ORDER BY sort_order""")
+        tactics = [{'key': r[0], 'label': r[1], 'unit': r[2],
+                    'rate': float(r[3]) if r[3] is not None else None,
+                    'qty_label': r[4], 'grp': r[5]} for r in cur.fetchall()]
+
+        cur.execute("SELECT district_code, mask, include, notes FROM district_spend")
+        plan = {r[0]: {'mask': r[1], 'include': r[2], 'notes': r[3] or ''} for r in cur.fetchall()}
+
+        cur.execute("SELECT district_code, tactic_key, qty, rate_override FROM district_spend_item")
+        items = {}
+        for dc, tk, qty, ro in cur.fetchall():
+            items.setdefault(dc, {})[tk] = {'qty': float(qty),
+                                            'rate': float(ro) if ro is not None else None}
+
+        # Who is actually on the November ballot here, so a district is never planned blind.
+        cur.execute("""SELECT district_code, party,
+                              STRING_AGG(first_name || ' ' || last_name, ', ' ORDER BY last_name)
+                       FROM filings
+                       WHERE election_year = 2026 AND office = 'State Representative'
+                         AND result <> 'lost'
+                       GROUP BY district_code, party""")
+        nominees = {}
+        for dc, party, names in cur.fetchall():
+            nominees.setdefault(dc, {})[party] = names
+
+        for d in districts:
+            code = d['code']
+            p = plan.get(code, {})
+            d['mask'] = p.get('mask', 3)
+            d['include'] = p.get('include', False)
+            d['notes'] = p.get('notes', '')
+            d['items'] = items.get(code, {})
+            d['universe'] = universe.get((code, d['mask']), {'voters': 0, 'households': 0, 'cells': 0})
+            d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
+                                 for m in range(1, 32)}
+            d['nominees'] = nominees.get(code, {})
+
+        districts.sort(key=lambda d: _district_sort_key(d['code']))
+        return render_template('private/spend_plan.html',
+                               districts=districts, tactics=tactics, segments=SEGMENTS)
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/save', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_save():
+    """Inline save of one district: its universe mask, include flag, notes and quantities."""
+    data = request.get_json(silent=True) or {}
+    code = (data.get('district_code') or '').strip()
+    if not code:
+        return jsonify({'ok': False, 'error': 'district_code required'}), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        if 'mask' in data or 'include' in data or 'notes' in data:
+            cur.execute("""
+                INSERT INTO district_spend (district_code, mask, include, notes, updated_by, updated_at)
+                VALUES (%s, COALESCE(%s,3), COALESCE(%s,false), %s, %s, now())
+                ON CONFLICT (district_code) DO UPDATE SET
+                    mask    = COALESCE(EXCLUDED.mask, district_spend.mask),
+                    include = COALESCE(EXCLUDED.include, district_spend.include),
+                    notes   = COALESCE(EXCLUDED.notes, district_spend.notes),
+                    updated_by = EXCLUDED.updated_by, updated_at = now()
+            """, (code, data.get('mask'), data.get('include'), data.get('notes'),
+                  (current_user.email if current_user.is_authenticated else 'admin')))
+        for tk, qty in (data.get('items') or {}).items():
+            try:
+                q = float(qty)
+            except (TypeError, ValueError):
+                continue
+            if q <= 0:
+                cur.execute("DELETE FROM district_spend_item WHERE district_code=%s AND tactic_key=%s",
+                            (code, tk))
+            else:
+                cur.execute("""INSERT INTO district_spend_item (district_code, tactic_key, qty)
+                               VALUES (%s,%s,%s)
+                               ON CONFLICT (district_code, tactic_key)
+                               DO UPDATE SET qty = EXCLUDED.qty""", (code, tk, q))
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'spend plan save failed for {code}: {e}')
+        return jsonify({'ok': False, 'error': 'Save failed.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/rate', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_rate():
+    """Set a tactic's unit cost. The field tactics ship without a rate because nobody has
+    quoted them yet; this is how they get one."""
+    data = request.get_json(silent=True) or {}
+    key = (data.get('tactic_key') or '').strip()
+    raw = data.get('rate')
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        rate = None if raw in (None, '') else float(raw)
+        cur.execute("UPDATE spend_tactic SET rate=%s WHERE tactic_key=%s", (rate, key))
+        if cur.rowcount == 0:
+            return jsonify({'ok': False, 'error': 'Unknown tactic.'}), 404
+        conn.commit()
+        return jsonify({'ok': True, 'rate': rate})
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'Rate must be a number.'}), 400
+    finally:
+        cur.close(); release_db_connection(conn)
 
 
 @private_bp.route('/campaign-plan')
