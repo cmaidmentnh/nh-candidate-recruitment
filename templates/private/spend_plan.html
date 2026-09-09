@@ -168,6 +168,8 @@
   var PRESETS = {{ presets|tojson }};
   var DISTRICTS = {{ districts|tojson }};
   var BUDGET = 582000;
+  var CSRF = document.querySelector('meta[name="csrf-token"]')
+    ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
   var GROUPS = [['mail','Mail and text'],['text',null],['digital','Digital'],['field','Field']];
   var idx = 0, pending = {}, timer = null, filter = 'all', q = '';
   var saveMsg = document.getElementById('saveMsg');
@@ -324,11 +326,28 @@
     var jobs = Object.values(pending); pending = {};
     if(!jobs.length) return;
     saveMsg.textContent = 'Saving...';
+    saveMsg.style.color = '';
     Promise.all(jobs.map(function(j){
       return fetch('/private/spend-plan/save', {method:'POST',
-        headers:{'Content-Type':'application/json'}, body:JSON.stringify(j)});
-    })).then(function(){ saveMsg.textContent='Saved'; setTimeout(function(){saveMsg.textContent='';},1600); })
-      .catch(function(){ saveMsg.textContent='Save failed'; });
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body:JSON.stringify(j)})
+        .then(function(r){
+          // A non-2xx used to be swallowed and reported as "Saved", so 56 edits were
+          // silently thrown away. Never report success without checking.
+          if(!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function(d){ if(!d || !d.ok) throw new Error((d && d.error) || 'rejected'); 
+                           return d; });
+    })).then(function(){
+      saveMsg.textContent = 'Saved';
+      setTimeout(function(){ if(saveMsg.textContent === 'Saved') saveMsg.textContent = ''; }, 1600);
+    }).catch(function(err){
+      // Put the work back in the queue so the next edit retries it rather than losing it.
+      jobs.forEach(function(j){ pending[j.district_code] = Object.assign(pending[j.district_code] || {}, j); });
+      saveMsg.style.color = '#b4262d';
+      saveMsg.textContent = 'NOT SAVED: ' + err.message + ' - do not close this page';
+    });
   }
 
   function go(n){
