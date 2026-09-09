@@ -695,6 +695,157 @@ def my_progress():
         cur.close(); release_db_connection(conn)
 
 
+@portal_bp.route('/general-intake', methods=['GET'])
+def general_intake_get():
+    """What we already know about this nominee, to prefill the post-primary intake form.
+
+    Everything here is answerable from data we hold, so a candidate who has a website on
+    file is not asked to type it again. Blank means we genuinely do not know."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT c.first_name, f.district_code,
+                              NULLIF(TRIM(COALESCE(c.website_url,'')),''),
+                              NULLIF(TRIM(COALESCE(c.external_campaign_url,'')),''),
+                              NULLIF(TRIM(COALESCE(c.donate_url,'')),''),
+                              NULLIF(TRIM(COALESCE(c.facebook_url,'')),''),
+                              NULLIF(TRIM(COALESCE(c.facebook,'')),''),
+                              NULLIF(TRIM(COALESCE(c.photo_url,'')),'')
+                         FROM candidates c
+                    LEFT JOIN filings f ON f.candidate_id = c.candidate_id
+                          AND f.election_year = 2026 AND f.office = 'State Representative'
+                        WHERE c.candidate_id = %s
+                        LIMIT 1""", (cid,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'Profile not found.'}), 404
+        first, district, wsite, ext, donate, fb_url, fb, photo = row
+
+        cur.execute("""SELECT signs_have, signs_count, lit_have, headshot_have, walkbooks_have,
+                              fundraising_amount, cash_on_hand, anticipated_raise,
+                              intake_notes, intake_submitted_at
+                         FROM candidate_campaign_progress WHERE candidate_id = %s""", (cid,))
+        p = cur.fetchone()
+        # A walkbook already requested through the portal counts as having one.
+        cur.execute("SELECT 1 FROM walkbook_requests WHERE candidate_id=%s LIMIT 1", (cid,))
+        requested_walkbook = cur.fetchone() is not None
+
+        return jsonify({'ok': True,
+                        'first_name': first, 'district': district or '',
+                        'already_submitted': bool(p and p[9]),
+                        'submitted_at': p[9].isoformat() if (p and p[9]) else None,
+                        'answers': {
+                            'signs_have': (p[0] if p else None),
+                            'signs_count': (p[1] if p else None),
+                            'lit_have': (p[2] if p else None),
+                            'headshot_have': (p[3] if p else None) if (p and p[3] is not None) else bool(photo) or None,
+                            'walkbooks_have': (p[4] if p else None) if (p and p[4] is not None) else (True if requested_walkbook else None),
+                            'website_url': wsite or ext or '',
+                            'donate_url': donate or '',
+                            'facebook_url': fb_url or fb or '',
+                            'money_raised': (str(p[5]) if (p and p[5] is not None) else ''),
+                            'cash_on_hand': (str(p[6]) if (p and p[6] is not None) else ''),
+                            'anticipated_raise': (str(p[7]) if (p and p[7] is not None) else ''),
+                            'notes': (p[8] if p else '') or '',
+                        }})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@portal_bp.route('/general-intake', methods=['POST'])
+def general_intake_post():
+    """Store the post-primary intake.
+
+    URLs go back to `candidates` so they flow into /progress and the public directory
+    exactly as an admin edit would; everything else lands on candidate_campaign_progress.
+    Blank is not the same as false: an unanswered question stays NULL so the follow-up
+    list can tell "no" from "did not say"."""
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+
+    def tri(name):
+        v = (request.form.get(name) or '').strip().lower()
+        return True if v in ('1', 'true', 'yes') else False if v in ('0', 'false', 'no') else None
+
+    def money(name):
+        raw = re.sub(r'[^0-9.]', '', (request.form.get(name) or ''))
+        if not raw:
+            return None
+        try:
+            v = float(raw)
+        except ValueError:
+            return None
+        return v if 0 <= v < 100_000_000 else None
+
+    def count(name):
+        raw = re.sub(r'[^0-9]', '', (request.form.get(name) or ''))
+        return min(int(raw), 100000) if raw else None
+
+    def url(name):
+        u = (request.form.get(name) or '').strip()[:500]
+        if u and not u.lower().startswith(('http://', 'https://')):
+            u = 'https://' + u
+        return u
+
+    signs_have, lit_have = tri('signs_have'), tri('lit_have')
+    headshot_have, walkbooks_have = tri('headshot_have'), tri('walkbooks_have')
+    signs_count = count('signs_count')
+    raised, coh, antic = money('money_raised'), money('cash_on_hand'), money('anticipated_raise')
+    website, donate, facebook = url('website_url'), url('donate_url'), url('facebook_url')
+    notes = (request.form.get('notes') or '').strip()[:5000]
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO candidate_campaign_progress
+                (candidate_id, signs_have, signs_count, lit_have, headshot_have, walkbooks_have,
+                 fundraising_amount, cash_on_hand, anticipated_raise, intake_notes,
+                 intake_submitted_at, fundraising_started, signs_ordered, updated_by, updated_at)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now(),
+                    COALESCE(%s,false), COALESCE(%s,false), 'candidate portal', now())
+            ON CONFLICT (candidate_id) DO UPDATE SET
+                signs_have          = COALESCE(EXCLUDED.signs_have, candidate_campaign_progress.signs_have),
+                signs_count         = COALESCE(EXCLUDED.signs_count, candidate_campaign_progress.signs_count),
+                lit_have            = COALESCE(EXCLUDED.lit_have, candidate_campaign_progress.lit_have),
+                headshot_have       = COALESCE(EXCLUDED.headshot_have, candidate_campaign_progress.headshot_have),
+                walkbooks_have      = COALESCE(EXCLUDED.walkbooks_have, candidate_campaign_progress.walkbooks_have),
+                fundraising_amount  = COALESCE(EXCLUDED.fundraising_amount, candidate_campaign_progress.fundraising_amount),
+                cash_on_hand        = COALESCE(EXCLUDED.cash_on_hand, candidate_campaign_progress.cash_on_hand),
+                anticipated_raise   = COALESCE(EXCLUDED.anticipated_raise, candidate_campaign_progress.anticipated_raise),
+                intake_notes        = NULLIF(EXCLUDED.intake_notes, ''),
+                intake_submitted_at = now(),
+                fundraising_started = candidate_campaign_progress.fundraising_started
+                                      OR COALESCE(EXCLUDED.fundraising_amount,0) > 0,
+                signs_ordered       = candidate_campaign_progress.signs_ordered
+                                      OR COALESCE(EXCLUDED.signs_have,false),
+                updated_by = 'candidate portal', updated_at = now()
+        """, (cid, signs_have, signs_count, lit_have, headshot_have, walkbooks_have,
+              raised, coh, antic, notes,
+              True if (raised or 0) > 0 else None, signs_have))
+
+        # Only overwrite a URL the candidate actually supplied.
+        sets, vals = [], []
+        for col, val in (('website_url', website), ('donate_url', donate), ('facebook_url', facebook)):
+            if val:
+                sets.append(f"{col} = %s"); vals.append(val)
+        if sets:
+            vals.append(cid)
+            cur.execute(f"UPDATE candidates SET {', '.join(sets)}, modified_at = now(), "
+                        f"modified_by = 'candidate portal' WHERE candidate_id = %s", vals)
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'general intake save failed for candidate {cid}: {e}')
+        return jsonify({'ok': False, 'error': 'Could not save. Please try again.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    return jsonify({'ok': True, 'message': 'Thank you. Your answers are with the CTEHR team.'})
+
+
 @portal_bp.route('/profile', methods=['POST'])
 def profile_post():
     cid = _cid_from_session()
