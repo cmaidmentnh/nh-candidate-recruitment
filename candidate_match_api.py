@@ -201,6 +201,7 @@ ROSTER_SQL = """
            f.district_code
       FROM filings f
      WHERE f.election_year = %s
+       AND f.result <> 'lost'
      ORDER BY f.last_name, f.first_name
 """
 
