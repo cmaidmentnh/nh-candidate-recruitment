@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .pc{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--ink:#22303f;--green:#1a7f43;--red:#b4262d;
+      --amber:#8a6400;color:var(--ink);font-size:.9rem}
+  .pc *{box-sizing:border-box}
+  .pc a{cursor:pointer}
+  .ptot{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 30px;padding:0 0 12px;
+    border-bottom:1px solid var(--rule);margin-bottom:14px}
+  .ptot .big{font-size:2.1rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
+  .ptot .cap{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .ptot .unit{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .ptot .grp{display:flex;flex-direction:column;gap:2px}
+  .ptot .owed{color:var(--red)}
+  .pback{font-size:.72rem;color:var(--muted);margin-bottom:8px;display:block}
+  .pcols{display:flex;gap:20px;align-items:flex-start}
+  .plist{flex:0 0 320px;max-height:78vh;overflow-y:auto;border:1px solid var(--rule);border-radius:6px}
+  .plist .hd{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--rule);
+    padding:8px 10px;z-index:2;display:flex;gap:8px;align-items:center}
+  .plist .hd button{font-size:.72rem;padding:4px 10px;border:1px solid var(--navy);background:var(--navy);
+    color:#fff;border-radius:4px;cursor:pointer;font-weight:700}
+  .pitem{padding:7px 10px;border-bottom:1px solid #f0f3f7;cursor:pointer;line-height:1.35}
+  .pitem:hover{background:#f5f8fc}
+  .pitem.sel{background:#eef3fa;box-shadow:inset 3px 0 0 var(--navy)}
+  .pitem .pn{font-weight:700;color:var(--navy)}
+  .pitem .pm{font-size:.72rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+  .pitem .pc2{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
+  .st-draft{color:var(--muted)}
+  .st-scheduled{color:var(--amber);font-weight:700}
+  .st-delivered{color:var(--green);font-weight:700}
+  .iv-unbilled{color:var(--muted)}
+  .iv-unpaid{color:var(--red);font-weight:700}
+  .iv-paid{color:var(--green);font-weight:700}
+  .ped{flex:1;min-width:0;border:1px solid var(--rule);border-radius:6px;padding:16px 18px}
+  .ped h3{margin:0 0 2px;color:var(--navy);font-size:1.3rem}
+  .ped .lab{display:block;font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700;margin:0 0 3px}
+  .frow{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px}
+  .frow .f{display:flex;flex-direction:column}
+  .ped input[type=text],.ped input[type=date],.ped input[type=number],.ped select,.ped textarea{
+    padding:5px 8px;border:1px solid #d6dbe3;border-radius:4px;font-size:.84rem;font-family:inherit}
+  .ped textarea{width:100%;resize:vertical}
+  .sect{border-top:1px solid var(--rule);margin-top:16px;padding-top:12px}
+  .sect h4{margin:0 0 8px;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .shortcuts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;font-size:.74rem;align-items:center}
+  .shortcuts button{font-size:.72rem;padding:3px 9px;border:1px solid #c9d1dc;background:#fff;
+    border-radius:4px;cursor:pointer}
+  .shortcuts button:hover{border-color:var(--navy);color:var(--navy)}
+  .dgrid{max-height:300px;overflow-y:auto;border:1px solid var(--rule);border-radius:4px;padding:6px 8px;
+    columns:3;column-gap:18px}
+  .dgrid .cty{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    font-weight:700;margin:6px 0 2px;break-after:avoid}
+  .dgrid label{display:block;font-size:.78rem;line-height:1.5;break-inside:avoid;white-space:nowrap}
+  .dgrid label.off{color:#c3c9d2}
+  .dgrid .t1c{color:#b4262d;font-weight:700}
+  .dgrid .t2c{color:#8a6400;font-weight:700}
+  .dgrid .t3c{color:#7b8494;font-weight:700}
+  .dgrid .art{color:var(--green);font-size:.66rem;font-weight:700}
+  .dsum{display:flex;gap:22px;margin-top:8px;font-size:.76rem;color:var(--muted);align-items:baseline}
+  .dsum b{color:var(--navy);font-size:1rem;font-variant-numeric:tabular-nums}
+  .drop{border:2px dashed #ccd4df;border-radius:6px;padding:14px;text-align:center;color:var(--muted);
+    font-size:.78rem;margin-top:8px}
+  .drop.over{border-color:var(--navy);background:#f2f6fc;color:var(--navy)}
+  .arts{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+  .arts .a{border:1px solid var(--rule);border-radius:4px;padding:6px;width:120px;font-size:.68rem;
+    text-align:center;color:var(--muted);word-break:break-word}
+  .arts .a img{max-width:100%;display:block;margin:0 auto 4px}
+  .unm{margin-top:8px;font-size:.76rem;color:var(--red)}
+  .unm .u{padding:3px 0;border-bottom:1px solid #f2f5f8;display:flex;gap:8px;align-items:center}
+  .unm select{font-size:.74rem}
+  .pmsg{font-size:.74rem;color:var(--muted);margin-left:8px}
+  .pmsg.bad{color:var(--red);font-weight:700}
+  .pdel{float:right;font-size:.72rem;color:var(--red);cursor:pointer}
+  .empty{color:var(--muted);padding:26px 4px}
+  .note{font-size:.74rem;color:var(--muted);margin:4px 0 0}
+  .warnbox{background:#fdf6f6;border-left:3px solid var(--red);padding:7px 10px;font-size:.78rem;
+    margin-top:8px;color:#7d2a2a}
+</style>
+
+<div class="pc">
+  <a class="pback" href="{{ url_for('private.spend_plan') }}">&larr; Back to the spend plan</a>
+  <div class="ptot">
+    <div class="grp"><span class="big" id="tPlanned">$0</span>
+      <span class="cap">committed to pieces &middot; <span id="tPieces">0</span> pieces</span></div>
+    <div class="grp"><span class="unit" id="tInvoiced">$0</span><span class="cap">invoiced</span></div>
+    <div class="grp"><span class="unit iv-paid" id="tPaid">$0</span><span class="cap">paid</span></div>
+    <div class="grp"><span class="unit owed" id="tOwed">$0</span><span class="cap">owed</span></div>
+    <div class="grp"><span class="unit" id="tStatus">0 / 0 / 0</span>
+      <span class="cap">draft / scheduled / delivered</span></div>
+    <div class="grp"><span class="unit" id="tOfPlan">0%</span>
+      <span class="cap">of the {{ '${:,.0f}'.format(budget) }} program</span></div>
+  </div>
+
+  <div class="pcols">
+    <div class="plist">
+      <div class="hd"><button id="newPiece">New piece</button>
+        <span class="pmsg" id="msg"></span></div>
+      <div id="pieceList"></div>
+    </div>
+    <div class="ped" id="editor"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var PIECES = {{ pieces|tojson }};
+  var TACTICS = {{ tactics|tojson }};
+  var DISTRICTS = {{ districts|tojson }};
+  var PLANNED = {{ planned|tojson }};
+  var BUDGET = {{ budget|tojson }};
+  var CSRF = document.querySelector('meta[name="csrf-token"]')
+             ? document.querySelector('meta[name="csrf-token"]').content : '';
+  var sel = PIECES.length ? PIECES[0].id : null;
+  var msg = document.getElementById('msg');
+  var BY_CODE = {}; DISTRICTS.forEach(function(d){ BY_CODE[d.code] = d; });
+
+  function money(n){ return '$' + Math.round(n||0).toLocaleString(); }
+  function num(n){ return Math.round(n||0).toLocaleString(); }
+  function esc(s){ return String(s==null?'':s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function tacOf(k){ return TACTICS.filter(function(t){ return t.key===k; })[0] || {}; }
+  function cur(){ return PIECES.filter(function(p){ return p.id===sel; })[0] || null; }
+
+  function say(t, bad){ msg.textContent = t; msg.className = 'pmsg' + (bad?' bad':''); }
+
+  function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+                       body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(j){
+        if(!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        return j; }); });
+  }
+
+  // What one drop of this piece would reach and cost in a district, at today's universe. Only
+  // a preview: what a district is actually charged is snapshotted when it joins the piece.
+  function quote(p, d){
+    var t = tacOf(p.tactic_key);
+    var sz = (d.uni && (d.uni[p.universe] || d.uni.base)) || {households:0, cells:0};
+    if(t.unit === 'per_household') return {q: sz.households||0, c: (sz.households||0)*(t.rate||0)};
+    if(t.unit === 'per_cell')      return {q: sz.cells||0,      c: (sz.cells||0)*(t.rate||0)};
+    var pl = ((PLANNED[d.code]||{})[p.universe]||{})[p.tactic_key] || 0;
+    if(t.unit === 'dollars') return {q: pl, c: pl};
+    return {q: pl, c: t.rate == null ? null : pl*t.rate};
+  }
+  function blocked(p, d){
+    var t = tacOf(p.tactic_key);
+    return d.floterial && (t.unit === 'per_household' || t.unit === 'per_cell');
+  }
+
+  function drawTotals(){
+    var planned = 0, inv = 0, paid = 0, owed = 0, st = {draft:0, scheduled:0, delivered:0};
+    PIECES.forEach(function(p){
+      planned += p.planned || 0;
+      st[p.status] = (st[p.status]||0) + 1;
+      if(p.invoice_amount != null){
+        inv += p.invoice_amount;
+        if(p.invoice_status === 'paid') paid += p.invoice_amount;
+        else owed += p.invoice_amount;
+      }
+    });
+    document.getElementById('tPlanned').textContent = money(planned);
+    document.getElementById('tPieces').textContent = PIECES.length;
+    document.getElementById('tInvoiced').textContent = money(inv);
+    document.getElementById('tPaid').textContent = money(paid);
+    document.getElementById('tOwed').textContent = money(owed);
+    document.getElementById('tStatus').textContent = st.draft+' / '+st.scheduled+' / '+st.delivered;
+    document.getElementById('tOfPlan').textContent =
+      BUDGET ? Math.round(100*planned/BUDGET) + '%' : '';
+  }
+
+  function drawList(){
+    var h = '';
+    if(!PIECES.length) h = '<div class="empty" style="padding:20px 12px">Nothing made yet. ' +
+      'A piece is one mail drop, one text or one buy, going to many districts at once.</div>';
+    PIECES.forEach(function(p){
+      h += '<div class="pitem' + (p.id===sel?' sel':'') + '" data-id="' + p.id + '">' +
+        '<div class="pn">' + esc(p.name) + '</div>' +
+        '<div class="pm"><span>' + esc(p.tactic_label) + ' &middot; ' +
+          p.districts.length + ' district' + (p.districts.length===1?'':'s') + '</span>' +
+          '<span class="pc2">' + money(p.planned) + '</span></div>' +
+        '<div class="pm"><span class="st-' + p.status + '">' +
+          (p.drop_date ? p.drop_date : 'no date') + ' &middot; ' + p.status + '</span>' +
+          '<span class="iv-' + p.invoice_status + '">' +
+          (p.invoice_status === 'unbilled' ? 'not invoiced'
+            : money(p.invoice_amount) + ' ' + p.invoice_status) + '</span></div></div>';
+    });
+    document.getElementById('pieceList').innerHTML = h;
+    document.querySelectorAll('.pitem').forEach(function(el){
+      el.onclick = function(){ sel = +el.dataset.id; draw(); };
+    });
+  }
+
+  function drawEditor(){
+    var p = cur(), box = document.getElementById('editor');
+    if(!p){ box.innerHTML = '<div class="empty">Pick a piece, or make one.</div>'; return; }
+    var t = tacOf(p.tactic_key);
+    var on = {}; p.districts.forEach(function(d){ on[d.code] = d; });
+
+    var h = '<a class="pdel" data-del="1">Delete this piece</a>' +
+      '<h3>' + esc(p.name) + '</h3>' +
+      '<p class="note">' + esc(p.tactic_label) + ' &middot; ' + esc(p.universe) +
+      ' universe &middot; created by ' + esc(p.created_by) + '</p>';
+
+    h += '<div class="frow" style="margin-top:12px">' +
+      fld('Name', '<input type="text" id="fName" size="34" value="' + esc(p.name) + '">') +
+      fld('Tactic', selOf('fTactic', TACTICS.map(function(x){ return [x.key, x.label]; }), p.tactic_key)) +
+      fld('Universe', selOf('fUni', [['persuade','Persuasion'],['gotv','GOTV'],['base','Whole district']], p.universe)) +
+      fld('Drop date', '<input type="date" id="fDate" value="' + (p.drop_date||'') + '">') +
+      fld('Status', selOf('fStatus', [['draft','Draft'],['scheduled','Scheduled'],['delivered','Delivered']], p.status)) +
+      '</div>';
+
+    // --- districts ---
+    h += '<div class="sect"><h4>Where it goes</h4><div class="shortcuts">';
+    [1,2,3].forEach(function(tr){
+      h += '<button data-tier="' + tr + '">All Tier ' + tr + '</button>';
+    });
+    h += '<button data-tier="all">Everything in the plan</button>' +
+         '<button data-tier="none">Clear</button>' +
+         '<span style="color:var(--muted)">or tick them one at a time</span></div>';
+
+    var flo = DISTRICTS.filter(function(d){ return blocked(p, d); }).length;
+    h += '<div class="dgrid">';
+    var county = null;
+    DISTRICTS.forEach(function(d){
+      if(d.county !== county){ county = d.county; h += '<div class="cty">' + esc(county) + '</div>'; }
+      var b = blocked(p, d), row = on[d.code];
+      h += '<label class="' + (b?'off':'') + '"' +
+        (b ? ' title="Floterial. Its candidate rides on the base district\'s piece."' : '') + '>' +
+        '<input type="checkbox" data-code="' + esc(d.code) + '"' +
+        (row?' checked':'') + (b?' disabled':'') + '> ' +
+        '<span class="t' + d.tier + 'c">T' + d.tier + '</span> ' + esc(d.code) +
+        (d.floterial ? ' F' : '') +
+        (row && row.file_url ? ' <span class="art">art</span>' : '') + '</label>';
+    });
+    h += '</div>';
+
+    var reach = 0, cost = 0, unpriced = 0;
+    p.districts.forEach(function(d){
+      reach += d.quantity || 0;
+      if(d.cost == null) unpriced++; else cost += d.cost;
+    });
+    var unitWord = t.unit === 'per_household' ? 'households'
+                 : t.unit === 'per_cell' ? 'cells'
+                 : t.unit === 'dollars' ? 'dollars' : (t.qty_label || 'units');
+    h += '<div class="dsum"><span><b>' + p.districts.length + '</b> districts</span>' +
+      '<span><b>' + num(reach) + '</b> ' + unitWord + '</span>' +
+      '<span><b>' + money(cost) + '</b> for this drop</span>' +
+      (unpriced ? '<span style="color:var(--amber)">' + unpriced +
+                  ' priced at nothing: this tactic has no unit cost yet</span>' : '') + '</div>';
+    if(flo){
+      h += '<p class="note">' + flo + ' floterial' + (flo===1?' is':'s are') +
+        ' greyed out. Their candidates appear on the mail bought in the base districts, so ' +
+        'buying them here would bill the same household twice.</p>';
+    }
+
+    // --- artwork ---
+    h += '<div class="sect"><h4>Artwork</h4>';
+    h += '<div class="arts">' + (p.file_url
+      ? '<div class="a">' + thumb(p.file_url, p.content_type) +
+        '<a href="' + esc(p.file_url) + '" target="_blank" rel="noopener">shared proof</a></div>'
+      : '<div class="a" style="border-style:dashed">no shared proof yet</div>');
+    p.districts.filter(function(d){ return d.file_url; }).forEach(function(d){
+      h += '<div class="a">' + thumb(d.file_url, d.content_type) +
+        '<a href="' + esc(d.file_url) + '" target="_blank" rel="noopener">' + esc(d.code) + '</a></div>';
+    });
+    h += '</div>';
+    var own = p.districts.filter(function(d){ return d.file_url; }).length;
+    h += '<p class="note">' + own + ' of ' + p.districts.length +
+      ' districts have their own version; the rest use the shared proof.</p>';
+    h += '<div class="drop" id="dropShared">Drop the shared proof here, or click to pick one</div>';
+    h += '<div class="drop" id="dropMany">Drop many per-district files here. ' +
+      'They are filed by filename: <b>Rockingham 4.pdf</b>, <b>rockingham-04.pdf</b> and ' +
+      '<b>rock4_final.pdf</b> all land in Rockingham 4. Anything that matches two districts, ' +
+      'or none, is handed back for you to place.</div>';
+    h += '<div id="unmatched"></div>';
+    h += '<input type="file" id="fileShared" style="display:none">' +
+         '<input type="file" id="fileMany" multiple style="display:none">';
+    h += '</div>';
+
+    // --- invoice ---
+    h += '<div class="sect"><h4>Invoice</h4><div class="frow">' +
+      fld('Number', '<input type="text" id="fInvNo" size="16" value="' + esc(p.invoice_number) + '">') +
+      fld('Amount', '<input type="number" id="fInvAmt" step="0.01" style="width:120px" value="' +
+          (p.invoice_amount == null ? '' : p.invoice_amount) + '">') +
+      fld('Status', selOf('fInvSt', [['unbilled','Not invoiced'],['unpaid','Invoiced, unpaid'],['paid','Paid']], p.invoice_status)) +
+      fld('Due', '<input type="date" id="fInvDue" value="' + (p.invoice_due||'') + '">') +
+      fld('Paid on', '<input type="date" id="fPaid" value="' + (p.paid_at||'') + '">') +
+      '</div>';
+    if(p.invoice_amount != null && cost){
+      var diff = p.invoice_amount - cost;
+      if(Math.abs(diff) >= 1){
+        h += '<div class="warnbox">The invoice is ' + money(Math.abs(diff)) +
+          (diff > 0 ? ' <b>more</b>' : ' <b>less</b>') + ' than the ' + money(cost) +
+          ' this piece was planned at.</div>';
+      }
+    }
+    h += '</div>';
+
+    h += '<div class="sect"><h4>Notes</h4>' +
+      '<textarea id="fNotes" rows="2" placeholder="Anything worth remembering about this piece">' +
+      esc(p.notes) + '</textarea></div>';
+
+    box.innerHTML = h;
+    wire(p);
+  }
+
+  function fld(label, input){
+    return '<div class="f"><span class="lab">' + label + '</span>' + input + '</div>';
+  }
+  function selOf(id, opts, val){
+    return '<select id="' + id + '">' + opts.map(function(o){
+      return '<option value="' + esc(o[0]) + '"' + (o[0]===val?' selected':'') + '>' +
+             esc(o[1]) + '</option>'; }).join('') + '</select>';
+  }
+  function thumb(url, ct){
+    return (ct || '').indexOf('image/') === 0
+      ? '<img src="' + esc(url) + '" alt="">' : '<div style="font-size:1.6rem">&#128196;</div>';
+  }
+
+  function wire(p){
+    function save(payload){
+      return post('/private/spend-plan/piece/save',
+                  Object.assign({id: p.id}, payload))
+        .then(function(){ say('Saved'); })
+        .catch(function(e){ say('NOT SAVED: ' + e.message, true); throw e; });
+    }
+    function bind(id, field, after){
+      var el = document.getElementById(id); if(!el) return;
+      el.onchange = function(){
+        var v = el.value;
+        p[field] = (field === 'invoice_amount') ? (v === '' ? null : parseFloat(v)) : v;
+        var pay = {}; pay[field] = v;
+        save(pay).then(function(){ drawList(); drawTotals(); if(after) after(); });
+      };
+    }
+    bind('fName', 'name');
+    bind('fDate', 'drop_date');
+    bind('fStatus', 'status');
+    bind('fNotes', 'notes');
+    bind('fInvNo', 'invoice_number');
+    bind('fInvAmt', 'invoice_amount', draw);
+    bind('fInvSt', 'invoice_status');
+    bind('fInvDue', 'invoice_due');
+    bind('fPaid', 'paid_at');
+
+    // Changing the tactic or universe reprices nothing already snapshotted: the districts on
+    // the piece keep what they were charged. It only changes what a newly added one costs.
+    ['fTactic', 'fUni'].forEach(function(id){
+      var el = document.getElementById(id); if(!el) return;
+      el.onchange = function(){
+        var field = id === 'fTactic' ? 'tactic_key' : 'universe';
+        p[field] = el.value;
+        if(field === 'tactic_key') p.tactic_label = tacOf(el.value).label || el.value;
+        var pay = {}; pay[field] = el.value;
+        save(pay).then(draw);
+      };
+    });
+
+    document.querySelectorAll('.shortcuts button').forEach(function(b){
+      b.onclick = function(){
+        var want, k = b.dataset.tier;
+        if(k === 'none') want = [];
+        else if(k === 'all') want = DISTRICTS.filter(function(d){ return !blocked(p,d); })
+                                             .map(function(d){ return d.code; });
+        else want = DISTRICTS.filter(function(d){ return d.tier === +k && !blocked(p,d); })
+                             .map(function(d){ return d.code; });
+        setDistricts(p, want);
+      };
+    });
+    document.querySelectorAll('.dgrid input[type=checkbox]').forEach(function(cb){
+      cb.onchange = function(){
+        var codes = [];
+        document.querySelectorAll('.dgrid input[type=checkbox]').forEach(function(x){
+          if(x.checked) codes.push(x.dataset.code);
+        });
+        setDistricts(p, codes);
+      };
+    });
+
+    var del = document.querySelector('[data-del]');
+    if(del) del.onclick = function(){
+      if(!window.confirm('Delete "' + p.name + '"? Its districts go with it.')) return;
+      post('/private/spend-plan/piece/delete', {id: p.id}).then(function(){
+        PIECES = PIECES.filter(function(x){ return x.id !== p.id; });
+        sel = PIECES.length ? PIECES[0].id : null;
+        say('Deleted'); draw();
+      }).catch(function(e){ say('NOT DELETED: ' + e.message, true); });
+    };
+
+    upload('dropShared', 'fileShared', false, p);
+    upload('dropMany', 'fileMany', true, p);
+  }
+
+  function setDistricts(p, codes){
+    say('Saving...');
+    post('/private/spend-plan/piece/districts', {id: p.id, codes: codes})
+      .then(function(j){
+        p.districts = j.districts; p.planned = j.planned; p.reach = j.reach;
+        say('Saved'); draw();
+      })
+      .catch(function(e){ say('NOT SAVED: ' + e.message, true); draw(); });
+  }
+
+  function upload(zoneId, inputId, many, p){
+    var zone = document.getElementById(zoneId), input = document.getElementById(inputId);
+    if(!zone || !input) return;
+    zone.onclick = function(){ input.click(); };
+    input.onchange = function(){ send(input.files); input.value = ''; };
+    ['dragenter','dragover'].forEach(function(ev){
+      zone.addEventListener(ev, function(e){ e.preventDefault(); zone.classList.add('over'); });
+    });
+    ['dragleave','drop'].forEach(function(ev){
+      zone.addEventListener(ev, function(e){ e.preventDefault(); zone.classList.remove('over'); });
+    });
+    zone.addEventListener('drop', function(e){ send(e.dataTransfer.files); });
+
+    function send(files){
+      if(!files || !files.length) return;
+      var fd = new FormData();
+      fd.append('id', p.id);
+      if(!many) fd.append('shared', '1');
+      for(var i = 0; i < files.length; i++) fd.append('file', files[i]);
+      say('Uploading ' + files.length + ' file' + (files.length===1?'':'s') + '...');
+      fetch('/private/spend-plan/piece/art', {method:'POST', headers:{'X-CSRFToken':CSRF}, body: fd})
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if(!j.ok) throw new Error(j.error || 'upload failed');
+          j.placed.forEach(function(x){
+            if(x.code === null){ p.file_url = x.url; p.content_type = null; return; }
+            p.districts.forEach(function(d){ if(d.code === x.code) d.file_url = x.url; });
+          });
+          say(j.placed.length + ' filed' +
+              (j.unmatched.length ? ', ' + j.unmatched.length + ' need placing' : ''));
+          draw();
+          if(j.unmatched.length) showUnmatched(p, j.unmatched);
+        })
+        .catch(function(e){ say('UPLOAD FAILED: ' + e.message, true); });
+    }
+  }
+
+  // A file we could not place is never guessed at. It is listed with a district picker so the
+  // person who named it decides, and it is not lost in the meantime: it is already uploaded.
+  function showUnmatched(p, list){
+    var box = document.getElementById('unmatched');
+    if(!box) return;
+    var opts = p.districts.map(function(d){ return '<option value="' + esc(d.code) + '">' +
+      esc(d.code) + '</option>'; }).join('');
+    box.innerHTML = '<div class="unm"><b>' + list.length + ' file' +
+      (list.length===1?'':'s') + ' could not be filed.</b>' +
+      list.map(function(u, i){
+        return '<div class="u"><span>' + esc(u.name) + '</span>' +
+          '<span style="color:var(--muted);flex:1">' + esc(u.why) + '</span>' +
+          (u.url ? '<select data-un="' + i + '"><option value="">put it in...</option>' +
+                   opts + '</select>' : '') + '</div>';
+      }).join('') + '</div>';
+    box.querySelectorAll('select[data-un]').forEach(function(s){
+      s.onchange = function(){
+        var u = list[+s.dataset.un];
+        if(!s.value) return;
+        // no re-upload: the file is already in storage, only the filing was missing
+        post('/private/spend-plan/piece/place', {id: p.id, district: s.value, url: u.url})
+          .then(function(){
+            p.districts.forEach(function(d){ if(d.code === s.value) d.file_url = u.url; });
+            say('Filed in ' + s.value); draw();
+          })
+          .catch(function(e){ say('NOT FILED: ' + e.message, true); });
+      };
+    });
+  }
+
+  document.getElementById('newPiece').onclick = function(){
+    var name = window.prompt('What is this piece called? e.g. "Affordability #1"');
+    if(!name) return;
+    post('/private/spend-plan/piece/save',
+         {name: name, tactic_key: TACTICS[0].key, universe: 'persuade'})
+      .then(function(j){
+        PIECES.push({id: j.id, name: name, tactic_key: TACTICS[0].key,
+                     tactic_label: TACTICS[0].label, unit: TACTICS[0].unit, grp: TACTICS[0].grp,
+                     universe: 'persuade', drop_date: null, status: 'draft',
+                     file_url: null, content_type: null, notes: '',
+                     invoice_number: '', invoice_amount: null, invoice_status: 'unbilled',
+                     invoice_due: null, paid_at: null, created_by: 'you',
+                     districts: [], planned: 0, reach: 0});
+        sel = j.id; say('Made'); draw();
+      })
+      .catch(function(e){ say('NOT MADE: ' + e.message, true); });
+  };
+
+  function draw(){ drawList(); drawEditor(); drawTotals(); }
+  draw();
+})();
+</script>
+{% endblock %}

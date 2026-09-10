@@ -1183,113 +1183,6 @@ CREATIVE_EXT = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mp4', 'mov'}
 MAX_CREATIVE_BYTES = 40 * 1024 * 1024
 
 
-@private_bp.route('/spend-plan/creative', methods=['POST'])
-@require_feature_access('campaign_plan')
-def spend_creative_upload():
-    """Add one piece of creative to the library. Reuses the app's S3 helper."""
-    f = request.files.get('file')
-    if not f or not f.filename:
-        return jsonify({'ok': False, 'error': 'No file.'}), 400
-    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
-    if ext not in CREATIVE_EXT:
-        return jsonify({'ok': False, 'error': f'.{ext} not allowed. '
-                                              f'Use {", ".join(sorted(CREATIVE_EXT))}.'}), 400
-    f.seek(0, 2); size = f.tell(); f.seek(0)
-    if size > MAX_CREATIVE_BYTES:
-        return jsonify({'ok': False, 'error': 'File is over 40MB.'}), 400
-    if upload_to_storage is None:
-        return jsonify({'ok': False, 'error': 'File storage is not configured.'}), 500
-
-    # token prefix so two pieces named front.pdf cannot overwrite each other
-    key = f'spend_creative/{secrets.token_hex(4)}_{secure_filename(f.filename)}'
-    url = upload_to_storage(f, key)
-    if not url:
-        return jsonify({'ok': False, 'error': 'Upload failed.'}), 500
-
-    conn = get_db_connection(); cur = conn.cursor()
-    try:
-        cur.execute("""INSERT INTO spend_creative
-                         (label, tactic_key, file_url, content_type, file_size, uploaded_by)
-                       VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, uploaded_at""",
-                    ((request.form.get('label') or f.filename)[:120],
-                     request.form.get('tactic_key') or None, url,
-                     f.content_type, size,
-                     current_user.email if current_user.is_authenticated else 'admin'))
-        cid, at = cur.fetchone()
-        conn.commit()
-        return jsonify({'ok': True, 'creative': {
-            'id': cid, 'label': (request.form.get('label') or f.filename)[:120],
-            'tactic_key': request.form.get('tactic_key') or None, 'file_url': url,
-            'content_type': f.content_type, 'file_size': size,
-            'uploaded_at': at.isoformat(), 'drops': 0, 'districts': 0}})
-    except Exception as e:
-        conn.rollback()
-        logger.error(f'creative upload failed: {e}')
-        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
-    finally:
-        cur.close(); release_db_connection(conn)
-
-
-@private_bp.route('/spend-plan/drop', methods=['POST'])
-@require_feature_access('campaign_plan')
-def spend_drop_save():
-    """Create or update one district drop. Only fields actually sent are written."""
-    d = request.get_json(silent=True) or {}
-    did = d.get('id')
-    cols = ('label', 'creative_id', 'planned_date', 'delivered_date', 'quantity',
-            'planned_cost', 'actual_cost', 'invoice_number', 'invoice_status',
-            'invoice_due', 'paid_at', 'notes', 'seq')
-    conn = get_db_connection(); cur = conn.cursor()
-    try:
-        if did:
-            sets, vals = [], []
-            for c in cols:
-                if c in d:
-                    sets.append(f'{c} = %s')
-                    vals.append(d[c] if d[c] not in ('',) else None)
-            if not sets:
-                return jsonify({'ok': True, 'id': did})
-            vals.append(did)
-            cur.execute(f'UPDATE district_drop SET {", ".join(sets)} WHERE id = %s', vals)
-        else:
-            code, tk = (d.get('district_code') or '').strip(), (d.get('tactic_key') or '').strip()
-            if not code or not tk:
-                return jsonify({'ok': False, 'error': 'district and tactic required'}), 400
-            cur.execute("""SELECT COALESCE(MAX(seq), 0) + 1 FROM district_drop
-                            WHERE district_code=%s AND tactic_key=%s""", (code, tk))
-            seq = cur.fetchone()[0]
-            cur.execute("""INSERT INTO district_drop
-                             (district_code, tactic_key, seq, label, creative_id, planned_date,
-                              quantity, planned_cost, created_by)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
-                        (code, tk, seq, d.get('label') or None, d.get('creative_id') or None,
-                         d.get('planned_date') or None, d.get('quantity') or None,
-                         d.get('planned_cost') or None,
-                         current_user.email if current_user.is_authenticated else 'admin'))
-            did = cur.fetchone()[0]
-        conn.commit()
-        return jsonify({'ok': True, 'id': did})
-    except Exception as e:
-        conn.rollback()
-        logger.error(f'drop save failed: {e}')
-        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
-    finally:
-        cur.close(); release_db_connection(conn)
-
-
-@private_bp.route('/spend-plan/drop/delete', methods=['POST'])
-@require_feature_access('campaign_plan')
-def spend_drop_delete():
-    d = request.get_json(silent=True) or {}
-    conn = get_db_connection(); cur = conn.cursor()
-    try:
-        cur.execute('DELETE FROM district_drop WHERE id = %s', (d.get('id'),))
-        conn.commit()
-        return jsonify({'ok': True, 'deleted': cur.rowcount})
-    finally:
-        cur.close(); release_db_connection(conn)
-
-
 def _tier_word(t):
     """How a tier reads in a sentence. 0 and NULL are both "no tier"."""
     return ('Tier %d' % t) if t else 'no tier'
@@ -1528,38 +1421,7 @@ def spend_plan():
             for e in history[dc]:
                 e['at'] = e.pop('ts').strftime('%b %-d, %-I:%M %p')
 
-        cur.execute("""SELECT id, label, tactic_key, file_url, content_type, file_size,
-                              uploaded_by, uploaded_at,
-                              (SELECT count(*) FROM district_drop dd WHERE dd.creative_id = c.id),
-                              (SELECT count(DISTINCT dd.district_code) FROM district_drop dd
-                                WHERE dd.creative_id = c.id)
-                       FROM spend_creative c ORDER BY uploaded_at DESC""")
-        creatives = [{'id': r[0], 'label': r[1], 'tactic_key': r[2], 'file_url': r[3],
-                      'content_type': r[4], 'file_size': r[5], 'uploaded_by': r[6],
-                      'uploaded_at': r[7].strftime('%Y-%m-%d'), 'drops': r[8],
-                      'districts': r[9]} for r in cur.fetchall()]
-
-        cur.execute("""SELECT d.id, d.district_code, d.tactic_key, d.seq, d.label, d.creative_id,
-                              d.planned_date, d.delivered_date, d.quantity, d.planned_cost,
-                              d.actual_cost, d.invoice_number, d.invoice_status, d.invoice_due,
-                              d.paid_at, d.notes, c.file_url, c.content_type, c.label
-                       FROM district_drop d
-                       LEFT JOIN spend_creative c ON c.id = d.creative_id
-                       ORDER BY d.district_code, d.planned_date NULLS LAST, d.seq""")
-        drops_by_district = {}
-        for r in cur.fetchall():
-            drops_by_district.setdefault(r[1], []).append({
-                'id': r[0], 'tactic_key': r[2], 'seq': r[3], 'label': r[4], 'creative_id': r[5],
-                'planned_date': r[6].isoformat() if r[6] else None,
-                'delivered_date': r[7].isoformat() if r[7] else None,
-                'quantity': r[8],
-                'planned_cost': float(r[9]) if r[9] is not None else None,
-                'actual_cost': float(r[10]) if r[10] is not None else None,
-                'invoice_number': r[11], 'invoice_status': r[12],
-                'invoice_due': r[13].isoformat() if r[13] else None,
-                'paid_at': r[14].isoformat() if r[14] else None,
-                'notes': r[15], 'creative_url': r[16], 'creative_type': r[17],
-                'creative_label': r[18]})
+        pieces = _load_pieces(cur)
 
         cur.execute("SELECT amount FROM spend_budget WHERE key='program'")
         brow = cur.fetchone()
@@ -1579,7 +1441,6 @@ def spend_plan():
             d['rel'] = relation.get(code)
             d['ride'] = ride.get(code, [])
             d['r2018'] = replay18.get(code)
-            d['drops'] = drops_by_district.get(code, [])
             d['qty'] = qty_by_district.get(code, {})
             d['universe'] = universe.get((code, d['mask']), {'voters': 0, 'households': 0, 'cells': 0})
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
@@ -1593,7 +1454,7 @@ def spend_plan():
                                districts=districts, tactics=tactics, segments=SEGMENTS,
                                presets=UNIVERSE_PRESETS,
                                preset_masks=[m for m, _ in UNIVERSE_PRESETS],
-                               creatives=creatives, budget=budget)
+                               pieces=pieces, budget=budget)
     finally:
         cur.close(); release_db_connection(conn)
 
@@ -1689,6 +1550,410 @@ def spend_plan_export():
                                    '' if cost is None else round(cost, 2)])
     return Response(buf.getvalue(), mimetype='text/csv',
                     headers={'Content-Disposition': 'attachment; filename=spend_plan.csv'})
+
+
+# =============================================================================
+# PIECES - what we actually produced, as opposed to what we planned
+# =============================================================================
+
+PIECE_STATUS = ('draft', 'scheduled', 'delivered')
+INVOICE_STATUS = ('unbilled', 'unpaid', 'paid')
+
+
+def _piece_sizes(cur):
+    """Universe sizes per district, both the modelled universes and the old single mask."""
+    cur.execute("SELECT district_code, uni, voters, households, cells FROM district_model_universe")
+    sizes = {}
+    for dc, u, v, hh, ce in cur.fetchall():
+        sizes.setdefault(dc, {})[u] = {'voters': v or 0, 'households': hh or 0, 'cells': ce or 0}
+    cur.execute("""SELECT u.district_code, u.voters, u.households, u.cells
+                     FROM district_universe u
+                     JOIN district_spend s ON s.district_code = u.district_code
+                                          AND s.mask = u.mask""")
+    for dc, v, hh, ce in cur.fetchall():
+        sizes.setdefault(dc, {})['base'] = {'voters': v or 0, 'households': hh or 0, 'cells': ce or 0}
+    return sizes
+
+
+def _piece_snapshot(cur, sizes, tactic, universe, codes):
+    """What one drop of `tactic` to each of `codes` reaches and costs, right now.
+
+    Snapshotted onto the row so a later change to the universe never rewrites history. A
+    household-based or cell-based piece reaches the whole universe once; a digital flight and
+    an unpriced field tactic carry the district's planned figure instead, because "one drop"
+    is not a meaningful unit for either."""
+    unit, rate = tactic['unit'], tactic['rate']
+    planned = {}
+    if unit in ('dollars', 'per_unit'):
+        cur.execute("""SELECT district_code, qty FROM district_spend_item
+                        WHERE tactic_key = %s AND universe = %s""",
+                    (tactic['key'], universe))
+        planned = {r[0]: float(r[1]) for r in cur.fetchall()}
+    out = {}
+    for code in codes:
+        sz = (sizes.get(code, {}).get(universe)
+              or sizes.get(code, {}).get('base')
+              or {'households': 0, 'cells': 0})
+        if unit == 'per_household':
+            q = float(sz['households']); cost = q * float(rate or 0)
+        elif unit == 'per_cell':
+            q = float(sz['cells']); cost = q * float(rate or 0)
+        elif unit == 'dollars':
+            q = planned.get(code, 0.0); cost = q
+        else:
+            q = planned.get(code, 0.0)
+            cost = None if rate is None else q * float(rate)
+        out[code] = (q, cost)
+    return out
+
+
+def _load_pieces(cur):
+    """Every piece with its districts, ready for both the editor and the district pane."""
+    cur.execute("""SELECT p.id, p.name, p.tactic_key, p.universe, p.drop_date, p.status,
+                          p.default_file_url, p.default_content_type, p.notes,
+                          p.invoice_number, p.invoice_amount, p.invoice_status,
+                          p.invoice_due, p.paid_at, p.created_by, t.label, t.unit, t.grp
+                     FROM spend_piece p
+                     JOIN spend_tactic t ON t.tactic_key = p.tactic_key
+                    ORDER BY p.drop_date NULLS LAST, p.id""")
+    pieces = []
+    for r in cur.fetchall():
+        pieces.append({
+            'id': r[0], 'name': r[1], 'tactic_key': r[2], 'universe': r[3],
+            'drop_date': r[4].isoformat() if r[4] else None, 'status': r[5],
+            'file_url': r[6], 'content_type': r[7], 'notes': r[8] or '',
+            'invoice_number': r[9] or '',
+            'invoice_amount': float(r[10]) if r[10] is not None else None,
+            'invoice_status': r[11],
+            'invoice_due': r[12].isoformat() if r[12] else None,
+            'paid_at': r[13].isoformat() if r[13] else None,
+            'created_by': r[14] or '', 'tactic_label': r[15], 'unit': r[16], 'grp': r[17],
+            'districts': [], 'planned': 0.0, 'reach': 0.0})
+    by_id = {p['id']: p for p in pieces}
+    cur.execute("""SELECT piece_id, district_code, file_url, content_type, quantity, planned_cost
+                     FROM spend_piece_district ORDER BY district_code""")
+    for pid, code, url, ct, q, cost in cur.fetchall():
+        p = by_id.get(pid)
+        if not p:
+            continue
+        p['districts'].append({'code': code, 'file_url': url, 'content_type': ct,
+                               'quantity': float(q or 0),
+                               'cost': float(cost) if cost is not None else None})
+        p['planned'] += float(cost or 0)
+        p['reach'] += float(q or 0)
+    return pieces
+
+
+@private_bp.route('/spend-plan/pieces')
+@require_feature_access('campaign_plan')
+def spend_pieces():
+    """Every piece we are making, what it costs, where it goes and whether it is paid for."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT tactic_key, label, unit, rate, qty_label, grp
+                         FROM spend_tactic WHERE active ORDER BY sort_order""")
+        tactics = [{'key': r[0], 'label': r[1], 'unit': r[2],
+                    'rate': float(r[3]) if r[3] is not None else None,
+                    'qty_label': r[4], 'grp': r[5]} for r in cur.fetchall()]
+        sizes = _piece_sizes(cur)
+
+        cur.execute("""SELECT s.district_code, s.tier,
+                              (SELECT MAX(d.county_name) FROM districts d
+                                WHERE d.full_district_code = s.district_code),
+                              (SELECT MAX(d.seat_count) FROM districts d
+                                WHERE d.full_district_code = s.district_code),
+                              r.kind
+                         FROM district_spend s
+                         LEFT JOIN district_relation r ON r.district_code = s.district_code
+                        WHERE s.tier IS NOT NULL""")
+        districts = [{'code': r[0], 'tier': r[1], 'county': r[2], 'seats': r[3] or 0,
+                      'floterial': r[4] == 'floterial',
+                      'uni': sizes.get(r[0], {})} for r in cur.fetchall()]
+        districts.sort(key=lambda d: _district_sort_key(d['code']))
+
+        # How many drops of each tactic the plan calls for, so a piece can be counted against it
+        cur.execute("""SELECT district_code, universe, tactic_key, qty FROM district_spend_item""")
+        planned = {}
+        for dc, u, tk, q in cur.fetchall():
+            planned.setdefault(dc, {}).setdefault(u, {})[tk] = float(q)
+
+        cur.execute("SELECT amount FROM spend_budget WHERE key='program'")
+        brow = cur.fetchone()
+        return render_template('private/spend_pieces.html',
+                               pieces=_load_pieces(cur), tactics=tactics,
+                               districts=districts, planned=planned,
+                               budget=float(brow[0]) if brow else 600000.0)
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/piece/save', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_piece_save():
+    """Create a piece, or change the fields actually sent. Never touches a field left out."""
+    d = request.get_json(silent=True) or {}
+    who = current_user.email if current_user.is_authenticated else 'admin'
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        pid = d.get('id')
+        if not pid:
+            name = (d.get('name') or '').strip()
+            tk = (d.get('tactic_key') or '').strip()
+            if not name or not tk:
+                return jsonify({'ok': False, 'error': 'A piece needs a name and a tactic.'}), 400
+            cur.execute("""INSERT INTO spend_piece (name, tactic_key, universe, drop_date,
+                                                    notes, created_by, updated_by)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                        (name[:200], tk, (d.get('universe') or 'persuade')[:20],
+                         d.get('drop_date') or None, d.get('notes') or None, who, who))
+            pid = cur.fetchone()[0]
+            conn.commit()
+            return jsonify({'ok': True, 'id': pid})
+
+        sets, vals = [], []
+        for col in ('name', 'tactic_key', 'universe', 'drop_date', 'notes',
+                    'invoice_number', 'invoice_amount', 'invoice_due', 'paid_at'):
+            if col in d:
+                sets.append(col + ' = %s')
+                vals.append(d[col] if d[col] not in ('',) else None)
+        if 'status' in d:
+            if d['status'] not in PIECE_STATUS:
+                return jsonify({'ok': False, 'error': 'bad status'}), 400
+            sets.append('status = %s'); vals.append(d['status'])
+        if 'invoice_status' in d:
+            if d['invoice_status'] not in INVOICE_STATUS:
+                return jsonify({'ok': False, 'error': 'bad invoice status'}), 400
+            sets.append('invoice_status = %s'); vals.append(d['invoice_status'])
+        if not sets:
+            return jsonify({'ok': True, 'id': pid})
+        sets.append('updated_by = %s'); vals.append(who)
+        sets.append('updated_at = now()')
+        vals.append(pid)
+        cur.execute('UPDATE spend_piece SET ' + ', '.join(sets) + ' WHERE id = %s', vals)
+        conn.commit()
+        return jsonify({'ok': True, 'id': pid})
+    except Exception as e:
+        conn.rollback()
+        logger.error('piece save failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/piece/districts', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_piece_districts():
+    """Set which districts a piece goes to.
+
+    Districts already on the piece keep the quantity and cost they were snapshotted with;
+    only newly added ones are priced at today's universe. A floterial cannot be added to a
+    household or cell based piece at all: its candidate rides on the base district's piece,
+    and billing it separately is the double-count this planner exists to avoid."""
+    d = request.get_json(silent=True) or {}
+    pid = d.get('id')
+    codes = [c for c in (d.get('codes') or []) if c]
+    if not pid:
+        return jsonify({'ok': False, 'error': 'no piece'}), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT p.tactic_key, p.universe, t.unit, t.rate
+                         FROM spend_piece p JOIN spend_tactic t ON t.tactic_key = p.tactic_key
+                        WHERE p.id = %s""", (pid,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'no such piece'}), 404
+        tactic = {'key': row[0], 'unit': row[2],
+                  'rate': float(row[3]) if row[3] is not None else None}
+        universe = row[1]
+
+        if tactic['unit'] in ('per_household', 'per_cell') and codes:
+            cur.execute("""SELECT district_code FROM district_relation
+                            WHERE kind = 'floterial' AND district_code = ANY(%s)""", (codes,))
+            flo = [r[0] for r in cur.fetchall()]
+            if flo:
+                return jsonify({'ok': False, 'error':
+                                'These are floterials and ride on their base district\'s '
+                                'piece, so they cannot be bought here: ' + ', '.join(flo)}), 400
+
+        cur.execute('SELECT district_code FROM spend_piece_district WHERE piece_id = %s', (pid,))
+        have = {r[0] for r in cur.fetchall()}
+        want = set(codes)
+        gone, fresh = have - want, want - have
+
+        if gone:
+            cur.execute("""DELETE FROM spend_piece_district
+                            WHERE piece_id = %s AND district_code = ANY(%s)""",
+                        (pid, list(gone)))
+        if fresh:
+            snap = _piece_snapshot(cur, _piece_sizes(cur), tactic, universe, fresh)
+            for code in sorted(fresh):
+                q, cost = snap[code]
+                cur.execute("""INSERT INTO spend_piece_district
+                                 (piece_id, district_code, quantity, planned_cost)
+                               VALUES (%s,%s,%s,%s)""", (pid, code, q, cost))
+        conn.commit()
+        cur.execute("""SELECT district_code, file_url, content_type, quantity, planned_cost
+                         FROM spend_piece_district WHERE piece_id = %s ORDER BY district_code""",
+                    (pid,))
+        out = [{'code': r[0], 'file_url': r[1], 'content_type': r[2],
+                'quantity': float(r[3] or 0),
+                'cost': float(r[4]) if r[4] is not None else None} for r in cur.fetchall()]
+        return jsonify({'ok': True, 'added': len(fresh), 'removed': len(gone),
+                        'districts': out,
+                        'planned': sum(x['cost'] or 0 for x in out),
+                        'reach': sum(x['quantity'] for x in out)})
+    except Exception as e:
+        conn.rollback()
+        logger.error('piece districts failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+def _store_art(f):
+    """Validate and upload one artwork file. Returns (url, error)."""
+    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+    if ext not in CREATIVE_EXT:
+        return None, '.%s is not an allowed file type' % ext
+    f.seek(0, 2); size = f.tell(); f.seek(0)
+    if size > MAX_CREATIVE_BYTES:
+        return None, 'over 40MB'
+    if upload_to_storage is None:
+        return None, 'file storage is not configured'
+    key = 'spend_piece/%s_%s' % (secrets.token_hex(4), secure_filename(f.filename))
+    url = upload_to_storage(f, key)
+    return (url, None) if url else (None, 'upload failed')
+
+
+def _match_district(filename, codes):
+    """Which district a per-district artwork file belongs to.
+
+    Accepts the shapes people actually name files: "Rockingham 4.pdf", "Rockingham-4.pdf",
+    "rockingham_04_final.pdf", "rock4.pdf". Returns None when two districts match equally
+    well, so an ambiguous file is offered back rather than filed in the wrong district."""
+    stem = _re.sub(r'[^a-z0-9]+', '', filename.rsplit('.', 1)[0].lower())
+    hits = []
+    for code in codes:
+        parts = code.rsplit(' ', 1)
+        if len(parts) != 2 or not parts[1].isdigit():
+            continue
+        county, n = _re.sub(r'[^a-z0-9]+', '', parts[0].lower()), parts[1]
+        for pad in {n, n.zfill(2)}:
+            for pre in (county, county[:4]):
+                if len(pre) >= 3 and _re.search(pre + r'0*' + pad + r'(?![0-9])', stem):
+                    hits.append((len(pre), len(pad), code))
+                    break
+    if not hits:
+        return None
+    hits.sort(reverse=True)
+    best = [h for h in hits if (h[0], h[1]) == (hits[0][0], hits[0][1])]
+    uniq = {h[2] for h in best}
+    return best[0][2] if len(uniq) == 1 else None
+
+
+@private_bp.route('/spend-plan/piece/art', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_piece_art():
+    """Upload artwork. One file with no district becomes the piece's shared proof; files sent
+    with district=<code>, or a batch matched by filename, become that district's own version.
+    A file that matches nothing, or matches two districts, is handed back unfiled."""
+    pid = request.form.get('id')
+    if not pid:
+        return jsonify({'ok': False, 'error': 'no piece'}), 400
+    files = request.files.getlist('file')
+    if not files or not files[0].filename:
+        return jsonify({'ok': False, 'error': 'No file.'}), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute('SELECT district_code FROM spend_piece_district WHERE piece_id = %s', (pid,))
+        codes = [r[0] for r in cur.fetchall()]
+        target = request.form.get('district')
+        shared = request.form.get('shared') == '1'
+        placed, unmatched = [], []
+
+        for f in files:
+            url, err = _store_art(f)
+            if err:
+                unmatched.append({'name': f.filename, 'why': err})
+                continue
+            if shared:
+                cur.execute("""UPDATE spend_piece
+                                  SET default_file_url = %s, default_content_type = %s,
+                                      updated_at = now()
+                                WHERE id = %s""", (url, f.content_type, pid))
+                placed.append({'name': f.filename, 'code': None, 'url': url})
+                continue
+            code = target or _match_district(f.filename, codes)
+            if not code:
+                unmatched.append({'name': f.filename, 'url': url,
+                                  'why': 'no district in this piece matches that filename'})
+                continue
+            cur.execute("""UPDATE spend_piece_district
+                              SET file_url = %s, content_type = %s
+                            WHERE piece_id = %s AND district_code = %s""",
+                        (url, f.content_type, pid, code))
+            if cur.rowcount:
+                placed.append({'name': f.filename, 'code': code, 'url': url})
+            else:
+                unmatched.append({'name': f.filename, 'url': url,
+                                  'why': code + ' is not on this piece'})
+        conn.commit()
+        return jsonify({'ok': True, 'placed': placed, 'unmatched': unmatched,
+                        'codes': codes})
+    except Exception as e:
+        conn.rollback()
+        logger.error('piece art failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/piece/place', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_piece_place():
+    """File an already-uploaded artwork file into the district the user picked for it.
+
+    Only ever accepts a URL this app wrote: the file is in storage under spend_piece/, so
+    there is nothing to re-upload, but nothing else can be pointed at either."""
+    d = request.get_json(silent=True) or {}
+    url, code, pid = (d.get('url') or ''), (d.get('district') or ''), d.get('id')
+    if not (pid and code and url.startswith('https://') and '/spend_piece/' in url):
+        return jsonify({'ok': False, 'error': 'bad request'}), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""UPDATE spend_piece_district SET file_url = %s
+                        WHERE piece_id = %s AND district_code = %s""", (url, pid, code))
+        if not cur.rowcount:
+            conn.rollback()
+            return jsonify({'ok': False, 'error': code + ' is not on this piece'}), 400
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error('piece place failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/piece/delete', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_piece_delete():
+    """Delete a piece. Its districts go with it, and both are kept in the history tables."""
+    d = request.get_json(silent=True) or {}
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE spend_piece SET updated_by = %s WHERE id = %s",
+                    (current_user.email if current_user.is_authenticated else 'admin', d.get('id')))
+        cur.execute('DELETE FROM spend_piece WHERE id = %s', (d.get('id'),))
+        conn.commit()
+        return jsonify({'ok': True, 'deleted': cur.rowcount})
+    except Exception as e:
+        conn.rollback()
+        logger.error('piece delete failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not delete.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
 
 
 @private_bp.route('/spend-plan/save', methods=['POST'])
