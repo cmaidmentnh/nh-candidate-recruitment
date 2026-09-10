@@ -124,10 +124,10 @@
   .views a{padding:6px 16px;font-size:.8rem;font-weight:700;color:var(--muted);cursor:pointer;
     border:1px solid transparent;border-bottom:0;border-radius:4px 4px 0 0}
   .views a.on{background:var(--navy);color:#fff}
-  .ptabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin:0 0 14px}
-  .ptabs a{padding:5px 14px;font-size:.76rem;font-weight:700;color:var(--muted);cursor:pointer;
-    border-bottom:2px solid transparent;margin-bottom:-1px}
-  .ptabs a.on{color:var(--navy);border-bottom-color:var(--navy)}
+  .ptabs{display:flex;gap:2px;margin:8px 0 0}
+  .ptabs a{padding:4px 14px;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;
+    border:1px solid var(--rule);border-radius:4px;background:#fff}
+  .ptabs a.on{color:#fff;background:var(--navy);border-color:var(--navy)}
   .droprow{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f0f3f7}
   .thumb{width:62px;height:62px;flex:0 0 62px;border:1px solid var(--rule);border-radius:4px;
     object-fit:cover;background:#f7f9fc}
@@ -426,11 +426,26 @@
 
   function drawPane(){
     var d = DISTRICTS[idx], u = uni(d), c = cost(d), r = d.nominees && d.nominees.R;
+    var tabs = '<div class="ptabs">' +
+      ['plan|Plan','delivered|Delivered','creative|Creative'].map(function(t){
+        var k = t.split('|')[0];
+        return '<a data-pt="' + k + '"' + (paneTab === k ? ' class="on"' : '') + '>' + t.split('|')[1] + '</a>';
+      }).join('') + '</div>';
+
     var h = '<div class="panetop"><div><h3>' + d.code + '</h3><p class="panesub">' +
       (d.seats||0) + ' seat' + (d.seats===1?'':'s') + ' &middot; <span class="' + rc(d.rating) +
       '" style="font-weight:700">' + pvi(d) + ' ' + (d.rating||'') + '</span> &middot; ' + (d.towns||'') +
-      '</p></div><div class="nav"><button id="prevBtn">&larr; Prev</button>' +
+      '</p>' + tabs + '</div><div class="nav"><button id="prevBtn">&larr; Prev</button>' +
       '<button id="nextBtn">Next &rarr;</button></div></div>';
+
+    // On the execution tabs, show that and nothing else. Nobody wants to scroll past the
+    // 2018 replay to reach a mail piece.
+    if(paneTab === 'delivered'){
+      document.getElementById('pane').innerHTML = h + deliveredHtml(d); return;
+    }
+    if(paneTab === 'creative'){
+      document.getElementById('pane').innerHTML = h + creativeHtml(d); return;
+    }
     h += '<div class="who"><span class="lab">Republican nominees</span>' +
       (r ? r : '<span class="none">No Republican on the ballot here</span>') + '</div>';
     var TIERS = [[1,'Tier 1','Full effort, everything we have'],
@@ -494,23 +509,6 @@
     h += '</select><div class="unicount"><b>' + num(u.households) + '</b> mail households &middot; <b>' +
       num(u.cells) + '</b> textable cells &middot; ' + num(u.voters) + ' voters</div>' +
       '<div class="unihint">Mail bills against households, texts against cells. Widen this and every drop costs more.</div></div>';
-    h += '<div class="ptabs">' +
-      ['plan|Plan','delivered|Delivered','creative|Creative'].map(function(t){
-        var k = t.split('|')[0];
-        return '<a data-pt="' + k + '"' + (paneTab === k ? ' class="on"' : '') + '>' + t.split('|')[1] + '</a>';
-      }).join('') + '</div>';
-
-    if(paneTab === 'delivered'){
-      h += deliveredHtml(d);
-      document.getElementById('pane').innerHTML = h;
-      return;
-    }
-    if(paneTab === 'creative'){
-      h += creativeHtml(d);
-      document.getElementById('pane').innerHTML = h;
-      return;
-    }
-
     h += '<table class="tac">';
     var last = null;
     GROUPS.forEach(function(g){
