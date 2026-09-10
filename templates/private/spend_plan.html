@@ -139,6 +139,9 @@
     <div class="grp"><span class="unit" id="fText">$0</span><span class="sub">TEXT <span id="fTextMsgs">0 messages</span></span></div>
     <div class="grp"><span class="unit" id="fDigital">$0</span><span class="sub">DIGITAL</span></div>
     <div class="grp"><span class="unit" id="fField">$0</span><span class="sub">FIELD</span></div>
+    <div class="grp" title="Every district's current towns, with their actual 2018 State Rep votes, summed onto today's lines. Assumes the leading party takes the whole district.">
+      <span class="unit"><span class="t1c">175</span> R / <span style="color:#1d4e89">225</span> D</span>
+      <span class="sub">2018 ON THIS MAP &middot; 222 R in 2024</span></div>
     <span class="saved" id="saveMsg"></span>
   </div>
 
@@ -326,12 +329,14 @@
       if(d.r2018){
         var r = d.r2018, weak = r.towns !== r.towns_data;
         var m18 = r.r_votes - r.d_votes, lost18 = m18 < 0;
+        var seats18 = d.seats || 1;
+        var whoWon = (lost18 ? 'Democrats' : 'Republicans') + ' would take ' +
+                     (seats18 === 1 ? 'the seat' : 'all ' + seats18 + ' seats');
         h += '<div class="yr"><div class="yrh">2018 replay <span style="font-weight:400;text-transform:none;letter-spacing:0">on today\'s towns</span></div>' +
-             '<div class="seatline ' + (lost18 ? 'win-d' : 'win-r') + '">' +
+             '<div class="seatline ' + (lost18 ? 'win-d' : 'win-r') + '">' + whoWon + '</div>' +
+             '<div class="close ' + (lost18 ? 'win-d' : 'win-r') + '" style="font-size:.8rem">' +
              (lost18 ? 'D +' + num(-m18) : 'R +' + num(m18)) + '</div>' +
              '<div class="votes">' + num(r.r_votes) + ' R &middot; ' + num(r.d_votes) + ' D</div>' +
-             '<div class="close" style="color:' + (lost18 ? '#1d4e89' : '#96a0ad') + '">' +
-             (lost18 ? 'would have lost by ' + num(-m18) : 'would have held by ' + num(m18)) + '</div>' +
              (weak ? '<div class="close" style="color:#8a6400">only ' + r.towns_data + ' of ' +
                      r.towns + ' towns have 2018 data</div>' : '') +
              '<div class="close" style="color:#aab2bd;font-weight:400">no candidates: 2018 ran on the old map</div>' +
