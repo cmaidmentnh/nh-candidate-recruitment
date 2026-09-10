@@ -567,6 +567,15 @@ _match_cli(app)
 limiter.limit("60 per minute; 1000 per day")(app.view_functions['match_api.match_members'])
 limiter.limit("30 per minute; 500 per day")(app.view_functions['match_api.list_candidates'])
 
+# Shareable, password-gated view of the battlefield. Deliberately carries no dollars, no
+# piece counts and no universe sizes: anyone with the password can read it, so assume the
+# NHDP eventually will.
+from public_plan import public_plan_bp, init_public_plan
+init_public_plan(get_db_connection, release_db_connection)
+app.register_blueprint(public_plan_bp)
+limiter.limit("10 per minute; 60 per hour")(app.view_functions['publicplan.public_plan'])
+
+
 @app.context_processor
 def inject_progress_access():
     return {'can_access_progress': can_access_progress(),

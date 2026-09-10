@@ -103,8 +103,9 @@
     <p class="sub">
       Saved {{ diff.at }} at {{ '${:,.0f}'.format(diff.total) }};
       the plan is {{ '${:,.0f}'.format(live.total) }} now.
-      {% if diff.rows %}{{ diff.rows|length }} district{{ '' if diff.rows|length == 1 else 's' }}
-      differ.{% else %}Nothing differs.{% endif %}
+      {% if diff.rows %}{{ diff.rows|length }}
+      {{ 'district differs' if diff.rows|length == 1 else 'districts differ' }}.
+      {% else %}Nothing differs.{% endif %}
     </p>
     {% for r in diff.rows %}
     <div class="drow">

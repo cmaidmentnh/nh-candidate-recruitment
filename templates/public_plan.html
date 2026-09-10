@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>2026 New Hampshire House Battlefield</title>
+<style>
+  :root{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--ink:#22303f;--red:#b4262d;
+        --blue:#1d4e89;--amber:#8a6400;--green:#1a7f43}
+  *{box-sizing:border-box}
+  body{margin:0;background:#fff;color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 60px}
+  header{border-bottom:2px solid var(--navy);padding-bottom:12px;margin-bottom:18px}
+  h1{margin:0;font-size:1.6rem;color:var(--navy);letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:.82rem;margin:4px 0 0}
+  .tot{display:flex;flex-wrap:wrap;gap:0 34px;align-items:baseline;margin:16px 0 20px}
+  .tot .grp{display:flex;flex-direction:column;gap:2px}
+  .tot .big{font-size:2.2rem;font-weight:800;color:var(--navy);line-height:1;
+    font-variant-numeric:tabular-nums}
+  .tot .unit{font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .tot .cap{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .t1c{color:var(--red)} .t2c{color:var(--amber)} .t3c{color:var(--muted)}
+  .filters{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:12px;font-size:.78rem}
+  .filters a{cursor:pointer;color:var(--muted);border-bottom:1px solid transparent;
+    text-decoration:none;padding-bottom:1px}
+  .filters a.on{color:var(--navy);font-weight:700;border-bottom-color:var(--navy)}
+  .filters input{padding:5px 9px;border:1px solid #d6dbe3;border-radius:4px;font-size:.82rem;
+    min-width:220px;font-family:inherit}
+  .tblwrap{overflow-x:auto;border:1px solid var(--rule);border-radius:6px}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;padding:8px;text-align:left;font-weight:700;white-space:nowrap}
+  th.n,td.n{text-align:right;font-variant-numeric:tabular-nums}
+  td{padding:8px;border-bottom:1px solid #eef1f5;vertical-align:top}
+  tr:hover{background:#f5f8fc}
+  .cty{background:#f6f8fb;font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--muted);font-weight:700}
+  .dcode{font-weight:700;color:var(--navy);white-space:nowrap}
+  .flo{font-size:.68rem;color:var(--muted);font-weight:400}
+  .tier{font-weight:800;font-variant-numeric:tabular-nums}
+  .r-gop{color:var(--red)} .r-dem{color:var(--blue)} .r-swing{color:var(--amber)}
+  .nom{line-height:1.4}
+  .nom .none{color:var(--muted);font-style:italic}
+  .ch{color:var(--muted);font-size:.78rem;white-space:nowrap}
+  .town{color:var(--muted);font-size:.8rem}
+  .held{font-weight:700}
+  .held.r{color:var(--red)} .held.d{color:var(--blue)} .held.s{color:var(--amber)}
+  footer{margin-top:22px;color:var(--muted);font-size:.76rem;border-top:1px solid var(--rule);
+    padding-top:12px}
+  /* gate */
+  .gate{max-width:380px;margin:14vh auto;padding:26px;border:1px solid var(--rule);border-radius:8px}
+  .gate h1{font-size:1.2rem}
+  .gate p{color:var(--muted);font-size:.84rem}
+  .gate input{width:100%;padding:9px 11px;border:1px solid #d6dbe3;border-radius:4px;
+    font-size:.95rem;margin:10px 0;font-family:inherit}
+  .gate button{width:100%;padding:9px;border:0;border-radius:4px;background:var(--navy);
+    color:#fff;font-weight:700;font-size:.9rem;cursor:pointer}
+  .gate .err{color:var(--red);font-size:.82rem;font-weight:700}
+</style>
+</head>
+<body>
+{% if locked %}
+  <div class="gate">
+    <h1>2026 New Hampshire House Battlefield</h1>
+    {% if unset %}
+      <p class="err">This page is not open yet.</p>
+      <p>No password has been set for it, so nobody can get in. Ask Chris.</p>
+    {% else %}
+      <p>Enter the password you were given.</p>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="password" name="password" autofocus autocomplete="current-password"
+               placeholder="Password">
+        {% if error %}<p class="err">That is not it.</p>{% endif %}
+        <button type="submit">Open</button>
+      </form>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="wrap">
+    <header>
+      <h1>2026 New Hampshire House Battlefield</h1>
+      <p class="sub">
+        Where the Committee to Elect House Republicans is working, and how hard. Tier 1 is a
+        full effort, Tier 2 is real spend, Tier 3 is a light touch.
+      </p>
+    </header>
+
+    <div class="tot">
+      <div class="grp"><span class="big">{{ summary.districts }}</span>
+        <span class="cap">districts being worked</span></div>
+      <div class="grp"><span class="unit">{{ summary.seats }}</span><span class="cap">seats</span></div>
+      <div class="grp"><span class="unit">{{ summary.candidates }}</span>
+        <span class="cap">Republicans on the ballot</span></div>
+      <div class="grp"><span class="unit"><span class="t1c">{{ summary.t1 }}</span> /
+        <span class="t2c">{{ summary.t2 }}</span> / <span class="t3c">{{ summary.t3 }}</span></span>
+        <span class="cap">tier 1 / 2 / 3</span></div>
+    </div>
+
+    <div class="filters">
+      <input type="search" id="q" placeholder="Filter by district, town or candidate">
+      <a data-f="all" class="on">All</a><a data-f="1">Tier 1</a><a data-f="2">Tier 2</a>
+      <a data-f="3">Tier 3</a>
+      <span id="count" style="color:var(--muted);margin-left:auto"></span>
+    </div>
+
+    <div class="tblwrap">
+      <table id="tbl">
+        <thead><tr>
+          <th>District</th><th class="n">Seats</th><th class="n">Tier</th><th>Lean</th>
+          <th>Republicans on the ballot</th><th>Largest R town</th><th>2024</th><th>Getting</th>
+        </tr></thead>
+        <tbody>
+        {% set ns = namespace(county='') %}
+        {% for r in rows %}
+          {% if r.county != ns.county %}
+            {% set ns.county = r.county %}
+            <tr class="cty-row" data-cty="{{ r.county }}"><td colspan="8" class="cty">{{ r.county }}</td></tr>
+          {% endif %}
+          <tr data-tier="{{ r.tier }}"
+              data-s="{{ (r.code ~ ' ' ~ r.town ~ ' ' ~ r.nominees ~ ' ' ~ r.county)|lower }}">
+            <td><span class="dcode">{{ r.code }}</span>
+              {% if r.floterial %}<br><span class="flo">floterial over {{ r.bases }}</span>{% endif %}</td>
+            <td class="n">{{ r.seats }}</td>
+            <td class="n"><span class="tier t{{ r.tier }}c">{{ r.tier }}</span></td>
+            <td>
+              {% set cls = 'r-gop' if 'GOP' in (r.rating or '')|upper else ('r-dem' if 'DEM' in (r.rating or '')|upper else 'r-swing') %}
+              <span class="{{ cls }}" style="font-weight:700">
+                {% if r.pvi is not none %}{{ 'R+' if r.pvi >= 0 else 'D+' }}{{ '%.1f'|format(r.pvi|abs) }}{% endif %}
+              </span><br><span class="town">{{ r.rating|title }}</span>
+            </td>
+            <td class="nom">
+              {% if r.nominees %}{{ r.nominees }}
+              {% else %}<span class="none">no Republican filed</span>{% endif %}
+            </td>
+            <td class="town">{{ r.town }}</td>
+            <td>
+              {% if r.r_seats_2024 is not none %}
+                {% set held = 'r' if r.r_seats_2024 == r.seats else ('d' if r.r_seats_2024 == 0 else 's') %}
+                <span class="held {{ held }}">R held {{ r.r_seats_2024 }} of {{ r.seats }}</span>
+              {% else %}<span class="town">&mdash;</span>{% endif %}
+            </td>
+            <td class="ch">{{ r.channels|join(', ') if r.channels else '&mdash;'|safe }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      Committee to Elect House Republicans. Tiers and targets are as of today and will move.
+      This page is for the people it was shared with, not for publication.
+    </footer>
+  </div>
+
+<script>
+(function(){
+  var q = document.getElementById('q'), tier = 'all';
+  var rows = [].slice.call(document.querySelectorAll('#tbl tbody tr[data-tier]'));
+  var heads = [].slice.call(document.querySelectorAll('#tbl tbody tr.cty-row'));
+  function apply(){
+    var s = q.value.trim().toLowerCase(), shown = 0;
+    rows.forEach(function(tr){
+      var ok = (tier === 'all' || tr.dataset.tier === tier) &&
+               (!s || tr.dataset.s.indexOf(s) >= 0);
+      tr.style.display = ok ? '' : 'none';
+      if(ok) shown++;
+    });
+    // a county heading only earns its place when something under it is showing
+    heads.forEach(function(h){
+      var n = h.nextElementSibling, any = false;
+      while(n && !n.classList.contains('cty-row')){
+        if(n.style.display !== 'none'){ any = true; break; }
+        n = n.nextElementSibling;
+      }
+      h.style.display = any ? '' : 'none';
+    });
+    document.getElementById('count').textContent =
+      shown + ' of ' + rows.length + ' districts';
+  }
+  q.addEventListener('input', apply);
+  document.querySelectorAll('.filters a').forEach(function(a){
+    a.addEventListener('click', function(){
+      document.querySelectorAll('.filters a').forEach(function(x){ x.classList.remove('on'); });
+      a.classList.add('on'); tier = a.dataset.f; apply();
+    });
+  });
+  apply();
+})();
+</script>
+{% endif %}
+</body>
+</html>
