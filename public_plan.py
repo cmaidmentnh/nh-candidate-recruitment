@@ -115,10 +115,10 @@ def public_plan():
             if not bases:
                 continue
             bases.sort(key=lambda c: key(by_code[c]))   # 9 before 16, not after it
-            key = x['code']
+            ckey = x['code']
             for code in bases + [x['code']]:
-                cluster_of[code] = key
-            members[key] = [by_code[c] for c in bases] + [x]
+                cluster_of[code] = ckey
+            members[ckey] = [by_code[c] for c in bases] + [x]
 
         # Emit each cluster where its first member falls, so district order is unbroken.
         items, done = [], set()
@@ -127,17 +127,17 @@ def public_plan():
             if x['county'] != county:
                 county = x['county']
                 items.append({'kind': 'county', 'name': county})
-            key = cluster_of.get(x['code'])
-            if not key:
+            ckey = cluster_of.get(x['code'])
+            if not ckey:
                 items.append({'kind': 'district', 'row': x})
                 continue
-            if key in done:
+            if ckey in done:
                 continue
-            done.add(key)
-            mem = members[key]
+            done.add(ckey)
+            mem = members[ckey]
             label = ' + '.join(
                 (m['code'].rsplit(' ', 1)[-1] + ('F' if m['floterial'] else '')) for m in mem)
-            items.append({'kind': 'cluster', 'key': key,
+            items.append({'kind': 'cluster', 'key': ckey,
                           'label': (mem[0]['county'] or '') + ' ' + label,
                           'seats': sum(m['seats'] for m in mem),
                           'members': mem})
