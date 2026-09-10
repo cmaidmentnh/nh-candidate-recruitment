@@ -1828,27 +1828,32 @@ def _store_art(f):
 def _match_district(filename, codes):
     """Which district a per-district artwork file belongs to.
 
-    Accepts the shapes people actually name files: "Rockingham 4.pdf", "Rockingham-4.pdf",
-    "rockingham_04_final.pdf", "rock4.pdf". Returns None when two districts match equally
-    well, so an ambiguous file is offered back rather than filed in the wrong district."""
-    stem = _re.sub(r'[^a-z0-9]+', '', filename.rsplit('.', 1)[0].lower())
+    Works on the shapes people actually name files: "Rockingham 4.pdf", "Rockingham-04.pdf",
+    "rock4_final.pdf", "hills21.jpg". The rule is a number preceded by letters that start the
+    county's name, so "mail_piece_2.pdf" matches nothing rather than landing in a district
+    whose number happens to be 2. Returns None when two districts fit equally well, so an
+    ambiguous file is handed back rather than filed in the wrong place."""
+    stem = filename.rsplit('.', 1)[0].lower()
+    # every (letters, number) pair in the name, e.g. "rockingham_14_v2" -> rockingham/14, v/2
+    pairs = [(m.group(1), int(m.group(2)))
+             for m in _re.finditer(r'([a-z]+)[^a-z0-9]*0*([0-9]+)', stem)]
+    if not pairs:
+        return None
     hits = []
     for code in codes:
         parts = code.rsplit(' ', 1)
         if len(parts) != 2 or not parts[1].isdigit():
             continue
-        county, n = _re.sub(r'[^a-z0-9]+', '', parts[0].lower()), parts[1]
-        for pad in {n, n.zfill(2)}:
-            for pre in (county, county[:4]):
-                if len(pre) >= 3 and _re.search(pre + r'0*' + pad + r'(?![0-9])', stem):
-                    hits.append((len(pre), len(pad), code))
-                    break
+        county, n = _re.sub(r'[^a-z]', '', parts[0].lower()), int(parts[1])
+        for word, num in pairs:
+            # at least three letters, and they must begin the county name
+            if num == n and len(word) >= 3 and county.startswith(word):
+                hits.append((len(word), code))
     if not hits:
         return None
     hits.sort(reverse=True)
-    best = [h for h in hits if (h[0], h[1]) == (hits[0][0], hits[0][1])]
-    uniq = {h[2] for h in best}
-    return best[0][2] if len(uniq) == 1 else None
+    best = {c for ln, c in hits if ln == hits[0][0]}
+    return hits[0][1] if len(best) == 1 else None
 
 
 @private_bp.route('/spend-plan/piece/art', methods=['POST'])

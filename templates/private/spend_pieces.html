@@ -13,6 +13,26 @@
   .ptot .grp{display:flex;flex-direction:column;gap:2px}
   .ptot .owed{color:var(--red)}
   .pback{font-size:.72rem;color:var(--muted);margin-bottom:8px;display:block}
+  .pviews{display:flex;gap:2px;margin-bottom:12px;border-bottom:2px solid var(--navy)}
+  .pviews a{padding:5px 14px;font-size:.78rem;font-weight:700;color:var(--muted);
+    border-radius:4px 4px 0 0}
+  .pviews a.on{background:var(--navy);color:#fff}
+  .mon{border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+  .mon table{width:100%;border-collapse:collapse;font-size:.82rem}
+  .mon th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;padding:6px 8px;text-align:left;font-weight:700}
+  .mon th.n,.mon td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .mon td{padding:6px 8px;border-bottom:1px solid #eef1f5}
+  .mon tr:hover{background:#f5f8fc}
+  .mon .pn2{font-weight:700;color:var(--navy);cursor:pointer}
+  .mon .late{color:var(--red);font-weight:700}
+  .mon .soon{color:var(--amber);font-weight:700}
+  .recon{margin-bottom:16px}
+  .recon .r{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid var(--rule);
+    max-width:560px;font-size:.86rem}
+  .recon .r b{font-variant-numeric:tabular-nums;font-size:1rem}
+  .recon .r.gap b{color:var(--red)}
+  .recon .lead{font-size:.76rem;color:var(--muted);margin:0 0 8px;max-width:560px}
   .pcols{display:flex;gap:20px;align-items:flex-start}
   .plist{flex:0 0 320px;max-height:78vh;overflow-y:auto;border:1px solid var(--rule);border-radius:6px}
   .plist .hd{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--rule);
@@ -91,7 +111,11 @@
       <span class="cap">of the {{ '${:,.0f}'.format(budget) }} program</span></div>
   </div>
 
-  <div class="pcols">
+  <div class="pviews">
+    <a data-pv="build" class="on">Pieces</a><a data-pv="money">Money owed</a>
+  </div>
+
+  <div class="pcols" id="viewBuild">
     <div class="plist">
       <div class="hd"><button id="newPiece">New piece</button>
         <span class="pmsg" id="msg"></span></div>
@@ -99,6 +123,8 @@
     </div>
     <div class="ped" id="editor"></div>
   </div>
+
+  <div id="viewMoney" style="display:none"></div>
 </div>
 
 <script>
@@ -485,6 +511,101 @@
       })
       .catch(function(e){ say('NOT MADE: ' + e.message, true); });
   };
+
+  // Where the money stands: what the plan intends, what pieces have committed it to, what a
+  // vendor has actually billed, and what is still owed. The four are different numbers and
+  // showing only the first is how a program overspends without noticing.
+  function drawMoney(){
+    var committed = 0, inv = 0, paid = 0;
+    PIECES.forEach(function(p){
+      committed += p.planned || 0;
+      if(p.invoice_amount != null){
+        inv += p.invoice_amount;
+        if(p.invoice_status === 'paid') paid += p.invoice_amount;
+      }
+    });
+    var owed = inv - paid;
+    var planTotal = 0;
+    Object.keys(PLANNED).forEach(function(code){
+      var d = BY_CODE[code]; if(!d) return;
+      Object.keys(PLANNED[code]).forEach(function(u){
+        Object.keys(PLANNED[code][u]).forEach(function(k){
+          var t = tacOf(k), q = PLANNED[code][u][k] || 0;
+          if(!q) return;
+          var sz = (d.uni && (d.uni[u] || d.uni.base)) || {households:0, cells:0};
+          if(t.unit === 'per_household') planTotal += q*(sz.households||0)*(t.rate||0);
+          else if(t.unit === 'per_cell')  planTotal += q*(sz.cells||0)*(t.rate||0);
+          else if(t.unit === 'dollars')   planTotal += q;
+          else if(t.rate != null)         planTotal += q*t.rate;
+        });
+      });
+    });
+
+    var h = '<div class="recon"><p class="lead">The plan is what we intend to buy. Committed ' +
+      'is what pieces actually exist for. Invoiced is what a vendor has billed. They should ' +
+      'converge as the program runs, and the gap is the work not yet made.</p>' +
+      row('The plan', planTotal, '') +
+      row('Committed to pieces', committed,
+          planTotal ? Math.round(100*committed/planTotal) + '% of the plan' : '') +
+      row('Still to build', planTotal - committed, '', planTotal - committed > 0) +
+      row('Invoiced', inv, '') +
+      row('Paid', paid, '') +
+      row('Owed', owed, '', owed > 0) +
+      '</div>';
+
+    var bills = PIECES.filter(function(p){ return p.invoice_amount != null &&
+                                                  p.invoice_status !== 'unbilled'; })
+      .sort(function(a, b){ return (a.invoice_due||'9999').localeCompare(b.invoice_due||'9999'); });
+    if(!bills.length){
+      h += '<p style="color:var(--muted);font-size:.86rem">Nothing invoiced yet.</p>';
+    } else {
+      var today = new Date().toISOString().slice(0,10);
+      h += '<div class="mon"><table><tr><th>Piece</th><th>Invoice</th><th>Due</th>' +
+           '<th class="n">Planned at</th><th class="n">Billed</th><th class="n">Difference</th>' +
+           '<th>Status</th></tr>';
+      bills.forEach(function(p){
+        var diff = p.invoice_amount - (p.planned || 0);
+        var late = p.invoice_status !== 'paid' && p.invoice_due && p.invoice_due < today;
+        h += '<tr><td class="pn2" data-go="' + p.id + '">' + esc(p.name) +
+          '<br><span style="color:var(--muted);font-weight:400;font-size:.74rem">' +
+          esc(p.tactic_label) + ' &middot; ' + p.districts.length + ' districts</span></td>' +
+          '<td>' + (esc(p.invoice_number) || '&mdash;') + '</td>' +
+          '<td class="' + (late ? 'late' : '') + '">' + (p.invoice_due || '&mdash;') +
+            (late ? ' overdue' : '') + '</td>' +
+          '<td class="n">' + money(p.planned) + '</td>' +
+          '<td class="n">' + money(p.invoice_amount) + '</td>' +
+          '<td class="n' + (Math.abs(diff) >= 1 ? ' late' : '') + '">' +
+            (Math.abs(diff) < 1 ? '&mdash;' : (diff > 0 ? '+' : '-') + money(Math.abs(diff))) + '</td>' +
+          '<td class="iv-' + p.invoice_status + '">' + p.invoice_status + '</td></tr>';
+      });
+      h += '</table></div>';
+    }
+    document.getElementById('viewMoney').innerHTML = h;
+    document.querySelectorAll('.mon [data-go]').forEach(function(el){
+      el.onclick = function(){
+        sel = +el.dataset.go;
+        document.querySelector('.pviews a[data-pv="build"]').click();
+        draw();
+      };
+    });
+
+    function row(label, v, sub, bad){
+      return '<div class="r' + (bad ? ' gap' : '') + '"><span>' + label +
+        (sub ? ' <span style="color:var(--muted);font-size:.76rem">' + sub + '</span>' : '') +
+        '</span><b>' + money(v) + '</b></div>';
+    }
+  }
+
+  document.querySelectorAll('.pviews a').forEach(function(a){
+    a.addEventListener('click', function(){
+      document.querySelectorAll('.pviews a').forEach(function(x){ x.classList.remove('on'); });
+      a.classList.add('on');
+      var v = a.dataset.pv;
+      document.getElementById('viewBuild').style.display = v === 'build' ? '' : 'none';
+      document.getElementById('viewMoney').style.display = v === 'money' ? '' : 'none';
+      if(v === 'money') drawMoney();
+    });
+  });
 
   function draw(){ drawList(); drawEditor(); drawTotals(); }
   draw();
