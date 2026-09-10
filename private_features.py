@@ -1207,6 +1207,18 @@ def spend_plan():
         cur.execute("SELECT district_code, reg_r, reg_d, reg_u, reg_total FROM district_registration")
         reg = {r[0]: {'r': r[1], 'd': r[2], 'u': r[3], 'total': r[4]} for r in cur.fetchall()}
 
+        # How the seat has actually behaved, not just how it models.
+        cur.execute("""SELECT district_code, year, seats, r_seats, d_seats, r_votes, d_votes,
+                              last_winner_votes, first_loser_votes
+                       FROM district_past_results ORDER BY year DESC""")
+        past = {}
+        for dc, yr, seats, rs, ds, rv, dv, lw, fl in cur.fetchall():
+            past.setdefault(dc, []).append({
+                'year': yr, 'seats': seats, 'r_seats': rs, 'd_seats': ds,
+                'r_votes': rv, 'd_votes': dv,
+                'r_share': round(100.0 * rv / (rv + dv), 1) if (rv + dv) else None,
+                'margin': (lw - fl) if (lw is not None and fl is not None) else None})
+
         cur.execute("SELECT district_code, tactic_key, qty, rate_override FROM district_spend_item")
         qty_by_district = {}
         for dc, tk, q, ro in cur.fetchall():
@@ -1232,6 +1244,7 @@ def spend_plan():
             d['notes'] = p.get('notes', '')
             d['tier'] = p.get('tier')
             d['reg'] = reg.get(code, {'r': 0, 'd': 0, 'u': 0, 'total': 0})
+            d['past'] = past.get(code, [])
             d['qty'] = qty_by_district.get(code, {})
             d['universe'] = universe.get((code, d['mask']), {'voters': 0, 'households': 0, 'cells': 0})
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})

@@ -63,6 +63,16 @@
   .regline .rl{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
   .regline .rp{font-size:.68rem;color:var(--muted)}
   .t1c{color:#a8261f}.t2c{color:#8a6400}.t3c{color:#1a7f43}
+  .past{display:flex;gap:0 30px;flex-wrap:wrap;margin-bottom:16px;padding:11px 14px;
+    background:#fbfcfe;border:1px solid var(--rule);border-radius:6px}
+  .past .yr{min-width:172px}
+  .past .yrh{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+    font-weight:700;margin-bottom:4px}
+  .past .seatline{font-size:1.02rem;font-weight:800;font-variant-numeric:tabular-nums}
+  .past .votes{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+  .past .close{font-size:.72rem;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+  .past .none{font-size:.78rem;color:var(--muted)}
+  .win-r{color:#a8261f}.win-d{color:#1d4e89}.win-split{color:#8a6400}
   .ditem .dt{font-size:.6rem;font-weight:800;width:14px;text-align:center}
   .who{font-size:.84rem;margin-bottom:14px}
   .who .lab{font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block}
@@ -280,6 +290,24 @@
       '<div><span class="rv">' + num(g.total) + '</span><span class="rl">On the checklist</span>' +
       '<span class="rp">R' + (g.r - g.d >= 0 ? '+' : '') + num(g.r - g.d) + ' over D</span></div>' +
       '</div></div>';
+    // How the seat actually voted, both cycles on this same map.
+    if(d.past && d.past.length){
+      h += '<div class="past">';
+      d.past.forEach(function(p){
+        var cls = p.r_seats > p.d_seats ? 'win-r' : p.d_seats > p.r_seats ? 'win-d' : 'win-split';
+        var held = p.r_seats + ' of ' + p.seats + (p.seats === 1 ? ' seat' : ' seats');
+        h += '<div class="yr"><div class="yrh">' + p.year + ' general</div>' +
+             '<div class="seatline ' + cls + '">R won ' + held + '</div>' +
+             '<div class="votes">' + num(p.r_votes) + ' R &middot; ' + num(p.d_votes) + ' D' +
+             (p.r_share !== null ? ' &middot; ' + p.r_share + '% R' : '') + '</div>' +
+             (p.margin !== null
+               ? '<div class="close ' + (p.margin < 100 ? 'win-split' : '') + '">closest seat by ' +
+                 num(p.margin) + (p.margin === 0 ? ' (tied)' : '') + '</div>'
+               : '<div class="close" style="color:#aab2bd">uncontested</div>') +
+             '</div>';
+      });
+      h += '</div>';
+    }
     h += '<div class="uniblock"><label for="uniSel">Who are you buying in this district</label><select id="uniSel">';
     var known = false;
     PRESETS.forEach(function(p){ if(p[0] === d.mask) known = true;
