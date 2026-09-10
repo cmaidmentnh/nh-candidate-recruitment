@@ -120,6 +120,48 @@
   .bulkrow button{padding:5px 13px;border:0;border-radius:4px;background:var(--navy);color:#fff;
     font-weight:700;font-size:.78rem;cursor:pointer}
   .saved{font-size:.74rem;color:var(--green);font-weight:700;margin-left:auto}
+  .views{display:flex;gap:2px;margin-bottom:12px;border-bottom:2px solid var(--navy)}
+  .views a{padding:6px 16px;font-size:.8rem;font-weight:700;color:var(--muted);cursor:pointer;
+    border:1px solid transparent;border-bottom:0;border-radius:4px 4px 0 0}
+  .views a.on{background:var(--navy);color:#fff}
+  .ptabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin:0 0 14px}
+  .ptabs a{padding:5px 14px;font-size:.76rem;font-weight:700;color:var(--muted);cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px}
+  .ptabs a.on{color:var(--navy);border-bottom-color:var(--navy)}
+  .droprow{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f0f3f7}
+  .thumb{width:62px;height:62px;flex:0 0 62px;border:1px solid var(--rule);border-radius:4px;
+    object-fit:cover;background:#f7f9fc}
+  .thumb.doc{display:flex;align-items:center;justify-content:center;font-size:.62rem;
+    font-weight:800;color:var(--muted);text-align:center}
+  .dropmain{flex:1;min-width:0}
+  .dropmain .dl{font-weight:700;color:var(--navy)}
+  .dropmain .dm{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .dropmoney{text-align:right;font-variant-numeric:tabular-nums;min-width:150px}
+  .dropmoney .pv{font-size:.72rem;color:var(--muted)}
+  .dropmoney .av{font-size:1rem;font-weight:800;color:var(--navy)}
+  .inv-unbilled{color:var(--muted)}.inv-unpaid{color:#b4262d;font-weight:800}
+  .inv-paid{color:var(--green);font-weight:800}
+  .dropf{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 0;font-size:.8rem}
+  .dropf select,.dropf input{padding:4px 7px;border:1px solid #cfd6e0;border-radius:4px;font-size:.8rem}
+  .dropf button{padding:5px 12px;border:0;border-radius:4px;background:var(--navy);color:#fff;
+    font-weight:700;font-size:.78rem;cursor:pointer}
+  .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px}
+  .galcard{border:1px solid var(--rule);border-radius:6px;overflow:hidden;background:#fff}
+  .galcard img{width:100%;height:150px;object-fit:cover;display:block;background:#f7f9fc}
+  .galcard .doc{height:150px;display:flex;align-items:center;justify-content:center;
+    font-size:.8rem;font-weight:800;color:var(--muted);background:#f7f9fc}
+  .galcard .m{padding:8px 10px}
+  .galcard .m b{display:block;font-size:.82rem;color:var(--navy)}
+  .galcard .m span{font-size:.72rem;color:var(--muted)}
+  .cal{border-collapse:collapse;width:100%}
+  .cal td,.cal th{padding:5px 8px;border-bottom:1px solid #f0f3f7;font-size:.82rem;text-align:left}
+  .cal th{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .cal .dt{font-weight:800;color:var(--navy);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .up{padding:12px 14px;background:#f7f9fc;border:1px dashed #b9c4d2;border-radius:6px;margin-bottom:14px}
+  .up input[type=file]{font-size:.8rem}
+  .up input[type=text],.up select{padding:4px 7px;border:1px solid #cfd6e0;border-radius:4px;font-size:.8rem}
+  .up button{padding:5px 14px;border:0;border-radius:4px;background:var(--navy);color:#fff;
+    font-weight:700;font-size:.78rem;cursor:pointer}
 </style>
 
 <div class="sp">
@@ -166,7 +208,14 @@
     </div>
   </details>
 
-  <div class="cols">
+  <div class="views">
+    <a data-v="districts" class="on">Districts</a><a data-v="creative">Creative</a><a data-v="calendar">Calendar</a>
+  </div>
+
+  <div id="viewCreative" style="display:none"></div>
+  <div id="viewCalendar" style="display:none"></div>
+
+  <div class="cols" id="viewDistricts">
     <div class="rail" id="rail">
       <div class="railhead">
         <input type="search" id="q" placeholder="Filter, e.g. Rockingham or Raymond">
@@ -186,7 +235,8 @@
   var TACTICS = {{ tactics|tojson }};
   var PRESETS = {{ presets|tojson }};
   var DISTRICTS = {{ districts|tojson }};
-  var BUDGET = 582000;
+  var BUDGET = {{ budget|tojson }};
+  var CREATIVES = {{ creatives|tojson }};
   var CSRF = document.querySelector('meta[name="csrf-token"]')
     ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
 
@@ -309,6 +359,71 @@
     }).join('') + '</table>';
   }
 
+  var paneTab = 'plan';
+
+  function fmtDate(s){ return s ? s.slice(5).replace('-', '/') : ''; }
+  function isImg(t){ return (t || '').indexOf('image') === 0; }
+  function thumb(url, type, label){
+    if(!url) return '<div class="thumb doc">none</div>';
+    return isImg(type)
+      ? '<a href="' + url + '" target="_blank" rel="noopener"><img class="thumb" src="' + url + '" alt=""></a>'
+      : '<a href="' + url + '" target="_blank" rel="noopener" class="thumb doc">' +
+        ((type || '').indexOf('pdf') >= 0 ? 'PDF' : 'FILE') + '</a>';
+  }
+
+  // Everything that has actually gone out in this district.
+  function deliveredHtml(d){
+    var h = '';
+    if(!d.drops || !d.drops.length){
+      h += '<p style="color:#7b8494;font-size:.84rem">Nothing recorded yet for ' + d.code + '.</p>';
+    } else {
+      d.drops.forEach(function(dr){
+        var t = TACTICS.filter(function(x){ return x.key === dr.tactic_key; })[0] || {label: dr.tactic_key};
+        var inv = dr.invoice_status || 'unbilled';
+        h += '<div class="droprow">' + thumb(dr.creative_url, dr.creative_type) +
+          '<div class="dropmain"><div class="dl">' + t.label + ' ' + dr.seq +
+            (dr.label ? ' &middot; ' + dr.label : '') + '</div>' +
+          '<div class="dm">' +
+            (dr.delivered_date ? 'delivered ' + fmtDate(dr.delivered_date)
+             : dr.planned_date ? 'planned ' + fmtDate(dr.planned_date) : 'no date') +
+            (dr.quantity ? ' &middot; ' + num(dr.quantity) : '') +
+            (dr.invoice_number ? ' &middot; inv ' + dr.invoice_number : '') + '</div></div>' +
+          '<div class="dropmoney">' +
+            (dr.planned_cost != null ? '<div class="pv">planned ' + money(dr.planned_cost) + '</div>' : '') +
+            '<div class="av">' + (dr.actual_cost != null ? money(dr.actual_cost) : '&mdash;') + '</div>' +
+            '<div class="inv-' + inv + '" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.06em">' +
+              inv + '</div></div>' +
+          '<button data-del="' + dr.id + '" title="Remove" style="border:0;background:none;color:#b4262d;cursor:pointer;font-size:1rem">&times;</button>' +
+          '</div>';
+      });
+    }
+    h += '<div class="dropf"><strong style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#7b8494">Add a drop</strong>' +
+      '<select id="ndTactic">' + TACTICS.map(function(t){
+        return '<option value="' + t.key + '">' + t.label + '</option>'; }).join('') + '</select>' +
+      '<select id="ndCreative"><option value="">no creative yet</option>' +
+        CREATIVES.map(function(c){ return '<option value="' + c.id + '">' + c.label + '</option>'; }).join('') +
+      '</select>' +
+      '<input type="date" id="ndDate"><input type="text" id="ndLabel" placeholder="label" style="width:120px">' +
+      '<button id="ndAdd">Add</button></div>';
+    return h;
+  }
+
+  // The pieces this district received, bigger.
+  function creativeHtml(d){
+    var seen = {}, list = (d.drops || []).filter(function(dr){
+      if(!dr.creative_id || seen[dr.creative_id]) return false;
+      seen[dr.creative_id] = 1; return true; });
+    if(!list.length) return '<p style="color:#7b8494;font-size:.84rem">No creative attached to ' +
+      d.code + ' yet. Attach one when you add a drop under Delivered.</p>';
+    return '<div class="gal">' + list.map(function(dr){
+      return '<div class="galcard">' + (isImg(dr.creative_type)
+          ? '<a href="' + dr.creative_url + '" target="_blank" rel="noopener"><img src="' + dr.creative_url + '" alt=""></a>'
+          : '<a href="' + dr.creative_url + '" target="_blank" rel="noopener" class="doc">OPEN FILE</a>') +
+        '<div class="m"><b>' + (dr.creative_label || 'untitled') + '</b><span>' +
+        fmtDate(dr.delivered_date || dr.planned_date) + '</span></div></div>';
+    }).join('') + '</div>';
+  }
+
   function drawPane(){
     var d = DISTRICTS[idx], u = uni(d), c = cost(d), r = d.nominees && d.nominees.R;
     var h = '<div class="panetop"><div><h3>' + d.code + '</h3><p class="panesub">' +
@@ -379,6 +494,23 @@
     h += '</select><div class="unicount"><b>' + num(u.households) + '</b> mail households &middot; <b>' +
       num(u.cells) + '</b> textable cells &middot; ' + num(u.voters) + ' voters</div>' +
       '<div class="unihint">Mail bills against households, texts against cells. Widen this and every drop costs more.</div></div>';
+    h += '<div class="ptabs">' +
+      ['plan|Plan','delivered|Delivered','creative|Creative'].map(function(t){
+        var k = t.split('|')[0];
+        return '<a data-pt="' + k + '"' + (paneTab === k ? ' class="on"' : '') + '>' + t.split('|')[1] + '</a>';
+      }).join('') + '</div>';
+
+    if(paneTab === 'delivered'){
+      h += deliveredHtml(d);
+      document.getElementById('pane').innerHTML = h;
+      return;
+    }
+    if(paneTab === 'creative'){
+      h += creativeHtml(d);
+      document.getElementById('pane').innerHTML = h;
+      return;
+    }
+
     h += '<table class="tac">';
     var last = null;
     GROUPS.forEach(function(g){
@@ -414,8 +546,8 @@
     var el = document.getElementById('fTotal');
     el.textContent = money(grand); el.classList.toggle('over', grand > BUDGET);
     document.getElementById('fVsBudget').textContent = grand > BUDGET
-      ? money(grand-BUDGET) + ' over the $582,000 base program'
-      : money(BUDGET-grand) + ' left of the $582,000 base program';
+      ? money(grand - BUDGET) + ' over the ' + money(BUDGET) + ' program'
+      : money(BUDGET - grand) + ' left of the ' + money(BUDGET) + ' program';
     var tc = {1:0,2:0,3:0,0:0};
     DISTRICTS.forEach(function(d){ tc[d.tier || 0]++; });
     document.getElementById('fT1').textContent = tc[1];
@@ -511,9 +643,47 @@
   document.getElementById('pane').addEventListener('click', function(e){
     if(e.target.id === 'nextBtn') return go(1);
     if(e.target.id === 'prevBtn') return go(-1);
+    var tab = e.target.closest('[data-pt]');
+    if(tab){ paneTab = tab.dataset.pt; return drawPane(); }
+    var del = e.target.closest('[data-del]');
+    if(del){ return deleteDrop(parseInt(del.dataset.del, 10)); }
+    if(e.target.id === 'ndAdd') return addDrop();
     var b = e.target.closest('button[data-tier]');
     if(b) setTier(parseInt(b.dataset.tier, 10));
   });
+
+  function post(url, body){
+    return fetch(url, {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify(body)}).then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+  }
+
+  // A drop's planned cost is snapshotted now, so changing the universe later never
+  // rewrites what a past drop was expected to cost.
+  function addDrop(){
+    var d = DISTRICTS[idx], u = uni(d);
+    var tk = document.getElementById('ndTactic').value;
+    var t = TACTICS.filter(function(x){ return x.key === tk; })[0] || {};
+    var qty = t.unit === 'per_household' ? u.households : t.unit === 'per_cell' ? u.cells : null;
+    var planned = t.unit === 'per_household' ? u.households * t.rate
+                : t.unit === 'per_cell' ? u.cells * t.rate : null;
+    post('/private/spend-plan/drop', {
+      district_code: d.code, tactic_key: tk,
+      creative_id: parseInt(document.getElementById('ndCreative').value, 10) || null,
+      planned_date: document.getElementById('ndDate').value || null,
+      label: document.getElementById('ndLabel').value || null,
+      quantity: qty, planned_cost: planned
+    }).then(function(){ location.reload(); })
+      .catch(function(e){ alert('Could not add the drop: ' + e.message); });
+  }
+  function deleteDrop(id){
+    post('/private/spend-plan/drop/delete', {id: id})
+      .then(function(){ location.reload(); })
+      .catch(function(e){ alert('Could not remove it: ' + e.message); });
+  }
 
   document.getElementById('q').addEventListener('input', function(e){
     q = e.target.value.trim().toLowerCase(); drawRail(); rememberPlace();
@@ -578,6 +748,105 @@
       if(good.length) setTimeout(function(){ location.reload(); }, 900);
     });
   }
+
+  // ---- Creative gallery and drop calendar, both across every district ----------
+  function allDrops(){
+    var out = [];
+    DISTRICTS.forEach(function(d){
+      (d.drops || []).forEach(function(dr){ out.push(Object.assign({district: d.code}, dr)); });
+    });
+    return out;
+  }
+
+  function drawCreative(){
+    var drops = allDrops(), byC = {};
+    drops.forEach(function(dr){ if(dr.creative_id){
+      byC[dr.creative_id] = byC[dr.creative_id] || {districts:{}, spend:0};
+      byC[dr.creative_id].districts[dr.district] = 1;
+      byC[dr.creative_id].spend += (dr.actual_cost != null ? dr.actual_cost : (dr.planned_cost || 0));
+    }});
+    var h = '<div class="up"><strong style="font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#7b8494">Add creative</strong> ' +
+      '<input type="file" id="upFile" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.mp4,.mov"> ' +
+      '<input type="text" id="upLabel" placeholder="what is it, e.g. Affordability #1"> ' +
+      '<select id="upTactic"><option value="">any tactic</option>' +
+        TACTICS.map(function(t){ return '<option value="' + t.key + '">' + t.label + '</option>'; }).join('') +
+      '</select> <button id="upGo">Upload</button> <span id="upMsg" style="font-size:.78rem"></span></div>';
+    if(!CREATIVES.length){
+      h += '<p style="color:#7b8494;font-size:.86rem">Nothing uploaded yet. Add a mail piece, a digital ad or a video above, then attach it to a district under Delivered.</p>';
+    } else {
+      h += '<div class="gal">' + CREATIVES.map(function(c){
+        var u = byC[c.id] || {districts:{}, spend:0};
+        var n = Object.keys(u.districts).length;
+        return '<div class="galcard">' + (isImg(c.content_type)
+            ? '<a href="' + c.file_url + '" target="_blank" rel="noopener"><img src="' + c.file_url + '" alt=""></a>'
+            : '<a href="' + c.file_url + '" target="_blank" rel="noopener" class="doc">' +
+              ((c.content_type||'').indexOf('pdf')>=0 ? 'PDF' : 'FILE') + '</a>') +
+          '<div class="m"><b>' + c.label + '</b><span>' + c.uploaded_at +
+          (n ? ' &middot; ' + n + ' district' + (n===1?'':'s') : ' &middot; not used yet') +
+          (u.spend ? ' &middot; ' + money(u.spend) : '') + '</span></div></div>';
+      }).join('') + '</div>';
+    }
+    document.getElementById('viewCreative').innerHTML = h;
+  }
+
+  function drawCalendar(){
+    var drops = allDrops().filter(function(d){ return d.delivered_date || d.planned_date; });
+    drops.sort(function(a,b){
+      return (a.delivered_date||a.planned_date).localeCompare(b.delivered_date||b.planned_date); });
+    var h;
+    if(!drops.length){
+      h = '<p style="color:#7b8494;font-size:.86rem">No drops have a date yet. Add one under a district\'s Delivered tab.</p>';
+    } else {
+      var byDate = {};
+      drops.forEach(function(d){ var k = d.delivered_date || d.planned_date;
+        (byDate[k] = byDate[k] || []).push(d); });
+      h = '<table class="cal"><tr><th>Date</th><th>What</th><th>Districts</th><th style="text-align:right">Cost</th></tr>';
+      Object.keys(byDate).sort().forEach(function(k){
+        var g = byDate[k], spend = 0, names = {};
+        g.forEach(function(d){ spend += (d.actual_cost != null ? d.actual_cost : (d.planned_cost||0));
+                               names[d.creative_label || d.tactic_key] = 1; });
+        h += '<tr><td class="dt">' + k + (g[0].delivered_date ? '' : ' <span style="color:#8a6400;font-weight:400">planned</span>') +
+             '</td><td>' + Object.keys(names).join(', ') + '</td><td>' + g.length +
+             '</td><td style="text-align:right;font-variant-numeric:tabular-nums">' + money(spend) + '</td></tr>';
+      });
+      h += '</table>';
+    }
+    document.getElementById('viewCalendar').innerHTML = h;
+  }
+
+  document.querySelectorAll('.views a').forEach(function(a){
+    a.addEventListener('click', function(){
+      document.querySelectorAll('.views a').forEach(function(x){ x.classList.remove('on'); });
+      a.classList.add('on');
+      var v = a.dataset.v;
+      document.getElementById('viewDistricts').style.display = v === 'districts' ? '' : 'none';
+      document.getElementById('viewCreative').style.display  = v === 'creative'  ? '' : 'none';
+      document.getElementById('viewCalendar').style.display  = v === 'calendar'  ? '' : 'none';
+      if(v === 'creative') drawCreative();
+      if(v === 'calendar') drawCalendar();
+    });
+  });
+
+  document.getElementById('viewCreative').addEventListener('click', function(e){
+    if(e.target.id !== 'upGo') return;
+    var f = document.getElementById('upFile').files[0];
+    var msg = document.getElementById('upMsg');
+    if(!f){ msg.style.color = '#b4262d'; msg.textContent = 'Choose a file first.'; return; }
+    var fd = new FormData();
+    fd.append('file', f);
+    fd.append('label', document.getElementById('upLabel').value || f.name);
+    fd.append('tactic_key', document.getElementById('upTactic').value || '');
+    msg.style.color = ''; msg.textContent = 'Uploading...';
+    fetch('/private/spend-plan/creative', {method:'POST', headers:{'X-CSRFToken':CSRF}, body:fd})
+      .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+      .then(function(res){
+        if(!res.ok || !res.d.ok) throw new Error((res.d && res.d.error) || 'upload failed');
+        CREATIVES.unshift(res.d.creative);
+        msg.style.color = '#1a7f43'; msg.textContent = 'Added';
+        drawCreative();
+      })
+      .catch(function(e){ msg.style.color = '#b4262d'; msg.textContent = e.message; });
+  });
 
   restorePlace();
   redraw();

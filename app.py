@@ -527,7 +527,8 @@ def inject_impersonation():
 
 # Register private features blueprint
 from private_features import private_bp, init_private_features
-init_private_features(get_db_connection, release_db_connection, is_super_admin, SUPER_ADMIN_EMAIL)
+init_private_features(get_db_connection, release_db_connection, is_super_admin, SUPER_ADMIN_EMAIL,
+                      upload_file_to_storage)
 app.register_blueprint(private_bp)
 
 # Register candidate scout blueprint

@@ -9,6 +9,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from datetime import datetime
 import logging
+import secrets
+from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +20,20 @@ private_bp = Blueprint('private', __name__, url_prefix='/private')
 get_db_connection = None
 release_db_connection = None
 is_super_admin = None
+upload_to_storage = None
 SUPER_ADMIN_EMAIL = None
 
 
-def init_private_features(db_conn_func, db_release_func, super_admin_func, super_admin_email):
+def init_private_features(db_conn_func, db_release_func, super_admin_func, super_admin_email,
+                          storage_upload=None):
     """Initialize the module with database functions from main app."""
     global get_db_connection, release_db_connection, is_super_admin, SUPER_ADMIN_EMAIL
+    global upload_to_storage
     get_db_connection = db_conn_func
     release_db_connection = db_release_func
     is_super_admin = super_admin_func
     SUPER_ADMIN_EMAIL = super_admin_email
+    upload_to_storage = storage_upload
 
 
 def has_feature_access(feature_slug):
@@ -1173,6 +1179,117 @@ def _district_sort_key(code):
     return (code or '', 0)
 
 
+CREATIVE_EXT = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mp4', 'mov'}
+MAX_CREATIVE_BYTES = 40 * 1024 * 1024
+
+
+@private_bp.route('/spend-plan/creative', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_creative_upload():
+    """Add one piece of creative to the library. Reuses the app's S3 helper."""
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return jsonify({'ok': False, 'error': 'No file.'}), 400
+    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+    if ext not in CREATIVE_EXT:
+        return jsonify({'ok': False, 'error': f'.{ext} not allowed. '
+                                              f'Use {", ".join(sorted(CREATIVE_EXT))}.'}), 400
+    f.seek(0, 2); size = f.tell(); f.seek(0)
+    if size > MAX_CREATIVE_BYTES:
+        return jsonify({'ok': False, 'error': 'File is over 40MB.'}), 400
+    if upload_to_storage is None:
+        return jsonify({'ok': False, 'error': 'File storage is not configured.'}), 500
+
+    # token prefix so two pieces named front.pdf cannot overwrite each other
+    key = f'spend_creative/{secrets.token_hex(4)}_{secure_filename(f.filename)}'
+    url = upload_to_storage(f, key)
+    if not url:
+        return jsonify({'ok': False, 'error': 'Upload failed.'}), 500
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""INSERT INTO spend_creative
+                         (label, tactic_key, file_url, content_type, file_size, uploaded_by)
+                       VALUES (%s,%s,%s,%s,%s,%s) RETURNING id, uploaded_at""",
+                    ((request.form.get('label') or f.filename)[:120],
+                     request.form.get('tactic_key') or None, url,
+                     f.content_type, size,
+                     current_user.email if current_user.is_authenticated else 'admin'))
+        cid, at = cur.fetchone()
+        conn.commit()
+        return jsonify({'ok': True, 'creative': {
+            'id': cid, 'label': (request.form.get('label') or f.filename)[:120],
+            'tactic_key': request.form.get('tactic_key') or None, 'file_url': url,
+            'content_type': f.content_type, 'file_size': size,
+            'uploaded_at': at.isoformat(), 'drops': 0, 'districts': 0}})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'creative upload failed: {e}')
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/drop', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_drop_save():
+    """Create or update one district drop. Only fields actually sent are written."""
+    d = request.get_json(silent=True) or {}
+    did = d.get('id')
+    cols = ('label', 'creative_id', 'planned_date', 'delivered_date', 'quantity',
+            'planned_cost', 'actual_cost', 'invoice_number', 'invoice_status',
+            'invoice_due', 'paid_at', 'notes', 'seq')
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        if did:
+            sets, vals = [], []
+            for c in cols:
+                if c in d:
+                    sets.append(f'{c} = %s')
+                    vals.append(d[c] if d[c] not in ('',) else None)
+            if not sets:
+                return jsonify({'ok': True, 'id': did})
+            vals.append(did)
+            cur.execute(f'UPDATE district_drop SET {", ".join(sets)} WHERE id = %s', vals)
+        else:
+            code, tk = (d.get('district_code') or '').strip(), (d.get('tactic_key') or '').strip()
+            if not code or not tk:
+                return jsonify({'ok': False, 'error': 'district and tactic required'}), 400
+            cur.execute("""SELECT COALESCE(MAX(seq), 0) + 1 FROM district_drop
+                            WHERE district_code=%s AND tactic_key=%s""", (code, tk))
+            seq = cur.fetchone()[0]
+            cur.execute("""INSERT INTO district_drop
+                             (district_code, tactic_key, seq, label, creative_id, planned_date,
+                              quantity, planned_cost, created_by)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                        (code, tk, seq, d.get('label') or None, d.get('creative_id') or None,
+                         d.get('planned_date') or None, d.get('quantity') or None,
+                         d.get('planned_cost') or None,
+                         current_user.email if current_user.is_authenticated else 'admin'))
+            did = cur.fetchone()[0]
+        conn.commit()
+        return jsonify({'ok': True, 'id': did})
+    except Exception as e:
+        conn.rollback()
+        logger.error(f'drop save failed: {e}')
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/drop/delete', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_drop_delete():
+    d = request.get_json(silent=True) or {}
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute('DELETE FROM district_drop WHERE id = %s', (d.get('id'),))
+        conn.commit()
+        return jsonify({'ok': True, 'deleted': cur.rowcount})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
 @private_bp.route('/spend-plan')
 @require_feature_access('campaign_plan')
 def spend_plan():
@@ -1250,6 +1367,43 @@ def spend_plan():
         for dc, party, names in cur.fetchall():
             nominees.setdefault(dc, {})[party] = names
 
+        cur.execute("""SELECT id, label, tactic_key, file_url, content_type, file_size,
+                              uploaded_by, uploaded_at,
+                              (SELECT count(*) FROM district_drop dd WHERE dd.creative_id = c.id),
+                              (SELECT count(DISTINCT dd.district_code) FROM district_drop dd
+                                WHERE dd.creative_id = c.id)
+                       FROM spend_creative c ORDER BY uploaded_at DESC""")
+        creatives = [{'id': r[0], 'label': r[1], 'tactic_key': r[2], 'file_url': r[3],
+                      'content_type': r[4], 'file_size': r[5], 'uploaded_by': r[6],
+                      'uploaded_at': r[7].strftime('%Y-%m-%d'), 'drops': r[8],
+                      'districts': r[9]} for r in cur.fetchall()]
+
+        cur.execute("""SELECT d.id, d.district_code, d.tactic_key, d.seq, d.label, d.creative_id,
+                              d.planned_date, d.delivered_date, d.quantity, d.planned_cost,
+                              d.actual_cost, d.invoice_number, d.invoice_status, d.invoice_due,
+                              d.paid_at, d.notes, c.file_url, c.content_type, c.label
+                       FROM district_drop d
+                       LEFT JOIN spend_creative c ON c.id = d.creative_id
+                       ORDER BY d.district_code, d.planned_date NULLS LAST, d.seq""")
+        drops_by_district = {}
+        for r in cur.fetchall():
+            drops_by_district.setdefault(r[1], []).append({
+                'id': r[0], 'tactic_key': r[2], 'seq': r[3], 'label': r[4], 'creative_id': r[5],
+                'planned_date': r[6].isoformat() if r[6] else None,
+                'delivered_date': r[7].isoformat() if r[7] else None,
+                'quantity': r[8],
+                'planned_cost': float(r[9]) if r[9] is not None else None,
+                'actual_cost': float(r[10]) if r[10] is not None else None,
+                'invoice_number': r[11], 'invoice_status': r[12],
+                'invoice_due': r[13].isoformat() if r[13] else None,
+                'paid_at': r[14].isoformat() if r[14] else None,
+                'notes': r[15], 'creative_url': r[16], 'creative_type': r[17],
+                'creative_label': r[18]})
+
+        cur.execute("SELECT amount FROM spend_budget WHERE key='program'")
+        brow = cur.fetchone()
+        budget = float(brow[0]) if brow else 600000.0
+
         for d in districts:
             code = d['code']
             p = plan.get(code, {})
@@ -1260,6 +1414,7 @@ def spend_plan():
             d['reg'] = reg.get(code, {'r': 0, 'd': 0, 'u': 0, 'total': 0})
             d['past'] = past.get(code, [])
             d['r2018'] = replay18.get(code)
+            d['drops'] = drops_by_district.get(code, [])
             d['qty'] = qty_by_district.get(code, {})
             d['universe'] = universe.get((code, d['mask']), {'voters': 0, 'households': 0, 'cells': 0})
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
@@ -1270,7 +1425,8 @@ def spend_plan():
         return render_template('private/spend_plan.html',
                                districts=districts, tactics=tactics, segments=SEGMENTS,
                                presets=UNIVERSE_PRESETS,
-                               preset_masks=[m for m, _ in UNIVERSE_PRESETS])
+                               preset_masks=[m for m, _ in UNIVERSE_PRESETS],
+                               creatives=creatives, budget=budget)
     finally:
         cur.close(); release_db_connection(conn)
 
