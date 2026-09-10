@@ -114,6 +114,7 @@ def public_plan():
                      if c and c in by_code]
             if not bases:
                 continue
+            bases.sort(key=lambda c: key(by_code[c]))   # 9 before 16, not after it
             key = x['code']
             for code in bases + [x['code']]:
                 cluster_of[code] = key

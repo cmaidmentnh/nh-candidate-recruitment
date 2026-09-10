@@ -427,10 +427,16 @@
   function clusterOf(d){ return CLUSTER[d.code] || null; }
   function clusterMembers(key){
     var f = BY_CODE[key]; if(!f) return [];
+    // the base list arrives string-sorted, which puts Grafton 9 after Grafton 16
     var bases = (f.rel.bases || '').split(', ').filter(Boolean)
       .map(function(c){ return BY_CODE[c]; })
-      .filter(function(b){ return b && b.tier; });
+      .filter(function(b){ return b && b.tier; })
+      .sort(function(a, b){ return dnum(a.code) - dnum(b.code); });
     return bases.concat([f]);
+  }
+  function dnum(code){
+    var n = parseInt(code.split(' ').pop(), 10);
+    return isNaN(n) ? 0 : n;
   }
   function clusterCost(key){
     return clusterMembers(key).reduce(function(a, m){ return a + cost(m).total; }, 0);
