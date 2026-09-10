@@ -29,6 +29,12 @@
   .cnd .foot b{color:var(--ink);font-variant-numeric:tabular-nums;font-size:.86rem}
   .cnd .foot .warn{color:var(--red)}
   .needmark{color:var(--red);font-weight:700;font-size:.62rem;letter-spacing:.04em}
+  .afp-bad{color:#b4262d;font-weight:700}
+  .afp-warn{color:#8a6400;font-weight:700}
+  .afp-ok{color:#1a7f43;font-weight:700}
+  .afp-none{color:#c3c9d2}
+  .afp-v{color:var(--muted);font-size:.72rem;font-style:italic}
+  .afpmark{color:#b4262d;font-weight:700;font-size:.62rem;letter-spacing:.04em}
   .hist{border-top:1px solid var(--rule);margin-top:16px;padding-top:8px}
   .hist summary{cursor:pointer;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;
     color:var(--muted);font-weight:700}
@@ -293,7 +299,7 @@
         <div class="filters">
           <a data-f="all" class="on">All 203</a><a data-f="untiered">Untiered</a>
           <a data-f="t1">T1</a><a data-f="t2">T2</a><a data-f="t3">T3</a><a data-f="norep">No R</a>
-          <a data-f="needs">Needs</a><a data-f="stranded">Stranded</a>
+          <a data-f="needs">Needs</a><a data-f="stranded">Stranded</a><a data-f="afp">AFP</a>
         </div>
       </div>
       <div id="railList"></div>
@@ -484,6 +490,7 @@
       if(filter === 'norep') return !(d.nominees && d.nominees.R);
       if(filter === 'needs') return needCount(d) > 0;
       if(filter === 'stranded') return strandedBases(d).length > 0;
+      if(filter === 'afp') return afpFlag(d);
       return true;
     });
   }
@@ -500,7 +507,8 @@
         (d.rel && d.rel.kind==='floterial' ? ' <span class="flomark">F</span>' : '') + '</span>' +
       '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
       '<span class="dt2">' + (d.topr ? d.topr.town : '') +
-        (needCount(d) ? ' <span class="needmark">ASKS</span>' : '') + '</span>' +
+        (needCount(d) ? ' <span class="needmark">ASKS</span>' : '') +
+        (afpFlag(d) ? ' <span class="afpmark">AFP</span>' : '') + '</span>' +
       '<span class="dc">' + (c ? money(c)
         : (d.rel && d.rel.kind==='floterial'
             ? (inCluster ? '<span class="onbase">on the base mail</span>'
@@ -671,20 +679,21 @@
     function dol(v){ return v === null || v === undefined ? '' : money(v); }
     var h = '<div class="cnd"><table><tr><th>Candidate</th><th>Signs</th><th class="n">How many</th>' +
       '<th>Lit</th><th>Headshot</th><th>Walk books</th><th class="n">Raised</th>' +
-      '<th class="n">On hand</th><th class="n">Expects more</th><th>Links</th></tr>';
+      '<th class="n">On hand</th><th class="n">Expects more</th><th>AFP</th><th>Links</th></tr>';
     cs.forEach(function(c){
       if(!c.answered){
         h += '<tr><td class="who2">' + c.name + '</td>' +
              '<td colspan="8" class="silent">has not filled in the check in</td>' +
-             '<td>' + linkBits(c) + '</td></tr>';
+             '<td>' + afpCell(c) + '</td><td>' + linkBits(c) + '</td></tr>';
         return;
       }
       h += '<tr><td class="who2">' + c.name + '</td><td>' + tri(c.signs) + '</td>' +
         '<td class="n">' + (c.signs_count ? num(c.signs_count) : '') + '</td>' +
         '<td>' + tri(c.lit) + '</td><td>' + tri(c.headshot) + '</td><td>' + tri(c.walkbooks) + '</td>' +
         '<td class="n">' + dol(c.raised) + '</td><td class="n">' + dol(c.coh) + '</td>' +
-        '<td class="n">' + dol(c.more) + '</td><td>' + linkBits(c) + '</td></tr>';
-      if(c.note) h += '<tr><td colspan="10" class="cnote">&ldquo;' + esc(c.note) + '&rdquo;</td></tr>';
+        '<td class="n">' + dol(c.more) + '</td><td>' + afpCell(c) + '</td>' +
+        '<td>' + linkBits(c) + '</td></tr>';
+      if(c.note) h += '<tr><td colspan="11" class="cnote">&ldquo;' + esc(c.note) + '&rdquo;</td></tr>';
     });
     h += '</table>';
     var m = candMoney(d), ctehr = cost(d).total, need = needCount(d);
@@ -699,6 +708,29 @@
       '</div></div>';
     return h;
   }
+  // AFP's own verdict on this candidate, in AFP's words. AFP does not score the survey, so
+  // there is nothing to compute: either Sarah Scott has written a verdict or she has not, and
+  // most candidates have neither a verdict nor a survey on file.
+  function afpCell(c){
+    if(c.afp_rank === null || c.afp_rank === undefined){
+      return c.afp_done
+        ? '<span class="afp-none" title="survey returned, no verdict yet">in, no verdict</span>'
+        : '<span class="afp-none">no survey</span>';
+    }
+    var cls = c.afp_rank === -1 ? 'afp-ok'
+            : c.afp_rank <= 1  ? 'afp-bad'
+            : c.afp_rank === 2 ? 'afp-warn' : 'afp-ok';
+    return '<span class="' + cls + '">' + esc(c.afp_label) + '</span>' +
+           (c.afp && c.afp.toLowerCase() !== c.afp_label.toLowerCase()
+             ? '<br><span class="afp-v">&ldquo;' + esc(c.afp) + '&rdquo;</span>' : '');
+  }
+  // rank 0 or 1 is what is worth seeing from the worklist: AFP called them bad, not great, or
+  // said they cannot endorse.
+  function afpFlag(d){
+    return (d.cands || []).some(function(c){
+      return c.afp_rank !== null && c.afp_rank !== undefined && c.afp_rank <= 1; });
+  }
+
   function linkBits(c){
     var out = [];
     if(c.website) out.push('<a href="' + c.website + '" target="_blank" rel="noopener">site</a>');

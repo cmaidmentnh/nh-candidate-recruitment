@@ -1183,6 +1183,25 @@ CREATIVE_EXT = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mp4', 'mov'}
 MAX_CREATIVE_BYTES = 40 * 1024 * 1024
 
 
+def _afp_rank(rating):
+    """AFP's own verdict wording, bucketed. Mirrors _afp_alignment in app.py exactly: AFP does
+    not score the survey, so this only sorts the words Sarah Scott sends. Never re-scores."""
+    t = (rating or '').strip().lower()
+    if not t:
+        return (None, '')
+    if t.startswith('good'):
+        return (-1, 'Aligned')
+    if "can't endorse" in t or 'cannot endorse' in t:
+        return (1, "Can't endorse")
+    if t.startswith('bad'):
+        return (0, 'Bad')
+    if 'not great' in t:
+        return (1, 'Not great')
+    if 'not bad' in t:
+        return (2, 'Not bad')
+    return (3, 'Qualified')
+
+
 def _tier_word(t):
     """How a tier reads in a sentence. 0 and NULL are both "no tier"."""
     return ('Tier %d' % t) if t else 'no tier'
@@ -1345,7 +1364,13 @@ def spend_plan():
                               p.walkbooks_have, p.fundraising_amount, p.cash_on_hand,
                               p.anticipated_raise, p.intake_notes,
                               COALESCE(NULLIF(c.website_url,''), NULLIF(c.external_campaign_url,'')),
-                              NULLIF(c.donate_url,''), NULLIF(c.facebook_url,'')
+                              NULLIF(c.donate_url,''), NULLIF(c.facebook_url,''),
+                              (SELECT sv.rating FROM candidate_surveys sv
+                                WHERE sv.candidate_id = f.candidate_id
+                                  AND sv.survey_org = 'AFP' LIMIT 1),
+                              EXISTS (SELECT 1 FROM candidate_surveys sv
+                                       WHERE sv.candidate_id = f.candidate_id
+                                         AND sv.survey_org = 'AFP')
                        FROM filings f
                        JOIN candidates c ON c.candidate_id = f.candidate_id
                        LEFT JOIN candidate_campaign_progress p ON p.candidate_id = f.candidate_id
@@ -1361,7 +1386,9 @@ def spend_plan():
                 'raised': float(r[8]) if r[8] is not None else None,
                 'coh': float(r[9]) if r[9] is not None else None,
                 'more': float(r[10]) if r[10] is not None else None,
-                'note': r[11], 'website': r[12], 'donate': r[13], 'facebook': r[14]})
+                'note': r[11], 'website': r[12], 'donate': r[13], 'facebook': r[14],
+                'afp': r[15], 'afp_done': r[16],
+                'afp_label': _afp_rank(r[15])[1], 'afp_rank': _afp_rank(r[15])[0]})
 
         # Every edit to this plan, so four people editing it can see each other's work. The
         # trigger stores a row as it was BEFORE the change, so each row's value is the state
