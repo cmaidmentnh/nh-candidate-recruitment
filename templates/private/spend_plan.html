@@ -170,6 +170,30 @@
   var BUDGET = 582000;
   var CSRF = document.querySelector('meta[name="csrf-token"]')
     ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+
+  // ---- Local journal -------------------------------------------------------------
+  // Every edit is written to localStorage before it is sent, and only cleared once the
+  // server confirms it. A 400, a crash or a reload therefore leaves a replayable record.
+  var JKEY = 'spendPlanJournal';
+  function journalRead(){
+    try { return JSON.parse(localStorage.getItem(JKEY) || '{}'); } catch(e){ return {}; }
+  }
+  function journalWrite(code, payload){
+    try {
+      var j = journalRead();
+      j[code] = Object.assign(j[code] || {district_code: code}, payload);
+      if(payload.items) j[code].items = Object.assign(j[code].items || {}, payload.items);
+      j[code]._at = Date.now();
+      localStorage.setItem(JKEY, JSON.stringify(j));
+    } catch(e){}
+  }
+  function journalClear(codes){
+    try {
+      var j = journalRead();
+      codes.forEach(function(c){ delete j[c]; });
+      localStorage.setItem(JKEY, JSON.stringify(j));
+    } catch(e){}
+  }
   var GROUPS = [['mail','Mail and text'],['text',null],['digital','Digital'],['field','Field']];
   var idx = 0, pending = {}, timer = null, filter = 'all', q = '';
   var saveMsg = document.getElementById('saveMsg');
@@ -318,6 +342,7 @@
   function redraw(){ drawRail(); drawPane(); totals(); }
 
   function queue(code, payload){
+    journalWrite(code, payload);
     pending[code] = Object.assign(pending[code] || {district_code: code}, payload);
     if(payload.items) pending[code].items = Object.assign(pending[code].items || {}, payload.items);
     clearTimeout(timer); timer = setTimeout(flush, 700);
@@ -340,6 +365,7 @@
         .then(function(d){ if(!d || !d.ok) throw new Error((d && d.error) || 'rejected'); 
                            return d; });
     })).then(function(){
+      journalClear(jobs.map(function(j){ return j.district_code; }));
       saveMsg.textContent = 'Saved';
       setTimeout(function(){ if(saveMsg.textContent === 'Saved') saveMsg.textContent = ''; }, 1600);
     }).catch(function(err){
@@ -443,7 +469,27 @@
     redraw(); flush();
   });
 
+  // On load, anything still in the journal was never confirmed by the server. Replay it.
+  function replayJournal(){
+    var j = journalRead(), codes = Object.keys(j);
+    if(!codes.length) return;
+    saveMsg.style.color = '#8a6400';
+    saveMsg.textContent = 'Restoring ' + codes.length + ' unsaved change' + (codes.length===1?'':'s') + '...';
+    Promise.all(codes.map(function(c){
+      return fetch('/private/spend-plan/save', {method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+        body: JSON.stringify(j[c])}).then(function(r){ return r.ok ? c : null; });
+    })).then(function(done){
+      var good = done.filter(Boolean);
+      journalClear(good);
+      saveMsg.style.color = good.length === codes.length ? '' : '#b4262d';
+      saveMsg.textContent = 'Restored ' + good.length + ' of ' + codes.length + ', reloading';
+      if(good.length) setTimeout(function(){ location.reload(); }, 900);
+    });
+  }
+
   redraw();
+  replayJournal();
 })();
 </script>
 {% endblock %}
