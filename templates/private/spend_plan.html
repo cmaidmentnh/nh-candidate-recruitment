@@ -27,6 +27,13 @@
   .ditem .dn{font-weight:700;color:var(--navy);white-space:nowrap}
   .ditem.inplan .dn{color:var(--green)}
   .ditem .dr{font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .cav{font-size:.6rem;color:#aab2bd;cursor:pointer;width:10px;flex:0 0 10px;
+    transition:transform .1s;display:inline-block}
+  .cav.o{transform:rotate(90deg);color:var(--navy)}
+  .dexp{padding:2px 10px 7px 34px;background:#fafbfd;border-left:3px solid transparent}
+  .dexp .cand{font-size:.76rem;color:#3d4855;padding:1px 0}
+  .dexp .cand.none{color:#b4262d;font-weight:700}
+  .dexp .cand.seats{font-size:.66rem;color:#8b95a3;padding-top:3px}
   .ditem .dt2{font-size:.7rem;color:#8b95a3;white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;max-width:96px}
   .ditem .dc{margin-left:auto;font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -267,6 +274,7 @@
   }
   var GROUPS = [['mail','Mail and text'],['text',null],['digital','Digital'],['field','Field']];
   var idx = 0, pending = {}, timer = null, filter = 'all', q = '';
+  var openRows = {};
   var PKEY = 'spendPlanPlace';
 
   function rememberPlace(){
@@ -340,12 +348,24 @@
     visible().forEach(function(d){
       if(d.county !== county){ county = d.county; html += '<div class="cty">' + county + '</div>'; }
       var c = cost(d).total;
+      var open = !!openRows[d.code];
       html += '<div class="ditem' + (d.include?' inplan':'') + (d === DISTRICTS[idx]?' sel':'') +
-        '" data-code="' + d.code + '"><span class="dt t' + (d.tier||0) + 'c">' +
-        (d.tier ? d.tier : '') + '</span><span class="dn">' + d.code + '</span>' +
+        '" data-code="' + d.code + '">' +
+        '<span class="cav' + (open?' o':'') + '" data-exp="' + d.code + '">&#9656;</span>' +
+        '<span class="dt t' + (d.tier||0) + 'c">' + (d.tier ? d.tier : '') + '</span>' +
+        '<span class="dn">' + d.code + '</span>' +
         '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
         '<span class="dt2">' + (d.topr ? d.topr.town : '') + '</span>' +
         '<span class="dc">' + (c ? money(c) : '') + '</span></div>';
+      if(open){
+        var names = (d.nominees && d.nominees.R) ? d.nominees.R.split(', ') : [];
+        html += '<div class="dexp">' + (names.length
+          ? names.map(function(nm){ return '<div class="cand">' + nm + '</div>'; }).join('')
+          : '<div class="cand none">no Republican on the ballot</div>')
+          + '<div class="cand seats">' + (d.seats||0) + ' seat' + (d.seats===1?'':'s') +
+            (names.length && d.seats && names.length < d.seats
+              ? ' &middot; <b>' + (d.seats - names.length) + ' unfilled</b>' : '') + '</div></div>';
+      }
     });
     document.getElementById('railList').innerHTML = html || '<div class="cty">No match</div>';
     var s = document.querySelector('.ditem.sel'); if(s) s.scrollIntoView({block:'nearest'});
@@ -610,8 +630,16 @@
   }
 
   document.getElementById('railList').addEventListener('click', function(e){
+    var cav = e.target.closest('[data-exp]');
+    if(cav){                       // toggle without moving the selection
+      var k = cav.dataset.exp;
+      if(openRows[k]) delete openRows[k]; else openRows[k] = 1;
+      return drawRail();
+    }
     var it = e.target.closest('.ditem'); if(!it) return;
-    idx = DISTRICTS.findIndex(function(d){ return d.code === it.dataset.code; }); redraw();
+    idx = DISTRICTS.findIndex(function(d){ return d.code === it.dataset.code; });
+    openRows[it.dataset.code] = 1;  // selecting a district opens it
+    redraw();
   });
 
   document.getElementById('pane').addEventListener('input', function(e){
