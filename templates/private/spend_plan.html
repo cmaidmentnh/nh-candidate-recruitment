@@ -65,13 +65,19 @@
   .t1c{color:#a8261f}.t2c{color:#8a6400}.t3c{color:#1a7f43}
   .past{display:flex;gap:0 30px;flex-wrap:wrap;margin-bottom:16px;padding:11px 14px;
     background:#fbfcfe;border:1px solid var(--rule);border-radius:6px}
-  .past .yr{min-width:172px}
+  .past .yr{min-width:236px;flex:1}
   .past .yrh{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
     font-weight:700;margin-bottom:4px}
   .past .seatline{font-size:1.02rem;font-weight:800;font-variant-numeric:tabular-nums}
   .past .votes{font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
   .past .close{font-size:.72rem;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
   .past .none{font-size:.78rem;color:var(--muted)}
+  .past table{width:100%;border-collapse:collapse;margin-top:6px}
+  .past table td{padding:2px 0;font-size:.78rem;border:0}
+  .past table td.v{text-align:right;font-variant-numeric:tabular-nums;padding-left:10px}
+  .past .w{font-weight:800}
+  .past .l{color:#96a0ad}
+  .past .pty{font-size:.62rem;font-weight:800;letter-spacing:.04em;padding-right:5px}
   .win-r{color:#a8261f}.win-d{color:#1d4e89}.win-split{color:#8a6400}
   .ditem .dt{font-size:.6rem;font-weight:800;width:14px;text-align:center}
   .who{font-size:.84rem;margin-bottom:14px}
@@ -262,6 +268,17 @@
     var s = document.querySelector('.ditem.sel'); if(s) s.scrollIntoView({block:'nearest'});
   }
 
+  // Who actually ran and what they got. Winners in bold, losers greyed.
+  function candTable(p){
+    if(!p.cands || !p.cands.length) return '';
+    var pc = {R:'win-r', D:'win-d', L:'win-split', I:'win-split'};
+    return '<table>' + p.cands.map(function(c){
+      return '<tr class="' + (c.won ? 'w' : 'l') + '">' +
+             '<td><span class="pty ' + (pc[c.party]||'') + '">' + c.party + '</span>' + c.name + '</td>' +
+             '<td class="v">' + num(c.votes) + '</td></tr>';
+    }).join('') + '</table>';
+  }
+
   function drawPane(){
     var d = DISTRICTS[idx], u = uni(d), c = cost(d), r = d.nominees && d.nominees.R;
     var h = '<div class="panetop"><div><h3>' + d.code + '</h3><p class="panesub">' +
@@ -304,8 +321,22 @@
                ? '<div class="close ' + (p.margin < 100 ? 'win-split' : '') + '">closest seat by ' +
                  num(p.margin) + (p.margin === 0 ? ' (tied)' : '') + '</div>'
                : '<div class="close" style="color:#aab2bd">uncontested</div>') +
-             '</div>';
+             candTable(p) + '</div>';
       });
+      // 2018 on today's lines. A re-aggregation, not a result, and labelled as one.
+      if(d.r2018){
+        var r = d.r2018, weak = r.towns !== r.towns_data;
+        h += '<div class="yr"><div class="yrh">2018 replay <span style="font-weight:400;text-transform:none;letter-spacing:0">on today\'s towns</span></div>' +
+             '<div class="seatline ' + (r.r_share < 50 ? 'win-d' : 'win-r') + '">' +
+             r.r_share + '% R</div>' +
+             '<div class="votes">' + num(r.r_votes) + ' R &middot; ' + num(r.d_votes) + ' D</div>' +
+             '<div class="close" style="color:' + (r.r_share < 50 ? '#1d4e89' : '#96a0ad') + '">' +
+             (r.r_share < 50 ? 'would have lost' : 'would have held') + '</div>' +
+             (weak ? '<div class="close" style="color:#8a6400">only ' + r.towns_data + ' of ' +
+                     r.towns + ' towns have 2018 data</div>' : '') +
+             '<div class="close" style="color:#aab2bd;font-weight:400">no candidates: 2018 ran on the old map</div>' +
+             '</div>';
+      }
       h += '</div>';
     }
     h += '<div class="uniblock"><label for="uniSel">Who are you buying in this district</label><select id="uniSel">';

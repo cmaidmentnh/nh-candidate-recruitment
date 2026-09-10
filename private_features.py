@@ -1217,7 +1217,21 @@ def spend_plan():
                 'year': yr, 'seats': seats, 'r_seats': rs, 'd_seats': ds,
                 'r_votes': rv, 'd_votes': dv,
                 'r_share': round(100.0 * rv / (rv + dv), 1) if (rv + dv) else None,
-                'margin': (lw - fl) if (lw is not None and fl is not None) else None})
+                'margin': (lw - fl) if (lw is not None and fl is not None) else None,
+                'cands': []})
+
+        cur.execute("""SELECT district_code, r_votes, d_votes, r_share, towns, towns_with_data
+                       FROM district_2018_replay""")
+        replay18 = {r[0]: {'r_votes': r[1], 'd_votes': r[2], 'r_share': float(r[3]),
+                           'towns': r[4], 'towns_data': r[5]} for r in cur.fetchall()}
+
+        cur.execute("""SELECT district_code, year, name, party, votes, won
+                       FROM district_past_candidates ORDER BY district_code, year DESC, rank""")
+        for dc, yr, nm, pty, vt, won in cur.fetchall():
+            for blk in past.get(dc, []):
+                if blk['year'] == yr:
+                    blk['cands'].append({'name': nm, 'party': pty, 'votes': vt, 'won': won})
+                    break
 
         cur.execute("SELECT district_code, tactic_key, qty, rate_override FROM district_spend_item")
         qty_by_district = {}
@@ -1245,6 +1259,7 @@ def spend_plan():
             d['tier'] = p.get('tier')
             d['reg'] = reg.get(code, {'r': 0, 'd': 0, 'u': 0, 'total': 0})
             d['past'] = past.get(code, [])
+            d['r2018'] = replay18.get(code)
             d['qty'] = qty_by_district.get(code, {})
             d['universe'] = universe.get((code, d['mask']), {'voters': 0, 'households': 0, 'cells': 0})
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
