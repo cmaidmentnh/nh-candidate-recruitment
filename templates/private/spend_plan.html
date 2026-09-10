@@ -117,6 +117,13 @@
     color:var(--navy);margin:16px 0 2px;padding-top:10px;border-top:1px solid var(--rule)}
   .unisz{font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:4px}
   .unisz b{color:var(--ink)}
+  .flo{background:#fdf8ec;border-left:3px solid #8a6400;padding:10px 13px;margin:14px 0;font-size:.82rem}
+  .flo.carry{background:#f2fbf5;border-left-color:var(--green)}
+  .flo b{color:var(--navy)}
+  .flob{font-size:.76rem;color:var(--muted);margin-top:4px}
+  .flow{font-size:.78rem;color:var(--red);margin-top:5px}
+  .flok{font-size:.78rem;color:var(--green);margin-top:5px}
+  .flomark{font-size:.58rem;font-weight:800;color:#8a6400;vertical-align:super}
   .dtot{display:flex;justify-content:space-between;align-items:baseline;
     border-top:2px solid var(--navy);padding-top:10px;margin-top:8px}
   .dtot .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
@@ -369,7 +376,7 @@
         '" data-code="' + d.code + '">' +
         '<span class="cav' + (open?' o':'') + '" data-exp="' + d.code + '">&#9656;</span>' +
         '<span class="dt t' + (d.tier||0) + 'c">' + (d.tier ? d.tier : '') + '</span>' +
-        '<span class="dn">' + d.code + '</span>' +
+        '<span class="dn">' + d.code + (d.rel && d.rel.kind==='floterial' ? ' <span class="flomark">F</span>' : '') + '</span>' +
         '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
         '<span class="dt2">' + (d.topr ? d.topr.town : '') + '</span>' +
         '<span class="dc">' + (c ? money(c) : '') + '</span></div>';
@@ -553,8 +560,26 @@
     var UNIS = [['gotv','GOTV &middot; low-propensity Republicans'],
                 ['persuade','Persuasion &middot; midterm voters, no partisan history or flip-floppers'],
                 ['base','Digital and field &middot; whole district']];
+    var isFlo = d.rel && d.rel.kind === 'floterial';
+    if(isFlo){
+      var covered = (d.rel.bases_covered||'').split(', ').filter(Boolean);
+      var all = (d.rel.bases||'').split(', ').filter(Boolean);
+      var missing = all.filter(function(b){ return covered.indexOf(b) < 0; });
+      h += '<div class="flo"><b>Floterial.</b> No mail or text is bought here: this candidate ' +
+        'rides on the base districts\' pieces, so the households are already paid for.' +
+        '<div class="flob">Sits over ' + all.length + ': ' + all.join(', ') + '</div>' +
+        (missing.length
+          ? '<div class="flow"><b>' + missing.length + ' of those get no mail at all</b> (' +
+            missing.join(', ') + '), so this candidate is unreached there.</div>'
+          : '<div class="flok">All ' + all.length + ' are in the plan, so this candidate is covered everywhere.</div>') +
+        '</div>';
+    } else if(d.rel && d.rel.carries){
+      h += '<div class="flo carry"><b>Carries a floterial.</b> Mail bought here also promotes ' +
+           d.rel.carries + '.</div>';
+    }
     UNIS.forEach(function(U){
       var universe = U[0], sz = sizeFor(d, universe);
+      if(isFlo && universe !== 'base') return;      // floterials buy no household-based media
       var keys = universe==='base' ? ['meta','ctv','display','palm_cards','signs','gotv_calls','doors']
                                    : ['mail','mms'];
       h += '<div class="unihdr">' + U[1] + '</div>';

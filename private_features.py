@@ -1321,6 +1321,19 @@ def spend_plan():
         plan = {r[0]: {'mask': r[1], 'include': r[2], 'notes': r[3] or '', 'tier': r[4]}
                 for r in cur.fetchall()}
 
+        cur.execute("""SELECT r.district_code, r.kind, r.spans,
+                              (SELECT string_agg(b.base, ', ' ORDER BY b.base)
+                                 FROM district_floterial_base b WHERE b.floterial = r.district_code),
+                              (SELECT string_agg(b.base, ', ' ORDER BY b.base)
+                                 FROM district_floterial_base b
+                                 JOIN district_spend s2 ON s2.district_code = b.base AND s2.tier IS NOT NULL
+                                WHERE b.floterial = r.district_code),
+                              (SELECT string_agg(f.floterial, ', ' ORDER BY f.floterial)
+                                 FROM district_floterial_base f WHERE f.base = r.district_code)
+                       FROM district_relation r""")
+        relation = {r[0]: {'kind': r[1], 'spans': r[2], 'bases': r[3], 'bases_covered': r[4],
+                           'carries': r[5]} for r in cur.fetchall()}
+
         cur.execute("SELECT district_code, uni, voters, households, cells FROM district_model_universe")
         model_uni = {}
         for dc, uni, v, hh, ce in cur.fetchall():
@@ -1423,6 +1436,7 @@ def spend_plan():
             d['past'] = past.get(code, [])
             d['topr'] = topr.get(code)
             d['model'] = model_uni.get(code, {})
+            d['rel'] = relation.get(code)
             d['r2018'] = replay18.get(code)
             d['drops'] = drops_by_district.get(code, [])
             d['qty'] = qty_by_district.get(code, {})
