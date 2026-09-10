@@ -447,8 +447,6 @@
       }
       if(ck) return;                      // already drawn inside its cluster
       html += railRow(d, false);
-      var open = !!openRows[d.code];
-      html += railRow(d, false);
     });
     document.getElementById('railList').innerHTML = html || '<div class="cty">No match</div>';
     var s = document.querySelector('.ditem.sel'); if(s) s.scrollIntoView({block:'nearest'});
