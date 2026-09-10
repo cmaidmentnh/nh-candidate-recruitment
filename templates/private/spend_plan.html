@@ -366,18 +366,25 @@
   // combined seats and combined spend on the cluster, and each member listed underneath.
   var BY_CODE = {}, CLUSTER = {};
   DISTRICTS.forEach(function(d){ BY_CODE[d.code] = d; });
-  DISTRICTS.forEach(function(d){
-    if(!d.rel) return;
-    if(d.rel.kind === 'floterial'){
-      var members = (d.rel.bases || '').split(', ').filter(Boolean).concat([d.code]);
-      members.forEach(function(m){ CLUSTER[m] = d.code; });   // keyed by the floterial
-    }
-  });
+  function buildClusters(){
+    CLUSTER = {};
+    DISTRICTS.forEach(function(d){
+      if(!d.rel || d.rel.kind !== 'floterial' || !d.tier) return;
+      // Only bases actually in the plan are part of the effort. A base the floterial merely
+      // sits over, that we are not buying, is not a joint effort and stays a normal row.
+      var bases = (d.rel.bases || '').split(', ').filter(Boolean)
+        .filter(function(c){ var b = BY_CODE[c]; return b && b.tier; });
+      if(!bases.length) return;              // nothing to pair with; it stands alone
+      bases.concat([d.code]).forEach(function(m){ CLUSTER[m] = d.code; });
+    });
+  }
+  buildClusters();
   function clusterOf(d){ return CLUSTER[d.code] || null; }
   function clusterMembers(key){
     var f = BY_CODE[key]; if(!f) return [];
     var bases = (f.rel.bases || '').split(', ').filter(Boolean)
-      .map(function(c){ return BY_CODE[c]; }).filter(Boolean);
+      .map(function(c){ return BY_CODE[c]; })
+      .filter(function(b){ return b && b.tier; });
     return bases.concat([f]);
   }
   function clusterCost(key){
@@ -697,7 +704,7 @@
     document.getElementById('fField').textContent = money(g.field);
   }
 
-  function redraw(){ drawRail(); drawPane(); totals(); rememberPlace(); }
+  function redraw(){ buildClusters(); drawRail(); drawPane(); totals(); rememberPlace(); }
 
   function queue(code, payload){
     journalWrite(code, payload);
