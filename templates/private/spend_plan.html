@@ -12,6 +12,32 @@
   .totals .unit{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
   .totals .grp{display:flex;flex-direction:column;gap:2px}
   .totals .sub{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .cnd{border:1px solid var(--rule);border-radius:6px;margin:12px 0;overflow:hidden}
+  .cnd table{width:100%;border-collapse:collapse;font-size:.78rem}
+  .cnd th{background:#f6f8fb;color:var(--muted);font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;padding:5px 7px;text-align:left;font-weight:700}
+  .cnd th.n,.cnd td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .cnd td{padding:5px 7px;border-top:1px solid #eef1f5}
+  .cnd .who2{font-weight:700;color:var(--navy)}
+  .cnd .has{color:var(--green)}
+  .cnd .needs{color:var(--red);font-weight:700}
+  .cnd .noans{color:#c3c9d2}
+  .cnd .silent{color:var(--muted);font-style:italic}
+  .cnd .cnote{color:var(--muted);padding:5px 7px;border-top:1px solid #eef1f5;font-size:.75rem}
+  .cnd .foot{display:flex;flex-wrap:wrap;gap:0 22px;padding:6px 7px;background:#fbfcfe;
+    border-top:1px solid var(--rule);font-size:.72rem;color:var(--muted)}
+  .cnd .foot b{color:var(--ink);font-variant-numeric:tabular-nums;font-size:.86rem}
+  .cnd .foot .warn{color:var(--red)}
+  .needmark{color:var(--red);font-weight:700;font-size:.62rem;letter-spacing:.04em}
+  .hist{border-top:1px solid var(--rule);margin-top:16px;padding-top:8px}
+  .hist summary{cursor:pointer;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700}
+  .hist .hrow{display:flex;gap:10px;padding:4px 0;border-bottom:1px solid #f2f5f8;font-size:.76rem}
+  .hist .hwhen{flex:0 0 132px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .hist .hwho{flex:0 0 120px;color:var(--muted)}
+  .hist .hwhat{flex:1}
+  .hist .hwhat .was{color:var(--muted);text-decoration:line-through}
+  .hist .hwhat .now{font-weight:700;color:var(--navy)}
   .cols{display:flex;gap:20px;align-items:flex-start}
   .rail{flex:0 0 330px;max-height:76vh;overflow-y:auto;border:1px solid var(--rule);border-radius:6px}
   .railhead{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--rule);padding:8px 10px;z-index:2}
@@ -247,6 +273,7 @@
 
   <div class="views">
     <a data-v="districts" class="on">Districts</a><a data-v="creative">Creative</a><a data-v="calendar">Calendar</a>
+    <a href="{{ url_for('private.spend_plan_export') }}" style="margin-left:auto;color:var(--muted)">Export CSV</a>
   </div>
 
   <div id="viewCreative" style="display:none"></div>
@@ -259,6 +286,7 @@
         <div class="filters">
           <a data-f="all" class="on">All 203</a><a data-f="untiered">Untiered</a>
           <a data-f="t1">T1</a><a data-f="t2">T2</a><a data-f="t3">T3</a><a data-f="norep">No R</a>
+          <a data-f="needs">Needs</a><a data-f="stranded">Stranded</a>
         </div>
       </div>
       <div id="railList"></div>
@@ -404,6 +432,34 @@
     return clusterMembers(key).reduce(function(a, m){ return a + (m.seats || 0); }, 0);
   }
 
+  // A need is only a need when the candidate said so. An unanswered question is null and
+  // stays null: silence is not a No, and counting it as one would invent work.
+  function needsOf(c){
+    var out = [];
+    if(c.signs === false) out.push('signs');
+    if(c.lit === false) out.push('literature');
+    if(c.headshot === false) out.push('a headshot');
+    if(c.walkbooks === false) out.push('walk books');
+    return out;
+  }
+  function needCount(d){
+    return (d.cands || []).reduce(function(a, c){ return a + needsOf(c).length; }, 0);
+  }
+  function candMoney(d){
+    var t = {raised:0, coh:0, more:0, answers:0};
+    (d.cands || []).forEach(function(c){
+      if(c.raised === null && c.coh === null && c.more === null) return;
+      t.answers++; t.raised += c.raised||0; t.coh += c.coh||0; t.more += c.more||0;
+    });
+    return t;
+  }
+  // Bases this floterial's candidate rides on that we are not buying. Every household in one
+  // of them gets nothing at all, which is the failure this flag exists to catch.
+  function strandedBases(d){
+    if(!d.rel || d.rel.kind !== 'floterial' || !d.tier) return [];
+    return (d.ride || []).filter(function(r){ return !r.tier; });
+  }
+
   function visible(){
     return DISTRICTS.filter(function(d){
       if(q && (d.code + ' ' + (d.towns||'')).toLowerCase().indexOf(q) < 0) return false;
@@ -413,6 +469,8 @@
       if(filter === 't2') return d.tier === 2;
       if(filter === 't3') return d.tier === 3;
       if(filter === 'norep') return !(d.nominees && d.nominees.R);
+      if(filter === 'needs') return needCount(d) > 0;
+      if(filter === 'stranded') return strandedBases(d).length > 0;
       return true;
     });
   }
@@ -428,7 +486,8 @@
       '<span class="dn">' + d.code +
         (d.rel && d.rel.kind==='floterial' ? ' <span class="flomark">F</span>' : '') + '</span>' +
       '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
-      '<span class="dt2">' + (d.topr ? d.topr.town : '') + '</span>' +
+      '<span class="dt2">' + (d.topr ? d.topr.town : '') +
+        (needCount(d) ? ' <span class="needmark">ASKS</span>' : '') + '</span>' +
       '<span class="dc">' + (c ? money(c)
         : (d.rel && d.rel.kind==='floterial'
             ? (inCluster ? '<span class="onbase">on the base mail</span>'
@@ -436,8 +495,14 @@
             : '')) + '</span></div>';
     if(open){
         var names = (d.nominees && d.nominees.R) ? d.nominees.R.split(', ') : [];
+        var byName = {}; (d.cands||[]).forEach(function(c){ byName[c.name] = c; });
         h += '<div class="dexp">' + (names.length
-          ? names.map(function(nm){ return '<div class="cand">' + nm + '</div>'; }).join('')
+          ? names.map(function(nm){
+              var c = byName[nm], nd = c ? needsOf(c) : [];
+              return '<div class="cand">' + nm +
+                (nd.length ? ' <span class="needmark">needs ' + nd.join(', ') + '</span>'
+                           : (c && c.answered ? '' : ' <span class="none">no check in</span>')) +
+                '</div>'; }).join('')
           : '<div class="cand none">no Republican on the ballot</div>')
           + '<div class="cand seats">' + (d.seats||0) + ' seat' + (d.seats===1?'':'s') +
             (names.length && d.seats && names.length < d.seats
@@ -554,6 +619,74 @@
     }).join('') + '</div>';
   }
 
+  // What the candidates said in the check-in, beside what CTEHR is buying. Their money is
+  // real money in this district: reading the plan without it overstates what is missing.
+  function candHtml(d){
+    var cs = d.cands || [];
+    if(!cs.length) return '';
+    function tri(v){
+      if(v === null || v === undefined) return '<span class="noans">no answer</span>';
+      return v ? '<span class="has">has</span>' : '<span class="needs">NEEDS</span>';
+    }
+    function dol(v){ return v === null || v === undefined ? '' : money(v); }
+    var h = '<div class="cnd"><table><tr><th>Candidate</th><th>Signs</th><th class="n">How many</th>' +
+      '<th>Lit</th><th>Headshot</th><th>Walk books</th><th class="n">Raised</th>' +
+      '<th class="n">On hand</th><th class="n">Expects more</th><th>Links</th></tr>';
+    cs.forEach(function(c){
+      if(!c.answered){
+        h += '<tr><td class="who2">' + c.name + '</td>' +
+             '<td colspan="8" class="silent">has not filled in the check in</td>' +
+             '<td>' + linkBits(c) + '</td></tr>';
+        return;
+      }
+      h += '<tr><td class="who2">' + c.name + '</td><td>' + tri(c.signs) + '</td>' +
+        '<td class="n">' + (c.signs_count ? num(c.signs_count) : '') + '</td>' +
+        '<td>' + tri(c.lit) + '</td><td>' + tri(c.headshot) + '</td><td>' + tri(c.walkbooks) + '</td>' +
+        '<td class="n">' + dol(c.raised) + '</td><td class="n">' + dol(c.coh) + '</td>' +
+        '<td class="n">' + dol(c.more) + '</td><td>' + linkBits(c) + '</td></tr>';
+      if(c.note) h += '<tr><td colspan="10" class="cnote">&ldquo;' + esc(c.note) + '&rdquo;</td></tr>';
+    });
+    h += '</table>';
+    var m = candMoney(d), ctehr = cost(d).total, need = needCount(d);
+    h += '<div class="foot">' +
+      '<span>Their cash on hand <b>' + money(m.coh) + '</b></span>' +
+      '<span>Expect to raise <b>' + money(m.more) + '</b></span>' +
+      '<span>CTEHR here <b>' + money(ctehr) + '</b></span>' +
+      '<span>Everything in this district <b>' + money(m.coh + m.more + ctehr) + '</b></span>' +
+      (m.answers < cs.length
+        ? '<span>' + (cs.length - m.answers) + ' of ' + cs.length + ' have not reported money</span>' : '') +
+      (need ? '<span class="warn"><b>' + need + '</b> thing' + (need===1?'':'s') + ' asked for</span>' : '') +
+      '</div></div>';
+    return h;
+  }
+  function linkBits(c){
+    var out = [];
+    if(c.website) out.push('<a href="' + c.website + '" target="_blank" rel="noopener">site</a>');
+    if(c.donate) out.push('<a href="' + c.donate + '" target="_blank" rel="noopener">donate</a>');
+    if(c.facebook) out.push('<a href="' + c.facebook + '" target="_blank" rel="noopener">fb</a>');
+    return out.join(' ');
+  }
+  function esc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Four people edit this plan. This is how each of them sees what the others changed.
+  function histHtml(d){
+    var hs = d.hist || [];
+    if(!hs.length) return '';
+    var h = '<details class="hist"><summary>' + hs.length + ' change' + (hs.length===1?'':'s') +
+            ' to this district</summary>';
+    hs.forEach(function(e){
+      h += '<div class="hrow"><span class="hwhen">' + e.at + '</span>' +
+           '<span class="hwho">' + esc(e.by || '') + '</span><span class="hwhat">' +
+           e.changes.map(function(c){
+             return esc(c[0]) + ' <span class="was">' + esc(c[1]) + '</span> &rarr; ' +
+                    '<span class="now">' + esc(c[2]) + '</span>';
+           }).join(' &middot; ') + '</span></div>';
+    });
+    return h + '</details>';
+  }
+
   function drawPane(){
     var d = DISTRICTS[idx], u = uni(d), c = cost(d), r = d.nominees && d.nominees.R;
     var tabs = '<div class="ptabs">' +
@@ -580,6 +713,7 @@
     }
     h += '<div class="who"><span class="lab">Republican nominees</span>' +
       (r ? r : '<span class="none">No Republican on the ballot here</span>') + '</div>';
+    h += candHtml(d);
     var TIERS = [[1,'Tier 1','Full effort, everything we have'],
                  [2,'Tier 2','Needs real spend here'],
                  [3,'Tier 3','Light touch'],
@@ -715,6 +849,7 @@
     h += '<p class="inplan"><label><input type="checkbox" id="incBox"'+(d.include?' checked':'')+
       '> Count this district in the plan</label></p>';
     h += '<textarea class="notes" id="notesBox" rows="2" placeholder="Notes on this district"></textarea>';
+    h += histHtml(d);
     document.getElementById('pane').innerHTML = h;
     document.getElementById('notesBox').value = d.notes || '';
   }

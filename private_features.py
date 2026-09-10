@@ -1290,6 +1290,39 @@ def spend_drop_delete():
         cur.close(); release_db_connection(conn)
 
 
+def _tier_word(t):
+    """How a tier reads in a sentence. 0 and NULL are both "no tier"."""
+    return ('Tier %d' % t) if t else 'no tier'
+
+
+def _qty_word(q):
+    q = float(q or 0)
+    return str(int(q)) if q == int(q) else ('%.1f' % q)
+
+
+def _cost_of(qty_for_district, sizes, tactics):
+    """What a district's chosen quantities cost. Mirrors cost() in spend_plan.html: mail bills
+    against households, texts against cells, and an unpriced tactic counts units at zero."""
+    total = 0.0
+    for universe, byk in (qty_for_district or {}).items():
+        sz = sizes.get(universe) or {'households': 0, 'cells': 0, 'voters': 0}
+        for t in tactics:
+            row = byk.get(t['key'])
+            q = float(row['qty']) if row else 0.0
+            if q <= 0:
+                continue
+            rate = row.get('rate') if row and row.get('rate') is not None else t['rate']
+            if t['unit'] == 'per_household':
+                total += q * (sz.get('households') or 0) * (rate or 0)
+            elif t['unit'] == 'per_cell':
+                total += q * (sz.get('cells') or 0) * (rate or 0)
+            elif t['unit'] == 'dollars':
+                total += q
+            elif t['unit'] == 'per_unit':
+                total += 0.0 if rate is None else q * rate
+    return total
+
+
 @private_bp.route('/spend-plan')
 @require_feature_access('campaign_plan')
 def spend_plan():
@@ -1409,6 +1442,92 @@ def spend_plan():
         for dc, party, names in cur.fetchall():
             nominees.setdefault(dc, {})[party] = names
 
+        # What the candidates themselves said they have and need. An unanswered question is
+        # stored NULL and must never read as a No: only an explicit false is a need. Same rule
+        # progress_checkin() applies in campaign_progress.py.
+        cur.execute("""SELECT f.district_code,
+                              c.first_name || ' ' || c.last_name,
+                              p.intake_submitted_at,
+                              p.signs_have, p.signs_count, p.lit_have, p.headshot_have,
+                              p.walkbooks_have, p.fundraising_amount, p.cash_on_hand,
+                              p.anticipated_raise, p.intake_notes,
+                              COALESCE(NULLIF(c.website_url,''), NULLIF(c.external_campaign_url,'')),
+                              NULLIF(c.donate_url,''), NULLIF(c.facebook_url,'')
+                       FROM filings f
+                       JOIN candidates c ON c.candidate_id = f.candidate_id
+                       LEFT JOIN candidate_campaign_progress p ON p.candidate_id = f.candidate_id
+                       WHERE f.election_year = 2026 AND f.office = 'State Representative'
+                         AND f.party = 'R' AND f.result <> 'lost'
+                       ORDER BY f.district_code, c.last_name, c.first_name""")
+        cands = {}
+        for r in cur.fetchall():
+            cands.setdefault(r[0], []).append({
+                'name': r[1], 'answered': r[2].strftime('%b %-d') if r[2] else None,
+                'signs': r[3], 'signs_count': r[4], 'lit': r[5], 'headshot': r[6],
+                'walkbooks': r[7],
+                'raised': float(r[8]) if r[8] is not None else None,
+                'coh': float(r[9]) if r[9] is not None else None,
+                'more': float(r[10]) if r[10] is not None else None,
+                'note': r[11], 'website': r[12], 'donate': r[13], 'facebook': r[14]})
+
+        # Every edit to this plan, so four people editing it can see each other's work. The
+        # trigger stores a row as it was BEFORE the change, so each row's value is the state
+        # it moved away from: pairing it with the next row (and the last with the live value)
+        # turns that into a readable "was X, now Y".
+        history = {}
+        cur.execute("""SELECT district_code, tier, mask, include, notes, changed_by, changed_at
+                       FROM district_spend_history WHERE op = 'update'
+                       ORDER BY district_code, changed_at""")
+        by_district = {}
+        for dc, tier, mask, inc, notes, by, at in cur.fetchall():
+            by_district.setdefault(dc, []).append(
+                {'tier': tier, 'mask': mask, 'include': inc, 'notes': notes or '',
+                 'by': by, 'at': at})
+        for dc, seq in by_district.items():
+            live = plan.get(dc, {})
+            tail = {'tier': live.get('tier'), 'mask': live.get('mask'),
+                    'include': live.get('include'), 'notes': live.get('notes', '')}
+            for i, was in enumerate(seq):
+                now = seq[i + 1] if i + 1 < len(seq) else tail
+                ch = []
+                if was['tier'] != now['tier']:
+                    ch.append(['Tier', _tier_word(was['tier']), _tier_word(now['tier'])])
+                if bool(was['include']) != bool(now['include']):
+                    ch.append(['In the plan', 'no' if not was['include'] else 'yes',
+                               'no' if not now['include'] else 'yes'])
+                if was['mask'] != now['mask']:
+                    ch.append(['Universe', str(was['mask']), str(now['mask'])])
+                if (was['notes'] or '') != (now['notes'] or ''):
+                    ch.append(['Notes', was['notes'] or 'empty', now['notes'] or 'empty'])
+                if ch:
+                    history.setdefault(dc, []).append(
+                        {'ts': was['at'], 'by': was['by'] or '', 'changes': ch})
+
+        tac_label = {t['key']: t['label'] for t in tactics}
+        cur.execute("""SELECT district_code, universe, tactic_key, qty, changed_at
+                       FROM district_spend_item_history WHERE op = 'update'
+                       ORDER BY district_code, universe, tactic_key, changed_at""")
+        by_item = {}
+        for dc, uni_, tk, q, at in cur.fetchall():
+            by_item.setdefault((dc, uni_, tk), []).append((float(q or 0), at))
+        for (dc, uni_, tk), seq in by_item.items():
+            cell = qty_by_district.get(dc, {}).get(uni_, {}).get(tk)
+            live_q = float(cell['qty']) if cell else 0.0
+            for i, (was_q, at) in enumerate(seq):
+                now_q = seq[i + 1][0] if i + 1 < len(seq) else live_q
+                if was_q == now_q:
+                    continue
+                history.setdefault(dc, []).append({
+                    'ts': at, 'by': '',
+                    'changes': [['%s, %s' % (tac_label.get(tk, tk), uni_),
+                                 _qty_word(was_q), _qty_word(now_q)]]})
+
+        for dc in history:
+            history[dc].sort(key=lambda e: e['ts'], reverse=True)
+            del history[dc][40:]
+            for e in history[dc]:
+                e['at'] = e.pop('ts').strftime('%b %-d, %-I:%M %p')
+
         cur.execute("""SELECT id, label, tactic_key, file_url, content_type, file_size,
                               uploaded_by, uploaded_at,
                               (SELECT count(*) FROM district_drop dd WHERE dd.creative_id = c.id),
@@ -1466,6 +1585,8 @@ def spend_plan():
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
                                  for m in range(1, 32)}
             d['nominees'] = nominees.get(code, {})
+            d['cands'] = cands.get(code, [])
+            d['hist'] = history.get(code, [])
 
         districts.sort(key=lambda d: _district_sort_key(d['code']))
         return render_template('private/spend_plan.html',
@@ -1475,6 +1596,99 @@ def spend_plan():
                                creatives=creatives, budget=budget)
     finally:
         cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/export.csv')
+@require_feature_access('campaign_plan')
+def spend_plan_export():
+    """The plan as a spreadsheet: one row per district per universe per tactic, plus a row per
+    district carrying the tier and totals. Field tactics are unpriced, so their cost column is
+    blank rather than zero - a blank says "not quoted", a zero says "free"."""
+    import csv, io as _io
+    from flask import Response
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT tactic_key, label, unit, rate, grp FROM spend_tactic
+                       WHERE active ORDER BY sort_order""")
+        tactics = [{'key': r[0], 'label': r[1], 'unit': r[2],
+                    'rate': float(r[3]) if r[3] is not None else None, 'grp': r[4]}
+                   for r in cur.fetchall()]
+        tac = {t['key']: t for t in tactics}
+
+        cur.execute("""SELECT full_district_code, MAX(county_name), MAX(seat_count),
+                              MAX(pvi), MAX(pvi_rating)
+                       FROM districts WHERE full_district_code IS NOT NULL GROUP BY 1""")
+        meta = {r[0]: {'county': r[1], 'seats': r[2], 'pvi': r[3], 'rating': r[4]}
+                for r in cur.fetchall()}
+
+        cur.execute("SELECT district_code, tier, mask, include FROM district_spend")
+        plan = {r[0]: {'tier': r[1], 'mask': r[2], 'include': r[3]} for r in cur.fetchall()}
+
+        cur.execute("SELECT district_code, uni, voters, households, cells FROM district_model_universe")
+        sizes = {}
+        for dc, u, v, hh, ce in cur.fetchall():
+            sizes.setdefault(dc, {})[u] = {'voters': v, 'households': hh, 'cells': ce}
+        cur.execute("SELECT district_code, mask, voters, households, cells FROM district_universe")
+        base_uni = {(r[0], r[1]): {'voters': r[2], 'households': r[3], 'cells': r[4]}
+                    for r in cur.fetchall()}
+
+        cur.execute("SELECT district_code, universe, tactic_key, qty, rate_override FROM district_spend_item")
+        items = {}
+        for dc, u, tk, q, ro in cur.fetchall():
+            items.setdefault(dc, {}).setdefault(u, {})[tk] = {
+                'qty': float(q), 'rate': float(ro) if ro is not None else None}
+
+        cur.execute("SELECT district_code, kind FROM district_relation")
+        kind = dict(cur.fetchall())
+
+        cur.execute("""SELECT district_code,
+                              STRING_AGG(first_name || ' ' || last_name, '; ' ORDER BY last_name)
+                       FROM filings
+                       WHERE election_year = 2026 AND office = 'State Representative'
+                         AND party = 'R' AND result <> 'lost'
+                       GROUP BY district_code""")
+        nominees = dict(cur.fetchall())
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    buf = _io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['District', 'County', 'Seats', 'Floterial', 'Tier', 'PVI', 'Rating',
+                'R nominees', 'Universe', 'Tactic', 'Quantity', 'Unit', 'Reach', 'Cost'])
+    for code in sorted(plan, key=_district_sort_key):
+        m = meta.get(code, {})
+        p = plan[code]
+        head = [code, m.get('county') or '', m.get('seats') or '',
+                'yes' if kind.get(code) == 'floterial' else '',
+                p['tier'] or '', m.get('pvi') if m.get('pvi') is not None else '',
+                m.get('rating') or '', nominees.get(code, '')]
+        rows = items.get(code, {})
+        if not rows:
+            w.writerow(head + ['', '', '', '', '', ''])
+            continue
+        for universe in sorted(rows):
+            sz = (sizes.get(code, {}).get(universe)
+                  or base_uni.get((code, p['mask'] or 3))
+                  or {'households': 0, 'cells': 0, 'voters': 0})
+            for tk, row in sorted(rows[universe].items()):
+                t = tac.get(tk)
+                if not t or row['qty'] <= 0:
+                    continue
+                rate = row['rate'] if row['rate'] is not None else t['rate']
+                q = row['qty']
+                if t['unit'] == 'per_household':
+                    reach, cost = q * (sz['households'] or 0), q * (sz['households'] or 0) * (rate or 0)
+                elif t['unit'] == 'per_cell':
+                    reach, cost = q * (sz['cells'] or 0), q * (sz['cells'] or 0) * (rate or 0)
+                elif t['unit'] == 'dollars':
+                    reach, cost = '', q
+                else:
+                    reach, cost = q, (None if rate is None else q * rate)
+                w.writerow(head + [universe, t['label'], _qty_word(q), t['unit'],
+                                   int(reach) if reach != '' else '',
+                                   '' if cost is None else round(cost, 2)])
+    return Response(buf.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition': 'attachment; filename=spend_plan.csv'})
 
 
 @private_bp.route('/spend-plan/save', methods=['POST'])
