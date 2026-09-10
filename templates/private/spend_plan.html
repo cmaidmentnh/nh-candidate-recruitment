@@ -27,6 +27,8 @@
   .ditem .dn{font-weight:700;color:var(--navy);white-space:nowrap}
   .ditem.inplan .dn{color:var(--green)}
   .ditem .dr{font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .ditem .dt2{font-size:.7rem;color:#8b95a3;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;max-width:96px}
   .ditem .dc{margin-left:auto;font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
   .ditem.inplan .dc{color:var(--green);font-weight:700}
   .r-gop{color:#a8261f}.r-dem{color:#1d4e89}.r-swing{color:#8a6400}
@@ -342,6 +344,7 @@
         '" data-code="' + d.code + '"><span class="dt t' + (d.tier||0) + 'c">' +
         (d.tier ? d.tier : '') + '</span><span class="dn">' + d.code + '</span>' +
         '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
+        '<span class="dt2">' + (d.topr ? d.topr.town : '') + '</span>' +
         '<span class="dc">' + (c ? money(c) : '') + '</span></div>';
     });
     document.getElementById('railList').innerHTML = html || '<div class="cty">No match</div>';
@@ -434,7 +437,9 @@
 
     var h = '<div class="panetop"><div><h3>' + d.code + '</h3><p class="panesub">' +
       (d.seats||0) + ' seat' + (d.seats===1?'':'s') + ' &middot; <span class="' + rc(d.rating) +
-      '" style="font-weight:700">' + pvi(d) + ' ' + (d.rating||'') + '</span> &middot; ' + (d.towns||'') +
+      '" style="font-weight:700">' + pvi(d) + ' ' + (d.rating||'') + '</span> &middot; ' +
+      (d.topr ? '<b>' + d.topr.town + '</b> holds ' + d.topr.pct + '% of its Republicans &middot; ' : '') +
+      (d.towns||'') +
       '</p>' + tabs + '</div><div class="nav"><button id="prevBtn">&larr; Prev</button>' +
       '<button id="nextBtn">Next &rarr;</button></div></div>';
 

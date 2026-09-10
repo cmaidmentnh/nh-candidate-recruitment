@@ -1321,6 +1321,9 @@ def spend_plan():
         plan = {r[0]: {'mask': r[1], 'include': r[2], 'notes': r[3] or '', 'tier': r[4]}
                 for r in cur.fetchall()}
 
+        cur.execute("SELECT district_code, town, town_r, pct FROM district_top_r_town")
+        topr = {r[0]: {'town': r[1], 'r': r[2], 'pct': r[3]} for r in cur.fetchall()}
+
         cur.execute("SELECT district_code, reg_r, reg_d, reg_u, reg_total FROM district_registration")
         reg = {r[0]: {'r': r[1], 'd': r[2], 'u': r[3], 'total': r[4]} for r in cur.fetchall()}
 
@@ -1413,6 +1416,7 @@ def spend_plan():
             d['tier'] = p.get('tier')
             d['reg'] = reg.get(code, {'r': 0, 'd': 0, 'u': 0, 'total': 0})
             d['past'] = past.get(code, [])
+            d['topr'] = topr.get(code)
             d['r2018'] = replay18.get(code)
             d['drops'] = drops_by_district.get(code, [])
             d['qty'] = qty_by_district.get(code, {})
