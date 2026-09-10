@@ -1321,6 +1321,11 @@ def spend_plan():
         plan = {r[0]: {'mask': r[1], 'include': r[2], 'notes': r[3] or '', 'tier': r[4]}
                 for r in cur.fetchall()}
 
+        cur.execute("SELECT district_code, uni, voters, households, cells FROM district_model_universe")
+        model_uni = {}
+        for dc, uni, v, hh, ce in cur.fetchall():
+            model_uni.setdefault(dc, {})[uni] = {'voters': v, 'households': hh, 'cells': ce}
+
         cur.execute("SELECT district_code, town, town_r, pct FROM district_top_r_town")
         topr = {r[0]: {'town': r[1], 'r': r[2], 'pct': r[3]} for r in cur.fetchall()}
 
@@ -1353,11 +1358,11 @@ def spend_plan():
                     blk['cands'].append({'name': nm, 'party': pty, 'votes': vt, 'won': won})
                     break
 
-        cur.execute("SELECT district_code, tactic_key, qty, rate_override FROM district_spend_item")
+        cur.execute("SELECT district_code, universe, tactic_key, qty, rate_override FROM district_spend_item")
         qty_by_district = {}
-        for dc, tk, q, ro in cur.fetchall():
-            qty_by_district.setdefault(dc, {})[tk] = {'qty': float(q),
-                                                      'rate': float(ro) if ro is not None else None}
+        for dc, uni, tk, q, ro in cur.fetchall():
+            qty_by_district.setdefault(dc, {}).setdefault(uni, {})[tk] = {
+                'qty': float(q), 'rate': float(ro) if ro is not None else None}
 
         # Who is actually on the November ballot here, so a district is never planned blind.
         cur.execute("""SELECT district_code, party,
@@ -1417,6 +1422,7 @@ def spend_plan():
             d['reg'] = reg.get(code, {'r': 0, 'd': 0, 'u': 0, 'total': 0})
             d['past'] = past.get(code, [])
             d['topr'] = topr.get(code)
+            d['model'] = model_uni.get(code, {})
             d['r2018'] = replay18.get(code)
             d['drops'] = drops_by_district.get(code, [])
             d['qty'] = qty_by_district.get(code, {})

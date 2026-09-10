@@ -113,6 +113,10 @@
   table.tac .tc{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;color:var(--navy);width:112px}
   table.tac .tc.zero{color:#c9ced6;font-weight:400}
   .norate{color:var(--red);font-size:.7rem;font-weight:700}
+  .unihdr{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;font-weight:800;
+    color:var(--navy);margin:16px 0 2px;padding-top:10px;border-top:1px solid var(--rule)}
+  .unisz{font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums;margin-bottom:4px}
+  .unisz b{color:var(--ink)}
   .dtot{display:flex;justify-content:space-between;align-items:baseline;
     border-top:2px solid var(--navy);padding-top:10px;margin-top:8px}
   .dtot .l{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
@@ -315,17 +319,29 @@
   function rc(r){ r=(r||'').toUpperCase();
     return r.indexOf('GOP')>=0?'r-gop':r.indexOf('DEM')>=0?'r-dem':'r-swing'; }
 
+  function sizeFor(d, universe){
+    if(universe === 'base') return uni(d);          // the old single-mask universe
+    return (d.model && d.model[universe]) || {voters:0, households:0, cells:0};
+  }
   function cost(d){
-    var u = uni(d), out = {total:0,pieces:0,msgs:0,grp:{mail:0,text:0,digital:0,field:0},per:{}};
-    TACTICS.forEach(function(t){
-      var q = (d.qty && d.qty[t.key] && d.qty[t.key].qty) || 0, c = 0;
-      if(q > 0){
-        if(t.unit === 'per_household'){ c = q*u.households*t.rate; out.pieces += q*u.households; }
-        else if(t.unit === 'per_cell'){ c = q*u.cells*t.rate; out.msgs += q*u.cells; }
-        else if(t.unit === 'dollars'){ c = q; }
-        else if(t.unit === 'per_unit'){ c = (t.rate == null) ? 0 : q*t.rate; }
-      }
-      out.per[t.key] = c; out.total += c; out.grp[t.grp] += c;
+    var out = {total:0,pieces:0,msgs:0,grp:{mail:0,text:0,digital:0,field:0},per:{},byUni:{}};
+    var qty = d.qty || {};
+    Object.keys(qty).forEach(function(universe){
+      var sz = sizeFor(d, universe);
+      TACTICS.forEach(function(t){
+        var row = qty[universe][t.key];
+        var q = (row && row.qty) || 0, c = 0;
+        if(q > 0){
+          if(t.unit === 'per_household'){ c = q*sz.households*t.rate; out.pieces += q*sz.households; }
+          else if(t.unit === 'per_cell'){ c = q*sz.cells*t.rate; out.msgs += q*sz.cells; }
+          else if(t.unit === 'dollars'){ c = q; }
+          else if(t.unit === 'per_unit'){ c = (t.rate == null) ? 0 : q*t.rate; }
+        }
+        if(!c) return;
+        out.per[universe+'|'+t.key] = c;
+        out.total += c; out.grp[t.grp] += c;
+        out.byUni[universe] = (out.byUni[universe]||0) + c;
+      });
     });
     return out;
   }
@@ -534,22 +550,35 @@
     h += '</select><div class="unicount"><b>' + num(u.households) + '</b> mail households &middot; <b>' +
       num(u.cells) + '</b> textable cells &middot; ' + num(u.voters) + ' voters</div>' +
       '<div class="unihint">Mail bills against households, texts against cells. Widen this and every drop costs more.</div></div>';
-    h += '<table class="tac">';
-    var last = null;
-    GROUPS.forEach(function(g){
-      TACTICS.filter(function(t){ return t.grp === g[0]; }).forEach(function(t){
-        if(g[1] && last !== g[1]){ h += '<tr class="grp"><td colspan="4">' + g[1] + '</td></tr>'; last = g[1]; }
-        var qv = (d.qty && d.qty[t.key] && d.qty[t.key].qty) || '';
-        var hint = t.unit==='per_household' ? num(u.households)+' households &times; $'+t.rate.toFixed(2)
-                 : t.unit==='per_cell'      ? num(u.cells)+' cells &times; $'+t.rate.toFixed(2)
+    var UNIS = [['gotv','GOTV &middot; low-propensity Republicans'],
+                ['persuade','Persuasion &middot; midterm voters, no partisan history or flip-floppers'],
+                ['base','Digital and field &middot; whole district']];
+    UNIS.forEach(function(U){
+      var universe = U[0], sz = sizeFor(d, universe);
+      var keys = universe==='base' ? ['meta','ctv','display','palm_cards','signs','gotv_calls','doors']
+                                   : ['mail','mms'];
+      h += '<div class="unihdr">' + U[1] + '</div>';
+      if(universe!=='base'){
+        h += '<div class="unisz"><b>' + num(sz.households) + '</b> households &middot; <b>' +
+             num(sz.cells) + '</b> cells &middot; ' + num(sz.voters) + ' voters</div>';
+      }
+      h += '<table class="tac">';
+      keys.forEach(function(k){
+        var t = TACTICS.filter(function(x){ return x.key===k; })[0]; if(!t) return;
+        var row = d.qty && d.qty[universe] && d.qty[universe][t.key];
+        var qv = (row && row.qty) || '';
+        var hint = t.unit==='per_household' ? num(sz.households)+' households &times; $'+t.rate.toFixed(2)
+                 : t.unit==='per_cell'      ? num(sz.cells)+' cells &times; $'+t.rate.toFixed(2)
                  : t.unit==='dollars'       ? 'dollars, at $'+t.rate.toFixed(0)+' CPM'
                  : (t.rate==null ? '<span class="norate">no unit cost set</span>' : '&times; $'+t.rate.toFixed(2)+' each');
+        var key = universe+'|'+t.key;
         h += '<tr><td class="tl">'+t.label+'</td><td class="ti"><input type="number" min="0" step="any" data-tactic="'+
-          t.key+'"'+(qv?' class="set"':'')+' value="'+qv+'" placeholder="'+t.qty_label+'"></td>'+
-          '<td class="th">'+hint+'</td><td class="tc'+(c.per[t.key]?'':' zero')+'">'+money(c.per[t.key]||0)+'</td></tr>';
+          t.key+'" data-uni="'+universe+'"'+(qv?' class="set"':'')+' value="'+qv+'" placeholder="'+t.qty_label+'"></td>'+
+          '<td class="th">'+hint+'</td><td class="tc'+(c.per[key]?'':' zero')+'">'+money(c.per[key]||0)+'</td></tr>';
       });
+      h += '</table>';
     });
-    h += '</table><div class="dtot"><span class="l">'+d.code+' total</span><span class="v">'+money(c.total)+'</span></div>';
+    h += '<div class="dtot"><span class="l">'+d.code+' total</span><span class="v">'+money(c.total)+'</span></div>';
     h += '<p class="inplan"><label><input type="checkbox" id="incBox"'+(d.include?' checked':'')+
       '> Count this district in the plan</label></p>';
     h += '<textarea class="notes" id="notesBox" rows="2" placeholder="Notes on this district"></textarea>';
@@ -646,13 +675,16 @@
     var d = DISTRICTS[idx];
     if(e.target.dataset.tactic){
       var v = parseFloat(e.target.value) || 0;
-      d.qty = d.qty || {}; d.qty[e.target.dataset.tactic] = {qty: v};
-      var i = {}; i[e.target.dataset.tactic] = v; queue(d.code, {items: i});
+      var un = e.target.dataset.uni || 'base';
+      d.qty = d.qty || {}; d.qty[un] = d.qty[un] || {};
+      d.qty[un][e.target.dataset.tactic] = {qty: v};
+      var i = {}; i[e.target.dataset.tactic] = v; queue(d.code, {universe: un, items: i});
       var c = cost(d);
       e.target.classList.toggle('set', v > 0);
+      var kk = un+'|'+e.target.dataset.tactic;
       var cell = e.target.closest('tr').querySelector('.tc');
-      cell.textContent = money(c.per[e.target.dataset.tactic] || 0);
-      cell.classList.toggle('zero', !c.per[e.target.dataset.tactic]);
+      cell.textContent = money(c.per[kk] || 0);
+      cell.classList.toggle('zero', !c.per[kk]);
       document.querySelector('.dtot .v').textContent = money(c.total);
       drawRail(); totals();
     } else if(e.target.id === 'notesBox'){ d.notes = e.target.value; queue(d.code, {notes: d.notes}); }
