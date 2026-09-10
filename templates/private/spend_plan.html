@@ -127,13 +127,12 @@
     background:#fdfaf3;margin:6px 6px 8px 6px;overflow:hidden}
   .clushdr{display:flex;align-items:baseline;gap:8px;padding:5px 9px;background:#f7efdc}
   .clushdr .cl{font-size:.72rem;font-weight:800;color:#7a5f14;white-space:nowrap}
-  .clushdr .cs{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:#9a8games}
   .clushdr .cs{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:#9a8558}
   .clushdr .cc{margin-left:auto;font-size:.8rem;font-weight:800;color:#7a5f14;
     font-variant-numeric:tabular-nums}
   .clusbox .ditem{background:transparent;border-left-color:transparent}
   .clusbox .ditem.sel{background:#eef3fa;border-left-color:var(--navy)}
-  .rides{color:#9a8558;font-style:italic}
+  .onbase{color:#9a8558;font-size:.7rem}
   .stranded{color:var(--red);font-weight:700;font-size:.7rem}
   .ridet{width:100%;border-collapse:collapse;margin:8px 0 4px}
   .ridet th{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
@@ -432,7 +431,7 @@
       '<span class="dt2">' + (d.topr ? d.topr.town : '') + '</span>' +
       '<span class="dc">' + (c ? money(c)
         : (d.rel && d.rel.kind==='floterial'
-            ? (inCluster ? '<span class="rides">rides</span>'
+            ? (inCluster ? '<span class="onbase">on the base mail</span>'
                          : (d.tier ? '<span class="stranded">no base funded</span>' : ''))
             : '')) + '</span></div>';
     if(open){
@@ -654,9 +653,9 @@
       var implied = d.tier === 1 ? 7 : d.tier === 2 ? 5 : d.tier === 3 ? 4 : null;
       var pctReached = totalHH ? Math.round(100*reachedHH/totalHH) : 0;
 
-      h += '<div class="flo"><b>Floterial.</b> Nothing is bought here. This candidate rides on ' +
-        'the base districts\' pieces, so what they actually receive is set by those bases, ' +
-        'not by the tier on this district.';
+      h += '<div class="flo"><b>Floterial.</b> Nothing is bought here. This candidate appears on ' +
+        'the mail bought in the base districts below, so what they receive is set by those ' +
+        'bases, not by the tier on this district.';
       h += '<table class="ridet"><tr><th>Base</th><th class="n">Households</th><th class="n">Share</th>' +
            '<th class="n">Tier</th><th class="n">Pieces</th></tr>' +
         ride.map(function(r){
@@ -683,8 +682,8 @@
       }
       h += '</div>';
     } else if(d.rel && d.rel.carries){
-      h += '<div class="flo carry"><b>Carries a floterial.</b> Mail bought here also promotes ' +
-           d.rel.carries + '.</div>';
+      h += '<div class="flo carry"><b>Also carries ' + d.rel.carries + '.</b> ' +
+           'Mail bought here reaches that candidate too.</div>';
     }
     UNIS.forEach(function(U){
       var universe = U[0], sz = sizeFor(d, universe);
