@@ -1469,19 +1469,21 @@ def spend_plan_save():
                   (data.get('tier') or None),
                   (current_user.email if current_user.is_authenticated else 'admin'),
                   'mask' in data, 'include' in data, 'notes' in data, 'tier' in data))
+        universe = (data.get('universe') or 'base').strip()[:20]
         for tk, qty in (data.get('items') or {}).items():
             try:
                 q = float(qty)
             except (TypeError, ValueError):
                 continue
             if q <= 0:
-                cur.execute("DELETE FROM district_spend_item WHERE district_code=%s AND tactic_key=%s",
-                            (code, tk))
+                cur.execute("DELETE FROM district_spend_item WHERE district_code=%s "
+                            "AND universe=%s AND tactic_key=%s", (code, universe, tk))
             else:
-                cur.execute("""INSERT INTO district_spend_item (district_code, tactic_key, qty)
-                               VALUES (%s,%s,%s)
-                               ON CONFLICT (district_code, tactic_key)
-                               DO UPDATE SET qty = EXCLUDED.qty""", (code, tk, q))
+                cur.execute("""INSERT INTO district_spend_item
+                                   (district_code, universe, tactic_key, qty)
+                               VALUES (%s,%s,%s,%s)
+                               ON CONFLICT (district_code, universe, tactic_key)
+                               DO UPDATE SET qty = EXCLUDED.qty""", (code, universe, tk, q))
         conn.commit()
         return jsonify({'ok': True})
     except Exception as e:
