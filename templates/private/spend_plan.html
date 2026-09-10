@@ -215,6 +215,33 @@
   }
   var GROUPS = [['mail','Mail and text'],['text',null],['digital','Digital'],['field','Field']];
   var idx = 0, pending = {}, timer = null, filter = 'all', q = '';
+  var PKEY = 'spendPlanPlace';
+
+  function rememberPlace(){
+    try {
+      var d = DISTRICTS[idx];
+      localStorage.setItem(PKEY, JSON.stringify({code: d && d.code, filter: filter, q: q}));
+      if(d) history.replaceState(null, '', '#' + encodeURIComponent(d.code));
+    } catch(e){}
+  }
+  function restorePlace(){
+    var code = null;
+    try {
+      if(location.hash.length > 1) code = decodeURIComponent(location.hash.slice(1));
+      var saved = JSON.parse(localStorage.getItem(PKEY) || '{}');
+      if(!code) code = saved.code;
+      if(saved.filter){ filter = saved.filter; }
+      if(saved.q){ q = saved.q; }
+    } catch(e){}
+    if(q){ var qb = document.getElementById('q'); if(qb) qb.value = q; }
+    document.querySelectorAll('.filters a').forEach(function(a){
+      a.classList.toggle('on', a.dataset.f === filter);
+    });
+    if(code){
+      var i = DISTRICTS.findIndex(function(d){ return d.code === code; });
+      if(i >= 0) idx = i;
+    }
+  }
   var saveMsg = document.getElementById('saveMsg');
 
   function money(n){ return '$' + Math.round(n).toLocaleString(); }
@@ -403,7 +430,7 @@
     document.getElementById('fField').textContent = money(g.field);
   }
 
-  function redraw(){ drawRail(); drawPane(); totals(); }
+  function redraw(){ drawRail(); drawPane(); totals(); rememberPlace(); }
 
   function queue(code, payload){
     journalWrite(code, payload);
@@ -489,12 +516,12 @@
   });
 
   document.getElementById('q').addEventListener('input', function(e){
-    q = e.target.value.trim().toLowerCase(); drawRail();
+    q = e.target.value.trim().toLowerCase(); drawRail(); rememberPlace();
   });
   document.querySelectorAll('.filters a').forEach(function(a){
     a.addEventListener('click', function(){
       document.querySelectorAll('.filters a').forEach(function(x){ x.classList.remove('on'); });
-      a.classList.add('on'); filter = a.dataset.f; drawRail();
+      a.classList.add('on'); filter = a.dataset.f; drawRail(); rememberPlace();
     });
   });
   document.addEventListener('keydown', function(e){
@@ -552,6 +579,7 @@
     });
   }
 
+  restorePlace();
   redraw();
   replayJournal();
 })();
