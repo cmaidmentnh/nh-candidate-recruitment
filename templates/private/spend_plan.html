@@ -123,13 +123,18 @@
   .flob{font-size:.76rem;color:var(--muted);margin-top:4px}
   .flow{font-size:.78rem;color:var(--red);margin-top:5px}
   .flok{font-size:.78rem;color:var(--green);margin-top:5px}
-  .clus{display:flex;align-items:baseline;gap:8px;padding:5px 10px 2px 10px;margin-top:3px;
-    background:#f4f7fb;border-left:3px solid #8a6400}
-  .clus .cl{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#8a6400}
-  .clus .cc{margin-left:auto;font-size:.78rem;font-weight:800;color:var(--navy);
+  .clusbox{border:1px solid #e6d9b8;border-left:3px solid #b8912f;border-radius:4px;
+    background:#fdfaf3;margin:6px 6px 8px 6px;overflow:hidden}
+  .clushdr{display:flex;align-items:baseline;gap:8px;padding:5px 9px;background:#f7efdc}
+  .clushdr .cl{font-size:.72rem;font-weight:800;color:#7a5f14;white-space:nowrap}
+  .clushdr .cs{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:#9a8games}
+  .clushdr .cs{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:#9a8558}
+  .clushdr .cc{margin-left:auto;font-size:.8rem;font-weight:800;color:#7a5f14;
     font-variant-numeric:tabular-nums}
-  .ditem.inclus{background:#fafbfd;border-left-color:#e2e8f0}
-  .ditem.inclus.sel{background:#eef3fa;border-left-color:var(--navy)}
+  .clusbox .ditem{background:transparent;border-left-color:transparent}
+  .clusbox .ditem.sel{background:#eef3fa;border-left-color:var(--navy)}
+  .rides{color:#9a8558;font-style:italic}
+  .stranded{color:var(--red);font-weight:700;font-size:.7rem}
   .ridet{width:100%;border-collapse:collapse;margin:8px 0 4px}
   .ridet th{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
     text-align:left;padding:2px 6px 3px 0;font-weight:700}
@@ -425,8 +430,11 @@
         (d.rel && d.rel.kind==='floterial' ? ' <span class="flomark">F</span>' : '') + '</span>' +
       '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
       '<span class="dt2">' + (d.topr ? d.topr.town : '') + '</span>' +
-      '<span class="dc">' + (c ? money(c) : (d.rel && d.rel.kind==='floterial' ? 'rides along' : '')) +
-      '</span></div>';
+      '<span class="dc">' + (c ? money(c)
+        : (d.rel && d.rel.kind==='floterial'
+            ? (inCluster ? '<span class="rides">rides</span>'
+                         : (d.tier ? '<span class="stranded">no base funded</span>' : ''))
+            : '')) + '</span></div>';
     if(open){
         var names = (d.nominees && d.nominees.R) ? d.nominees.R.split(', ') : [];
         h += '<div class="dexp">' + (names.length
@@ -451,10 +459,16 @@
         var mem = clusterMembers(ck).filter(function(m){ return visCodes[m.code]; });
         if(mem.length){
           var cc = clusterCost(ck), cs = clusterSeats(ck);
-          html += '<div class="clus"><span class="cl">joint effort &middot; ' + cs +
-                  ' seat' + (cs===1?'':'s') + '</span>' +
-                  '<span class="cc">' + (cc ? money(cc) : '') + '</span></div>';
+          var names = mem.map(function(m){
+            var n = m.code.split(' ')[1];
+            return (m.rel && m.rel.kind==='floterial') ? n + 'F' : n;
+          }).join(' + ');
+          html += '<div class="clusbox">' +
+            '<div class="clushdr"><span class="cl">' + (mem[0].county||'') + ' ' + names + '</span>' +
+            '<span class="cs">' + cs + ' seat' + (cs===1?'':'s') + ' together</span>' +
+            '<span class="cc">' + (cc ? money(cc) : '') + '</span></div>';
           mem.forEach(function(m){ html += railRow(m, true); });
+          html += '</div>';
         }
         return;
       }
