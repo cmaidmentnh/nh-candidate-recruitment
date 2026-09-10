@@ -351,7 +351,7 @@ def progress_checkin():
     The form went to 309 nominees; this is the only place its answers are readable. NULL is
     meaningful here and is shown as "no answer" rather than as a No: the form deliberately
     leaves an unanswered question NULL so a non-response is distinguishable from a No."""
-    conn = get_db_connection()
+    conn = _get_db()
     cur = conn.cursor()
     try:
         cur.execute("""
@@ -394,7 +394,7 @@ def progress_checkin():
         return render_template('progress_checkin.html', rows=rows, totals=totals)
     finally:
         cur.close()
-        release_db_connection(conn)
+        _release_db(conn)
 
 
 @progress_bp.route('/progress/update', methods=['POST'])
