@@ -1339,6 +1339,27 @@ def spend_plan():
         for dc, uni, v, hh, ce in cur.fetchall():
             model_uni.setdefault(dc, {})[uni] = {'voters': v, 'households': hh, 'cells': ce}
 
+        # A floterial buys nothing itself: what it RECEIVES is decided by the tiers of the
+        # bases it rides on, weighted by where its households sit. A tier on a floterial is
+        # therefore close to decorative, and this is what makes that visible.
+        cur.execute("""
+            SELECT b.floterial, b.base,
+                   COALESCE(bh.h, 0) AS households,
+                   bs.tier,
+                   COALESCE(bm.pieces, 0) AS pieces
+              FROM district_floterial_base b
+              LEFT JOIN (SELECT district_code, sum(households) h
+                           FROM district_model_universe GROUP BY 1) bh ON bh.district_code = b.base
+              LEFT JOIN district_spend bs ON bs.district_code = b.base AND bs.tier IS NOT NULL
+              LEFT JOIN (SELECT district_code, max(qty) pieces
+                           FROM district_spend_item WHERE tactic_key = 'mail' GROUP BY 1) bm
+                     ON bm.district_code = b.base
+             ORDER BY b.floterial, COALESCE(bh.h,0) DESC""")
+        ride = {}
+        for f, base, hh, btier, pieces in cur.fetchall():
+            ride.setdefault(f, []).append({'base': base, 'households': int(hh or 0),
+                                           'tier': btier, 'pieces': float(pieces or 0)})
+
         cur.execute("SELECT district_code, town, town_r, pct FROM district_top_r_town")
         topr = {r[0]: {'town': r[1], 'r': r[2], 'pct': r[3]} for r in cur.fetchall()}
 
@@ -1437,6 +1458,7 @@ def spend_plan():
             d['topr'] = topr.get(code)
             d['model'] = model_uni.get(code, {})
             d['rel'] = relation.get(code)
+            d['ride'] = ride.get(code, [])
             d['r2018'] = replay18.get(code)
             d['drops'] = drops_by_district.get(code, [])
             d['qty'] = qty_by_district.get(code, {})

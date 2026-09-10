@@ -130,6 +130,12 @@
     font-variant-numeric:tabular-nums}
   .ditem.inclus{background:#fafbfd;border-left-color:#e2e8f0}
   .ditem.inclus.sel{background:#eef3fa;border-left-color:var(--navy)}
+  .ridet{width:100%;border-collapse:collapse;margin:8px 0 4px}
+  .ridet th{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+    text-align:left;padding:2px 6px 3px 0;font-weight:700}
+  .ridet td{font-size:.78rem;padding:2px 6px 2px 0;border-top:1px solid #eef1f5}
+  .ridet .n{text-align:right;font-variant-numeric:tabular-nums}
+  .ridet tr.gap td{color:var(--red);font-weight:700}
   .flomark{font-size:.58rem;font-weight:800;color:#8a6400;vertical-align:super}
   .dtot{display:flex;justify-content:space-between;align-items:baseline;
     border-top:2px solid var(--navy);padding-top:10px;margin-top:8px}
@@ -627,17 +633,41 @@
                 ['base','Field &middot; whole district']];
     var isFlo = d.rel && d.rel.kind === 'floterial';
     if(isFlo){
-      var covered = (d.rel.bases_covered||'').split(', ').filter(Boolean);
-      var all = (d.rel.bases||'').split(', ').filter(Boolean);
-      var missing = all.filter(function(b){ return covered.indexOf(b) < 0; });
-      h += '<div class="flo"><b>Floterial.</b> No mail or text is bought here: this candidate ' +
-        'rides on the base districts\' pieces, so the households are already paid for.' +
-        '<div class="flob">Sits over ' + all.length + ': ' + all.join(', ') + '</div>' +
-        (missing.length
-          ? '<div class="flow"><b>' + missing.length + ' of those get no mail at all</b> (' +
-            missing.join(', ') + '), so this candidate is unreached there.</div>'
-          : '<div class="flok">All ' + all.length + ' are in the plan, so this candidate is covered everywhere.</div>') +
-        '</div>';
+      var ride = d.ride || [];
+      var totalHH = ride.reduce(function(a,r){ return a + r.households; }, 0);
+      var reachedHH = ride.reduce(function(a,r){ return a + (r.tier ? r.households : 0); }, 0);
+      var effective = totalHH ? ride.reduce(function(a,r){ return a + r.pieces*r.households; },0)/totalHH : 0;
+      var implied = d.tier === 1 ? 7 : d.tier === 2 ? 5 : d.tier === 3 ? 4 : null;
+      var pctReached = totalHH ? Math.round(100*reachedHH/totalHH) : 0;
+
+      h += '<div class="flo"><b>Floterial.</b> Nothing is bought here. This candidate rides on ' +
+        'the base districts\' pieces, so what they actually receive is set by those bases, ' +
+        'not by the tier on this district.';
+      h += '<table class="ridet"><tr><th>Base</th><th class="n">Households</th><th class="n">Share</th>' +
+           '<th class="n">Tier</th><th class="n">Pieces</th></tr>' +
+        ride.map(function(r){
+          var share = totalHH ? Math.round(100*r.households/totalHH) : 0;
+          return '<tr class="' + (r.tier ? '' : 'gap') + '"><td>' + r.base + '</td>' +
+            '<td class="n">' + num(r.households) + '</td><td class="n">' + share + '%</td>' +
+            '<td class="n">' + (r.tier ? 'T'+r.tier : 'not in plan') + '</td>' +
+            '<td class="n">' + (r.tier ? r.pieces : '&mdash;') + '</td></tr>';
+        }).join('') + '</table>';
+
+      if(pctReached < 100){
+        h += '<div class="flow"><b>' + (100-pctReached) + '% of this candidate\'s households get nothing.</b> ' +
+             'Fund the bases marked "not in plan" to reach them.</div>';
+      }
+      if(implied !== null && totalHH){
+        var diff = effective - implied;
+        h += '<div class="' + (Math.abs(diff) < 0.5 ? 'flok' : 'flow') + '">Tier ' + d.tier +
+             ' implies ' + implied + ' mail pieces. This candidate actually receives <b>' +
+             effective.toFixed(1) + '</b>, weighted by where their households sit' +
+             (Math.abs(diff) < 0.5 ? '.' :
+               (diff < 0 ? ', so they are <b>under-served</b> by ' + Math.abs(diff).toFixed(1) + ' pieces.'
+                         : ', so they are getting <b>' + diff.toFixed(1) + ' more</b> than their tier calls for.')) +
+             '</div>';
+      }
+      h += '</div>';
     } else if(d.rel && d.rel.carries){
       h += '<div class="flo carry"><b>Carries a floterial.</b> Mail bought here also promotes ' +
            d.rel.carries + '.</div>';
