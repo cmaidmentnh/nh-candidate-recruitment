@@ -559,7 +559,7 @@
       '<div class="unihint">Mail bills against households, texts against cells. Widen this and every drop costs more.</div></div>';
     var UNIS = [['gotv','GOTV &middot; low-propensity Republicans'],
                 ['persuade','Persuasion &middot; midterm voters, no partisan history or flip-floppers'],
-                ['base','Digital and field &middot; whole district']];
+                ['base','Field &middot; whole district']];
     var isFlo = d.rel && d.rel.kind === 'floterial';
     if(isFlo){
       var covered = (d.rel.bases_covered||'').split(', ').filter(Boolean);
@@ -580,8 +580,8 @@
     UNIS.forEach(function(U){
       var universe = U[0], sz = sizeFor(d, universe);
       if(isFlo && universe !== 'base') return;      // floterials buy no household-based media
-      var keys = universe==='base' ? ['meta','ctv','display','palm_cards','signs','gotv_calls','doors']
-                                   : ['mail','mms'];
+      var keys = universe==='base' ? ['palm_cards','signs','gotv_calls','doors']
+                                   : ['mail','mms','meta','ctv','display'];
       h += '<div class="unihdr">' + U[1] + '</div>';
       if(universe!=='base'){
         h += '<div class="unisz"><b>' + num(sz.households) + '</b> households &middot; <b>' +
