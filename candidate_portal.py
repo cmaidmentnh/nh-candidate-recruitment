@@ -159,15 +159,42 @@ PORTAL_FROM = os.environ.get('PORTAL_FROM',
                              '"Committee to Elect House Republicans" <info@electhouserepublicans.com>')
 
 
-def _send_access_link(cid, fn, email):
+# Pages a login link is allowed to land on. A destination arrives from the browser, so it is
+# matched against this list rather than pasted into a URL: anything else becomes the hub.
+ACCESS_DESTS = {
+    'checkin': '/checkin',
+    'profile': '/candidates.html',
+    'walkbooks': '/walkbooks',
+    'voterlists': '/voterlists',
+    'consult': '/consult',
+}
+DEST_WORDS = {
+    'checkin': ('complete your check in', 'Complete my check in'),
+    'profile': ('sign in and manage your information', 'Sign in to my profile'),
+    'walkbooks': ('get to your walk books', 'Open my walk books'),
+    'voterlists': ('get to your voter lists', 'Open my voter lists'),
+    'consult': ('book your consult', 'Book my consult'),
+}
+
+
+def _send_access_link(cid, fn, email, dest=None):
+    """Email a one-click login link.
+
+    `dest` is where they were trying to go. Sending everyone to the hub was fine when the hub
+    was the destination, but a nominee asked to complete the check in who clicks a link and
+    lands on their profile has been answered with the wrong page, and most of them stopped
+    there."""
     token = make_token('portal_access', cid)
-    link = f"{PORTAL_BASE}/candidates.html?token={token}"
+    path = ACCESS_DESTS.get(dest or '', '/candidates.html')
+    sep = '&' if '?' in path else '?'
+    link = f"{PORTAL_BASE}{path}{sep}token={token}"
+    lead, button = DEST_WORDS.get(dest or '', DEST_WORDS['profile'])
     html = f"""<div style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.6">
         <p>Hi {fn or 'there'},</p>
-        <p>Here's your secure login link for your candidate profile with the Committee to Elect House
-        Republicans. Click below to sign in and manage your information &mdash; no password needed.</p>
+        <p>Here's your secure login link for the Committee to Elect House Republicans.
+        Click below to {lead} &mdash; no password needed.</p>
         <p style="margin:24px 0"><a href="{link}" style="background:#b91c1c;color:#fff;padding:14px 28px;
-        border-radius:6px;text-decoration:none;font-weight:700">Sign in to my profile</a></p>
+        border-radius:6px;text-decoration:none;font-weight:700">{button}</a></p>
         <p style="font-size:13px;color:#444">Or paste this link into your browser:<br>
         <a href="{link}" style="color:#b91c1c;word-break:break-all">{link}</a></p>
         <p style="color:#666;font-size:13px">This link expires in 7 days. If you didn't request it, you can ignore this email.</p></div>"""
@@ -490,6 +517,7 @@ def login_link():
     tell them to register. The single entry point for the unified login (post-cutover)."""
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip().lower()
+    dest = (data.get('dest') or '').strip()
     if not EMAIL_RE.match(email):
         return jsonify({'ok': False, 'error': 'Please enter a valid email address.'}), 400
     conn = get_db_connection(); cur = conn.cursor()
@@ -498,7 +526,7 @@ def login_link():
     finally:
         cur.close(); release_db_connection(conn)
     if row:
-        _send_access_link(row[0], row[1], email)
+        _send_access_link(row[0], row[1], email, dest)
         return jsonify({'ok': True, 'sent': True,
                         'message': f"We've emailed a login link to {email}. Click it to sign in — no password needed."})
     return jsonify({'ok': True, 'sent': False, 'unknown': True,
@@ -598,6 +626,7 @@ def forgot_password():
     is sent to the email ON FILE, never to whatever the requester typed."""
     data = request.get_json(silent=True) or {}
     ident = (data.get('identifier') or data.get('email') or data.get('username') or '').strip()
+    dest = (data.get('dest') or '').strip()
     generic = jsonify({'ok': True,
         'message': "If that account exists, we just emailed a one-click login link to the address on file. Check your inbox (and spam)."})
     if not ident:
@@ -615,7 +644,7 @@ def forgot_password():
         cur.close(); release_db_connection(conn)
     if row and row[2]:
         try:
-            _send_access_link(row[0], row[1], row[2])
+            _send_access_link(row[0], row[1], row[2], dest)
             if log_activity:
                 log_activity('portal_password_reset_link', 'Emailed a login link (forgot password)', row[0])
         except Exception as e:
