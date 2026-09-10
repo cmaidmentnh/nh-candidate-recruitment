@@ -1258,21 +1258,23 @@ def spend_plan_save():
     conn = get_db_connection(); cur = conn.cursor()
     try:
         if any(k in data for k in ('mask', 'include', 'notes', 'tier')):
+            # A field is only written when the caller actually sent it. The previous version
+            # coerced a missing `include` to false in the VALUES clause, so COALESCE could
+            # never see NULL and every tier-only save silently switched the district OFF.
+            # Same trap for mask. Pass a "was it sent" flag per field and branch on it.
             cur.execute("""
                 INSERT INTO district_spend (district_code, mask, include, notes, tier, updated_by, updated_at)
                 VALUES (%s, COALESCE(%s,3), COALESCE(%s,false), %s, %s, %s, now())
                 ON CONFLICT (district_code) DO UPDATE SET
-                    mask    = COALESCE(EXCLUDED.mask, district_spend.mask),
-                    include = COALESCE(EXCLUDED.include, district_spend.include),
-                    notes   = COALESCE(EXCLUDED.notes, district_spend.notes),
-                    -- tier 0 from the UI means "clear it", so it maps to NULL rather than
-                    -- being swallowed by COALESCE and leaving the old tier in place.
-                    tier    = CASE WHEN %s THEN EXCLUDED.tier ELSE district_spend.tier END,
+                    mask    = CASE WHEN %s THEN EXCLUDED.mask    ELSE district_spend.mask    END,
+                    include = CASE WHEN %s THEN EXCLUDED.include ELSE district_spend.include END,
+                    notes   = CASE WHEN %s THEN EXCLUDED.notes   ELSE district_spend.notes   END,
+                    tier    = CASE WHEN %s THEN EXCLUDED.tier    ELSE district_spend.tier    END,
                     updated_by = EXCLUDED.updated_by, updated_at = now()
             """, (code, data.get('mask'), data.get('include'), data.get('notes'),
-                  (data.get('tier') or None), 
+                  (data.get('tier') or None),
                   (current_user.email if current_user.is_authenticated else 'admin'),
-                  'tier' in data))
+                  'mask' in data, 'include' in data, 'notes' in data, 'tier' in data))
         for tk, qty in (data.get('items') or {}).items():
             try:
                 q = float(qty)
