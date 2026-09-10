@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .vs{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--ink:#22303f;--green:#1a7f43;--red:#b4262d;
+      --amber:#8a6400;color:var(--ink);font-size:.9rem}
+  .vs a.back{font-size:.72rem;color:var(--muted);display:block;margin-bottom:8px}
+  .vs h4{margin:0 0 2px;color:var(--navy)}
+  .vs .lead{color:var(--muted);font-size:.78rem;margin:0 0 14px;max-width:680px}
+  .live{display:flex;gap:0 30px;align-items:baseline;padding:0 0 12px;
+    border-bottom:1px solid var(--rule);margin-bottom:14px}
+  .live .big{font-size:2.1rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
+  .live .cap{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .live .unit{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .live .grp{display:flex;flex-direction:column;gap:2px}
+  .newv{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .newv input{padding:5px 8px;border:1px solid #d6dbe3;border-radius:4px;font-size:.84rem}
+  .newv button{font-size:.76rem;padding:5px 14px;border:1px solid var(--navy);background:var(--navy);
+    color:#fff;border-radius:4px;cursor:pointer;font-weight:700}
+  .vtab{width:100%;border-collapse:collapse;font-size:.84rem}
+  .vtab th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;padding:6px 8px;text-align:left;font-weight:700}
+  .vtab th.n,.vtab td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .vtab td{padding:7px 8px;border-bottom:1px solid #eef1f5;vertical-align:top}
+  .vtab tr:hover{background:#f5f8fc}
+  .vtab .vn{font-weight:700;color:var(--navy)}
+  .vtab .auto{color:var(--muted);font-weight:400;font-style:italic}
+  .vtab .act a{font-size:.74rem;margin-right:10px;cursor:pointer}
+  .vtab .act .rm{color:var(--red)}
+  .up{color:var(--red);font-weight:700}
+  .dn{color:var(--green);font-weight:700}
+  .diff{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px}
+  .diff h5{margin:0 0 3px;color:var(--navy);font-size:1rem}
+  .diff .sub{color:var(--muted);font-size:.76rem;margin:0 0 10px}
+  .diff .drow{display:flex;gap:14px;padding:6px 2px;border-bottom:1px solid #f2f5f8;font-size:.82rem}
+  .diff .dc{flex:0 0 150px;font-weight:700;color:var(--navy)}
+  .diff .dw{flex:1}
+  .diff .was{color:var(--muted);text-decoration:line-through}
+  .diff .now{font-weight:700;color:var(--navy)}
+  .diff .q{color:var(--muted);font-size:.78rem;display:block}
+  .msg{font-size:.76rem;margin-left:8px;color:var(--muted)}
+  .msg.bad{color:var(--red);font-weight:700}
+  .none{color:var(--muted);padding:16px 2px}
+</style>
+
+<div class="vs">
+  <a class="back" href="{{ url_for('private.spend_plan') }}">&larr; Back to the spend plan</a>
+  <h4>Versions of the plan</h4>
+  <p class="lead">
+    A version is the whole plan frozen at a moment: every tier, every universe, every quantity.
+    Restoring one puts it back as the live plan and takes a copy of what is there now first, so
+    it is never a one-way door.
+  </p>
+
+  <div class="live">
+    <div class="grp"><span class="big">{{ '${:,.0f}'.format(live.total) }}</span>
+      <span class="cap">the plan right now</span></div>
+    <div class="grp"><span class="unit">{{ live.districts }}</span><span class="cap">districts</span></div>
+    <div class="grp"><span class="unit">{{ live.seats }}</span><span class="cap">seats</span></div>
+  </div>
+
+  <div class="newv">
+    <input type="text" id="vName" size="34" placeholder="Name this version, e.g. Board draft, 9 Sept">
+    <input type="text" id="vNote" size="40" placeholder="What is it for (optional)">
+    <button id="vSave">Save the plan as it stands</button>
+    <span class="msg" id="msg"></span>
+  </div>
+
+  {% if not versions %}
+    <p class="none">No versions saved yet. The first one is worth taking before the next
+    round of changes.</p>
+  {% else %}
+  <table class="vtab">
+    <tr><th>Version</th><th class="n">Total</th><th class="n">vs now</th><th class="n">Districts</th>
+        <th class="n">Seats</th><th>Saved</th><th></th></tr>
+    {% for v in versions %}
+    <tr>
+      <td><span class="vn">{{ v.name }}</span>
+        {% if v.auto %}<span class="auto">taken automatically</span>{% endif %}
+        {% if v.note %}<br><span style="color:#7b8494;font-size:.76rem">{{ v.note }}</span>{% endif %}</td>
+      <td class="n">{{ '${:,.0f}'.format(v.total) }}</td>
+      <td class="n">
+        {% set d = live.total - v.total %}
+        {% if d|abs < 1 %}&mdash;
+        {% elif d > 0 %}<span class="up">+{{ '${:,.0f}'.format(d) }}</span>
+        {% else %}<span class="dn">&minus;{{ '${:,.0f}'.format(-d) }}</span>{% endif %}
+      </td>
+      <td class="n">{{ v.districts }}</td>
+      <td class="n">{{ v.seats }}</td>
+      <td>{{ v.at }}<br><span style="color:#7b8494;font-size:.74rem">{{ v.by }}</span></td>
+      <td class="act">
+        <a href="{{ url_for('private.spend_versions', compare=v.id) }}">Compare</a>
+        <a data-restore="{{ v.id }}" data-name="{{ v.name }}">Restore</a>
+        <a class="rm" data-del="{{ v.id }}" data-name="{{ v.name }}">Delete</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if diff %}
+  <div class="diff">
+    <h5>{{ diff.name }} compared with the plan now</h5>
+    <p class="sub">
+      Saved {{ diff.at }} at {{ '${:,.0f}'.format(diff.total) }};
+      the plan is {{ '${:,.0f}'.format(live.total) }} now.
+      {% if diff.rows %}{{ diff.rows|length }} district{{ '' if diff.rows|length == 1 else 's' }}
+      differ.{% else %}Nothing differs.{% endif %}
+    </p>
+    {% for r in diff.rows %}
+    <div class="drow">
+      <span class="dc">{{ r.code }}</span>
+      <span class="dw">
+        {% if r.was_tier != r.now_tier %}
+          Tier <span class="was">{{ r.was_tier or 'none' }}</span> &rarr;
+          <span class="now">{{ r.now_tier or 'none' }}</span>
+        {% endif %}
+        {% if r.was_in != r.now_in %}
+          {% if r.was_tier != r.now_tier %}&middot;{% endif %}
+          In the plan <span class="was">{{ 'yes' if r.was_in else 'no' }}</span> &rarr;
+          <span class="now">{{ 'yes' if r.now_in else 'no' }}</span>
+        {% endif %}
+        {% for q in r.qty %}
+          <span class="q">{{ q.tactic }} &middot; {{ q.universe }}:
+            <span class="was">{{ q.was }}</span> &rarr; <span class="now">{{ q.now }}</span></span>
+        {% endfor %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+(function(){
+  var CSRF = document.querySelector('meta[name="csrf-token"]')
+             ? document.querySelector('meta[name="csrf-token"]').content : '';
+  var msg = document.getElementById('msg');
+  function say(t, bad){ msg.textContent = t; msg.className = 'msg' + (bad?' bad':''); }
+  function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+                       body: JSON.stringify(body)})
+      .then(function(r){ return r.json().then(function(j){
+        if(!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        return j; }); });
+  }
+
+  document.getElementById('vSave').onclick = function(){
+    var name = document.getElementById('vName').value.trim();
+    if(!name){ say('Give it a name first.', true); return; }
+    say('Saving...');
+    post('/private/spend-plan/version/save',
+         {name: name, note: document.getElementById('vNote').value})
+      .then(function(){ location.reload(); })
+      .catch(function(e){ say('NOT SAVED: ' + e.message, true); });
+  };
+
+  document.querySelectorAll('[data-restore]').forEach(function(a){
+    a.onclick = function(){
+      if(!window.confirm('Restore "' + a.dataset.name + '"?\n\n' +
+        'It replaces every tier and every quantity in the live plan. The plan as it ' +
+        'stands is saved as a version first, so you can come back.')) return;
+      say('Restoring...');
+      post('/private/spend-plan/version/restore', {id: +a.dataset.restore})
+        .then(function(){ location.reload(); })
+        .catch(function(e){ say('NOT RESTORED: ' + e.message, true); });
+    };
+  });
+
+  document.querySelectorAll('[data-del]').forEach(function(a){
+    a.onclick = function(){
+      if(!window.confirm('Delete the version "' + a.dataset.name + '"? The live plan is not touched.')) return;
+      post('/private/spend-plan/version/delete', {id: +a.dataset.del})
+        .then(function(){ location.reload(); })
+        .catch(function(e){ say('NOT DELETED: ' + e.message, true); });
+    };
+  });
+})();
+</script>
+{% endblock %}

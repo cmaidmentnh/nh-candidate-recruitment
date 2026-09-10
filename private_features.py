@@ -1961,6 +1961,203 @@ def spend_piece_delete():
         cur.close(); release_db_connection(conn)
 
 
+# =============================================================================
+# SCENARIOS - named versions of the whole plan
+# =============================================================================
+
+def _plan_totals(cur):
+    """What the live plan costs, and how many districts and seats it covers."""
+    cur.execute("""SELECT tactic_key, unit, rate FROM spend_tactic WHERE active""")
+    tactics = [{'key': r[0], 'unit': r[1], 'rate': float(r[2]) if r[2] is not None else None}
+               for r in cur.fetchall()]
+    sizes = _piece_sizes(cur)
+    cur.execute("SELECT district_code, universe, tactic_key, qty, rate_override FROM district_spend_item")
+    qty = {}
+    for dc, u, tk, q, ro in cur.fetchall():
+        qty.setdefault(dc, {}).setdefault(u, {})[tk] = {
+            'qty': float(q), 'rate': float(ro) if ro is not None else None}
+    total = 0.0
+    for dc, byu in qty.items():
+        total += _cost_of(byu, sizes.get(dc, {}), tactics)
+    cur.execute("""SELECT count(*), COALESCE(SUM((SELECT MAX(d.seat_count) FROM districts d
+                                   WHERE d.full_district_code = s.district_code)), 0)
+                     FROM district_spend s WHERE s.tier IS NOT NULL""")
+    n, seats = cur.fetchone()
+    return round(total, 2), n, int(seats or 0)
+
+
+def _take_scenario(cur, name, note, who, auto=False):
+    """Copy the live plan into a new scenario. Returns its id."""
+    total, n, seats = _plan_totals(cur)
+    cur.execute("""INSERT INTO spend_scenario (name, note, total, districts, seats, auto, created_by)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (name[:120], note or None, total, n, seats, auto, who))
+    sid = cur.fetchone()[0]
+    cur.execute("""INSERT INTO spend_scenario_district
+                     (scenario_id, district_code, mask, include, notes, tier)
+                   SELECT %s, district_code, mask, include, notes, tier FROM district_spend""", (sid,))
+    cur.execute("""INSERT INTO spend_scenario_item
+                     (scenario_id, district_code, universe, tactic_key, qty, rate_override)
+                   SELECT %s, district_code, universe, tactic_key, qty, rate_override
+                     FROM district_spend_item""", (sid,))
+    return sid
+
+
+@private_bp.route('/spend-plan/versions')
+@require_feature_access('campaign_plan')
+def spend_versions():
+    """Saved versions of the plan, and what changed between one of them and the plan now."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT id, name, note, total, districts, seats, auto, created_by, created_at,
+                              (SELECT count(*) FROM spend_scenario_district d WHERE d.scenario_id = s.id)
+                         FROM spend_scenario s ORDER BY created_at DESC""")
+        versions = [{'id': r[0], 'name': r[1], 'note': r[2] or '',
+                     'total': float(r[3]) if r[3] is not None else 0.0,
+                     'districts': r[4] or 0, 'seats': r[5] or 0, 'auto': r[6],
+                     'by': r[7] or '', 'at': r[8].strftime('%b %-d, %-I:%M %p'),
+                     'rows': r[9]} for r in cur.fetchall()]
+
+        total, n, seats = _plan_totals(cur)
+        live = {'total': total, 'districts': n, 'seats': seats}
+
+        # What is different between the version being looked at and the plan right now
+        cmp_id = request.args.get('compare', type=int)
+        diff = None
+        if cmp_id:
+            cur.execute("""SELECT district_code, tier, include FROM spend_scenario_district
+                            WHERE scenario_id = %s""", (cmp_id,))
+            was = {r[0]: {'tier': r[1], 'include': r[2]} for r in cur.fetchall()}
+            cur.execute("SELECT district_code, tier, include FROM district_spend")
+            now = {r[0]: {'tier': r[1], 'include': r[2]} for r in cur.fetchall()}
+
+            cur.execute("""SELECT district_code, universe, tactic_key, qty
+                             FROM spend_scenario_item WHERE scenario_id = %s""", (cmp_id,))
+            was_q = {(r[0], r[1], r[2]): float(r[3]) for r in cur.fetchall()}
+            cur.execute("SELECT district_code, universe, tactic_key, qty FROM district_spend_item")
+            now_q = {(r[0], r[1], r[2]): float(r[3]) for r in cur.fetchall()}
+
+            touched = {}
+            for code in set(was) | set(now):
+                w, nw = was.get(code), now.get(code)
+                if not w or not nw or w['tier'] != nw['tier'] or bool(w['include']) != bool(nw['include']):
+                    touched[code] = {'was_tier': w['tier'] if w else None,
+                                     'now_tier': nw['tier'] if nw else None,
+                                     'was_in': bool(w['include']) if w else False,
+                                     'now_in': bool(nw['include']) if nw else False,
+                                     'qty': []}
+            for key in set(was_q) | set(now_q):
+                a, b = was_q.get(key, 0.0), now_q.get(key, 0.0)
+                if a == b:
+                    continue
+                code = key[0]
+                touched.setdefault(code, {'was_tier': (was.get(code) or {}).get('tier'),
+                                          'now_tier': (now.get(code) or {}).get('tier'),
+                                          'was_in': bool((was.get(code) or {}).get('include')),
+                                          'now_in': bool((now.get(code) or {}).get('include')),
+                                          'qty': []})['qty'].append(
+                    {'universe': key[1], 'tactic': key[2],
+                     'was': _qty_word(a), 'now': _qty_word(b)})
+
+            rows = []
+            for code in sorted(touched, key=_district_sort_key):
+                t = touched[code]
+                t['qty'].sort(key=lambda x: (x['universe'], x['tactic']))
+                t['code'] = code
+                rows.append(t)
+            cur.execute("SELECT name, total, created_at FROM spend_scenario WHERE id = %s", (cmp_id,))
+            meta = cur.fetchone()
+            diff = {'id': cmp_id, 'name': meta[0] if meta else '',
+                    'total': float(meta[1]) if meta and meta[1] is not None else 0.0,
+                    'at': meta[2].strftime('%b %-d, %-I:%M %p') if meta else '',
+                    'rows': rows}
+        return render_template('private/spend_versions.html',
+                               versions=versions, live=live, diff=diff)
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/version/save', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_version_save():
+    """Freeze the plan as it stands under a name."""
+    d = request.get_json(silent=True) or {}
+    name = (d.get('name') or '').strip()
+    if not name:
+        return jsonify({'ok': False, 'error': 'Give the version a name.'}), 400
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        sid = _take_scenario(cur, name, d.get('note'),
+                             current_user.email if current_user.is_authenticated else 'admin')
+        conn.commit()
+        return jsonify({'ok': True, 'id': sid})
+    except Exception as e:
+        conn.rollback()
+        logger.error('version save failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/version/restore', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_version_restore():
+    """Put a saved version back as the live plan.
+
+    The plan as it stands is copied to a scenario of its own first, so this is reversible even
+    if it was a mistake. Both the delete and the insert run through the history triggers, so
+    the previous values are recoverable a second way too."""
+    d = request.get_json(silent=True) or {}
+    sid = d.get('id')
+    if not sid:
+        return jsonify({'ok': False, 'error': 'no version'}), 400
+    who = current_user.email if current_user.is_authenticated else 'admin'
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute('SELECT name FROM spend_scenario WHERE id = %s', (sid,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({'ok': False, 'error': 'no such version'}), 404
+        backup = _take_scenario(cur, 'Before restoring "%s"' % row[0][:80], None, who, auto=True)
+
+        cur.execute('UPDATE district_spend SET updated_by = %s', (who,))
+        cur.execute('DELETE FROM district_spend_item')
+        cur.execute('DELETE FROM district_spend')
+        cur.execute("""INSERT INTO district_spend (district_code, mask, include, notes, tier,
+                                                   updated_by, updated_at)
+                       SELECT district_code, mask, include, notes, tier, %s, now()
+                         FROM spend_scenario_district WHERE scenario_id = %s""", (who, sid))
+        cur.execute("""INSERT INTO district_spend_item
+                         (district_code, universe, tactic_key, qty, rate_override)
+                       SELECT district_code, universe, tactic_key, qty, rate_override
+                         FROM spend_scenario_item WHERE scenario_id = %s""", (sid,))
+        conn.commit()
+        return jsonify({'ok': True, 'backup': backup})
+    except Exception as e:
+        conn.rollback()
+        logger.error('version restore failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not restore. Nothing was changed.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/version/delete', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_version_delete():
+    d = request.get_json(silent=True) or {}
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute('DELETE FROM spend_scenario WHERE id = %s', (d.get('id'),))
+        conn.commit()
+        return jsonify({'ok': True, 'deleted': cur.rowcount})
+    except Exception as e:
+        conn.rollback()
+        logger.error('version delete failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not delete.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
 @private_bp.route('/spend-plan/save', methods=['POST'])
 @require_feature_access('campaign_plan')
 def spend_plan_save():
