@@ -62,9 +62,17 @@ _is_super_admin = None
 # Restricted, like /surveys. Super admin (Chris) is always allowed; add internal
 # leadership here. Kept intentionally small — this is sensitive campaign intel.
 PROGRESS_ACCESS_EMAILS = {
-    'jason@osborne4nh.com',   # Jason Osborne
-    'sayra@sayralynn.com',    # Sayra DeVito
+    'jason@osborne4nh.com',      # Jason Osborne
+    'sayra@sayralynn.com',       # Sayra DeVito
+    'josephfsweeney@gmail.com',  # Joe Sweeney
+    'berryrm0@gmail.com',        # Ross Berry
 }
+
+# Access also comes from private_feature_access, the same grantable table the spend plan
+# uses. Keeping two systems meant granting someone the spend plan silently left them locked
+# out of /progress, which is how Ross and Joe ended up half-admitted. A grant now works for
+# both, and no deploy is needed to add the next person.
+PROGRESS_FEATURE_SLUG = 'campaign_plan'
 
 # The milestones that make up a candidate's progress score (each worth 1 point).
 # 'filed' is implicit (100% of the cohort has filed) so it isn't scored.
@@ -99,12 +107,32 @@ def is_whip():
     return _role() == 'whip'
 
 
+def _has_progress_grant():
+    """True if this user holds the grant in private_feature_access."""
+    uid = getattr(current_user, 'user_id', None) if current_user.is_authenticated else None
+    if not uid or not _get_db:
+        return False
+    conn = _get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT 1 FROM private_feature_access WHERE user_id=%s AND feature_slug=%s",
+                    (uid, PROGRESS_FEATURE_SLUG))
+        return cur.fetchone() is not None
+    except Exception:
+        return False
+    finally:
+        cur.close()
+        _release_db(conn)
+
+
 def can_access_progress():
-    """Desktop matrix: super admin + the named leadership allowlist."""
+    """Desktop matrix: super admin, the named leadership allowlist, or a granted user."""
     if _is_super_admin and _is_super_admin():
         return True
     email = getattr(current_user, 'email', None) if current_user.is_authenticated else None
-    return bool(email) and email.lower() in PROGRESS_ACCESS_EMAILS
+    if email and email.lower() in PROGRESS_ACCESS_EMAILS:
+        return True
+    return _has_progress_grant()
 
 
 def can_whip():
