@@ -343,6 +343,60 @@ def progress():
         _release_db(conn)
 
 
+@progress_bp.route('/progress/checkin')
+@progress_access_required
+def progress_checkin():
+    """Who has answered the post-primary check-in, and what they said.
+
+    The form went to 309 nominees; this is the only place its answers are readable. NULL is
+    meaningful here and is shown as "no answer" rather than as a No: the form deliberately
+    leaves an unanswered question NULL so a non-response is distinguishable from a No."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT c.first_name || ' ' || c.last_name AS name,
+                   f.district_code, p.intake_submitted_at,
+                   p.signs_have, p.signs_count, p.lit_have, p.headshot_have, p.walkbooks_have,
+                   p.fundraising_amount, p.cash_on_hand, p.anticipated_raise, p.intake_notes,
+                   COALESCE(NULLIF(c.website_url,''), NULLIF(c.external_campaign_url,'')),
+                   NULLIF(c.donate_url,''), NULLIF(c.facebook_url,'')
+              FROM candidate_campaign_progress p
+              JOIN candidates c ON c.candidate_id = p.candidate_id
+              LEFT JOIN filings f ON f.candidate_id = p.candidate_id
+                   AND f.election_year = 2026 AND f.office = 'State Representative'
+             WHERE p.intake_submitted_at IS NOT NULL
+             ORDER BY p.intake_submitted_at DESC""")
+        cols = ['name', 'district', 'at', 'signs', 'signs_count', 'lit', 'headshot', 'walkbooks',
+                'raised', 'coh', 'more', 'notes', 'website', 'donate', 'facebook']
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+
+        # everyone the form went to, so the non-responders are visible too
+        cur.execute("""
+            SELECT count(*) FROM filings f
+             WHERE f.election_year = 2026 AND f.party = 'R'
+               AND f.office = 'State Representative' AND f.result <> 'lost'""")
+        nominees = cur.fetchone()[0]
+
+        money = [r for r in rows if r['raised'] is not None or r['coh'] is not None]
+        totals = {
+            'responded': len(rows), 'nominees': nominees,
+            'pct': round(100.0 * len(rows) / nominees) if nominees else 0,
+            'raised': sum(float(r['raised'] or 0) for r in rows),
+            'coh': sum(float(r['coh'] or 0) for r in rows),
+            'more': sum(float(r['more'] or 0) for r in rows),
+            'money_answers': len(money),
+            'need_signs': sum(1 for r in rows if r['signs'] is False),
+            'need_lit': sum(1 for r in rows if r['lit'] is False),
+            'need_headshot': sum(1 for r in rows if r['headshot'] is False),
+            'need_walkbooks': sum(1 for r in rows if r['walkbooks'] is False),
+        }
+        return render_template('progress_checkin.html', rows=rows, totals=totals)
+    finally:
+        cur.close()
+        release_db_connection(conn)
+
+
 @progress_bp.route('/progress/update', methods=['POST'])
 @progress_access_required
 def progress_update():

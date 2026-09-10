@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .ck{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--red:#b4262d;--green:#1a7f43;
+      color:#22303f;font-size:.9rem}
+  .ck .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 30px;padding:0 0 12px;
+    border-bottom:1px solid var(--rule);margin-bottom:14px}
+  .ck .big{font-size:2.1rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
+  .ck .cap{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .ck .unit{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .ck .grp{display:flex;flex-direction:column;gap:2px}
+  .ck table{width:100%;border-collapse:collapse}
+  .ck th{position:sticky;top:0;background:var(--navy);color:#fff;font-size:.62rem;
+    text-transform:uppercase;letter-spacing:.05em;padding:6px 6px;text-align:left;font-weight:700}
+  .ck th.n,.ck td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .ck td{padding:5px 6px;border-bottom:1px solid #eef1f5;vertical-align:top}
+  .ck tr:hover{background:#f5f8fc}
+  .ck .nm{font-weight:700;color:var(--navy);white-space:nowrap}
+  .ck .di{font-size:.72rem;color:var(--muted);white-space:nowrap}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .na{color:#c3c9d2}
+  .ck .lnk{font-size:.72rem;color:var(--navy)}
+  .ck .note{font-size:.74rem;color:var(--muted);max-width:280px}
+  .ck .lead{color:var(--muted);font-size:.78rem;margin:0 0 12px}
+</style>
+
+<div class="ck">
+  <h4 style="margin:0 0 2px">General Election Check In</h4>
+  <p class="lead">
+    Answers to the form sent to every Republican State Rep nominee. A blank is a question
+    left unanswered, which is not the same as a No.
+  </p>
+
+  <div class="top">
+    <div class="grp"><span class="big">{{ totals.responded }}</span>
+      <span class="cap">of {{ totals.nominees }} nominees &middot; {{ totals.pct }}%</span></div>
+    <div class="grp"><span class="unit">${{ '{:,.0f}'.format(totals.raised) }}</span>
+      <span class="cap">raised, self reported</span></div>
+    <div class="grp"><span class="unit">${{ '{:,.0f}'.format(totals.coh) }}</span>
+      <span class="cap">cash on hand</span></div>
+    <div class="grp"><span class="unit">${{ '{:,.0f}'.format(totals.more) }}</span>
+      <span class="cap">more expected</span></div>
+    <div class="grp"><span class="unit no">{{ totals.need_signs }}</span><span class="cap">need signs</span></div>
+    <div class="grp"><span class="unit no">{{ totals.need_lit }}</span><span class="cap">need literature</span></div>
+    <div class="grp"><span class="unit no">{{ totals.need_headshot }}</span><span class="cap">need a headshot</span></div>
+    <div class="grp"><span class="unit no">{{ totals.need_walkbooks }}</span><span class="cap">need walk books</span></div>
+  </div>
+
+  {% if not rows %}
+    <p>Nobody has filled it in yet.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Candidate</th><th>Signs</th><th class="n">How many</th><th>Lit</th>
+        <th>Headshot</th><th>Walk books</th>
+        <th class="n">Raised</th><th class="n">On hand</th><th class="n">Expects more</th>
+        <th>Links</th><th>Notes</th><th class="n">Sent</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      {% macro tri(v) %}
+        {% if v is none %}<span class="na">no answer</span>
+        {% elif v %}<span class="yes">has</span>
+        {% else %}<span class="no">NEEDS</span>{% endif %}
+      {% endmacro %}
+      <tr>
+        <td><span class="nm">{{ r.name }}</span><br><span class="di">{{ r.district or '' }}</span></td>
+        <td>{{ tri(r.signs) }}</td>
+        <td class="n">{{ '{:,}'.format(r.signs_count) if r.signs_count else '' }}</td>
+        <td>{{ tri(r.lit) }}</td>
+        <td>{{ tri(r.headshot) }}</td>
+        <td>{{ tri(r.walkbooks) }}</td>
+        <td class="n">{{ '${:,.0f}'.format(r.raised) if r.raised is not none else '' }}</td>
+        <td class="n">{{ '${:,.0f}'.format(r.coh) if r.coh is not none else '' }}</td>
+        <td class="n">{{ '${:,.0f}'.format(r.more) if r.more is not none else '' }}</td>
+        <td>
+          {% if r.website %}<a class="lnk" href="{{ r.website }}" target="_blank" rel="noopener">site</a>{% endif %}
+          {% if r.donate %} <a class="lnk" href="{{ r.donate }}" target="_blank" rel="noopener">donate</a>{% endif %}
+          {% if r.facebook %} <a class="lnk" href="{{ r.facebook }}" target="_blank" rel="noopener">fb</a>{% endif %}
+        </td>
+        <td class="note">{{ r.notes or '' }}</td>
+        <td class="n di">{{ r.at.strftime('%b %-d %H:%M') if r.at else '' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}
