@@ -35,6 +35,16 @@
   th.n,td.n{text-align:right;font-variant-numeric:tabular-nums}
   td{padding:8px;border-bottom:1px solid #eef1f5;vertical-align:top}
   tr:hover{background:#f5f8fc}
+  .clushdr td{background:#f2f6fc;border-top:2px solid var(--navy);border-bottom:0;
+    padding:7px 8px}
+  .clushdr .cl{font-weight:800;color:var(--navy);font-size:.82rem}
+  .clushdr .cs{color:var(--muted);font-size:.72rem;margin-left:10px}
+  .clushdr .cw{color:var(--muted);font-size:.72rem;margin-left:10px;font-style:italic}
+  tr.mem td:first-child{box-shadow:inset 3px 0 0 var(--navy)}
+  tr.mem td{background:#fbfcfe}
+  tr.mem:hover td{background:#f2f6fc}
+  tr.mem .dcode{padding-left:6px}
+  .onbase{color:var(--muted);font-style:italic}
   .cty{background:#f6f8fb;font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;
     color:var(--muted);font-weight:700}
   .dcode{font-weight:700;color:var(--navy);white-space:nowrap}
@@ -84,7 +94,9 @@
       <h1>2026 New Hampshire House Battlefield</h1>
       <p class="sub">
         Where the Committee to Elect House Republicans is working, and how hard. Tier 1 is a
-        full effort, Tier 2 is real spend, Tier 3 is a light touch.
+        full effort, Tier 2 is real spend, Tier 3 is a light touch. Where a floterial sits over
+        a district we are working, the two are grouped: one piece goes into the base carrying
+        the floterial candidate as well, so they are one effort and not two.
       </p>
     </header>
 
@@ -94,6 +106,8 @@
       <div class="grp"><span class="unit">{{ summary.seats }}</span><span class="cap">seats</span></div>
       <div class="grp"><span class="unit">{{ summary.candidates }}</span>
         <span class="cap">Republicans on the ballot</span></div>
+      <div class="grp"><span class="unit">{{ summary.clusters }}</span>
+        <span class="cap">joint efforts &middot; {{ summary.clustered }} districts</span></div>
       <div class="grp"><span class="unit"><span class="t1c">{{ summary.t1 }}</span> /
         <span class="t2c">{{ summary.t2 }}</span> / <span class="t3c">{{ summary.t3 }}</span></span>
         <span class="cap">tier 1 / 2 / 3</span></div>
@@ -113,16 +127,12 @@
           <th>Republicans on the ballot</th><th>Largest R town</th><th>2024</th><th>Getting</th>
         </tr></thead>
         <tbody>
-        {% set ns = namespace(county='') %}
-        {% for r in rows %}
-          {% if r.county != ns.county %}
-            {% set ns.county = r.county %}
-            <tr class="cty-row" data-cty="{{ r.county }}"><td colspan="8" class="cty">{{ r.county }}</td></tr>
-          {% endif %}
-          <tr data-tier="{{ r.tier }}"
+        {% macro drow(r, mem) %}
+          <tr class="{{ 'mem' if mem else '' }}" data-tier="{{ r.tier }}"
+              {% if mem %}data-clus="{{ mem }}"{% endif %}
               data-s="{{ (r.code ~ ' ' ~ r.town ~ ' ' ~ r.nominees ~ ' ' ~ r.county)|lower }}">
             <td><span class="dcode">{{ r.code }}</span>
-              {% if r.floterial %}<br><span class="flo">floterial over {{ r.bases }}</span>{% endif %}</td>
+              {% if r.floterial %}<br><span class="flo">floterial</span>{% endif %}</td>
             <td class="n">{{ r.seats }}</td>
             <td class="n"><span class="tier t{{ r.tier }}c">{{ r.tier }}</span></td>
             <td>
@@ -142,8 +152,28 @@
                 <span class="held {{ held }}">R held {{ r.r_seats_2024 }} of {{ r.seats }}</span>
               {% else %}<span class="town">&mdash;</span>{% endif %}
             </td>
-            <td class="ch">{{ r.channels|join(', ') if r.channels else '&mdash;'|safe }}</td>
+            <td class="ch">
+              {% if r.channels %}{{ r.channels|join(', ') }}
+              {% elif r.floterial and mem %}<span class="onbase">on the base mail</span>
+              {% else %}&mdash;{% endif %}
+            </td>
           </tr>
+        {% endmacro %}
+
+        {% for it in items %}
+          {% if it.kind == 'county' %}
+            <tr class="cty-row"><td colspan="8" class="cty">{{ it.name }}</td></tr>
+          {% elif it.kind == 'cluster' %}
+            <tr class="clushdr" data-clushdr="{{ it.key }}"><td colspan="8">
+              <span class="cl">{{ it.label }}</span>
+              <span class="cs">{{ it.seats }} seat{{ '' if it.seats == 1 else 's' }} together</span>
+              <span class="cw">one effort &mdash; the floterial candidate appears on the mail
+                bought in the base district{{ '' if it.members|length == 2 else 's' }}</span>
+            </td></tr>
+            {% for m in it.members %}{{ drow(m, it.key) }}{% endfor %}
+          {% else %}
+            {{ drow(it.row, none) }}
+          {% endif %}
         {% endfor %}
         </tbody>
       </table>
@@ -160,13 +190,19 @@
   var q = document.getElementById('q'), tier = 'all';
   var rows = [].slice.call(document.querySelectorAll('#tbl tbody tr[data-tier]'));
   var heads = [].slice.call(document.querySelectorAll('#tbl tbody tr.cty-row'));
+  var clusters = [].slice.call(document.querySelectorAll('#tbl tbody tr.clushdr'));
   function apply(){
     var s = q.value.trim().toLowerCase(), shown = 0;
+    var liveClus = {};
     rows.forEach(function(tr){
       var ok = (tier === 'all' || tr.dataset.tier === tier) &&
                (!s || tr.dataset.s.indexOf(s) >= 0);
       tr.style.display = ok ? '' : 'none';
-      if(ok) shown++;
+      if(ok){ shown++; if(tr.dataset.clus) liveClus[tr.dataset.clus] = 1; }
+    });
+    // a joint-effort header earns its place only while something under it is showing
+    clusters.forEach(function(h){
+      h.style.display = liveClus[h.dataset.clushdr] ? '' : 'none';
     });
     // a county heading only earns its place when something under it is showing
     heads.forEach(function(h){

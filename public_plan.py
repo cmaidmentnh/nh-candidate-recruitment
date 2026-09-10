@@ -99,6 +99,50 @@ def public_plan():
             return (x['county'] or '', int(parts[1]) if len(parts) == 2 and parts[1].isdigit() else 0)
         rows.sort(key=key)
 
+        # A base district and the floterial over it are ONE effort: a single mail piece goes
+        # into the base carrying the floterial candidate too. Listing them as separate rows
+        # reads as two campaigns, and reads the floterial as getting nothing. They are grouped
+        # exactly as the internal planner groups them, so both tell the same story.
+        by_code = {x['code']: x for x in rows}
+        cluster_of, members = {}, {}
+        for x in rows:
+            if not x['floterial']:
+                continue
+            # only bases we are actually working: one the floterial merely sits over is not a
+            # joint effort, and the floterial stands on its own
+            bases = [c for c in [b.strip() for b in (x['bases'] or '').split(',')]
+                     if c and c in by_code]
+            if not bases:
+                continue
+            key = x['code']
+            for code in bases + [x['code']]:
+                cluster_of[code] = key
+            members[key] = [by_code[c] for c in bases] + [x]
+
+        # Emit each cluster where its first member falls, so district order is unbroken.
+        items, done = [], set()
+        county = None
+        for x in rows:
+            if x['county'] != county:
+                county = x['county']
+                items.append({'kind': 'county', 'name': county})
+            key = cluster_of.get(x['code'])
+            if not key:
+                items.append({'kind': 'district', 'row': x})
+                continue
+            if key in done:
+                continue
+            done.add(key)
+            mem = members[key]
+            label = ' + '.join(
+                (m['code'].rsplit(' ', 1)[-1] + ('F' if m['floterial'] else '')) for m in mem)
+            items.append({'kind': 'cluster', 'key': key,
+                          'label': (mem[0]['county'] or '') + ' ' + label,
+                          'seats': sum(m['seats'] for m in mem),
+                          'members': mem})
+        for x in rows:
+            x['in_cluster'] = x['code'] in cluster_of
+
         summary = {
             'districts': len(rows),
             'seats': sum(x['seats'] for x in rows),
@@ -106,8 +150,11 @@ def public_plan():
             't2': sum(1 for x in rows if x['tier'] == 2),
             't3': sum(1 for x in rows if x['tier'] == 3),
             'candidates': sum(len([n for n in x['nominees'].split(', ') if n]) for x in rows),
+            'clusters': len(members),
+            'clustered': len(cluster_of),
         }
-        return render_template('public_plan.html', rows=rows, summary=summary, locked=False)
+        return render_template('public_plan.html', rows=rows, items=items,
+                               summary=summary, locked=False)
     finally:
         cur.close()
         release_db_connection(conn)
