@@ -4936,6 +4936,30 @@ def _survey_badge(rating, incumbent=False):
     return ('badge-secondary', 'Noted')
 
 
+def _afp_alignment(rating):
+    """Bucket AFP's own verdict wording into an alignment rank.
+
+    AFP does not score the survey; the verdict on each candidate is the free
+    text Sarah Scott sends ("Good", "Bad", "Not great…", "Not bad but can't
+    endorse"). This only sorts AFP's words — it never re-scores the answers.
+    Returns (rank, label) where rank -1 means AFP called them Good.
+    """
+    t = (rating or '').strip().lower()
+    if not t:
+        return (None, '')
+    if t.startswith('good'):
+        return (-1, 'Aligned')
+    if "can't endorse" in t or 'cannot endorse' in t:
+        return (1, "Can't endorse")
+    if t.startswith('bad'):
+        return (0, 'Bad')
+    if 'not great' in t:
+        return (1, 'Not great')
+    if 'not bad' in t:
+        return (2, 'Not bad')
+    return (3, 'Qualified')
+
+
 @app.route('/surveys')
 @survey_access_required
 def surveys():
@@ -4962,7 +4986,7 @@ def surveys():
         for cid, fn, ln, dist, inc in cur.fetchall():
             name = f"{fn} {ln}".strip()
             row = {'candidate_id': cid, 'name': name, 'district': dist or '',
-                   'incumbent': inc, 'cells': {}}
+                   'incumbent': inc, 'cells': {}, 'roster': True}
             rows.append(row)
             if cid:
                 by_id[cid] = row
@@ -4976,7 +5000,7 @@ def surveys():
             row = (by_id.get(cid) if cid else None) or by_nd.get(((name or '').lower(), (dist or '').lower()))
             if row is None:  # surveyed but not in the R House roster — still show them
                 row = {'candidate_id': cid, 'name': name, 'district': dist or '',
-                       'incumbent': False, 'cells': {}}
+                       'incumbent': False, 'cells': {}, 'roster': False}
                 rows.append(row)
                 if cid:
                     by_id[cid] = row
@@ -5026,8 +5050,35 @@ def surveys():
                                  _dkey(x['district']),
                                  x['name'].split()[-1].lower() if x['name'] else '', x['name'].lower()))
         stats = {o: sum(1 for r in rows if r['cells'].get(o, {}).get('rating')) for o in orgs}
+
+        # --- AFP alignment: who came back misaligned, and who never answered ---
+        # "Submitted" means AFP has a survey on file for them; "verdict" means
+        # AFP also sent through their read on the answers.
+        afp = None
+        if 'AFP' in visible:
+            ballot = [r for r in rows if r.get('roster')]
+            misaligned, no_survey = [], []
+            for r in ballot:
+                cell = r['cells'].get('AFP')
+                if cell is None:
+                    no_survey.append(r)
+                    continue
+                rank, label = _afp_alignment(cell.get('rating'))
+                if rank is not None and rank >= 0:
+                    misaligned.append(dict(r, afp_rank=rank, afp_label=label,
+                                           afp_verdict=cell.get('rating') or ''))
+            misaligned.sort(key=lambda x: (x['afp_rank'], _dkey(x['district'])))
+            afp = {
+                'misaligned': misaligned,
+                'no_survey': no_survey,
+                'ballot': len(ballot),
+                'submitted': len(ballot) - len(no_survey),
+                'verdicts': sum(1 for r in ballot if (r['cells'].get('AFP') or {}).get('rating')),
+                'notes_ok': note_ok.get('AFP', True),
+            }
+
         return render_template('surveys.html', rows=rows, orgs=orgs, stats=stats,
-                               primary_first=primary_first, note_ok=note_ok)
+                               primary_first=primary_first, note_ok=note_ok, afp=afp)
     finally:
         cur.close()
         release_db_connection(conn)

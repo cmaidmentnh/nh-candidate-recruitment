@@ -39,6 +39,35 @@
   .admin-sel.ind { color:#6c757d; }
   .admin-note { border:none; background:transparent; width:100%; font-size:.82rem; padding:3px 5px; border-radius:4px; }
   .admin-note:focus { background:#fffdf0; outline:1px solid #e2cf7a; }
+
+  /* AFP alignment panels */
+  .afp-panel { background:#fff; border:1px solid #e6e6e6; border-radius:10px; padding:16px 18px; height:100%; }
+  .afp-panel h2 { font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; color:#1e3557;
+      font-weight:700; margin:0 0 2px; }
+  .afp-panel .sub { font-size:.76rem; color:#8b8f96; margin:0 0 12px; }
+  .afp-count { font-size:1.9rem; font-weight:700; color:#1e3557; line-height:1;
+      font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; margin-right:8px; }
+  .afp-list { margin:0; padding:0; list-style:none; }
+  .afp-list li { padding:6px 0; border-top:1px solid #f1f1f3; font-size:.86rem; }
+  .afp-list li:first-child { border-top:none; }
+  .afp-list .nm { font-weight:600; color:#1e3557; }
+  .afp-list .nm a { color:#1e3557; }
+  .afp-list .nm a:hover { color:#a01023; }
+  .afp-list .dd { color:#9a9ea6; font-size:.78rem; margin-left:6px;
+      font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
+  .afp-verdict { display:block; font-size:.78rem; margin-top:1px; }
+  .afp-r0 .afp-verdict { color:#a01023; font-weight:700; }
+  .afp-r1 .afp-verdict { color:#b3141d; font-weight:600; }
+  .afp-r2 .afp-verdict { color:#8a6d00; }
+  .afp-r3 .afp-verdict { color:#6c757d; }
+  .afp-none { columns:2; column-gap:26px; max-height:340px; overflow-y:auto; margin-top:10px;
+      border-top:1px solid #f1f1f3; padding-top:10px; }
+  .afp-none div { break-inside:avoid; font-size:.82rem; padding:2px 0; color:#3d4550; }
+  .afp-none .dd { color:#9a9ea6; font-size:.76rem;
+      font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
+  .afp-toggle { background:none; border:none; padding:0; font-size:.78rem; color:#1e3557;
+      text-decoration:underline; cursor:pointer; }
+  .afp-toggle:hover { color:#a01023; }
 </style>
 {% endblock %}
 {% block content %}
@@ -75,6 +104,50 @@
         <div class="col-md-2 mb-2"><button class="btn btn-sm btn-success btn-block" onclick="addCandidate()"><i class="fas fa-check"></i> Save</button></div>
     </div>
 </div>
+
+{% if afp %}
+<div class="row mb-4">
+    <div class="col-lg-5 mb-3 mb-lg-0">
+        <div class="afp-panel">
+            <h2>Did not align with AFP</h2>
+            <p class="sub">Answered the survey; AFP's own read on the answers was short of &ldquo;Good&rdquo;.</p>
+            <div class="d-flex align-items-baseline mb-2">
+                <span class="afp-count">{{ afp.misaligned|length }}</span>
+                <span class="text-muted small">of {{ afp.verdicts }} candidates AFP has given a verdict on</span>
+            </div>
+            {% if afp.misaligned %}
+            <ul class="afp-list">
+                {% for r in afp.misaligned %}
+                <li class="afp-r{{ r.afp_rank }}">
+                    <span class="nm">{% if r.candidate_id %}<a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %}</span><span class="dd">{{ r.district }}</span>
+                    {% if afp.notes_ok %}<span class="afp-verdict">{{ r.afp_verdict }}</span>
+                    {% else %}<span class="afp-verdict">{{ r.afp_label }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-0">Nobody on the ballot came back misaligned.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="afp-panel">
+            <h2>No AFP survey on file</h2>
+            <p class="sub">On the November ballot, never returned AFP's candidate survey.</p>
+            <div class="d-flex align-items-baseline mb-2">
+                <span class="afp-count">{{ afp.no_survey|length }}</span>
+                <span class="text-muted small">of {{ afp.ballot }} R House candidates &middot; {{ afp.submitted }} have a survey in</span>
+            </div>
+            <button class="afp-toggle" onclick="toggleNoSurvey()" id="nsBtn">Show all {{ afp.no_survey|length }}</button>
+            <div class="afp-none" id="nsList" style="display:none;">
+                {% for r in afp.no_survey %}
+                <div>{% if r.candidate_id %}<a href="{{ url_for('candidate_profile', candidate_id=r.candidate_id) }}" style="color:#3d4550;">{{ r.name }}</a>{% else %}{{ r.name }}{% endif %} <span class="dd">{{ r.district }}</span></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="survey-wrap">
 <div class="table-responsive">
@@ -200,6 +273,12 @@ document.querySelectorAll('.admin-note').forEach(inp => {
     inp.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); inp.blur(); }});
 });
 
+function toggleNoSurvey(){
+    const l = document.getElementById('nsList'), b = document.getElementById('nsBtn');
+    const open = l.style.display !== 'none';
+    l.style.display = open ? 'none' : '';
+    b.textContent = open ? ('Show all ' + l.children.length) : 'Hide';
+}
 function toggleAdd(){ const f=document.getElementById('addForm'); f.style.display = f.style.display==='none'?'block':'none'; if(f.style.display==='block') newName.focus(); }
 function addCandidate(){
     const body = {org:newOrg.value, candidate_name:newName.value.trim(), district:newDistrict.value.trim(), rating:newRating.value.trim()};
