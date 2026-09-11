@@ -60,11 +60,14 @@ def public_plan():
                    (SELECT max(d.pvi) FROM districts d
                      WHERE d.full_district_code = s.district_code),
                    r.kind,
+                   -- a candidate who asked not to appear in our materials is not named on
+                   -- a page we hand to other people
                    (SELECT string_agg(f.first_name || ' ' || f.last_name, ', ' ORDER BY f.last_name)
                       FROM filings f
+                      JOIN candidates c2 ON c2.candidate_id = f.candidate_id
                      WHERE f.election_year = 2026 AND f.office = 'State Representative'
                        AND f.district_code = s.district_code AND f.party = 'R'
-                       AND f.result <> 'lost'),
+                       AND f.result <> 'lost' AND NOT c2.materials_optout),
                    (SELECT string_agg(DISTINCT t.grp, ',')
                       FROM district_spend_item i
                       JOIN spend_tactic t ON t.tactic_key = i.tactic_key

@@ -35,6 +35,10 @@
   .afp-none{color:#c3c9d2}
   .afp-v{color:var(--muted);font-size:.72rem;font-style:italic}
   .afpmark{color:#b4262d;font-weight:700;font-size:.62rem;letter-spacing:.04em}
+  .optout{background:#fdf6f6;border-left:3px solid var(--red);padding:8px 11px;margin:10px 0;
+    font-size:.82rem;color:#7d2a2a}
+  .optout b{color:var(--red)}
+  .optmark{color:var(--red);font-weight:800;font-size:.62rem;letter-spacing:.04em}
   .hist{border-top:1px solid var(--rule);margin-top:16px;padding-top:8px}
   .hist summary{cursor:pointer;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;
     color:var(--muted);font-weight:700}
@@ -508,7 +512,9 @@
       '<span class="dr ' + rc(d.rating) + '">' + pvi(d) + '</span>' +
       '<span class="dt2">' + (d.topr ? d.topr.town : '') +
         (needCount(d) ? ' <span class="needmark">ASKS</span>' : '') +
-        (afpFlag(d) ? ' <span class="afpmark">AFP</span>' : '') + '</span>' +
+        (afpFlag(d) ? ' <span class="afpmark">AFP</span>' : '') +
+        ((d.cands||[]).some(function(c){ return c.optout; })
+          ? ' <span class="optmark">OPT OUT</span>' : '') + '</span>' +
       '<span class="dc">' + (c ? money(c)
         : (d.rel && d.rel.kind==='floterial'
             ? (inCluster ? '<span class="onbase">on the base mail</span>'
@@ -687,7 +693,9 @@
              '<td>' + afpCell(c) + '</td><td>' + linkBits(c) + '</td></tr>';
         return;
       }
-      h += '<tr><td class="who2">' + c.name + '</td><td>' + tri(c.signs) + '</td>' +
+      h += '<tr><td class="who2">' + c.name +
+        (c.optout ? ' <span class="optmark">OPT OUT</span>' : '') + '</td>' +
+        '<td>' + tri(c.signs) + '</td>' +
         '<td class="n">' + (c.signs_count ? num(c.signs_count) : '') + '</td>' +
         '<td>' + tri(c.lit) + '</td><td>' + tri(c.headshot) + '</td><td>' + tri(c.walkbooks) + '</td>' +
         '<td class="n">' + dol(c.raised) + '</td><td class="n">' + dol(c.coh) + '</td>' +
@@ -782,6 +790,12 @@
     }
     h += '<div class="who"><span class="lab">Republican nominees</span>' +
       (r ? r : '<span class="none">No Republican on the ballot here</span>') + '</div>';
+    (d.cands || []).forEach(function(c){
+      if(!c.optout) return;
+      h += '<div class="optout"><b>' + esc(c.name) + ' has opted out of CTEHR materials.</b> ' +
+           'No mail, no palm card, no shared page may carry their name or picture. ' +
+           esc(c.optout_note || '') + '</div>';
+    });
     h += candHtml(d);
     var TIERS = [[1,'Tier 1','Full effort, everything we have'],
                  [2,'Tier 2','Needs real spend here'],

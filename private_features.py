@@ -1370,7 +1370,8 @@ def spend_plan():
                                   AND sv.survey_org = 'AFP' LIMIT 1),
                               EXISTS (SELECT 1 FROM candidate_surveys sv
                                        WHERE sv.candidate_id = f.candidate_id
-                                         AND sv.survey_org = 'AFP')
+                                         AND sv.survey_org = 'AFP'),
+                              c.materials_optout, c.materials_optout_note
                        FROM filings f
                        JOIN candidates c ON c.candidate_id = f.candidate_id
                        LEFT JOIN candidate_campaign_progress p ON p.candidate_id = f.candidate_id
@@ -1388,7 +1389,8 @@ def spend_plan():
                 'more': float(r[10]) if r[10] is not None else None,
                 'note': r[11], 'website': r[12], 'donate': r[13], 'facebook': r[14],
                 'afp': r[15], 'afp_done': r[16],
-                'afp_label': _afp_rank(r[15])[1], 'afp_rank': _afp_rank(r[15])[0]})
+                'afp_label': _afp_rank(r[15])[1], 'afp_rank': _afp_rank(r[15])[0],
+                'optout': r[17], 'optout_note': r[18]})
 
         # Every edit to this plan, so four people editing it can see each other's work. The
         # trigger stores a row as it was BEFORE the change, so each row's value is the state
