@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .am{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--ink:#22303f;--green:#1a7f43;--red:#b4262d;
+      --amber:#8a6400;--soft:#f5f8fc;--ours:#d91720;--theirs:#2563eb;color:var(--ink);font-size:.9rem}
+  .am h4{margin:0 0 2px;color:var(--navy)}
+  .am .lead{color:var(--muted);font-size:.78rem;margin:0 0 14px;max-width:760px}
+  .am .hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .am .hdr .acts{display:flex;gap:8px;align-items:center}
+  .am .btn-nv{font-size:.76rem;padding:5px 14px;border:1px solid var(--navy);background:var(--navy);
+    color:#fff;border-radius:4px;cursor:pointer;font-weight:700;white-space:nowrap}
+  .am .btn-nv:hover{background:#2b4a78;color:#fff;text-decoration:none}
+  .am .btn-ln{font-size:.76rem;padding:5px 12px;border:1px solid #c9d1dc;background:#fff;color:var(--navy);
+    border-radius:4px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .am .btn-ln:hover{background:var(--soft);text-decoration:none}
+  .am .btn-ln.rm{color:var(--red);border-color:#e6c3c5}
+  .am form.inl{display:inline}
+  .am section{margin-top:22px}
+  .am .sec-h{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .am .sec-h h5{margin:0;color:var(--navy);font-size:1rem}
+  .am .sec-h .sub{color:var(--muted);font-size:.76rem;margin:0;max-width:720px}
+  .am .tabs{display:inline-flex;background:#eef1f5;border-radius:6px;padding:2px}
+  .am .tabs a{font-size:.74rem;padding:3px 10px;border-radius:4px;color:var(--muted);font-weight:600}
+  .am .tabs a.on{background:#fff;color:var(--navy);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .am .tabs a:hover{text-decoration:none;color:var(--navy)}
+  .note{display:flex;gap:10px;align-items:flex-start;background:#eef1f5;border-radius:8px;padding:10px 14px;font-size:.8rem;color:var(--muted)}
+  .note b{color:var(--ink)}
+  .note.warn{background:#fdf6e0;border:1px solid #ead9a0;color:var(--ink)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+  .tile{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:12px 14px;border-left:4px solid var(--navy)}
+  .tile .cap{font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .tile .big{font-size:1.5rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.1;margin:4px 0 2px}
+  .tile .sub{font-size:.74rem;color:var(--muted)}
+  .card-nv{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:14px 16px}
+  .mtab{width:100%;border-collapse:collapse;font-size:.84rem}
+  .mtab th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;
+    padding:6px 8px;text-align:left;font-weight:700}
+  .mtab th.n,.mtab td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .mtab td{padding:7px 8px;border-bottom:1px solid #eef1f5;vertical-align:top}
+  .mtab tr:hover td{background:var(--soft)}
+  .mtab .dim{color:var(--muted);font-size:.74rem}
+  .chip{display:inline-block;font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:10px;border:1px solid;white-space:nowrap}
+  .chip.support{color:var(--green);border-color:#bfe3cb;background:#eaf7ee}
+  .chip.oppose{color:#4b5563;border-color:#d6dbe3;background:#f1f3f6}
+  .chip.live{color:var(--green);border-color:#bfe3cb;background:#eaf7ee}
+  .chip.paused{color:#4b5563;border-color:#d6dbe3;background:#f1f3f6}
+  .chip.muted{color:var(--muted);border-color:#d6dbe3;background:#fff}
+  .err{color:var(--red);font-size:.74rem}
+  .ok{color:var(--green);font-size:.74rem}
+  .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+  .ad{background:#fff;border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column}
+  .ad .bd{padding:10px 12px;flex:1;display:flex;flex-direction:column;gap:5px}
+  .ad .who{display:flex;justify-content:space-between;gap:6px;align-items:flex-start;font-size:.78rem}
+  .ad .who b{color:var(--navy)}
+  .ad .ttl{font-weight:700;color:var(--ink);font-size:.84rem;line-height:1.25}
+  .ad .txt{font-size:.76rem;color:var(--ink);display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+  .ad .meta{font-size:.7rem;color:var(--muted)}
+  .ad .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-top:1px solid var(--rule);padding:8px 12px;background:var(--soft)}
+  .ad .nums div{text-align:right}
+  .ad .nums .c{font-size:.6rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .ad .nums .v{font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .ad .nums .r{font-size:.64rem;color:var(--muted)}
+  .ad .ft{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;font-size:.7rem;color:var(--muted);border-top:1px solid var(--rule)}
+  .setup{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media (max-width:760px){.setup{grid-template-columns:1fr}}
+  .setup h6{color:var(--navy);font-size:.9rem;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+  .setup p,.setup li{font-size:.78rem;color:var(--muted)}
+  .setup ol,.setup ul{padding-left:18px}
+  .setup code{font-size:.72rem;background:#eef1f5;padding:1px 5px;border-radius:3px;color:var(--ink)}
+  .setup b{color:var(--ink);font-weight:600}
+  .setup .warnbox{background:#fdf6e0;border:1px solid #ead9a0;border-radius:6px;padding:8px 10px;font-size:.76rem;color:var(--ink)}
+  .empty{text-align:center;padding:36px 12px;color:var(--muted);background:#fff;border:1px dashed #c9d1dc;border-radius:8px}
+  .empty h5{color:var(--navy)}
+  .modal label{font-size:.8rem;font-weight:600;color:var(--navy);margin-bottom:2px}
+  .modal .form-control{font-size:.84rem}
+  .modal .form-text{font-size:.74rem}
+  .modal .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .found{border:1px solid var(--rule);border-radius:6px;max-height:220px;overflow:auto;margin-top:8px;display:none}
+  .found .row-a{padding:6px 10px;border-bottom:1px solid #eef1f5;cursor:pointer;font-size:.8rem}
+  .found .row-a:hover{background:var(--soft)}
+  .found .row-a .dim{font-size:.7rem;color:var(--muted)}
+  .msg{font-size:.76rem;margin-top:6px;color:var(--muted)}
+  .msg.bad{color:var(--red);font-weight:600}
+</style>
+{% endblock %}
+{% block content %}
+<div class="am">
+  <div class="hdr">
+    <div>
+      <h4>Ad monitor</h4>
+      <p class="lead">Every political ad in the race on Facebook and Instagram, ours and theirs, from Meta's public Ad Library.
+        Spend is a range Meta publishes, never an exact figure. Our own accounts, with exact numbers, are on <a href="{{ url_for('meta.page') }}">Meta ads</a>.</p>
+    </div>
+    <div class="acts">
+      {% if people %}<form class="inl" method="POST" action="{{ url_for('admon.sync_all') }}"><button class="btn-ln" type="submit"><i class="fas fa-sync-alt"></i> Sync all</button></form>{% endif %}
+      <button class="btn-nv" type="button" data-toggle="modal" data-target="#watchNew"><i class="fas fa-binoculars"></i> Watch a page</button>
+    </div>
+  </div>
+
+  <div class="note"><i class="fas fa-info-circle" style="margin-top:2px"></i>
+    <div><b>Every spend figure here is an estimate.</b> Meta publishes bands, not amounts, so each ad is priced off its impressions and pinned inside the band Meta gave. The band is printed under every number. The only exact figures are the ones typed in from an advertiser's Ad Library <b>Disclaimers</b> panel.</div></div>
+
+  {% if not has_token %}
+  <div class="note warn" style="margin-top:10px"><i class="fas fa-exclamation-triangle" style="margin-top:2px;color:var(--amber)"></i>
+    <div><b>The Ad Library cannot be read yet.</b><br><span style="font-size:.76rem">{{ token_problem }}</span></div></div>
+  {% endif %}
+
+  {% if not people %}
+  <section><div class="empty">
+    <h5><i class="fas fa-binoculars"></i> No pages are being watched yet</h5>
+    <p>{% if has_token %}Click <b>Watch a page</b>, say whose side they are on, type their name, and press <b>Find their Facebook Page</b>. Everything else is automatic.
+       {% else %}Set a token first, then add a page. The steps are below.{% endif %}</p>
+    <button class="btn-nv" type="button" data-toggle="modal" data-target="#watchNew">Watch a page</button>
+  </div></section>
+  {% else %}
+
+  {# ---- Overview ---- #}
+  <section>
+    <div class="tiles">
+      <div class="tile" style="border-left-color:var(--theirs)"><div class="cap">Opposition, this cycle (est.)</div><div class="big">{{ oppose.spend_estimate|money }}</div>
+        <div class="sub">{% if oppose.ads %}Meta says {{ oppose.range_label }} · {{ oppose.ads }} ad{{ '' if oppose.ads == 1 else 's' }}{% else %}No political ads found{% endif %}</div></div>
+      <div class="tile" style="border-left-color:var(--ours)"><div class="cap">Our side, this cycle (est.)</div><div class="big">{{ support.spend_estimate|money if support.pages else '-' }}</div>
+        <div class="sub">{% if not support.pages %}No pages on our side watched yet{% elif support.ads %}Meta says {{ support.range_label }} · {{ support.ads }} ad{{ '' if support.ads == 1 else 's' }}{% else %}No political ads found{% endif %}</div></div>
+      <div class="tile"><div class="cap">Running now</div><div class="big">{{ totals.active_ads|num }}</div><div class="sub">{{ oppose.active_ads|num }} theirs · {{ support.active_ads|num }} ours</div></div>
+      <div class="tile"><div class="cap">Put out, last {{ days }} days (est.)</div><div class="big">{{ in_window.support|money }} / {{ in_window.oppose|money }}</div>
+        <div class="sub">{{ 'Ours / theirs, both estimated' if in_window.support + in_window.oppose > 0 else 'No movement seen on either side yet' }}</div></div>
+    </div>
+  </section>
+
+  {# ---- Trend ---- #}
+  <section>
+    <div class="sec-h">
+      <div><h5>{{ current_view.title }}</h5>
+        <p class="sub">{{ current_view.blurb }}{% if view == 'total' %}{% if trend.first_day %}, which was {{ trend.first_day|fmt_date }}{% else %}.{% endif %}{% endif %}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="tabs">{% for v in views %}<a href="{{ href(view=v.key) }}" class="{{ 'on' if v.key == view }}">{{ v.label }}</a>{% endfor %}</div>
+        <div class="tabs">{% for r in ranges %}<a href="{{ href(days=r) }}" class="{{ 'on' if r == days }}">{{ r }}d</a>{% endfor %}</div>
+      </div>
+    </div>
+    <div class="card-nv"><div style="position:relative;height:260px"><canvas id="trendChart"></canvas></div></div>
+    <div class="sec-h" style="margin-top:14px"><div><h5>By team</h5><p class="sub">Every page on a side added together. Same readings and view as above; red is ours, blue is theirs.</p></div></div>
+    <div class="card-nv"><div style="position:relative;height:220px"><canvas id="teamChart"></canvas></div></div>
+  </section>
+
+  {# ---- Who we watch ---- #}
+  <section>
+    <div class="card-nv">
+      <div class="sec-h"><div><h5>Who we watch</h5>
+        <p class="sub">{{ oppose.pages }} opposition, {{ support.pages }} on our side{% if people|length > watched %}, {{ people|length - watched }} paused{% endif %}. Pulled every hour. Sync reads one page again straight away.</p></div></div>
+      <div class="table-responsive">
+      <table class="mtab">
+        <thead><tr><th>Page</th><th>Side</th><th class="n">Spend (est.)</th><th class="n">Ads</th><th class="n">Last ad</th><th class="n">Checked</th><th class="n"></th></tr></thead>
+        <tbody>
+        {% for p in people %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ p.name }}{% if not p.active %} <span class="chip paused">Paused</span>{% endif %}</div>
+            <div class="dim">{% if p.office %}{{ p.office }} · {% endif %}
+              {% if p.page_id %}<a href="{{ p.page_url }}" target="_blank" rel="noopener">{{ p.page_name or p.page_id }} <i class="fas fa-external-link-alt" style="font-size:.6rem"></i></a>
+              {% else %}No Page linked - searching by name only{% endif %}</div>
+            {% if p.last_sync_error %}<div class="err"><i class="fas fa-exclamation-triangle"></i> {{ p.last_sync_error[:200] }}</div>{% endif %}
+          </td>
+          <td><span class="chip {{ p.side }}">{{ side_labels[p.side] }}</span></td>
+          <td class="n">
+            <div style="font-weight:600">{{ p.spend_estimate|money }}</div>
+            {% if p.ads %}<div class="dim">{{ p.range_label }}</div>{% endif %}
+            {% if p.meta_total_spend is not none %}
+              {% set too_high = p.spend_estimate > p.meta_total_spend %}
+              <div class="dim" {% if too_high %}style="color:var(--red);font-weight:600"{% endif %} title="{{ 'This cycle cannot exceed the advertiser\'s all-time total. The estimate is too high.' if too_high else 'Meta\'s own all-time figure, for all funders of this page.' }}">Meta all-time {{ p.meta_total_spend|money }}{% if too_high %} - estimate too high{% endif %}</div>
+            {% endif %}
+            {% if p.meta_week_spend is not none %}<div class="dim">Meta last week {{ p.meta_week_spend|money }}</div>{% endif %}
+          </td>
+          <td class="n">{{ p.ads|num }}<div class="dim">{{ p.active_ads|num }} running</div></td>
+          <td class="n dim">{{ p.last_ad_on|fmt_date if p.last_ad_on else 'None found' }}</td>
+          <td class="n">{% if p.last_synced_at %}<span class="ok"><i class="fas fa-check-circle"></i> {{ p.last_synced_at|ago }}</span>{% else %}<span class="dim">Never</span>{% endif %}</td>
+          <td class="n" style="white-space:nowrap">
+            <form class="inl" method="POST" action="{{ url_for('admon.sync_one', watch_id=p.id) }}"><button class="btn-ln" type="submit" {% if not has_token %}disabled{% endif %}>Sync</button></form>
+            <button class="btn-ln" type="button" data-toggle="modal" data-target="#edit{{ p.id }}">Edit</button>
+            <form class="inl" method="POST" action="{{ url_for('admon.set_active', watch_id=p.id) }}"><input type="hidden" name="active" value="{{ '0' if p.active else '1' }}"><button class="btn-ln" type="submit">{{ 'Pause' if p.active else 'Resume' }}</button></form>
+            <form class="inl" method="POST" action="{{ url_for('admon.delete_watch', watch_id=p.id) }}" onsubmit="return confirm('Stop watching {{ p.name|e }} and delete their collected ads and readings?')"><button class="btn-ln rm" type="submit">Remove</button></form>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  {# ---- Meta's own figures ---- #}
+  {% if reports %}
+  <section>
+    <div class="card-nv">
+      <div class="sec-h"><div><h5>Meta's own figures</h5>
+        <p class="sub">Exact numbers, typed in from each page's Ad Library Disclaimers panel. Meta's "last 7 days" is a rolling figure: it moves one day at a time, so reading it every day builds a day-by-day history instead of a handful of separate weeks. The change column is the gap since the reading before it.</p></div></div>
+      <div class="table-responsive">
+      <table class="mtab">
+        <thead><tr><th>Page</th><th>Read on</th><th class="n">That week</th><th class="n">Change</th><th class="n">All time</th></tr></thead>
+        <tbody>
+        {% for r in reports %}
+        <tr>
+          <td style="font-weight:600">{{ r.watch_name }}</td>
+          <td class="dim">{{ r.read_on|fmt_date }}</td>
+          <td class="n" style="font-weight:600">{{ r.week_spend|money if r.week_spend is not none else '-' }}</td>
+          <td class="n dim">{% if r.week_change is none %}-{% else %}<span title="{{ 'Against yesterday\'s reading. The two weeks share six days, so this is yesterday\'s spend less the day that dropped out.' if r.days_since_previous == 1 else 'Against the reading ' ~ r.days_since_previous ~ ' days earlier.' }}">{{ '+' if r.week_change > 0 else '-' if r.week_change < 0 else '' }}{{ (r.week_change|abs)|money }}{% if r.days_since_previous and r.days_since_previous != 1 %} / {{ r.days_since_previous }}d{% endif %}</span>{% endif %}</td>
+          <td class="n dim">{{ r.total_spend|money if r.total_spend is not none else '-' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <p style="font-size:.74rem;color:var(--muted);margin:10px 0 0">Add or update these with <b>Edit</b> on any page above. One reading a day costs a minute and turns the estimates into something you can check. The chart's <b>Last 7 days</b> view is this same window worked out from our own readings, so the two should track each other.</p>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ---- The ads ---- #}
+  <section>
+    <div class="sec-h">
+      <div><h5>{% if side %}{{ side_labels[side] }}: {{ 'ads this cycle' if show_all else 'running right now' }}{% elif show_all %}All ads this cycle{% else %}What is running right now{% endif %}</h5>
+        <p class="sub">Biggest spend first. Meta does not hand out the picture through its API, so open the ad to see it.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="tabs"><a href="{{ href(side='both') }}" class="{{ 'on' if not side }}">Everyone</a><a href="{{ href(side='oppose') }}" class="{{ 'on' if side == 'oppose' }}">{{ side_labels.oppose }}</a><a href="{{ href(side='support') }}" class="{{ 'on' if side == 'support' }}">{{ side_labels.support }}</a></div>
+        <div class="tabs"><a href="{{ href(show='running') }}" class="{{ 'on' if not show_all }}">Running now</a><a href="{{ href(show='all') }}" class="{{ 'on' if show_all }}">All this cycle</a></div>
+      </div>
+    </div>
+    {% if not ads %}
+      <div class="empty"><h5>{{ 'No ads collected yet' if show_all else 'Nothing running right now' }}</h5>
+        <p>{% if show_all %}Either they are not running political ads on Meta, or their ads were never declared political. Ads without that declaration are not in the archive at all.
+           {% elif totals.ads %}They have {{ totals.ads|num }} ad{{ '' if totals.ads == 1 else 's' }} on file this cycle, but none are delivering today. Switch to "All this cycle" to see them.
+           {% else %}Nothing has been collected yet. Either they are not running political ads, or their ads were never declared political.{% endif %}</p></div>
+    {% else %}
+    <div class="gal">
+      {% for a in ads %}
+      <div class="ad">
+        <div class="bd">
+          <div class="who"><span><b>{{ a.watch_name }}</b>{% if a.page_name and a.page_name != a.watch_name %} <span class="meta">· {{ a.page_name }}</span>{% endif %}</span>
+            <span class="chip {{ 'live' if a.running else 'muted' }}">{{ 'Running' if a.running else 'Ended' }}</span></div>
+          {% if a.link_title %}<div class="ttl">{{ a.link_title }}</div>{% endif %}
+          {% if a.body_text %}<div class="txt">{{ a.body_text }}</div>{% else %}<div class="meta"><i>No text in the archive for this ad.</i></div>{% endif %}
+          {% if a.bylines %}<div class="meta">Paid for by {{ a.bylines }}</div>{% endif %}
+          <div class="meta">{% if a.start_time %}Started {{ a.start_time|fmt_date }}{% endif %}{% if a.stop_time %} · ended {{ a.stop_time|fmt_date }}{% endif %}{% if a.platforms %} · {{ a.platforms|join(', ')|replace('_', ' ') }}{% endif %}</div>
+        </div>
+        <div class="nums">
+          <div><div class="c">Spend (est.)</div><div class="v">{{ a.spend_estimate|money }}</div><div class="r">{{ a.range_label }}</div></div>
+          <div><div class="c">Impressions</div><div class="v">{{ a.impressions_label }}</div></div>
+          <div><div class="c">Audience</div><div class="v">{% if a.audience_lower is not none %}{{ a.audience_lower|num }}{% if a.audience_upper and a.audience_upper > a.audience_lower %} - {{ a.audience_upper|num }}{% else %}+{% endif %}{% else %}-{% endif %}</div></div>
+        </div>
+        <div class="ft"><span>First seen {{ a.first_seen_at|fmt_date }}</span><a href="{{ a.url }}" target="_blank" rel="noopener">Open in Ad Library <i class="fas fa-external-link-alt"></i></a></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {# ---- Setup ---- #}
+  <section>
+    <div class="card-nv">
+      <div class="sec-h"><div><h5>How this works, and what it cannot show</h5><p class="sub">Nobody can read a rival's ad account. This page reads Meta's public Ad Library, which is the whole of what the law makes them publish.</p></div></div>
+      <div class="setup">
+        <div>
+          <h6><i class="fas fa-key text-muted"></i> Turn it on <span class="chip {{ 'live' if has_token else 'muted' }}">{{ 'Ready' if has_token else 'Not set' }}</span></h6>
+          <p>The archive answers only people Meta has checked the ID of. One token, in <code>META_AD_LIBRARY_TOKEN</code>, serves the whole page. If it is missing, <code>META_API_KEY</code> is used instead.{% if token_source %} Right now it is reading {{ token_source }}.{% endif %}</p>
+          <ol>
+            <li>Confirm your identity and location at <code>facebook.com/ID</code>. This is the only real gate, and Meta says it takes a few days. There is nothing to switch on in the app dashboard afterwards.</li>
+            <li>Once Meta confirms you, generate a user access token from your Meta for Developers app while signed in as that confirmed account.</li>
+            <li>Set that token as <code>META_AD_LIBRARY_TOKEN</code> in the server's <code>.env</code>, then restart the app.</li>
+            <li>Come back here, click <b>Watch a page</b>, and use <b>Find their Facebook Page</b>.</li>
+          </ol>
+          {% if not has_token %}<div class="warnbox"><b>{{ token_problem }}</b> Pages can still be added and edited; nothing will be pulled until a token is set.</div>{% endif %}
+        </div>
+        <div>
+          <h6><i class="fas fa-search text-muted"></i> Read the numbers carefully</h6>
+          <ul>
+            <li><b>Only political ads are in here.</b> A page that never got authorised to run political ads shows nothing at all. That is not a fault on this page.</li>
+            <li><b>Spend is a bracket, and the figure shown is priced off impressions.</b> Meta's bottom band is "under $100" with no floor, so averaging the bands overstates any page running many small boosts. Instead each page's cost per thousand impressions is worked out from its own larger ads, and its small ones are priced at that rate, then pinned inside the band Meta published. Meta's band is printed under every figure.</li>
+            <li><b>For one page's real total, open its Ad Library page</b> and scroll to <b>Disclaimers</b>. Meta prints an actual figure there, per funder, plus last week's spend. The page name in the table links straight to it. Type those in with <b>Edit</b>.</li>
+            <li><b>This race only.</b> The archive keeps seven years, so a plain search drags in the 2024 cycle. Everything here is cut off at {{ cycle_start|fmt_date(true) }} (<code>META_AD_CYCLE_START</code>).</li>
+            <li><b>Each ad shows a total for its whole run</b>, not a daily one. The chart is built from one reading a day taken here, so it only goes back to the day the watch started.</li>
+            <li><b>Search words can catch other people's ads.</b> Once a Page is linked, only that Page's ads count towards their spend.</li>
+          </ul>
+        </div>
+      </div>
+      <p style="font-size:.74rem;color:var(--muted);margin:12px 0 0">Everything here is public data that Meta is required to publish, read through the official Ad Library API. No account of theirs is touched, and nothing is done on their Pages.</p>
+    </div>
+  </section>
+</div>
+
+{# ---- Watch dialog (new) ---- #}
+{% macro watch_form(p) %}
+  <div class="form-group"><label>Whose side</label>
+    <div>{% for s in sides %}<label class="mr-3" style="font-weight:400"><input type="radio" name="side" value="{{ s }}" {{ 'checked' if (p.side if p else 'oppose') == s }}> {{ side_labels[s] }}</label>{% endfor %}</div></div>
+  <div class="two">
+    <div class="form-group"><label>Name</label><input class="form-control fName" name="name" value="{{ p.name if p else '' }}" placeholder="Jane Doe, or NHDP" required></div>
+    <div class="form-group"><label>Office or district</label><input class="form-control" name="office" value="{{ p.office or '' if p else '' }}" placeholder="e.g. Rockingham 5"></div>
+  </div>
+  {% if has_token %}
+  <div><button type="button" class="btn-ln findBtn"><i class="fas fa-search"></i> Find their Facebook Page</button>
+    <div class="found"></div><div class="msg"></div></div>
+  {% endif %}
+  <div class="two" style="margin-top:8px">
+    <div class="form-group"><label>Facebook Page id</label><input class="form-control fPid" name="page_id" value="{{ p.page_id or '' if p else '' }}" placeholder="Numbers only"><small class="form-text text-muted">Fills in from Find. Without it, only the search words are used.</small></div>
+    <div class="form-group"><label>Page name</label><input class="form-control fPname" name="page_name" value="{{ p.page_name or '' if p else '' }}"></div>
+  </div>
+  <div class="form-group"><label>Search words</label><input class="form-control" name="search_terms" value="{{ p.search_terms or '' if p else '' }}" placeholder="Jane Doe, Doe for NH House"><small class="form-text text-muted">Comma separated. Used when there is no Page id, or as well as one - but once a Page is linked, only its own ads count.</small></div>
+  <div class="two">
+    <div class="form-group"><label>Meta all-time spend</label><input class="form-control" name="meta_total_spend" placeholder="$ from Disclaimers panel"></div>
+    <div class="form-group"><label>Meta last 7 days</label><input class="form-control" name="meta_week_spend" placeholder="$ from Disclaimers panel"></div>
+  </div>
+  <small class="form-text text-muted" style="margin-top:-6px;margin-bottom:8px">Optional, typed in from the page's Ad Library Disclaimers panel. Recorded against today's date; the history is kept.{% if p and p.meta_figures_on %} Last read {{ p.meta_figures_on|fmt_date }}: {{ p.meta_total_spend|money if p.meta_total_spend is not none else '-' }} all time, {{ p.meta_week_spend|money if p.meta_week_spend is not none else '-' }} that week.{% endif %}</small>
+  <div class="form-group"><label>Notes</label><textarea class="form-control" name="notes" rows="2">{{ p.notes or '' if p else '' }}</textarea></div>
+{% endmacro %}
+
+<div class="modal fade" id="watchNew" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+    <form method="POST" action="{{ url_for('admon.add_watch') }}">
+      <div class="modal-header"><h5 class="modal-title" style="color:var(--navy)">Watch a page</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
+      <div class="modal-body am">{{ watch_form(none) }}</div>
+      <div class="modal-footer"><button type="submit" class="btn-nv">Watch</button></div>
+    </form>
+  </div></div>
+</div>
+
+{% for p in people %}
+<div class="modal fade" id="edit{{ p.id }}" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+    <form method="POST" action="{{ url_for('admon.update_watch', watch_id=p.id) }}">
+      <div class="modal-header"><h5 class="modal-title" style="color:var(--navy)">Edit {{ p.name }}</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
+      <div class="modal-body am">{{ watch_form(p) }}</div>
+      <div class="modal-footer"><button type="submit" class="btn-nv">Save</button></div>
+    </form>
+  </div></div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+  var CSRF = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+  var data = {{ chart_data|tojson if people else '[]' }};
+  var series = {{ trend.series|tojson if people else '[]' }};
+  var mode = {{ view|tojson }};
+  var PAL = { support: ['#d91720', '#f0646b', '#a30f16', '#ff9a9e', '#7a0a10'], oppose: ['#2563eb', '#60a5fa', '#1e40af', '#93c5fd', '#1e3a8a'] };
+  var labels = data.map(function(d){ var p = d.date.split('-'); return p[1] + '/' + p[2]; });
+  var money = function(v){ return '$' + Math.round(v).toLocaleString(); };
+  var common = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+               tooltip: { callbacks: { label: function(c){ return c.dataset.label + ': ' + money(c.parsed.y); } } } },
+    scales: { x: { stacked: mode === 'added', grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 16 } },
+              y: { stacked: mode === 'added', beginAtZero: true, ticks: { font: { size: 10 }, callback: money } } }
+  };
+  var type = mode === 'added' ? 'bar' : 'line';
+  function ds(label, color, values){
+    var d = { label: label, data: values, borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, tension: 0.2, spanGaps: false };
+    if (type === 'line') { d.fill = false; }
+    return d;
+  }
+  var el = document.getElementById('trendChart');
+  if (el && data.length) {
+    var n = { support: 0, oppose: 0 };
+    new Chart(el, { type: type, data: { labels: labels, datasets: series.map(function(s){
+      var color = PAL[s.side][n[s.side]++ % PAL[s.side].length];
+      return ds(s.name, color, data.map(function(d){ return (s.key in d) ? d[s.key] : null; }));
+    }) }, options: common });
+  }
+  var team = document.getElementById('teamChart');
+  if (team && data.length) {
+    function sumSide(side){ return data.map(function(d){
+      var any = false, t = 0;
+      series.forEach(function(s){ if (s.side === side && (s.key in d)) { any = true; t += d[s.key]; } });
+      return any ? t : null; }); }
+    new Chart(team, { type: type, data: { labels: labels, datasets: [ ds('Our side', '#d91720', sumSide('support')), ds('Opposition', '#2563eb', sumSide('oppose')) ] }, options: common });
+  }
+
+  // ---- Find their Facebook Page, in every watch dialog ----
+  document.querySelectorAll('.findBtn').forEach(function(btn){
+    var body = btn.closest('.modal-body');
+    var list = btn.parentNode.querySelector('.found'), msg = btn.parentNode.querySelector('.msg');
+    btn.addEventListener('click', function(){
+      var terms = body.querySelector('.fName').value.trim();
+      msg.className = 'msg'; msg.textContent = 'Searching the archive for "' + terms + '"…'; list.style.display = 'none'; list.innerHTML = '';
+      fetch('{{ url_for('admon.find') }}', { method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':CSRF}, body: JSON.stringify({ terms: terms }) })
+        .then(function(r){ return r.json(); }).then(function(d){
+          if (!d.ok) { msg.className = 'msg bad'; msg.textContent = d.error || 'Failed.'; return; }
+          if (!d.pages.length) { msg.textContent = 'No political ads found for that name this cycle. Try another spelling, or leave the Page blank and use search words.'; return; }
+          msg.textContent = d.pages.length + ' Page' + (d.pages.length === 1 ? '' : 's') + ' found. Click the right one.';
+          d.pages.forEach(function(p){
+            var row = document.createElement('div'); row.className = 'row-a';
+            row.innerHTML = '<div><b></b> <span class="dim"></span></div><div class="dim"></div>';
+            row.querySelector('b').textContent = p.page_name; row.querySelectorAll('.dim')[0].textContent = p.page_id;
+            row.querySelectorAll('.dim')[1].textContent = p.ads + ' ad' + (p.ads === 1 ? '' : 's') + ', up to $' + Math.round(p.spend_upper).toLocaleString() + (p.last_ran ? ', newest ' + p.last_ran : '');
+            row.addEventListener('click', function(){ body.querySelector('.fPid').value = p.page_id; body.querySelector('.fPname').value = p.page_name; list.style.display = 'none'; msg.textContent = 'Picked ' + p.page_name + '.'; });
+            list.appendChild(row);
+          });
+          list.style.display = '';
+        }).catch(function(){ msg.className = 'msg bad'; msg.textContent = 'Could not reach the server.'; });
+    });
+  });
+})();
+</script>
+{% endblock %}

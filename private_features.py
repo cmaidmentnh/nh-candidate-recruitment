@@ -71,7 +71,7 @@ def get_user_private_features():
     # Superadmin has access to all
     email = getattr(current_user, 'email', None)
     if email and email.lower() == SUPER_ADMIN_EMAIL.lower():
-        return ['secret_primaries', 'speaker_votes', 'campaign_plan', 'digest']
+        return ['secret_primaries', 'speaker_votes', 'campaign_plan', 'digest', 'meta_ads']
 
     if not hasattr(current_user, 'user_id'):
         return []
@@ -134,7 +134,7 @@ def manage_access():
         return render_template('private/manage_access.html',
                              users=users,
                              access_grants=access_grants,
-                             features=['secret_primaries', 'speaker_votes', 'campaign_plan', 'digest'])
+                             features=['secret_primaries', 'speaker_votes', 'campaign_plan', 'digest', 'meta_ads'])
     finally:
         cur.close()
         release_db_connection(conn)

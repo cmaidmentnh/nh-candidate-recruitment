@@ -12,6 +12,7 @@ A Flask web application for tracking NH House candidates across election cycles.
 - CSV bulk import
 - Registration tokens for controlled sign-ups
 - Photo uploads to S3-compatible storage
+- Meta ads reporting (our accounts) and Ad monitor (everyone's political ads) - see [docs/meta-ads.md](docs/meta-ads.md)
 
 ## Before You Commit (read this, Mac users)
 

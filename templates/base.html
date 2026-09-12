@@ -724,6 +724,14 @@
                 <i class="fas fa-envelope-open-text text-muted"></i> Weekly Digest
             </a>
             {% endif %}
+            {% if 'meta_ads' in user_private_features %}
+            <a class="dropdown-item" href="{{ url_for('meta.page') }}">
+                <i class="fab fa-facebook text-muted"></i> Meta Ads
+            </a>
+            <a class="dropdown-item" href="{{ url_for('admon.page') }}">
+                <i class="fas fa-binoculars text-muted"></i> Ad Monitor
+            </a>
+            {% endif %}
             {% if can_access_surveys %}
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="{{ url_for('surveys') }}">
