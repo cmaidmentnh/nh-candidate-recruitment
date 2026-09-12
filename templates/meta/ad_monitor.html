@@ -261,7 +261,7 @@
       <div class="setup">
         <div>
           <h6><i class="fas fa-key text-muted"></i> Turn it on <span class="chip {{ 'live' if has_token else 'muted' }}">{{ 'Ready' if has_token else 'Not set' }}</span></h6>
-          <p>The archive answers only people Meta has checked the ID of. One token, in <code>META_AD_LIBRARY_TOKEN</code>, serves the whole page. If it is missing, <code>META_API_KEY</code> is used instead.{% if token_source %} Right now it is reading {{ token_source }}.{% endif %}</p>
+          <p>The archive answers only people Meta has checked the ID of. One token, in <code>META_AD_LIBRARY_TOKEN</code>, serves the whole page. If it is missing, the server key (<code>META_ADS_TOKEN</code>) is tried instead, but Meta may refuse a system-user token here and want a person's.{% if token_source %} Right now it is reading <code>{{ token_source }}</code>.{% endif %}</p>
           <ol>
             <li>Confirm your identity and location at <code>facebook.com/ID</code>. This is the only real gate, and Meta says it takes a few days. There is nothing to switch on in the app dashboard afterwards.</li>
             <li>Once Meta confirms you, generate a user access token from your Meta for Developers app while signed in as that confirmed account.</li>

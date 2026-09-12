@@ -32,7 +32,7 @@ from psycopg2.extras import RealDictCursor, Json, execute_values
 
 from private_features import require_feature_access
 from meta_ads import (FEATURE, MetaApiError, _token_shape_problem, cron_authorized, iso_days_ago, meta_get_all_paged,
-                      report_today)
+                      report_today, server_token, server_token_source)
 
 logger = logging.getLogger(__name__)
 
@@ -93,28 +93,26 @@ ROLLING_DAYS = 7
 # =============================================================================
 
 def ad_library_token():
-    """The archive can use its own token, because reading it needs an ID-confirmed account
-    and that is often a different person from whoever holds the ads token. Falls back to
-    META_API_KEY so a single confirmed token can do both jobs."""
+    """The archive can use its own token, because reading it needs an ID-confirmed PERSON's
+    user token, and a system-user token may be refused. META_AD_LIBRARY_TOKEN wins when set;
+    otherwise the server key (META_ADS_TOKEN) is tried, so one token can do both jobs when
+    Meta allows it."""
     own = (os.environ.get('META_AD_LIBRARY_TOKEN') or '').strip()
     if own:
         return own
-    shared = (os.environ.get('META_API_KEY') or '').strip()
-    return shared or None
+    return server_token()
 
 
 def ad_library_token_source():
     if (os.environ.get('META_AD_LIBRARY_TOKEN') or '').strip():
         return 'META_AD_LIBRARY_TOKEN'
-    if (os.environ.get('META_API_KEY') or '').strip():
-        return 'META_API_KEY'
-    return None
+    return server_token_source()
 
 
 def ad_library_token_problem():
     t = ad_library_token()
     if not t:
-        return 'No token is set. Add META_AD_LIBRARY_TOKEN (or META_API_KEY) on this environment.'
+        return 'No token is set. Add META_AD_LIBRARY_TOKEN, or a server key (META_ADS_TOKEN), on this environment.'
     return _token_shape_problem(t, ad_library_token_source())
 
 

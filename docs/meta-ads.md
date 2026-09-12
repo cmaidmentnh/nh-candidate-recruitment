@@ -23,18 +23,24 @@ the bottom left.
    psql "$DATABASE_URL" -f migrations/031_meta_ads.sql
    ```
 
-2. Add to `.env`:
+2. Add to `.env`. **Never put a Meta token value in this repo - it is public.**
 
    ```
-   # An access token (starts with EAA) from a Business Manager system user with ads_read.
-   # Serves every ad account it can reach. Nothing secret is written to the database.
-   META_API_KEY=EAA...
+   # The server key. A system-user access token (starts with EAA) with ads_read, serving
+   # every ad account it can reach. Read at RUNTIME, in this order:
+   #   1. META_ADS_TOKEN in this process's environment
+   #   2. META_API_KEY  (the Goffstown name; an alias)
+   #   3. META_ADS_TOKEN inside the CRM's .env next door, /opt/nh-civic-crm/.env
+   # On the CTEHR server the token is already in (3), so this app needs NO copy of it.
+   # Point somewhere else with META_TOKEN_ENV_FILE=/path/to/.env
+   # META_ADS_TOKEN=EAA...
 
-   # Optional. The Ad Library needs a token from an account that has finished ID
-   # confirmation at facebook.com/ID. Falls back to META_API_KEY when unset.
-   META_AD_LIBRARY_TOKEN=EAA...
+   # Optional. The Ad Library needs a token from a PERSON who finished ID confirmation
+   # at facebook.com/ID; Meta may refuse a system-user token there. Falls back to the
+   # server key when unset. Do not use a personal token that dies before election day.
+   # META_AD_LIBRARY_TOKEN=EAA...
 
-   # Only needed to paste a token for one account that META_API_KEY cannot see.
+   # Only needed to paste a token for one account that the server key cannot see.
    # 64 hex characters:  openssl rand -hex 32
    ENCRYPTION_KEY=
 
@@ -45,7 +51,8 @@ the bottom left.
    META_AD_CYCLE_START=2026-01-01
    ```
 
-3. Restart the app (`requirements.txt` gained `cryptography` and `tzdata`).
+3. Restart the app (`requirements.txt` gained `cryptography` and `tzdata`). The Meta ads
+   page says which variable it is reading the key from, and why if it cannot.
 
 4. Open `/meta/`, click **Add account → Find my ad accounts**, pick one, **Test and save**.
    Open `/ad-monitor/`, click **Watch a page**, type the name, **Find their Facebook Page**.

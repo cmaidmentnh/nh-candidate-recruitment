@@ -108,7 +108,7 @@
   <div class="empty">
     <h5><i class="fas fa-bullhorn"></i> No ad accounts connected yet</h5>
     <p>{% if has_server_key %}The key on the server is set. Click <b>Add account</b>, then <b>Find my ad accounts</b>, and pick one from the list.
-       {% else %}Paste a system user token for one account, or set <code>META_API_KEY</code> on the server. Both ways are explained below.{% endif %}</p>
+       {% else %}Paste a system user token for one account, or set <code>META_ADS_TOKEN</code> on the server. Both ways are explained below.{% endif %}</p>
     <button class="btn-nv" type="button" data-toggle="modal" data-target="#addAccount">Add account</button>
   </div>
   {% else %}
@@ -294,8 +294,8 @@
       <div class="setup">
         <div>
           <h6><i class="fas fa-key text-muted"></i> 1. Key on the server <span class="chip {{ 'live' if has_server_key else 'muted' }}">{{ 'Ready' if has_server_key else 'Not set' }}</span></h6>
-          <p>One access token in the <code>META_API_KEY</code> environment variable serves every ad account it can reach, and nothing secret is written to the database.
-            {{ 'It is set and looks valid on this environment.' if has_server_key else 'It is not usable on this environment yet.' }}</p>
+          <p>One access token in the <code>META_ADS_TOKEN</code> environment variable serves every ad account it can reach, and nothing secret is written to the database or to this app's config: it is read at runtime from the environment, or from the CRM's <code>.env</code> next door.
+            {% if has_server_key %}It is set and looks valid on this environment (reading <code>{{ server_key_source }}</code>).{% else %}It is not usable on this environment yet.{% endif %}</p>
           <div class="warnbox">It must be an <b>access token</b>, which starts with <code>EAA</code>. An App ID, App Secret or client token will be rejected.
             Create one under <em>Business settings → Users → System users → Generate new token</em> with <code>ads_read</code>, and assign the ad account to that system user.</div>
           <ol style="margin-top:8px">

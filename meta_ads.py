@@ -7,8 +7,11 @@ spend chart, a campaign table, and a gallery of the ads themselves with their pi
 words. Active accounts are synced by cron; Sync on the page does one at once.
 
 Two ways to connect an account:
-  1. The key on the server (META_API_KEY). One system-user token serves every account it can
+  1. The key on the server (META_ADS_TOKEN). One system-user token serves every account it can
      reach and nothing secret is written to the database - the row stores a marker instead.
+     The value is read from the process environment at runtime, or from a sibling app's .env
+     (META_TOKEN_ENV_FILE) so it never has to be copied into this app's config. This repo is
+     public: no token value may ever land in it.
   2. A token pasted for one account, encrypted with AES-256-GCM (ENCRYPTION_KEY) before it is
      stored. It is never shown again.
 
@@ -94,12 +97,54 @@ def _report_window():
 # =============================================================================
 
 # Accounts read with the key on the server store this instead of a token.
-SERVER_TOKEN_MARKER = 'env:META_API_KEY'
+SERVER_TOKEN_MARKER = 'env:server-key'
+
+# Where the server key is looked for, in order. META_ADS_TOKEN is the name Chris uses on the
+# server; META_API_KEY is the Goffstown name and stays as an alias.
+SERVER_TOKEN_VARS = ('META_ADS_TOKEN', 'META_API_KEY')
+
+# A sibling app's .env, read at runtime when neither variable is in this process's
+# environment. The system-user token already lives there, and copying its value into this
+# app's config would be one more place for it to leak from.
+SHARED_ENV_FILE = (os.environ.get('META_TOKEN_ENV_FILE') or '/opt/nh-civic-crm/.env').strip()
+
+
+def _read_env_file(path, key):
+    """One KEY=VALUE from a dotenv-style file, or None. Never raises: a missing or unreadable
+    file just means the key is not there."""
+    try:
+        with open(path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                if k.strip() == key:
+                    v = v.strip()
+                    if len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'"):
+                        v = v[1:-1]
+                    return v or None
+    except OSError:
+        return None
+    return None
+
+
+def server_token_source():
+    """Which variable the server key came from, so the page can say where to change it."""
+    for name in SERVER_TOKEN_VARS:
+        if (os.environ.get(name) or '').strip():
+            return name
+    if _read_env_file(SHARED_ENV_FILE, 'META_ADS_TOKEN'):
+        return f'META_ADS_TOKEN in {SHARED_ENV_FILE}'
+    return None
 
 
 def server_token():
-    t = (os.environ.get('META_API_KEY') or '').strip()
-    return t or None
+    for name in SERVER_TOKEN_VARS:
+        t = (os.environ.get(name) or '').strip()
+        if t:
+            return t
+    return _read_env_file(SHARED_ENV_FILE, 'META_ADS_TOKEN')
 
 
 def _token_shape_problem(t, name):
@@ -123,7 +168,10 @@ def _token_shape_problem(t, name):
 
 
 def server_token_problem():
-    return _token_shape_problem(server_token(), 'META_API_KEY')
+    t = server_token()
+    if not t:
+        return f'No server key is set. Put META_ADS_TOKEN in this environment, or in {SHARED_ENV_FILE}.'
+    return _token_shape_problem(t, server_token_source())
 
 
 def has_server_token():
@@ -175,7 +223,7 @@ def token_for(row):
     if row['access_token_enc'] == SERVER_TOKEN_MARKER:
         t = server_token()
         if not t:
-            raise MetaApiError('This account uses the server key, but META_API_KEY is not set on this environment.')
+            raise MetaApiError('This account uses the server key, but ' + (server_token_problem() or 'it is not usable.'))
         return t
     return decrypt(row['access_token_enc'])
 
@@ -1013,7 +1061,8 @@ def page():
     live_ads = sum(1 for a in ads if a['delivering'])
     return render_template('meta/meta.html', accounts=accounts, overview=overview, ads=ads, live_ads=live_ads,
                            days=days, ranges=RANGES, has_server_key=has_server_token(),
-                           server_key_problem=server_token_problem(), encryption_problem=encryption_problem(),
+                           server_key_problem=server_token_problem(), server_key_source=server_token_source(),
+                           encryption_problem=encryption_problem(),
                            graph_version=GRAPH_VERSION, account_status=ACCOUNT_STATUS,
                            now_utc=datetime.now(timezone.utc))
 
