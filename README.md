@@ -13,6 +13,35 @@ A Flask web application for tracking NH House candidates across election cycles.
 - Registration tokens for controlled sign-ups
 - Photo uploads to S3-compatible storage
 
+## Before You Commit (read this, Mac users)
+
+This repo is worked on from **Windows and Mac**. Windows cannot create a file
+whose name has any of these characters:
+
+```
+\  :  *  ?  "  <  >  |
+```
+
+or a name that ends in a dot or a space, or is named `CON`, `PRN`, `AUX`,
+`NUL`, `COM1`-`COM9`, `LPT1`-`LPT9`.
+
+Mac and Linux allow all of that. Git on Windows does **not**. One such file
+in the repo makes `git clone` fail on Windows with
+`error: invalid path`, and the person gets an **empty** folder.
+
+This already happened once: a stray `(~\Downloads\items.csv)` got swept in
+by `git add .` and broke every Windows clone.
+
+**Rules:**
+
+1. Do not run `git add .` or `git add -A` without checking `git status` first.
+2. Turn on the guard hook once per clone. It blocks the commit if a bad
+   name is staged:
+
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+
 ## Deployment Options
 
 ### Option A: DigitalOcean App Platform (Easiest)

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Blocks commits that add files Windows cannot check out.
+#
+# Git on Windows refuses these names, and the WHOLE clone fails with
+# "error: invalid path". This bit us once with '(~\Downloads\items.csv)'.
+#
+# Turn this hook on once per clone (Mac / Linux / Windows):
+#   git config core.hooksPath .githooks
+
+bad=$(git diff --cached --name-only --diff-filter=AR -z \
+  | tr '\000' '\n' \
+  | grep -Ei '[\:*?"<>|]|(^|/)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.[^/]*)?(/|$)|[. ](/|$)')
+
+if [ -n "$bad" ]; then
+  echo "ERROR: these file names will not check out on Windows:" >&2
+  echo "$bad" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "Windows bans  \ : * ? \" < > |  in names, names that end in a dot" >&2
+  echo "or a space, and the names CON PRN AUX NUL COM1-9 LPT1-9." >&2
+  echo "Rename the file, or unstage it:  git rm --cached '<name>'" >&2
+  exit 1
+fi
