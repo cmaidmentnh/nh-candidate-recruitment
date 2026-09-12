@@ -102,7 +102,8 @@
 
   {% if not has_token %}
   <div class="note warn" style="margin-top:10px"><i class="fas fa-exclamation-triangle" style="margin-top:2px;color:var(--amber)"></i>
-    <div><b>The Ad Library cannot be read yet.</b><br><span style="font-size:.76rem">{{ token_problem }}</span></div></div>
+    <div><b>The Ad Library cannot be read yet.</b><br><span style="font-size:.76rem">{{ token_problem }}</span>
+      {% if can_edit_settings %}<br><a href="{{ url_for('meta.settings') }}" style="font-size:.76rem"><i class="fas fa-key"></i> Paste a token on the Meta settings page</a>{% endif %}</div></div>
   {% endif %}
 
   {% if not people %}
@@ -268,7 +269,7 @@
             <li>Set that token as <code>META_AD_LIBRARY_TOKEN</code> in the server's <code>.env</code>, then restart the app.</li>
             <li>Come back here, click <b>Watch a page</b>, and use <b>Find their Facebook Page</b>.</li>
           </ol>
-          {% if not has_token %}<div class="warnbox"><b>{{ token_problem }}</b> Pages can still be added and edited; nothing will be pulled until a token is set.</div>{% endif %}
+          {% if not has_token %}<div class="warnbox"><b>{{ token_problem }}</b> Pages can still be added and edited; nothing will be pulled until a token is set.{% if can_edit_settings %} <a href="{{ url_for('meta.settings') }}">Paste one now.</a>{% endif %}</div>{% endif %}
         </div>
         <div>
           <h6><i class="fas fa-search text-muted"></i> Read the numbers carefully</h6>

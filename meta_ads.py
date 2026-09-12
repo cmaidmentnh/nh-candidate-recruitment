@@ -7,23 +7,36 @@ spend chart, a campaign table, and a gallery of the ads themselves with their pi
 words. Active accounts are synced by cron; Sync on the page does one at once.
 
 Two ways to connect an account:
-  1. The key on the server (META_ADS_TOKEN). One system-user token serves every account it can
-     reach and nothing secret is written to the database - the row stores a marker instead.
-     The value is read from the process environment at runtime, or from a sibling app's .env
-     (META_TOKEN_ENV_FILE) so it never has to be copied into this app's config. This repo is
-     public: no token value may ever land in it.
-  2. A token pasted for one account, encrypted with AES-256-GCM (ENCRYPTION_KEY) before it is
-     stored. It is never shown again.
+  1. The shared key. One access token serves every account it can reach and the account row
+     stores a marker instead of a token. It is looked for at runtime, in this order: the
+     process environment (META_ADS_TOKEN, or the Goffstown name META_API_KEY), a sibling app's
+     .env (META_TOKEN_ENV_FILE), and last a token pasted on /meta/settings and kept encrypted
+     in meta_settings. Environment first, on purpose: the key in the server's .env is the
+     permanent system-user token, and a pasted user token is a stand-in for when nobody who
+     holds the token can reach the box. This repo is public: no token value may ever land in it.
+  2. A token pasted for one account, encrypted the same way. It is never shown again.
 
-Access is a private feature ('meta_ads'), granted on Manage Access like the battle plan.
+Encryption is AES-256-GCM under ENCRYPTION_KEY, or under a key derived from the app's own
+SECRET_KEY when ENCRYPTION_KEY is not set - the same secret the session cookie already trusts.
+
+The tables are created at start-up if missing (migrations/031 and 032 are idempotent), and an
+in-process thread runs the hourly sync under a Postgres advisory lock, so a fresh deploy needs
+neither psql nor a crontab. The cron endpoints and CLI commands still work for hosts that
+prefer them.
+
+Access is a private feature ('meta_ads'), granted on Manage Access like the battle plan. The
+settings page is narrower: the super admin plus META_SETTINGS_EDITORS.
 """
 import base64
+import hashlib
 import hmac
 import json
 import logging
 import os
 import re
 import secrets
+import threading
+import time
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -32,6 +45,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from flask_login import current_user
 from psycopg2.extras import RealDictCursor, execute_values
 
+import private_features
 from private_features import require_feature_access
 
 logger = logging.getLogger(__name__)
@@ -41,18 +55,68 @@ meta_bp = Blueprint('meta', __name__, url_prefix='/meta')
 # Set by init_meta_ads()
 get_db_connection = None
 release_db_connection = None
+_fallback_key = None
 
 FEATURE = 'meta_ads'
 
+# Who may open /meta/settings and paste a token. The super admin always can.
+SETTINGS_EDITORS = {e.strip().lower() for e in (os.environ.get('META_SETTINGS_EDITORS') or 'berryrm0@gmail.com').split(',') if e.strip()}
 
-def init_meta_ads(db_conn_func, db_release_func):
-    global get_db_connection, release_db_connection
+MIGRATIONS = ('031_meta_ads.sql', '032_meta_settings.sql')
+
+
+def init_meta_ads(db_conn_func, db_release_func, secret_key=None):
+    """Wires the database, derives the fallback encryption key from the app secret, and makes
+    sure the tables exist. Table creation failing (no database yet, say) is logged, not fatal:
+    the pages will say what is wrong when they are opened."""
+    global get_db_connection, release_db_connection, _fallback_key
     get_db_connection = db_conn_func
     release_db_connection = db_release_func
+    if secret_key:
+        raw = secret_key if isinstance(secret_key, bytes) else str(secret_key).encode('utf-8')
+        _fallback_key = hashlib.sha256(b'meta-settings:' + raw).digest()
+    try:
+        ensure_tables()
+    except Exception as e:
+        logger.error(f'[meta] could not create tables at start-up: {e}')
+
+
+def ensure_tables():
+    """Runs the Meta migrations. Every statement in them is IF NOT EXISTS, so this is safe on
+    every start and is how a host without psql access gets its tables."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        for name in MIGRATIONS:
+            with open(os.path.join(here, 'migrations', name), encoding='utf-8') as f:
+                cur.execute(f.read())
+        conn.commit()
+        cur.close()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        release_db_connection(conn)
 
 
 def _cursor(conn):
     return conn.cursor(cursor_factory=RealDictCursor)
+
+
+def meta_access_required(f):
+    """The 'meta_ads' private feature, or a settings editor: whoever is trusted to paste the
+    token is trusted to see what it fetches. The gate is a thin wrapper around the feature
+    decorator so Manage Access keeps working the same as for every other private page."""
+    from functools import wraps
+    gated = require_feature_access(FEATURE)(f)
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if current_user.is_authenticated and can_edit_settings():
+            return f(*args, **kwargs)
+        return gated(*args, **kwargs)
+    return decorated
 
 
 # =============================================================================
@@ -129,13 +193,18 @@ def _read_env_file(path, key):
     return None
 
 
+SETTINGS_PAGE_SOURCE = 'the Meta settings page'
+
+
 def server_token_source():
-    """Which variable the server key came from, so the page can say where to change it."""
+    """Where the shared key came from, so the page can say where to change it."""
     for name in SERVER_TOKEN_VARS:
         if (os.environ.get(name) or '').strip():
             return name
     if _read_env_file(SHARED_ENV_FILE, 'META_ADS_TOKEN'):
         return f'META_ADS_TOKEN in {SHARED_ENV_FILE}'
+    if stored_setting('META_ADS_TOKEN'):
+        return SETTINGS_PAGE_SOURCE
     return None
 
 
@@ -144,7 +213,7 @@ def server_token():
         t = (os.environ.get(name) or '').strip()
         if t:
             return t
-    return _read_env_file(SHARED_ENV_FILE, 'META_ADS_TOKEN')
+    return _read_env_file(SHARED_ENV_FILE, 'META_ADS_TOKEN') or stored_setting('META_ADS_TOKEN')
 
 
 def _token_shape_problem(t, name):
@@ -170,7 +239,8 @@ def _token_shape_problem(t, name):
 def server_token_problem():
     t = server_token()
     if not t:
-        return f'No server key is set. Put META_ADS_TOKEN in this environment, or in {SHARED_ENV_FILE}.'
+        return ('No shared key is set. Paste one on the Meta settings page, or put META_ADS_TOKEN in this '
+                f'environment or in {SHARED_ENV_FILE}.')
     return _token_shape_problem(t, server_token_source())
 
 
@@ -179,17 +249,25 @@ def has_server_token():
 
 
 def _encryption_key():
-    """32 bytes from ENCRYPTION_KEY (64 hex chars), or None when it is not usable."""
+    """32 bytes from ENCRYPTION_KEY (64 hex chars); otherwise the key derived from the app's
+    SECRET_KEY at init; None only when neither exists."""
     raw = (os.environ.get('ENCRYPTION_KEY') or '').strip()
-    if not re.fullmatch(r'[0-9a-fA-F]{64}', raw):
-        return None
-    return bytes.fromhex(raw)
+    if re.fullmatch(r'[0-9a-fA-F]{64}', raw):
+        return bytes.fromhex(raw)
+    return _fallback_key
 
 
 def encryption_problem():
     if _encryption_key() is None:
-        return 'ENCRYPTION_KEY must be set to 64 hex characters before a token can be pasted in.'
+        return 'Neither ENCRYPTION_KEY nor SECRET_KEY is set, so there is no key to encrypt a pasted token with.'
     return None
+
+
+def encryption_source():
+    raw = (os.environ.get('ENCRYPTION_KEY') or '').strip()
+    if re.fullmatch(r'[0-9a-fA-F]{64}', raw):
+        return 'ENCRYPTION_KEY'
+    return 'a key derived from SECRET_KEY' if _fallback_key else None
 
 
 def encrypt(plain):
@@ -226,6 +304,92 @@ def token_for(row):
             raise MetaApiError('This account uses the server key, but ' + (server_token_problem() or 'it is not usable.'))
         return t
     return decrypt(row['access_token_enc'])
+
+
+# ---------- tokens pasted in the browser ----------
+
+SETTING_KEYS = ('META_ADS_TOKEN', 'META_AD_LIBRARY_TOKEN')
+
+# Decrypted values are cached per process for a minute, because server_token() is asked several
+# times per page. Saving or clearing drops the cache in this worker; the others catch up within
+# the minute, which is fine for a value that changes a few times a year.
+SETTINGS_TTL = 60
+_settings = {'at': 0.0, 'rows': {}}
+_settings_lock = threading.Lock()
+
+
+def _load_settings(force=False):
+    with _settings_lock:
+        if not force and time.time() - _settings['at'] < SETTINGS_TTL:
+            return _settings['rows']
+        rows = {}
+        try:
+            conn = get_db_connection()
+            try:
+                cur = _cursor(conn)
+                cur.execute("SELECT key, value_enc, hint, updated_by, updated_at FROM meta_settings")
+                for r in cur.fetchall():
+                    try:
+                        r['value'] = decrypt(r['value_enc'])
+                    except Exception as e:
+                        # A key rotated under us. The row stays so the page can say so; the
+                        # value is simply unusable until it is pasted again.
+                        logger.warning(f'[meta] cannot decrypt setting {r["key"]}: {e}')
+                        r['value'] = None
+                    rows[r['key']] = r
+            finally:
+                release_db_connection(conn)
+        except Exception as e:
+            # No table yet, or no database: the environment chain still works without us.
+            logger.debug(f'[meta] settings not readable: {e}')
+        _settings['rows'] = rows
+        _settings['at'] = time.time()
+        return rows
+
+
+def stored_setting(key):
+    """The pasted value for a key, or None. Never log or return this to the client."""
+    row = _load_settings().get(key)
+    return (row or {}).get('value') or None
+
+
+def stored_setting_info(key):
+    """Who pasted it and when, plus the last four characters, for the settings page. Safe to show."""
+    row = _load_settings().get(key)
+    if not row:
+        return None
+    return {'hint': row.get('hint'), 'updated_by': row.get('updated_by'), 'updated_at': row.get('updated_at'),
+            'unreadable': row.get('value') is None}
+
+
+def save_setting(key, value, who):
+    if key not in SETTING_KEYS:
+        raise ValueError('Unknown setting.')
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("""INSERT INTO meta_settings (key, value_enc, hint, updated_by, updated_at)
+                       VALUES (%s, %s, %s, %s, now())
+                       ON CONFLICT (key) DO UPDATE SET value_enc = EXCLUDED.value_enc, hint = EXCLUDED.hint,
+                           updated_by = EXCLUDED.updated_by, updated_at = now()""",
+                    (key, encrypt(value), value[-4:], who))
+        conn.commit()
+        cur.close()
+    finally:
+        release_db_connection(conn)
+    _load_settings(force=True)
+
+
+def clear_setting(key):
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM meta_settings WHERE key = %s", (key,))
+        conn.commit()
+        cur.close()
+    finally:
+        release_db_connection(conn)
+    _load_settings(force=True)
 
 
 # =============================================================================
@@ -653,6 +817,10 @@ def sync_account(row):
     base = {'id': row['id'], 'account_id': row['account_id'], 'name': row['name']}
     conn = get_db_connection()
     try:
+        cur = conn.cursor()
+        cur.execute("UPDATE meta_ad_accounts SET last_attempt_at = now() WHERE id = %s", (row['id'],))
+        conn.commit()
+        cur.close()
         try:
             token = token_for(row)
             act = row['account_id']
@@ -1047,7 +1215,7 @@ def _who():
 
 
 @meta_bp.route('/')
-@require_feature_access(FEATURE)
+@meta_access_required
 def page():
     try:
         days = int(request.args.get('days', 30))
@@ -1064,11 +1232,11 @@ def page():
                            server_key_problem=server_token_problem(), server_key_source=server_token_source(),
                            encryption_problem=encryption_problem(),
                            graph_version=GRAPH_VERSION, account_status=ACCOUNT_STATUS,
-                           now_utc=datetime.now(timezone.utc))
+                           now_utc=datetime.now(timezone.utc), can_edit_settings=can_edit_settings())
 
 
 @meta_bp.route('/accounts/discover', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def discover():
     """The ad accounts the server key can reach. JSON, for the Add account dialog."""
     if not has_server_token():
@@ -1080,7 +1248,7 @@ def discover():
 
 
 @meta_bp.route('/accounts/test', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def test():
     """Tries a token against an account before anything is saved. JSON."""
     data = request.get_json(silent=True) or {}
@@ -1101,7 +1269,7 @@ def test():
 
 
 @meta_bp.route('/accounts', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def add_account():
     use_server = request.form.get('use_server_key') == '1'
     name = (request.form.get('name') or '').strip()[:160]
@@ -1159,7 +1327,7 @@ def add_account():
 
 
 @meta_bp.route('/accounts/<int:account_id>/token', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def update_token(account_id):
     row = _account_row(account_id) or abort(404)
     use_server = request.form.get('use_server_key') == '1'
@@ -1195,7 +1363,7 @@ def update_token(account_id):
 
 
 @meta_bp.route('/accounts/<int:account_id>/active', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def set_active(account_id):
     active = request.form.get('active') == '1'
     conn = get_db_connection()
@@ -1211,7 +1379,7 @@ def set_active(account_id):
 
 
 @meta_bp.route('/accounts/<int:account_id>/delete', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def delete_account(account_id):
     conn = get_db_connection()
     try:
@@ -1227,7 +1395,7 @@ def delete_account(account_id):
 
 
 @meta_bp.route('/accounts/<int:account_id>/sync', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def sync_one(account_id):
     row = _account_row(account_id) or abort(404)
     r = sync_account(row)
@@ -1241,7 +1409,7 @@ def sync_one(account_id):
 
 
 @meta_bp.route('/sync-all', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def sync_all():
     s = sync_all_active()
     if s['failed']:
@@ -1250,6 +1418,207 @@ def sync_all():
     else:
         flash(f'All {s["total"]} active accounts synced.', 'success')
     return redirect(url_for('meta.page'))
+
+
+# ---------- settings page ----------
+
+def can_edit_settings():
+    """The super admin, plus the named editors. Deliberately narrower than the feature itself:
+    this page is where a token gets pasted."""
+    if not current_user.is_authenticated:
+        return False
+    try:
+        if private_features.is_super_admin and private_features.is_super_admin():
+            return True
+    except Exception:
+        pass
+    email = (getattr(current_user, 'email', None) or '').lower()
+    return bool(email) and email in SETTINGS_EDITORS
+
+
+def settings_editor_required(f):
+    from functools import wraps
+
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('Please log in.', 'warning')
+            return redirect(url_for('login'))
+        if not can_edit_settings():
+            flash('You do not have access to that page.', 'danger')
+            return redirect(url_for('meta.page'))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@meta_bp.app_context_processor
+def inject_meta_settings_access():
+    return {'can_edit_meta_settings': can_edit_settings()}
+
+
+def _library_token_state():
+    """What the Ad Library will use right now. Imported lazily: ad_monitor imports this module."""
+    from ad_monitor import ad_library_token, ad_library_token_problem, ad_library_token_source
+    return ad_library_token(), ad_library_token_source(), ad_library_token_problem()
+
+
+def check_token(token, for_library=False):
+    """One live look at a token so the page can say what it is and what it can reach. Nothing
+    here writes anything. Returns plain values for the template."""
+    out = {'valid': None, 'expires_at': None, 'expiry': None, 'scopes': [], 'user': None, 'accounts': None,
+           'archive': None, 'error': None}
+    if not token:
+        return out
+    dbg = debug_token(token)
+    if dbg['ok']:
+        out['valid'] = dbg['valid']
+        out['expires_at'] = dbg['expires_at']
+        out['expiry'] = describe_token_expiry(dbg['expires_at'])
+        out['scopes'] = dbg['scopes']
+    try:
+        me = meta_get('me', token, {'fields': 'id,name'})
+        out['user'] = me.get('name') or me.get('id')
+    except MetaApiError as e:
+        out['error'] = str(e)
+        return out
+    if for_library:
+        from ad_monitor import CYCLE_START
+        try:
+            rows, _ = meta_get_all_paged('ads_archive', token, {
+                'ad_reached_countries': json.dumps(['US']), 'ad_type': 'POLITICAL_AND_ISSUE_ADS',
+                'ad_active_status': 'ALL', 'ad_delivery_date_min': CYCLE_START, 'search_terms': 'New Hampshire',
+                'fields': 'id', 'limit': 5}, 1)
+            out['archive'] = len(rows)
+        except MetaApiError as e:
+            out['error'] = f'The Ad Library refused it: {e}'
+    else:
+        try:
+            out['accounts'] = discover_ad_accounts(token)
+        except MetaApiError as e:
+            out['error'] = f'It works, but cannot list ad accounts: {e}'
+    return out
+
+
+@meta_bp.route('/settings')
+@settings_editor_required
+def settings():
+    ads_token = server_token()
+    lib_token, lib_source, lib_problem = _library_token_state()
+    ads = {'source': server_token_source(), 'problem': server_token_problem(), 'stored': stored_setting_info('META_ADS_TOKEN'),
+           'check': check_token(ads_token) if ads_token and not server_token_problem() else None}
+    lib = {'source': lib_source, 'problem': lib_problem, 'stored': stored_setting_info('META_AD_LIBRARY_TOKEN'),
+           'check': check_token(lib_token, for_library=True) if lib_token and not lib_problem else None,
+           'same_as_ads': bool(lib_token) and lib_token == ads_token}
+    return render_template('meta/settings.html', ads=ads, lib=lib, encryption_problem=encryption_problem(),
+                           encryption_source=encryption_source(), settings_page_source=SETTINGS_PAGE_SOURCE,
+                           editors=sorted(SETTINGS_EDITORS), auto_sync=auto_sync_enabled())
+
+
+@meta_bp.route('/settings', methods=['POST'])
+@settings_editor_required
+def settings_save():
+    key = request.form.get('key')
+    if key not in SETTING_KEYS:
+        abort(400)
+    label = 'Ad Library token' if key == 'META_AD_LIBRARY_TOKEN' else 'shared key'
+    if request.form.get('clear') == '1':
+        clear_setting(key)
+        flash(f'The pasted {label} was removed. ' + ('The environment still provides one.' if
+              (key == 'META_ADS_TOKEN' and server_token()) or (key != 'META_ADS_TOKEN' and _library_token_state()[0])
+              else 'Nothing provides one now.'), 'success')
+        return redirect(url_for('meta.settings'))
+    token = (request.form.get('token') or '').strip()
+    problem = _token_shape_problem(token, 'That') or encryption_problem()
+    if problem:
+        flash(problem, 'danger')
+        return redirect(url_for('meta.settings'))
+    check = check_token(token, for_library=(key == 'META_AD_LIBRARY_TOKEN'))
+    if check['valid'] is False:
+        flash('Meta says that token is not valid. Nothing was saved.', 'danger')
+        return redirect(url_for('meta.settings'))
+    if check['error'] and check['user'] is None:
+        flash(f'Meta would not accept that token: {check["error"]} Nothing was saved.', 'danger')
+        return redirect(url_for('meta.settings'))
+    save_setting(key, token, _who())
+    who = f' It belongs to {check["user"]}.' if check['user'] else ''
+    flash(f'{label[0].upper()}{label[1:]} saved and encrypted.{who} {check["expiry"] or ""}', 'success')
+    if check['error']:
+        flash(check['error'], 'warning')
+    # An env value still wins; say so rather than let a paste look like it did nothing.
+    src = _library_token_state()[1] if key == 'META_AD_LIBRARY_TOKEN' else server_token_source()
+    if src and src != SETTINGS_PAGE_SOURCE:
+        flash(f'Note: {src} is set on the server and is used first. The pasted token is the fallback.', 'warning')
+    return redirect(url_for('meta.settings'))
+
+
+# ---------- in-process hourly sync ----------
+
+# Any fixed 64-bit number works; it only has to be the same in every worker.
+AUTO_SYNC_LOCK = 0x4D455441_53594E43   # "META" "SYNC"
+AUTO_SYNC_EVERY_S = 10 * 60
+AUTO_SYNC_STALE_MIN = 55
+_auto_sync_thread = None
+
+
+def auto_sync_enabled():
+    return (os.environ.get('META_AUTO_SYNC') or '1').strip() not in ('0', 'false', 'no', 'off')
+
+
+def start_auto_sync():
+    """Starts one daemon thread per process. Gunicorn runs several workers, so the work itself
+    is serialised through a Postgres advisory lock: whichever worker wakes first does the hour's
+    sync, the rest see nothing due and go back to sleep."""
+    global _auto_sync_thread
+    if not auto_sync_enabled() or _auto_sync_thread is not None:
+        return
+    _auto_sync_thread = threading.Thread(target=_auto_sync_loop, name='meta-auto-sync', daemon=True)
+    _auto_sync_thread.start()
+
+
+def _auto_sync_loop():
+    time.sleep(90)   # let the app finish starting, and stagger workers a little
+    while True:
+        try:
+            auto_sync_once()
+        except Exception:
+            logger.exception('[meta] auto sync failed')
+        time.sleep(AUTO_SYNC_EVERY_S)
+
+
+def auto_sync_once():
+    """Syncs whatever has not been attempted in the last 55 minutes, if the lock is free.
+    Returns what it did, for tests and the CLI."""
+    done = {'lock': False, 'accounts': None, 'watches': None}
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (AUTO_SYNC_LOCK,))
+        if not cur.fetchone()[0]:
+            return done
+        done['lock'] = True
+        try:
+            cur.execute("""SELECT count(*) FROM meta_ad_accounts WHERE active
+                           AND (last_attempt_at IS NULL OR last_attempt_at < now() - make_interval(mins => %s))""",
+                        (AUTO_SYNC_STALE_MIN,))
+            due_accounts = cur.fetchone()[0]
+            cur.execute("""SELECT count(*) FROM ad_watch_pages WHERE active
+                           AND (last_attempt_at IS NULL OR last_attempt_at < now() - make_interval(mins => %s))""",
+                        (AUTO_SYNC_STALE_MIN,))
+            due_watches = cur.fetchone()[0]
+            conn.commit()
+            if due_accounts and has_server_token():
+                done['accounts'] = sync_all_active()
+            if due_watches:
+                from ad_monitor import has_ad_library_token, sync_all_watches
+                if has_ad_library_token():
+                    done['watches'] = sync_all_watches()
+        finally:
+            cur.execute("SELECT pg_advisory_unlock(%s)", (AUTO_SYNC_LOCK,))
+            conn.commit()
+            cur.close()
+    finally:
+        release_db_connection(conn)
+    return done
 
 
 # ---------- cron ----------

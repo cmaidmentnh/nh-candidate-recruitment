@@ -578,9 +578,11 @@ limiter.limit("10 per minute; 60 per hour")(app.view_functions['publicplan.publi
 # Meta ads: our own ad accounts (Marketing API) and the public Ad Library monitor. Both sit
 # behind the 'meta_ads' private feature. The two /cron/sync endpoints are called by cron with
 # a bearer CRON_SECRET and no session, so CSRF does not apply to them.
-from meta_ads import meta_bp, init_meta_ads, register_cli as _meta_cli
+from meta_ads import meta_bp, init_meta_ads, start_auto_sync, register_cli as _meta_cli
 from ad_monitor import admon_bp, init_ad_monitor, register_cli as _admon_cli
-init_meta_ads(get_db_connection, release_db_connection)
+# The app secret doubles as the fallback encryption key for tokens pasted on /meta/settings,
+# and the tables are created here if they are missing, so a deploy needs no psql step.
+init_meta_ads(get_db_connection, release_db_connection, secret_key=app.secret_key)
 init_ad_monitor(get_db_connection, release_db_connection)
 app.register_blueprint(meta_bp)
 app.register_blueprint(admon_bp)
@@ -588,6 +590,9 @@ csrf.exempt(app.view_functions['meta.cron_sync'])
 csrf.exempt(app.view_functions['admon.cron_sync'])
 _meta_cli(app)
 _admon_cli(app)
+# Hourly Meta sync inside the web process (advisory-locked across gunicorn workers), so no
+# crontab is needed. META_AUTO_SYNC=0 turns it off for hosts that run the cron endpoints.
+start_auto_sync()
 
 
 @app.context_processor

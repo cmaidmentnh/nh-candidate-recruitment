@@ -108,7 +108,8 @@
   <div class="empty">
     <h5><i class="fas fa-bullhorn"></i> No ad accounts connected yet</h5>
     <p>{% if has_server_key %}The key on the server is set. Click <b>Add account</b>, then <b>Find my ad accounts</b>, and pick one from the list.
-       {% else %}Paste a system user token for one account, or set <code>META_ADS_TOKEN</code> on the server. Both ways are explained below.{% endif %}</p>
+       {% else %}Paste a system user token for one account, or set <code>META_ADS_TOKEN</code> on the server. Both ways are explained below.{% endif %}
+       {% if can_edit_settings %}<br><a href="{{ url_for('meta.settings') }}"><i class="fas fa-key"></i> Paste a shared key on the Meta settings page</a>{% endif %}</p>
     <button class="btn-nv" type="button" data-toggle="modal" data-target="#addAccount">Add account</button>
   </div>
   {% else %}
@@ -293,8 +294,8 @@
       <div class="sec-h"><div><h5>Connect an ad account</h5><p class="sub">Two ways in. Use the key on the server first. Paste a token only when that key cannot see the account.</p></div></div>
       <div class="setup">
         <div>
-          <h6><i class="fas fa-key text-muted"></i> 1. Key on the server <span class="chip {{ 'live' if has_server_key else 'muted' }}">{{ 'Ready' if has_server_key else 'Not set' }}</span></h6>
-          <p>One access token in the <code>META_ADS_TOKEN</code> environment variable serves every ad account it can reach, and nothing secret is written to the database or to this app's config: it is read at runtime from the environment, or from the CRM's <code>.env</code> next door.
+          <h6><i class="fas fa-key text-muted"></i> 1. Shared key <span class="chip {{ 'live' if has_server_key else 'muted' }}">{{ 'Ready' if has_server_key else 'Not set' }}</span></h6>
+          <p>One access token serves every ad account it can reach. It is read at runtime from <code>META_ADS_TOKEN</code> in the environment, or from the CRM's <code>.env</code> next door{% if can_edit_settings %}, or failing those from the <a href="{{ url_for('meta.settings') }}">Meta settings page</a>{% endif %}. Nothing secret is written to this app's config.
             {% if has_server_key %}It is set and looks valid on this environment (reading <code>{{ server_key_source }}</code>).{% else %}It is not usable on this environment yet.{% endif %}</p>
           <div class="warnbox">It must be an <b>access token</b>, which starts with <code>EAA</code>. An App ID, App Secret or client token will be rejected.
             Create one under <em>Business settings → Users → System users → Generate new token</em> with <code>ads_read</code>, and assign the ad account to that system user.</div>
@@ -304,7 +305,7 @@
             <li>Click <b>Find my ad accounts</b>. The list shows every account the key can read; pick one and the name and id fill in.</li>
             <li>Say who it is for, then click <b>Test and save</b>. The first sync starts at once.</li>
           </ol>
-          {% if not has_server_key %}<div class="warnbox"><b>{{ server_key_problem }}</b> This route stays off until a real access token is set. Use route 2, which works right now.</div>{% endif %}
+          {% if not has_server_key %}<div class="warnbox"><b>{{ server_key_problem }}</b> This route stays off until a real access token is set. {% if can_edit_settings %}<a href="{{ url_for('meta.settings') }}">Paste one now</a>, or use{% else %}Use{% endif %} route 2, which works right now.</div>{% endif %}
         </div>
         <div>
           <h6><i class="fas fa-plug text-muted"></i> 2. Paste a token for one account</h6>

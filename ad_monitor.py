@@ -30,9 +30,8 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from flask_login import current_user
 from psycopg2.extras import RealDictCursor, Json, execute_values
 
-from private_features import require_feature_access
-from meta_ads import (FEATURE, MetaApiError, _token_shape_problem, cron_authorized, iso_days_ago, meta_get_all_paged,
-                      report_today, server_token, server_token_source)
+from meta_ads import (SETTINGS_PAGE_SOURCE, MetaApiError, meta_access_required, _token_shape_problem, cron_authorized, iso_days_ago,
+                      meta_get_all_paged, report_today, server_token, server_token_source, stored_setting)
 
 logger = logging.getLogger(__name__)
 
@@ -94,25 +93,28 @@ ROLLING_DAYS = 7
 
 def ad_library_token():
     """The archive can use its own token, because reading it needs an ID-confirmed PERSON's
-    user token, and a system-user token may be refused. META_AD_LIBRARY_TOKEN wins when set;
-    otherwise the server key (META_ADS_TOKEN) is tried, so one token can do both jobs when
-    Meta allows it."""
+    user token, and a system-user token may be refused. In order: META_AD_LIBRARY_TOKEN in the
+    environment, an Ad Library token pasted on the settings page, then the shared key chain, so
+    one token can do both jobs when Meta allows it."""
     own = (os.environ.get('META_AD_LIBRARY_TOKEN') or '').strip()
     if own:
         return own
-    return server_token()
+    return stored_setting('META_AD_LIBRARY_TOKEN') or server_token()
 
 
 def ad_library_token_source():
     if (os.environ.get('META_AD_LIBRARY_TOKEN') or '').strip():
         return 'META_AD_LIBRARY_TOKEN'
+    if stored_setting('META_AD_LIBRARY_TOKEN'):
+        return f'{SETTINGS_PAGE_SOURCE} (Ad Library token)'
     return server_token_source()
 
 
 def ad_library_token_problem():
     t = ad_library_token()
     if not t:
-        return 'No token is set. Add META_AD_LIBRARY_TOKEN, or a server key (META_ADS_TOKEN), on this environment.'
+        return ('No token is set. Paste one on the Meta settings page, or add META_AD_LIBRARY_TOKEN or a shared key '
+                '(META_ADS_TOKEN) on this environment.')
     return _token_shape_problem(t, ad_library_token_source())
 
 
@@ -299,6 +301,18 @@ def _write_spend_estimates(cur, watch_id):
          WHERE a.watch_id = %(w)s""", {'c': SMALL_AD_CEILING, 'g': global_cpm, 'w': watch_id})
 
 
+def _mark_attempt(watch_id):
+    """So the hourly sync can tell a page that keeps failing from one that is simply due."""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE ad_watch_pages SET last_attempt_at = now() WHERE id = %s", (watch_id,))
+        conn.commit()
+        cur.close()
+    finally:
+        release_db_connection(conn)
+
+
 def _set_error(watch_id, msg):
     conn = get_db_connection()
     try:
@@ -318,6 +332,7 @@ def sync_watch(row):
     entirely, would be added to their own spend.
     """
     base = {'watch_id': row['id'], 'name': row['name'], 'ads': 0, 'spend_lower': 0.0, 'spend_upper': 0.0, 'truncated': False}
+    _mark_attempt(row['id'])
     problem = ad_library_token_problem()
     if problem:
         _set_error(row['id'], problem)
@@ -671,6 +686,11 @@ def _who():
     return getattr(current_user, 'email', None) if current_user.is_authenticated else None
 
 
+def _can_edit_settings():
+    from meta_ads import can_edit_settings
+    return can_edit_settings()
+
+
 def _sum(rows):
     t = {'pages': 0, 'ads': 0, 'active_ads': 0, 'small_ads': 0, 'spend_lower': 0.0, 'spend_upper': 0.0, 'spend_estimate': 0.0}
     for p in rows:
@@ -682,7 +702,7 @@ def _sum(rows):
 
 
 @admon_bp.route('/')
-@require_feature_access(FEATURE)
+@meta_access_required
 def page():
     try:
         days = int(request.args.get('days', 30))
@@ -724,11 +744,12 @@ def page():
                            show_all=show_all, side=side, sides=SIDES, side_labels=SIDE_LABELS, href=href,
                            has_token=has_ad_library_token(), token_problem=ad_library_token_problem(),
                            token_source=ad_library_token_source(), cycle_start=CYCLE_START,
+                           can_edit_settings=_can_edit_settings(),
                            watched=sum(1 for p in people if p['active']))
 
 
 @admon_bp.route('/find', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def find():
     """Pages behind a name. JSON, for the Watch dialog."""
     data = request.get_json(silent=True) or {}
@@ -778,7 +799,7 @@ def _record_meta_figures(cur, watch_id, total, week):
 
 
 @admon_bp.route('/watch', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def add_watch():
     d = _read_watch_form()
     if not d['name']:
@@ -817,7 +838,7 @@ def add_watch():
 
 
 @admon_bp.route('/watch/<int:watch_id>', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def update_watch(watch_id):
     row = _watch_row(watch_id) or abort(404)
     d = _read_watch_form()
@@ -852,7 +873,7 @@ def update_watch(watch_id):
 
 
 @admon_bp.route('/watch/<int:watch_id>/active', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def set_active(watch_id):
     active = request.form.get('active') == '1'
     conn = get_db_connection()
@@ -868,7 +889,7 @@ def set_active(watch_id):
 
 
 @admon_bp.route('/watch/<int:watch_id>/delete', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def delete_watch(watch_id):
     conn = get_db_connection()
     try:
@@ -884,7 +905,7 @@ def delete_watch(watch_id):
 
 
 @admon_bp.route('/watch/<int:watch_id>/sync', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def sync_one(watch_id):
     row = _watch_row(watch_id) or abort(404)
     r = sync_watch(row)
@@ -897,7 +918,7 @@ def sync_one(watch_id):
 
 
 @admon_bp.route('/sync-all', methods=['POST'])
-@require_feature_access(FEATURE)
+@meta_access_required
 def sync_all():
     s = sync_all_watches()
     if s['failed']:

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .ms{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--ink:#22303f;--green:#1a7f43;--red:#b4262d;
+      --amber:#8a6400;--soft:#f5f8fc;color:var(--ink);font-size:.9rem;max-width:860px}
+  .ms a.back{font-size:.72rem;color:var(--muted);display:block;margin-bottom:8px}
+  .ms h4{margin:0 0 2px;color:var(--navy)}
+  .ms .lead{color:var(--muted);font-size:.78rem;margin:0 0 14px;max-width:720px}
+  .ms .card-nv{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:14px 16px;margin-top:16px}
+  .ms h5{margin:0 0 2px;color:var(--navy);font-size:1rem;display:flex;align-items:center;gap:8px}
+  .ms .sub{color:var(--muted);font-size:.76rem;margin:0 0 10px}
+  .ms .chip{display:inline-block;font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:10px;border:1px solid;white-space:nowrap}
+  .ms .chip.live{color:var(--green);border-color:#bfe3cb;background:#eaf7ee}
+  .ms .chip.warn{color:var(--amber);border-color:#ead9a0;background:#fdf6e0}
+  .ms .chip.muted{color:var(--muted);border-color:#d6dbe3;background:#fff}
+  .ms .chip.bad{color:var(--red);border-color:#e6c3c5;background:#fbeeee}
+  .ms dl{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:.8rem;margin:8px 0 12px}
+  .ms dt{color:var(--muted)}
+  .ms dd{margin:0}
+  .ms code{font-size:.72rem;background:#eef1f5;padding:1px 5px;border-radius:3px;color:var(--ink)}
+  .ms .paste{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;margin-top:8px}
+  .ms .paste input{flex:1;min-width:280px;padding:6px 8px;border:1px solid #d6dbe3;border-radius:4px;font-size:.84rem;font-family:ui-monospace,monospace}
+  .ms .btn-nv{font-size:.76rem;padding:6px 14px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:4px;cursor:pointer;font-weight:700;white-space:nowrap}
+  .ms .btn-ln{font-size:.76rem;padding:6px 12px;border:1px solid #c9d1dc;background:#fff;color:var(--navy);border-radius:4px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .ms .btn-ln.rm{color:var(--red);border-color:#e6c3c5}
+  .ms .hint{font-size:.74rem;color:var(--muted);margin-top:6px}
+  .ms .warnbox{background:#fdf6e0;border:1px solid #ead9a0;border-radius:6px;padding:8px 10px;font-size:.76rem;color:var(--ink);margin-top:8px}
+  .ms .errbox{background:#fbeeee;border:1px solid #e6c3c5;border-radius:6px;padding:8px 10px;font-size:.76rem;color:var(--red);margin-top:8px}
+  .ms ul.acc{margin:4px 0 0;padding-left:18px;font-size:.78rem}
+  .ms ol{padding-left:18px;font-size:.78rem;color:var(--muted)}
+  .ms ol b{color:var(--ink);font-weight:600}
+</style>
+{% endblock %}
+{% block content %}
+<div class="ms">
+  <a class="back" href="{{ url_for('meta.page') }}">&larr; Back to Meta ads</a>
+  <h4>Meta settings</h4>
+  <p class="lead">Paste a Meta access token here and the app uses it - no server, no <code>.env</code>. It is tested first, then
+    encrypted with {{ encryption_source or 'nothing (see below)' }}, and never shown again. A token set on the server always wins;
+    what you paste here is the fallback. Only {{ editors|join(', ') }} and the super admin can open this page.</p>
+
+  {% if encryption_problem %}<div class="errbox"><b>{{ encryption_problem }}</b> Nothing can be saved until that is fixed.</div>{% endif %}
+
+  {% macro status(block, label) %}
+    {% set c = block.check %}
+    <dl>
+      <dt>In use now</dt>
+      <dd>{% if block.problem and not block.source %}<span class="chip muted">Not set</span>
+          {% elif block.problem %}<span class="chip bad">Unusable</span> {{ block.problem }}
+          {% else %}<span class="chip live">Set</span> from <code>{{ block.source }}</code>{% endif %}</dd>
+      {% if block.stored %}
+      <dt>Pasted here</dt>
+      <dd>…{{ block.stored.hint }} by {{ block.stored.updated_by or 'unknown' }}, {{ block.stored.updated_at|fmt_date(true) }}
+          {% if block.stored.unreadable %}<span class="chip bad">cannot be decrypted - paste it again</span>
+          {% elif block.source and block.source != settings_page_source and not block.source.startswith(settings_page_source) %}<span class="chip warn">not in use: the server's value wins</span>{% endif %}</dd>
+      {% endif %}
+      {% if c %}
+        {% if c.user %}<dt>Belongs to</dt><dd>{{ c.user }}</dd>{% endif %}
+        {% if c.expiry %}<dt>Expiry</dt><dd>{{ c.expiry }}</dd>{% endif %}
+        {% if c.scopes %}<dt>Permissions</dt><dd>{{ c.scopes|join(', ') }}</dd>{% endif %}
+        {% if c.accounts is not none %}<dt>Ad accounts it sees</dt>
+          <dd>{% if c.accounts %}<ul class="acc">{% for a in c.accounts %}<li>{{ a.name }} <code>{{ a.id }}</code></li>{% endfor %}</ul>{% else %}None. Assign an ad account to this user in Business Manager.{% endif %}</dd>{% endif %}
+        {% if c.archive is not none %}<dt>Ad Library</dt><dd>Answers. Sample search returned {{ c.archive }} ad{{ '' if c.archive == 1 else 's' }}.</dd>{% endif %}
+        {% if c.error %}<dt>Problem</dt><dd style="color:var(--red)">{{ c.error }}</dd>{% endif %}
+      {% endif %}
+    </dl>
+  {% endmacro %}
+
+  {# ---- Shared key ---- #}
+  <div class="card-nv">
+    <h5>Shared key <span class="chip {{ 'live' if not ads.problem else 'muted' }}">{{ 'Ready' if not ads.problem else 'Not ready' }}</span></h5>
+    <p class="sub">Reads our own ad accounts for the <a href="{{ url_for('meta.page') }}">Meta ads</a> page. A system-user token that never expires is best; a
+      personal token from the Graph API Explorer works too, for as long as it lasts.</p>
+    {{ status(ads, 'shared key') }}
+    <form method="POST" action="{{ url_for('meta.settings_save') }}" class="paste">
+      <input type="hidden" name="key" value="META_ADS_TOKEN">
+      <input type="password" name="token" placeholder="EAA…" autocomplete="off" required {% if encryption_problem %}disabled{% endif %}>
+      <button class="btn-nv" type="submit" {% if encryption_problem %}disabled{% endif %}>Test and save</button>
+    </form>
+    {% if ads.stored %}
+    <form method="POST" action="{{ url_for('meta.settings_save') }}" style="margin-top:8px" onsubmit="return confirm('Remove the pasted shared key?')">
+      <input type="hidden" name="key" value="META_ADS_TOKEN"><input type="hidden" name="clear" value="1">
+      <button class="btn-ln rm" type="submit">Remove the pasted key</button>
+    </form>
+    {% endif %}
+    <p class="hint">Needs <code>ads_read</code> (and <code>read_insights</code> for a system user). After saving, go to Meta ads → <b>Add account</b> → <b>Find my ad accounts</b>.</p>
+  </div>
+
+  {# ---- Ad Library token ---- #}
+  <div class="card-nv">
+    <h5>Ad Library token <span class="chip {{ 'live' if not lib.problem else 'muted' }}">{{ 'Ready' if not lib.problem else 'Not ready' }}</span></h5>
+    <p class="sub">Reads everyone's political ads for the <a href="{{ url_for('admon.page') }}">Ad monitor</a>. The archive only answers a token from a
+      <b>person</b> who has confirmed their ID at <code>facebook.com/ID</code>; it may refuse a system user. Leave this blank to try the shared key.</p>
+    {{ status(lib, 'Ad Library token') }}
+    {% if lib.same_as_ads and not lib.stored %}<p class="hint">Right now the Ad Library is using the shared key above.</p>{% endif %}
+    <form method="POST" action="{{ url_for('meta.settings_save') }}" class="paste">
+      <input type="hidden" name="key" value="META_AD_LIBRARY_TOKEN">
+      <input type="password" name="token" placeholder="EAA…" autocomplete="off" required {% if encryption_problem %}disabled{% endif %}>
+      <button class="btn-nv" type="submit" {% if encryption_problem %}disabled{% endif %}>Test and save</button>
+    </form>
+    {% if lib.stored %}
+    <form method="POST" action="{{ url_for('meta.settings_save') }}" style="margin-top:8px" onsubmit="return confirm('Remove the pasted Ad Library token?')">
+      <input type="hidden" name="key" value="META_AD_LIBRARY_TOKEN"><input type="hidden" name="clear" value="1">
+      <button class="btn-ln rm" type="submit">Remove the pasted token</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# ---- How to get one ---- #}
+  <div class="card-nv">
+    <h5>Getting a token that lasts</h5>
+    <ol>
+      <li>Open <code>developers.facebook.com/tools/explorer</code>, pick your app, <b>User Token</b>, add <code>ads_read</code>, click <b>Generate Access Token</b>.</li>
+      <li>Click the <b>i</b> next to the token → <b>Open in Access Token Tool</b> → <b>Extend Access Token</b>. That turns a one-hour token into a 60-day one.</li>
+      <li>Copy the extended token and paste it above. The expiry shows once it is saved; paste a fresh one before it runs out.</li>
+      <li>For a token that never expires, an admin of the Business portfolio makes a <b>System user</b> and generates one there. Put that in the server's <code>META_ADS_TOKEN</code> and it takes over automatically.</li>
+    </ol>
+    <p class="hint">Syncs run every hour inside the app{{ '' if auto_sync else ' (turned off on this host: META_AUTO_SYNC=0)' }}, and the <b>Sync</b> buttons on each page run one now.</p>
+  </div>
+</div>
+{% endblock %}
