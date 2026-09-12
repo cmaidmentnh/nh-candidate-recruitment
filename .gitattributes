@@ -1,0 +1,2 @@
+# Shell hooks must stay LF. With CRLF, sh on Windows fails on the stray CR.
+.githooks/* text eol=lf
