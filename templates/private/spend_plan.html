@@ -35,6 +35,17 @@
   .afp-none{color:#c3c9d2}
   .afp-v{color:var(--muted);font-size:.72rem;font-style:italic}
   .afpmark{color:#b4262d;font-weight:700;font-size:.62rem;letter-spacing:.04em}
+  .metabox{border:1px solid var(--rule);border-radius:6px;margin:12px 0;padding:10px 12px}
+  .metabox h5{margin:0 0 7px;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700}
+  .metabox .row{display:flex;flex-wrap:wrap;gap:0 26px;align-items:baseline}
+  .metabox .g{display:flex;flex-direction:column;gap:1px}
+  .metabox .v{font-size:1.15rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+  .metabox .l{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .metabox .cmp{font-size:.74rem;color:var(--muted);margin-top:7px;word-break:break-word}
+  .metabox .vs{font-size:.78rem;margin-top:6px}
+  .metabox .over{color:var(--red);font-weight:700}
+  .metabox .under{color:var(--green);font-weight:700}
   .optout{background:#fdf6f6;border-left:3px solid var(--red);padding:8px 11px;margin:10px 0;
     font-size:.82rem;color:#7d2a2a}
   .optout b{color:var(--red)}
@@ -739,6 +750,40 @@
       return c.afp_rank !== null && c.afp_rank !== undefined && c.afp_rank <= 1; });
   }
 
+  // What Meta has actually spent here, against what the plan budgeted for digital. Only
+  // campaigns whose name names this district count: statewide issue spend is not this
+  // district's money and is deliberately excluded.
+  function metaHtml(d){
+    var m = d.meta;
+    if(!m) return '';
+    var planned = 0;
+    Object.keys(d.qty || {}).forEach(function(u){
+      ['meta','ctv','display'].forEach(function(k){
+        var row = d.qty[u][k];
+        if(row && row.qty) planned += row.qty;      // digital is budgeted in dollars
+      });
+    });
+    var h = '<div class="metabox"><h5>Meta, actually running</h5><div class="row">' +
+      '<div class="g"><span class="v">' + money(m.spend) + '</span><span class="l">spent</span></div>' +
+      '<div class="g"><span class="v">' + num(m.impressions) + '</span><span class="l">impressions</span></div>' +
+      '<div class="g"><span class="v">' + num(m.clicks) + '</span><span class="l">clicks</span></div>' +
+      (m.impressions ? '<div class="g"><span class="v">$' +
+        (m.spend / m.impressions * 1000).toFixed(2) + '</span><span class="l">CPM</span></div>' : '') +
+      (m.clicks ? '<div class="g"><span class="v">$' +
+        (m.spend / m.clicks).toFixed(2) + '</span><span class="l">per click</span></div>' : '') +
+      '</div>';
+    if(planned){
+      var diff = m.spend - planned;
+      h += '<div class="vs">Plan budgets ' + money(planned) + ' of digital here. ' +
+        (Math.abs(diff) < 1 ? 'Spend matches.'
+          : diff > 0 ? '<span class="over">' + money(diff) + ' over</span> so far.'
+                     : '<span class="under">' + money(-diff) + ' still to spend</span>.') + '</div>';
+    }
+    h += '<div class="cmp">' + esc(m.names) + '<br>' + m.from + ' to ' + m.to +
+         ' &middot; ' + m.campaigns + ' campaign' + (m.campaigns===1?'':'s') + '</div>';
+    return h + '</div>';
+  }
+
   function linkBits(c){
     var out = [];
     if(c.website) out.push('<a href="' + c.website + '" target="_blank" rel="noopener">site</a>');
@@ -796,6 +841,7 @@
            'No mail, no palm card, no shared page may carry their name or picture. ' +
            esc(c.optout_note || '') + '</div>';
     });
+    h += metaHtml(d);
     h += candHtml(d);
     var TIERS = [[1,'Tier 1','Full effort, everything we have'],
                  [2,'Tier 2','Needs real spend here'],

@@ -1183,6 +1183,67 @@ CREATIVE_EXT = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'mp4', 'mov'}
 MAX_CREATIVE_BYTES = 40 * 1024 * 1024
 
 
+# CTEHR names a district campaign "Wallace | BE2 General | Meredith | Impressions | Sep-Nov
+# 2026". BE2 is the link. An issue campaign such as "Property Tax Cap | Conversions | Aug 2026"
+# has no such token and maps to nothing, which is right: statewide spend must never be charged
+# to a district it did not run in.
+_META_COUNTY = {
+    'BE': 'Belknap', 'BELK': 'Belknap',
+    'CA': 'Carroll', 'CARR': 'Carroll',
+    'CH': 'Cheshire', 'CHES': 'Cheshire',
+    'CO': 'Coos', 'COOS': 'Coos',
+    'GR': 'Grafton', 'GRAF': 'Grafton',
+    'HI': 'Hillsborough', 'HILL': 'Hillsborough', 'HILLS': 'Hillsborough',
+    'ME': 'Merrimack', 'MERR': 'Merrimack',
+    'RO': 'Rockingham', 'ROCK': 'Rockingham',
+    'ST': 'Strafford', 'STRAF': 'Strafford',
+    'SU': 'Sullivan', 'SULL': 'Sullivan',
+}
+
+
+def district_from_campaign_name(name, known=None):
+    """The district a Meta campaign is running in, read off its name. None when the name
+    carries no district, which is the correct answer for a statewide issue campaign."""
+    if not name:
+        return None
+    for m in _re.finditer(r'\b([A-Za-z]{2,5})[\s-]?0*(\d{1,2})\b', name):
+        county = _META_COUNTY.get(m.group(1).upper())
+        if not county:
+            continue
+        code = '%s %s' % (county, int(m.group(2)))
+        if known is None or code in known:
+            return code
+    return None
+
+
+def sync_meta_campaign_districts(cur, who='auto'):
+    """Link every Meta campaign we can read a district off. Only ever ADDS auto rows and never
+    touches a manual one, so a hand correction survives the next sync."""
+    cur.execute("SELECT full_district_code FROM districts WHERE full_district_code IS NOT NULL")
+    known = {r[0] for r in cur.fetchall()}
+    cur.execute("""SELECT DISTINCT campaign_id, campaign_name FROM meta_insights
+                    WHERE campaign_id IS NOT NULL""")
+    campaigns = cur.fetchall()
+    cur.execute("SELECT campaign_id FROM meta_campaign_district WHERE source = 'manual'")
+    manual = {r[0] for r in cur.fetchall()}
+    linked, skipped = 0, []
+    for cid, cname in campaigns:
+        if cid in manual:
+            continue
+        code = district_from_campaign_name(cname, known)
+        if not code:
+            skipped.append(cname)
+            continue
+        cur.execute("""INSERT INTO meta_campaign_district
+                         (campaign_id, district_code, source, campaign_name, linked_by)
+                       VALUES (%s,%s,'auto',%s,%s)
+                       ON CONFLICT (campaign_id, district_code) DO UPDATE
+                         SET campaign_name = EXCLUDED.campaign_name""",
+                    (cid, code, cname, who))
+        linked += 1
+    return {'linked': linked, 'no_district': skipped}
+
+
 def _afp_rank(rating):
     """AFP's own verdict wording, bucketed. Mirrors _afp_alignment in app.py exactly: AFP does
     not score the survey, so this only sorts the words Sarah Scott sends. Never re-scores."""
@@ -1425,6 +1486,31 @@ def spend_plan():
                     history.setdefault(dc, []).append(
                         {'ts': was['at'], 'by': was['by'] or '', 'changes': ch})
 
+        # What Meta has actually spent in each district, against what the plan says. Only
+        # campaigns tied to a district count: a statewide issue campaign is not this
+        # district's money.
+        meta_actual = {}
+        try:
+            cur.execute("""SELECT d.district_code,
+                                  SUM(i.spend), SUM(i.impressions), SUM(i.clicks),
+                                  MIN(i.date), MAX(i.date),
+                                  COUNT(DISTINCT i.campaign_id),
+                                  STRING_AGG(DISTINCT i.campaign_name, ' | ')
+                             FROM meta_campaign_district d
+                             JOIN meta_insights i ON i.campaign_id = d.campaign_id
+                                                 AND i.level = 'campaign'
+                            GROUP BY d.district_code""")
+            for dc, sp, im, cl, lo, hi, n, names in cur.fetchall():
+                meta_actual[dc] = {
+                    'spend': float(sp or 0), 'impressions': int(im or 0),
+                    'clicks': int(cl or 0),
+                    'from': lo.isoformat() if lo else None,
+                    'to': hi.isoformat() if hi else None,
+                    'campaigns': n, 'names': names or ''}
+        except Exception as e:          # the Meta tables may not exist yet
+            logger.info('meta actuals unavailable: %s', e)
+            conn.rollback()
+
         tac_label = {t['key']: t['label'] for t in tactics}
         cur.execute("""SELECT district_code, universe, tactic_key, qty, changed_at
                        FROM district_spend_item_history WHERE op = 'update'
@@ -1475,6 +1561,7 @@ def spend_plan():
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
                                  for m in range(1, 32)}
             d['nominees'] = nominees.get(code, {})
+            d['meta'] = meta_actual.get(code)
             d['cands'] = cands.get(code, [])
             d['hist'] = history.get(code, [])
 
@@ -2183,6 +2270,27 @@ def spend_version_delete():
         conn.rollback()
         logger.error('version delete failed: %s', e)
         return jsonify({'ok': False, 'error': 'Could not delete.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/meta-link', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_meta_link():
+    """Re-read every Meta campaign name and link the ones that name a district.
+
+    Safe to run repeatedly: it only adds automatic links and never touches a manual one, so a
+    campaign pointed at a district by hand stays pointed there."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        res = sync_meta_campaign_districts(cur, who=(current_user.email
+                                                     if current_user.is_authenticated else 'auto'))
+        conn.commit()
+        return jsonify({'ok': True, **res})
+    except Exception as e:
+        conn.rollback()
+        logger.error('meta link failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not link.'}), 500
     finally:
         cur.close(); release_db_connection(conn)
 
