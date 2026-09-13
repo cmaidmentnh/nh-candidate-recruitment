@@ -733,6 +733,9 @@
             </a>
             {% endif %}
             {% if 'campaign_plan' in user_private_features %}
+            <a class="dropdown-item" href="{{ url_for('private.overview') }}">
+                <i class="fas fa-binoculars text-muted"></i> Where Things Stand
+            </a>
             <a class="dropdown-item" href="{{ url_for('private.spend_plan') }}">
                 <i class="fas fa-map-signs text-muted"></i> Spend Plan
             </a>

@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .ov{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--red:#b4262d;--green:#1a7f43;
+      --amber:#8a6400;--ink:#22303f;color:var(--ink);max-width:1180px;margin:0 auto}
+
+  /* Phone first. Everything is one column until there is room for more. */
+  .ov .bands{display:grid;grid-template-columns:1fr;gap:14px}
+  @media (min-width:760px){ .ov .bands{grid-template-columns:1fr 1fr} }
+  @media (min-width:1100px){ .ov .bands{grid-template-columns:1fr 1fr 1fr} }
+  .ov .wide{grid-column:1/-1}
+
+  .ov h4{margin:0 0 2px;font-size:1.25rem;color:var(--navy);font-weight:800}
+  .ov .when{color:var(--muted);font-size:.8rem;margin:0 0 14px}
+  .ov .when b{color:var(--red)}
+
+  .ov .band{border:1px solid var(--rule);border-radius:8px;padding:13px 15px;background:#fff}
+  .ov .band h5{margin:0 0 10px;font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);font-weight:700}
+
+  /* The headline number of a band. */
+  .ov .hero{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:3px}
+  .ov .hero .n{font-size:2.2rem;font-weight:800;color:var(--navy);line-height:1;
+    font-variant-numeric:tabular-nums}
+  .ov .hero .of{font-size:.9rem;color:var(--muted)}
+  .ov .sub{font-size:.82rem;color:var(--muted);line-height:1.5;margin:6px 0 0}
+
+  /* Rows of secondary facts. Status is carried by the words and their colour, never a pill. */
+  .ov .facts{list-style:none;padding:0;margin:10px 0 0;font-size:.86rem}
+  .ov .facts li{display:flex;justify-content:space-between;gap:12px;padding:5px 0;
+    border-top:1px solid #f1f4f8;line-height:1.4}
+  .ov .facts li:first-child{border-top:0}
+  .ov .facts .v{font-variant-numeric:tabular-nums;font-weight:700;color:var(--navy);
+    white-space:nowrap}
+  .ov .facts .v.bad{color:var(--red)}
+  .ov .facts .v.good{color:var(--green)}
+  .ov .facts .v.warn{color:var(--amber)}
+  .ov .facts .k{color:var(--ink)}
+
+  .ov .bar{height:8px;background:#eef1f5;border-radius:5px;overflow:hidden;margin:9px 0 4px}
+  .ov .bar i{display:block;height:100%;background:var(--navy)}
+  .ov .bar i.warn{background:var(--amber)}
+  .ov .bar i.bad{background:var(--red)}
+
+  /* The queue. Biggest thing on the page on a phone, because it is the reason you opened it. */
+  .ov .q{list-style:none;padding:0;margin:0}
+  .ov .q li{display:flex;align-items:baseline;gap:11px;padding:9px 0;
+    border-top:1px solid #f1f4f8}
+  .ov .q li:first-child{border-top:0}
+  .ov .q .n{font-size:1.45rem;font-weight:800;line-height:1;min-width:1.6em;text-align:right;
+    font-variant-numeric:tabular-nums;color:var(--navy)}
+  .ov .q .n.bad{color:var(--red)}
+  .ov .q .t{flex:1;font-size:.9rem;line-height:1.35}
+  .ov .q .t b{color:var(--navy)}
+  .ov .q .t .st{color:var(--muted);font-size:.8rem;display:block}
+  .ov .q .t .st.bad{color:var(--red)}
+  .ov .clear{font-size:.9rem;color:var(--green);font-weight:700}
+
+  .ov .note{font-size:.78rem;color:var(--muted);line-height:1.5;margin:9px 0 0;
+    padding-top:9px;border-top:1px solid #f1f4f8}
+  .ov .note.bad{color:var(--red)}
+  .ov a.more{font-size:.78rem;color:var(--navy);font-weight:600;text-decoration:none}
+  .ov a.more:hover{text-decoration:underline}
+
+  .ov .log{list-style:none;padding:0;margin:0;font-size:.82rem}
+  .ov .log li{padding:5px 0;border-top:1px solid #f1f4f8;display:flex;gap:10px;line-height:1.4}
+  .ov .log li:first-child{border-top:0}
+  .ov .log .tm{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;
+    min-width:68px}
+
+  @media (max-width:520px){
+    .ov h4{font-size:1.1rem}
+    .ov .hero .n{font-size:1.9rem}
+    .ov .band{padding:12px 13px}
+    .ov .log .tm{min-width:0}
+  }
+</style>
+
+{% macro money(v) %}${{ '{:,.0f}'.format(v or 0) }}{% endmacro %}
+{% macro num(v) %}{{ '{:,}'.format(v or 0) }}{% endmacro %}
+
+<div class="ov">
+  <h4>Where things stand</h4>
+  <p class="when">
+    {{ d.today.strftime('%A %-d %B') }} &middot; <b>{{ d.days_left }} days</b> to the election
+  </p>
+
+  <div class="bands">
+
+    <!-- ================= QUEUE ================= -->
+    <div class="band wide">
+      <h5>Waiting on you</h5>
+      {% if d.queue %}
+        <ul class="q">
+          {% for q in d.queue %}
+          <li>
+            <span class="n {{ 'bad' if q.tone == 'bad' }}">{{ q.n }}</span>
+            <span class="t">
+              <b>{{ q.what }}</b>
+              <span class="st {{ 'bad' if q.tone == 'bad' }}">
+                {{ q.state }}{% if q.since %}, oldest {{ q.since|ago }}{% endif %}
+              </span>
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="clear">Nothing waiting. Every request has been dealt with.</p>
+      {% endif %}
+    </div>
+
+    <!-- ================= BALLOT ================= -->
+    <div class="band">
+      <h5>The ballot</h5>
+      <div class="hero">
+        <span class="n">{{ num(d.ballot.nominees) }}</span>
+        <span class="of">R nominees for {{ num(d.ballot.seats) }} seats</span>
+      </div>
+      <ul class="facts">
+        {% if d.ballot.r_short_seats %}
+        <li><span class="k">Seats with no Republican on them</span>
+            <span class="v bad">{{ d.ballot.r_short_seats }}</span></li>
+        {% endif %}
+        <li><span class="k">Districts where Democrats are short</span>
+            <span class="v good">{{ d.ballot.d_short_districts }}</span></li>
+        <li><span class="k">Lost their primary</span>
+            <span class="v">{{ d.ballot.lost }}</span></li>
+        {% if d.ballot.no_email %}
+        <li><span class="k">Nominees with no email on file</span>
+            <span class="v warn">{{ d.ballot.no_email }}</span></li>
+        {% endif %}
+      </ul>
+      {% if d.ballot.pending %}
+      <p class="note bad">
+        {{ num(d.ballot.pending) }} filings still say <b>pending</b>, so their primary result was
+        never recorded. Every roster reads that column, which means those candidates are invisible
+        to the mail, the palm cards and the check in chase.
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- ================= CANDIDATES ================= -->
+    <div class="band">
+      <h5>Candidates</h5>
+      <div class="hero">
+        <span class="n">{{ d.cands.pct }}%</span>
+        <span class="of">have checked in, {{ d.cands.done }} of {{ d.cands.total }}</span>
+      </div>
+      <div class="bar"><i class="{{ 'bad' if d.cands.pct < 25 else 'warn' if d.cands.pct < 60 }}"
+        style="width:{{ d.cands.pct }}%"></i></div>
+      <ul class="facts">
+        <li><span class="k">Need yard signs</span><span class="v">{{ d.cands.needs_signs }}</span></li>
+        <li><span class="k">Need literature</span><span class="v">{{ d.cands.needs_lit }}</span></li>
+        <li><span class="k">Need a headshot</span><span class="v">{{ d.cands.needs_headshot }}</span></li>
+        <li><span class="k">Need walk books</span><span class="v">{{ d.cands.needs_walkbooks }}</span></li>
+      </ul>
+      {% if d.cands.never_logged_in %}
+      <p class="note">
+        {{ d.cands.never_logged_in }} have never signed in{% if d.cands.no_password %},
+        and {{ d.cands.no_password }} have no password set, so they cannot{% endif %}.
+        That is the check in rate above, explained.
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- ================= PROGRAM ================= -->
+    <div class="band">
+      <h5>The program</h5>
+      <div class="hero">
+        <span class="n">{{ money(d.program.committed) }}</span>
+        <span class="of">committed of {{ money(d.program.budget) }}</span>
+      </div>
+      {% set pct = (d.program.committed / d.program.budget * 100) if d.program.budget else 0 %}
+      <div class="bar"><i class="{{ 'bad' if pct > 100 else 'warn' if pct > 90 }}"
+        style="width:{{ [pct, 100]|min }}%"></i></div>
+      <p class="sub">
+        {{ d.program.districts }} districts in the plan.
+        {% if pct > 100 %}That is {{ money(d.program.committed - d.program.budget) }} over the
+        ceiling.{% else %}{{ money(d.program.budget - d.program.committed) }} still unspent.{% endif %}
+      </p>
+      <ul class="facts">
+        {% if d.program.next_drop %}
+        <li><span class="k">Next mail drop</span>
+            <span class="v">{{ d.program.next_drop.strftime('%-d %b') }}</span></li>
+        {% endif %}
+        <li><span class="k">Pieces still in draft</span>
+            <span class="v {{ 'warn' if d.program.pieces_draft }}">{{ d.program.pieces_draft }}</span></li>
+        {% if d.program.no_pieces %}
+        <li><span class="k">Districts with no piece made</span>
+            <span class="v bad">{{ d.program.no_pieces }}</span></li>
+        {% endif %}
+      </ul>
+      <p class="note"><a class="more" href="{{ url_for('private.spend_plan') }}">Open the spend plan</a></p>
+    </div>
+
+    <!-- ================= DIGITAL ================= -->
+    <div class="band">
+      <h5>Digital</h5>
+      <div class="hero">
+        <span class="n">{{ money(d.digital.spent) }}</span>
+        <span class="of">spent on Meta</span>
+      </div>
+      <ul class="facts">
+        <li><span class="k">Booked into Meta</span><span class="v">{{ money(d.digital.booked) }}</span></li>
+        <li><span class="k">Planned for Meta</span><span class="v">{{ money(d.digital.planned) }}</span></li>
+        {% if d.digital.offmeta %}
+        <li><span class="k">Planned off Meta, streaming and display</span>
+            <span class="v">{{ money(d.digital.offmeta) }}</span></li>
+        {% endif %}
+        <li><span class="k">Flights running now</span>
+            <span class="v {{ 'good' if d.digital.live }}">{{ d.digital.live }}</span></li>
+        <li><span class="k">Flights still to start</span><span class="v">{{ d.digital.scheduled }}</span></li>
+        {% if d.digital.dead %}
+        <li><span class="k">Live ads showing to nobody</span>
+            <span class="v bad">{{ d.digital.dead }}</span></li>
+        {% endif %}
+      </ul>
+      {% if d.digital.districts %}
+      <p class="sub">Running in {{ d.digital.districts }} district{{ '' if d.digital.districts == 1 else 's' }}.</p>
+      {% endif %}
+      {% if d.digital.sync_error %}
+      <p class="note bad">Last read from Meta: {{ d.digital.sync_error }}</p>
+      {% elif d.digital.synced %}
+      <p class="note">Meta last read {{ d.digital.synced|ago }}.</p>
+      {% endif %}
+    </div>
+
+    <!-- ================= SITES AND MONEY ================= -->
+    <div class="band">
+      <h5>Websites and donations</h5>
+      <div class="hero">
+        <span class="n">{{ d.sites.live }}</span>
+        <span class="of">candidate sites live</span>
+      </div>
+      <ul class="facts">
+        <li><span class="k">On their own domain</span><span class="v">{{ d.sites.custom_domain }}</span></li>
+        <li><span class="k">Still a draft</span><span class="v">{{ d.sites.draft }}</span></li>
+        <li><span class="k">Raised through the sites</span>
+            <span class="v good">{{ money(d.sites.donations) }}</span></li>
+        <li><span class="k">In the last seven days</span>
+            <span class="v">{{ money(d.sites.donations_7d) }}</span></li>
+        <li><span class="k">Donations</span><span class="v">{{ num(d.sites.donors) }}</span></li>
+      </ul>
+    </div>
+
+    <!-- ================= FIELD ================= -->
+    <div class="band">
+      <h5>Field</h5>
+      <div class="hero">
+        <span class="n">{{ num(d.field.walkbooks_built) }}</span>
+        <span class="of">walkbook builds delivered</span>
+      </div>
+      <ul class="facts">
+        <li><span class="k">Districts with books</span><span class="v">{{ d.field.walkbook_districts }}</span></li>
+        <li><span class="k">Voter lists sent</span><span class="v">{{ d.field.lists_sent }}</span></li>
+        <li><span class="k">Consults booked ahead</span><span class="v">{{ d.field.consults }}</span></li>
+      </ul>
+    </div>
+
+    <!-- ================= RECENT ================= -->
+    {% if d.recent %}
+    <div class="band wide">
+      <h5>Last three days</h5>
+      <ul class="log">
+        {% for at, action, desc in d.recent %}
+        <li><span class="tm">{{ at.strftime('%-d %b %H:%M') }}</span>
+            <span>{{ desc or action }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

@@ -1310,6 +1310,14 @@ def _cost_of(qty_for_district, sizes, tactics):
     return total
 
 
+@private_bp.route('/overview')
+@require_feature_access('campaign_plan')
+def overview():
+    """Where things stand, across the whole operation. Read-only."""
+    import overview as OV
+    return render_template('private/overview.html', d=OV.gather())
+
+
 @private_bp.route('/spend-plan')
 @require_feature_access('campaign_plan')
 def spend_plan():

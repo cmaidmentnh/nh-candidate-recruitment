@@ -545,6 +545,28 @@ app.register_blueprint(private_bp)
 from meta_district import init_meta_district
 init_meta_district(get_db_connection, release_db_connection, upload_file_to_storage)
 
+from overview import init_overview
+init_overview(get_db_connection, release_db_connection)
+
+
+@app.template_filter('ago')
+def _ago_filter(dt):
+    """'20 minutes ago' rather than a timestamp nobody subtracts in their head."""
+    if not dt:
+        return ''
+    from datetime import datetime, timezone
+    now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
+    secs = (now - dt).total_seconds()
+    if secs < 0:
+        secs = 0
+    if secs < 90:
+        return 'just now'
+    if secs < 5400:
+        return '%d minutes ago' % round(secs / 60)
+    if secs < 172800:
+        return '%d hours ago' % round(secs / 3600)
+    return '%d days ago' % round(secs / 86400)
+
 # Register candidate scout blueprint
 from candidate_scout import scout_bp, init_candidate_scout
 init_candidate_scout(get_db_connection, release_db_connection, get_voter_db_connection, release_voter_db_connection, is_super_admin, SUPER_ADMIN_EMAIL)
