@@ -744,9 +744,6 @@
             <a class="dropdown-item" href="{{ url_for('private.overview') }}">
                 <i class="fas fa-binoculars text-muted"></i> Where Things Stand
             </a>
-            <a class="dropdown-item" href="/m/">
-                <i class="fas fa-mobile-alt text-muted"></i> Phone Version
-            </a>
             <a class="dropdown-item" href="{{ url_for('private.spend_plan') }}">
                 <i class="fas fa-map-signs text-muted"></i> Spend Plan
             </a>
@@ -803,23 +800,6 @@
     <script>
     // Auto-add CSRF token to all forms
     document.addEventListener('DOMContentLoaded', function() {
-        // On a phone, the pages that have a purpose-built mobile screen go to it. Only where
-        // one exists: everything else still gets the desktop page, which is better than a
-        // dead end. Choosing the desktop version sticks for the rest of the session.
-        (function phoneRedirect(){
-            var M = { '/private/overview': '/m/' };
-            var here = location.pathname.replace(/\/$/, '') || '/';
-            if (!M[here]) return;
-            try {
-                if (new URLSearchParams(location.search).has('desktop')) {
-                    sessionStorage.setItem('ctehr-desktop', '1');
-                    return;
-                }
-                if (sessionStorage.getItem('ctehr-desktop')) return;
-            } catch (e) { /* private browsing: fall through and redirect */ }
-            if (window.innerWidth <= 780) location.replace(M[here]);
-        })();
-
         // A table wider than its column must scroll inside its own box. Doing it here rather
         // than in eighteen templates means a page added later gets it for free.
         (function wrapWideTables(){
