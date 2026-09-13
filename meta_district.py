@@ -16,7 +16,11 @@ import hashlib
 import io
 import logging
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+
+
+def _now_utc():
+    return datetime.now(timezone.utc)
 
 logger = logging.getLogger(__name__)
 
@@ -186,11 +190,13 @@ def district_meta(codes):
                               a.campaign_id, a.campaign_name, a.title, a.body, a.link_url,
                               a.spend, a.impressions, a.clicks, a.link_clicks,
                               a.first_delivered_on, a.last_delivered_on, a.delivery_days,
-                              a.recent_spend, c.s3_url, c.is_video, a.video_id
+                              a.recent_spend, c.s3_url, c.is_video, a.video_id,
+                              s.start_time, s.end_time, s.name
                          FROM meta_campaign_district d
                          JOIN meta_ads a ON a.campaign_id = d.campaign_id
                          LEFT JOIN meta_ad_creative c ON c.ad_id = a.ad_id
                                                      AND COALESCE(c.error,'') = ''
+                         LEFT JOIN meta_ad_sets s ON s.adset_id = a.adset_id
                         WHERE d.district_code = ANY(%s)
                         ORDER BY a.spend DESC, a.name""", (live,))
         for r in cur.fetchall():
@@ -203,11 +209,20 @@ def district_meta(codes):
                 last=r[14].isoformat() if r[14] else None,
                 delivery_days=r[15], recent_spend=float(r[16] or 0),
                 image=r[17], is_video=bool(r[18] or r[19]),
+                flight_start=r[20].isoformat() if r[20] else None,
+                flight_end=r[21].isoformat() if r[21] else None,
+                flight_name=r[22],
+                # An ad set that has not started yet has delivered nothing for a good
+                # reason. Calling that "not delivering" makes every ramped buy look broken.
+                scheduled=bool(r[20] and r[20] > _now_utc()),
                 delivering=(impr > 0), **_ratios(spend, impr, clicks)))
 
         for code, e in out.items():
             e.update(_ratios(e['spend'], e['impressions'], e['clicks']))
-            e['dead_ads'] = sum(1 for a in e['ads'] if not a['delivering'])
+            # Scheduled flights are not dead ads; they simply have not begun.
+            e['dead_ads'] = sum(1 for a in e['ads']
+                                if not a['delivering'] and not a.get('scheduled'))
+            e['scheduled_ads'] = sum(1 for a in e['ads'] if a.get('scheduled'))
     finally:
         cur.close(); release_db_connection(conn)
     return out

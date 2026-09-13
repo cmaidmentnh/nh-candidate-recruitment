@@ -37,6 +37,9 @@
   .afpmark{color:#b4262d;font-weight:700;font-size:.62rem;letter-spacing:.04em}
   .creativegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-top:10px}
   .creativecard{border:1px solid var(--rule);border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+  .creativecard.sched{opacity:.92}
+  .sched-flag{background:#eaf2ff;color:#1b3a5c;font-size:.66rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:.05em;padding:5px 10px;border-top:1px solid #d6e3f5}
   .creativecard .pic{height:200px;background:#0f3d28 center/contain no-repeat;position:relative}
   .creativecard .pic .vid{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.65);color:#fff;
     font-size:.6rem;padding:2px 6px;border-radius:3px;letter-spacing:.05em}
@@ -845,6 +848,15 @@
     return h + '</div>';
   }
 
+  // 2026-10-06T00:00:00-0400 -> "Mon 6 Oct 2026"
+  function fdate(iso){
+    if(!iso) return '';
+    var dt = new Date(iso);
+    if(isNaN(dt)) return esc(String(iso).slice(0,10));
+    return dt.toLocaleDateString('en-GB',
+      {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+  }
+
   function metaAdsFor(d){
     // A floterial buys no ads of its own: its candidate appears in the base districts' ads,
     // exactly as it appears on their mail.
@@ -867,16 +879,22 @@
         '<b>Wallace | BE2 General | Meredith</b>. If one is running and not showing here, ' +
         'its name is probably off convention.</p>';
     }
-    var dead = ads.filter(function(a){ return !a.delivering; }).length;
+    var sched = ads.filter(function(a){ return a.scheduled; }).length;
+    var dead  = ads.filter(function(a){ return !a.delivering && !a.scheduled; }).length;
     var h = '';
     if(dead){
       h += '<div class="verdict under" style="margin:10px 0"><b>' + dead + ' of ' + ads.length +
         ' ads have delivered nothing.</b> They are live but no one has seen them, so the money ' +
         'is going through the rest.</div>';
     }
+    if(sched){
+      h += '<div class="verdict" style="margin:10px 0">' + sched + ' of ' + ads.length +
+        ' ads are <b>scheduled for later</b> and have not started yet. That is a ramped buy ' +
+        'working as planned, not a problem.</div>';
+    }
     h += '<div class="creativegrid">';
     ads.forEach(function(a){
-      h += '<div class="creativecard' + (a.delivering ? '' : ' dead') + '">' +
+      h += '<div class="creativecard' + (a.delivering ? '' : (a.scheduled ? ' sched' : ' dead')) + '">' +
         '<div class="pic"' + (a.image ? ' style="background-image:url(\'' + esc(a.image) + '\')"' : '') + '>' +
           (a.is_video ? '<span class="vid">VIDEO</span>' : '') + '</div>' +
         '<div class="bd">' +
@@ -888,6 +906,8 @@
           '<div class="sub">' + esc(a.status || '') +
             (a.first ? ' &middot; ' + a.first + ' to ' + (a.last || 'now') : '') +
             (a.delivery_days ? ' &middot; ' + a.delivery_days + ' days delivering' : '') + '</div>' +
+          (a.flight_start ? '<div class="sub"><b>Flight:</b> ' + fdate(a.flight_start) +
+              ' &rarr; ' + (a.flight_end ? fdate(a.flight_end) : 'no end date') + '</div>' : '') +
         '</div>' +
         '<div class="nums">' +
           '<div><b>' + money(a.spend) + '</b><span>spend, 30d</span></div>' +
@@ -896,7 +916,9 @@
           (a.cpm ? '<div><b>$' + a.cpm.toFixed(2) + '</b><span>CPM</span></div>' : '') +
           (a.cpc ? '<div><b>$' + a.cpc.toFixed(2) + '</b><span>per click</span></div>' : '') +
         '</div>' +
-        (a.delivering ? '' : '<div class="idle-flag">Not delivering</div>') +
+        (a.delivering ? ''
+           : a.scheduled ? '<div class="sched-flag">Scheduled &middot; starts ' + fdate(a.flight_start) + '</div>'
+           : '<div class="idle-flag">Not delivering</div>') +
         '</div>';
     });
     return h + '</div>';
