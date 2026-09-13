@@ -79,7 +79,11 @@ def mirror_creative(limit=200):
                 else:
                     ext = 'png' if 'png' in ctype else ('gif' if 'gif' in ctype else 'jpg')
                     key = 'meta-creative/%s.%s' % (re.sub(r'[^A-Za-z0-9_-]', '', ad_id), ext)
-                    s3_url = upload_to_storage(io.BytesIO(body), key)
+                    # upload_file_to_storage reads .content_type off the object, and a bare
+                    # BytesIO has none, which would serve the image as octet-stream.
+                    buf = io.BytesIO(body)
+                    buf.content_type = ctype
+                    s3_url = upload_to_storage(buf, key)
                     if not s3_url:
                         failed.append((ad_id, 'upload returned nothing')); continue
                     seen[digest] = (s3_url, ctype)
