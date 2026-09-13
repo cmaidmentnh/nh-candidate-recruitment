@@ -349,7 +349,7 @@
   <div class="cols" id="viewDistricts">
     <div class="rail" id="rail">
       <div class="railhead">
-        <input type="search" id="q" placeholder="Filter, e.g. Rockingham or Raymond">
+        <input type="search" id="q" placeholder="District, town or candidate">
         <div class="filters">
           <a data-f="all" class="on">All 203</a><a data-f="untiered">Untiered</a>
           <a data-f="t1">T1</a><a data-f="t2">T2</a><a data-f="t3">T3</a><a data-f="norep">No R</a>
@@ -445,6 +445,15 @@
     if(universe === 'base') return uni(d);          // the old single-mask universe
     return (d.model && d.model[universe]) || {voters:0, households:0, cells:0};
   }
+  function hay(d){
+    if(d._hay) return d._hay;
+    var bits = [d.code || '', d.towns || ''];
+    if(d.nominees){ bits.push(d.nominees.R || '', d.nominees.D || ''); }
+    (d.cands || []).forEach(function(c){ if(c.name) bits.push(c.name); });
+    d._hay = bits.join(' ').toLowerCase();
+    return d._hay;
+  }
+
   function cost(d){
     var out = {total:0,pieces:0,msgs:0,grp:{mail:0,text:0,digital:0,field:0},per:{},byUni:{}};
     var qty = d.qty || {};
@@ -538,7 +547,9 @@
 
   function visible(){
     return DISTRICTS.filter(function(d){
-      if(q && (d.code + ' ' + (d.towns||'')).toLowerCase().indexOf(q) < 0) return false;
+      // Searchable by candidate too: looking up "the district Wallace is in" is at least as
+      // common as remembering it is Belknap 2.
+      if(q && hay(d).indexOf(q) < 0) return false;
       if(filter === 'in') return d.include;
       if(filter === 'untiered') return !d.tier;
       if(filter === 't1') return d.tier === 1;

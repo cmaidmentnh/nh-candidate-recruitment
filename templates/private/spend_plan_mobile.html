@@ -125,12 +125,19 @@
   ];
   var filter = 'in', query = '', shown = 40;
 
+  // What you search a district by: its code, its towns, or anyone standing in it. Looking up
+  // "the district Wallace is in" is at least as common as remembering it is Belknap 2.
+  function haystack(d){
+    if(d._hay) return d._hay;
+    var bits = [d.code || '', d.towns || ''];
+    if(d.nominees){ bits.push(d.nominees.R || '', d.nominees.D || ''); }
+    (d.cands || []).forEach(function(c){ if(c.name) bits.push(c.name); });
+    d._hay = bits.join(' ').toLowerCase();
+    return d._hay;
+  }
+
   function matches(d){
-    if(query){
-      var q = query.toLowerCase();
-      if((d.code || '').toLowerCase().indexOf(q) === -1 &&
-         (d.towns || '').toLowerCase().indexOf(q) === -1) return false;
-    }
+    if(query && haystack(d).indexOf(query.toLowerCase()) === -1) return false;
     switch(filter){
       case 'in':       return !!d.include;
       case 't1':       return d.tier === 1;
