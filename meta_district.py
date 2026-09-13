@@ -46,6 +46,55 @@ def init_meta_district(db_conn_func, db_release_func, storage_upload):
 # CREATIVE MIRROR
 # =============================================================================
 
+def _full_creative_url(ad_id, session):
+    """The real, uncropped creative image for an ad, or None.
+
+    Meta returns no image_url for an ad built on asset_feed_spec (multi-crop placement
+    customisation). All it gives is thumbnail_url, which is a SQUARE CENTRE CROP — so a
+    1.91:1 banner comes back with its headline sliced off at both ends. The actual images
+    live in asset_feed_spec.images[].hash, and a hash resolves to a full-size permalink
+    through /adimages.
+
+    Prefers the catch-all (square) asset when several crops exist, since that is the one
+    meant to be looked at as a whole.
+    """
+    try:
+        import meta_ads
+        token = meta_ads.server_token()
+    except Exception:
+        token = None
+    if not token:
+        return None
+    try:
+        r = session.get('https://graph.facebook.com/v21.0/%s' % ad_id,
+                        params={'fields': 'account_id,creative{asset_feed_spec}',
+                                'access_token': token}, timeout=25)
+        data = r.json()
+        afs = ((data.get('creative') or {}).get('asset_feed_spec')) or {}
+        images = afs.get('images') or []
+        if not images:
+            return None
+        acct = data.get('account_id')
+        # the catch-all rule's image is the square one; fall back to the first
+        by_label = {}
+        for im in images:
+            labels = [l.get('name', '') for l in (im.get('adlabels') or [])]
+            by_label[labels[0] if labels else ''] = im.get('hash')
+        want = next((h for lab, h in by_label.items() if 'all' in lab.lower() or 'square' in lab.lower()),
+                    images[0].get('hash'))
+        if not (want and acct):
+            return None
+        r2 = session.get('https://graph.facebook.com/v21.0/act_%s/adimages' % acct,
+                         params={'hashes': '["%s"]' % want, 'fields': 'hash,url',
+                                 'access_token': token}, timeout=25)
+        for row in (r2.json().get('data') or []):
+            if row.get('url'):
+                return row['url']
+    except Exception as e:
+        logger.warning('full creative lookup failed for %s: %s', ad_id, e)
+    return None
+
+
 def mirror_creative(limit=200):
     """Copy any ad image we do not already hold into our own S3.
 
@@ -60,7 +109,7 @@ def mirror_creative(limit=200):
     conn = get_db_connection(); cur = conn.cursor()
     done, skipped, failed = 0, 0, []
     try:
-        cur.execute("""SELECT a.ad_id, COALESCE(a.image_url, a.thumbnail_url), a.video_id
+        cur.execute("""SELECT a.ad_id, a.image_url, a.thumbnail_url, a.video_id
                          FROM meta_ads a
                          LEFT JOIN meta_ad_creative c ON c.ad_id = a.ad_id
                         WHERE c.ad_id IS NULL
@@ -70,7 +119,12 @@ def mirror_creative(limit=200):
         cur.execute("SELECT sha256, s3_url, content_type FROM meta_ad_creative WHERE sha256 IS NOT NULL")
         seen = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
 
-        for ad_id, url, video_id in todo:
+        session = requests.Session()
+        for ad_id, image_url, thumb_url, video_id in todo:
+            # image_url is the real picture. When it is missing the ad is built on
+            # asset_feed_spec and thumbnail_url is a square centre crop, so go and fetch
+            # the actual asset instead of mirroring a mutilated thumbnail.
+            url = image_url or (_full_creative_url(ad_id, session) if not video_id else None) or thumb_url
             try:
                 r = requests.get(url, timeout=20)
                 r.raise_for_status()
