@@ -77,15 +77,19 @@ button{font:inherit;color:inherit}
   background:#fff;border:1px solid var(--rule);border-radius:12px;
   padding:12px 14px;margin-bottom:8px;min-height:var(--tap);
 }
-.d .l{flex:1;min-width:0}
-.d .nm{font-size:1.06rem;font-weight:700;color:var(--navy)}
+/* These were inline spans, so the name, the towns and the rating ran together on one line,
+   wrapped, and collided with the cost on the right. Each is its own line. */
+.d .l{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.d .nm{font-size:1.06rem;font-weight:700;color:var(--navy);display:block}
 .d .nm.in{color:var(--green)}
-.d .tw{font-size:.84rem;color:var(--muted);white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis}
-.d .rt{font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
-.d .c{text-align:right;font-variant-numeric:tabular-nums}
-.d .c .v{font-size:1.02rem;font-weight:800;color:var(--navy)}
-.d .c .t{font-size:.74rem;color:var(--muted)}
+.d .tw{display:block;font-size:.84rem;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.d .rt{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d .c{flex:0 0 auto;text-align:right;font-variant-numeric:tabular-nums;
+  display:flex;flex-direction:column;gap:1px}
+.d .c .v{display:block;font-size:1.02rem;font-weight:800;color:var(--navy);white-space:nowrap}
+.d .c .t{display:block;font-size:.74rem;color:var(--muted);white-space:nowrap}
 .r-gop{color:#a8261f}.r-dem{color:#1d4e89}.r-swing{color:var(--amber)}
 
 .more{

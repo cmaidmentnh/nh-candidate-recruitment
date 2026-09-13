@@ -548,12 +548,6 @@ init_meta_district(get_db_connection, release_db_connection, upload_file_to_stor
 from overview import init_overview
 init_overview(get_db_connection, release_db_connection)
 
-# The phone surface. Its own templates and stylesheet rather than the desktop pages reshaped:
-# retrofitting them failed twice, because each admin page carries its own desktop layout CSS.
-from mobile import mobile_bp, init_mobile
-from private_features import require_feature_access as _feature_gate
-init_mobile(get_db_connection, release_db_connection, _feature_gate)
-app.register_blueprint(mobile_bp)
 
 
 @app.template_filter('ago')
