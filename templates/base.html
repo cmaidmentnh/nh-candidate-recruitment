@@ -72,6 +72,19 @@
                         <a class="nav-link" href="{{ url_for('progress.progress') }}">Progress</a>
                     </li>
                     {% endif %}
+                    {% if can_view_meta %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adsDropdown" role="button" data-toggle="dropdown">Ads</a>
+                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="adsDropdown">
+                            <a class="dropdown-item" href="{{ url_for('meta.page') }}"><i class="fab fa-facebook text-muted"></i> Meta Ads</a>
+                            <a class="dropdown-item" href="{{ url_for('admon.page') }}"><i class="fas fa-binoculars text-muted"></i> Ad Monitor</a>
+                            {% if can_edit_meta_settings %}
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{{ url_for('meta.settings') }}"><i class="fas fa-key text-muted"></i> Meta Settings</a>
+                            {% endif %}
+                        </div>
+                    </li>
+                    {% endif %}
                     {% if is_super_admin %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin_dashboard') }}">Admin</a>
@@ -731,14 +744,6 @@
             {% if 'digest' in user_private_features %}
             <a class="dropdown-item" href="{{ url_for('digest.digest_home') }}">
                 <i class="fas fa-envelope-open-text text-muted"></i> Weekly Digest
-            </a>
-            {% endif %}
-            {% if 'meta_ads' in user_private_features or can_edit_meta_settings %}
-            <a class="dropdown-item" href="{{ url_for('meta.page') }}">
-                <i class="fab fa-facebook text-muted"></i> Meta Ads
-            </a>
-            <a class="dropdown-item" href="{{ url_for('admon.page') }}">
-                <i class="fas fa-binoculars text-muted"></i> Ad Monitor
             </a>
             {% endif %}
             {% if can_edit_meta_settings %}

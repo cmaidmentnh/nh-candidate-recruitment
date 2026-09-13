@@ -191,6 +191,17 @@
                 <a href="{{ url_for('activity_log_page') }}" class="btn btn-outline-dark btn-block mb-2">
                     <i class="fas fa-history"></i> View Activity Log
                 </a>
+                <a href="{{ url_for('meta.page') }}" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="fab fa-facebook"></i> Meta Ads Report
+                </a>
+                <a href="{{ url_for('admon.page') }}" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="fas fa-binoculars"></i> Ad Library Monitor
+                </a>
+                {% if can_edit_meta_settings %}
+                <a href="{{ url_for('meta.settings') }}" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="fas fa-key"></i> Meta Settings
+                </a>
+                {% endif %}
             </div>
         </div>
 

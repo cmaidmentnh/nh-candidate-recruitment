@@ -12,9 +12,10 @@ Code: `meta_ads.py`, `ad_monitor.py`, `templates/meta/`, `migrations/031_meta_ad
 
 ## Who can see it
 
-It is a private feature, slug `meta_ads`. The super admin always has it. Grant it to anyone
-else on **Manage Access** (`/private/access`). Both pages then appear in the lock menu at
-the bottom left.
+Every user with the **admin** role, plus the super admin. Staff and whip logins cannot open
+either page. There is nothing to grant: it is the role, the same as the other admin pages.
+Both pages sit under **Ads** in the top bar. The settings page (where a token is pasted) is
+narrower still: the super admin and `META_SETTINGS_EDITORS`.
 
 `/meta/settings` is narrower: the super admin plus the emails in `META_SETTINGS_EDITORS`
 (default `berryrm0@gmail.com`). Those editors can also open both pages without a grant.

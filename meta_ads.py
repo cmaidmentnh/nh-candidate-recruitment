@@ -46,7 +46,6 @@ from flask_login import current_user
 from psycopg2.extras import RealDictCursor, execute_values
 
 import private_features
-from private_features import require_feature_access
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,6 @@ get_db_connection = None
 release_db_connection = None
 _fallback_key = None
 
-FEATURE = 'meta_ads'
 
 # Who may open /meta/settings and paste a token. The super admin always can.
 SETTINGS_EDITORS = {e.strip().lower() for e in (os.environ.get('META_SETTINGS_EDITORS') or 'berryrm0@gmail.com').split(',') if e.strip()}
@@ -104,18 +102,36 @@ def _cursor(conn):
     return conn.cursor(cursor_factory=RealDictCursor)
 
 
+def can_view_meta():
+    """Admins and the super admin. Not staff, not whips, and not a per-user grant: the ad
+    numbers are the campaign's money, so the rule is the role, the same as the rest of the
+    admin pages. A settings editor is trusted to paste the token, so they can see what it
+    fetches too."""
+    if not current_user.is_authenticated:
+        return False
+    try:
+        if private_features.is_super_admin and private_features.is_super_admin():
+            return True
+    except Exception:
+        pass
+    if getattr(current_user, 'role', None) == 'admin':
+        return True
+    return can_edit_settings()
+
+
 def meta_access_required(f):
-    """The 'meta_ads' private feature, or a settings editor: whoever is trusted to paste the
-    token is trusted to see what it fetches. The gate is a thin wrapper around the feature
-    decorator so Manage Access keeps working the same as for every other private page."""
+    """Same shape as app.admin_required: log in first, then the role."""
     from functools import wraps
-    gated = require_feature_access(FEATURE)(f)
 
     @wraps(f)
     def decorated(*args, **kwargs):
-        if current_user.is_authenticated and can_edit_settings():
+        if can_view_meta():
             return f(*args, **kwargs)
-        return gated(*args, **kwargs)
+        if not current_user.is_authenticated:
+            flash('Please log in.', 'warning')
+            return redirect(url_for('login'))
+        flash('Admin access required.', 'danger')
+        return redirect(url_for('index'))
     return decorated
 
 
@@ -1453,7 +1469,7 @@ def settings_editor_required(f):
 
 @meta_bp.app_context_processor
 def inject_meta_settings_access():
-    return {'can_edit_meta_settings': can_edit_settings()}
+    return {'can_edit_meta_settings': can_edit_settings(), 'can_view_meta': can_view_meta()}
 
 
 def _library_token_state():
