@@ -219,16 +219,33 @@ def _program(cur):
     """What the plan commits us to, and what has actually been made."""
     budget = _scalar(cur, "SELECT amount FROM spend_budget WHERE key='program'", None, 0)
 
-    # Cost of the plan as it stands: quantity times the tactic's rate, with any per-district
-    # override winning. Digital tactics are budgeted in dollars, so their qty IS the cost.
+    # Cost of the plan as it stands. Quantity alone is not cost: a mail quantity is the number
+    # of DROPS, so it has to be multiplied by the households in that universe and then by the
+    # rate. Leaving the universe out understated the whole program by nearly half, reporting
+    # $294,912 against the planner's $576,362 for the same rows.
+    #
+    # Which universe supplies the size depends on the row: 'base' uses the district's own mask
+    # in district_universe, everything else uses the modelled gotv/persuade counts. This is the
+    # same arithmetic as cost() in the spend plan front end.
     committed = _scalar(cur, """
+        WITH sized AS (
+          SELECT i.qty, t.unit, COALESCE(i.rate_override, t.rate, 0) AS rate,
+                 CASE WHEN i.universe = 'base' THEN du.households ELSE mu.households END AS households,
+                 CASE WHEN i.universe = 'base' THEN du.cells      ELSE mu.cells      END AS cells
+            FROM district_spend_item i
+            JOIN spend_tactic t  ON t.tactic_key = i.tactic_key
+            JOIN district_spend s ON s.district_code = i.district_code
+            LEFT JOIN district_universe du
+                   ON du.district_code = i.district_code AND du.mask = s.mask
+            LEFT JOIN district_model_universe mu
+                   ON mu.district_code = i.district_code AND mu.uni = i.universe
+           WHERE s.include
+        )
         SELECT COALESCE(sum(
-          CASE WHEN t.unit = 'dollars' THEN i.qty
-               ELSE i.qty * COALESCE(i.rate_override, t.rate, 0) END), 0)
-          FROM district_spend_item i
-          JOIN spend_tactic t ON t.tactic_key = i.tactic_key
-          JOIN district_spend s ON s.district_code = i.district_code
-         WHERE s.include""")
+          CASE WHEN unit = 'dollars'       THEN qty
+               WHEN unit = 'per_household' THEN qty * COALESCE(households, 0) * rate
+               WHEN unit = 'per_cell'      THEN qty * COALESCE(cells, 0) * rate
+               ELSE qty * rate END), 0) FROM sized""")
 
     pieces = dict(_rows(cur, "SELECT status, count(*) FROM spend_piece GROUP BY 1"))
     next_drop = _scalar(cur, """SELECT min(drop_date) FROM spend_piece
