@@ -71,6 +71,7 @@
   .bar i{display:block;height:100%;background:var(--navy)}
   .bar i.proj{background:#c9d3e2}
   .freshline{font-size:.72rem;color:var(--muted);margin:6px 0 0}
+  .freshline .warn{color:var(--red)}
   .freshline button{font-size:.7rem;padding:3px 10px;border:1px solid #c9d1dc;background:#fff;
     border-radius:4px;cursor:pointer;margin-left:8px}
   .metabox{border:1px solid var(--rule);border-radius:6px;margin:12px 0;padding:10px 12px}
@@ -1087,18 +1088,32 @@
     b.onclick = function(){
       var msg = document.getElementById('metaRefreshMsg');
       b.disabled = true; b.textContent = 'Reading...';
-      msg.textContent = 'this takes about ten seconds';
+      msg.className = '';
+      msg.textContent = 'asking Meta, this takes a few seconds';
       fetch('/private/spend-plan/meta-refresh', {method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
         body: JSON.stringify({code: d.code})})
-        .then(function(r){ return r.json(); })
+        .then(function(r){
+          if(r.status === 403) throw new Error('your session expired, reload the page');
+          return r.json().catch(function(){ throw new Error('server error ' + r.status); });
+        })
         .then(function(j){
-          if(!j.ok) throw new Error(j.error || 'refresh failed');
-          msg.textContent = 'updated, reloading';
-          location.reload();
+          if(!j.ok) throw new Error(j.error || 'Meta would not answer');
+          // Meta can answer for the daily numbers and refuse the ads in the same breath.
+          // Saying "updated" then reloading to identical figures reads as a dead button.
+          if(j.note){
+            b.disabled = false; b.textContent = 'Try again';
+            msg.className = 'warn';
+            msg.textContent = j.note;
+            return;
+          }
+          msg.textContent = 'read ' + (j.ads || 0) + ' ads' +
+            (j.mirrored ? ', ' + j.mirrored + ' new image' + (j.mirrored === 1 ? '' : 's') : '') +
+            (j.linked ? ', ' + j.linked + ' newly linked' : '') + '. Reloading.';
+          setTimeout(function(){ location.reload(); }, 700);
         })
         .catch(function(e){ b.disabled = false; b.textContent = 'Refresh from Meta';
-                            msg.textContent = e.message; });
+                            msg.className = 'warn'; msg.textContent = e.message; });
     };
   }
 
@@ -1149,7 +1164,8 @@
     // On the execution tabs, show that and nothing else. Nobody wants to scroll past the
     // 2018 replay to reach a mail piece.
     if(paneTab === 'getting'){
-      document.getElementById('pane').innerHTML = h + gettingHtml(d) + freshLine(); return;
+      document.getElementById('pane').innerHTML = h + gettingHtml(d) + freshLine();
+      wireRefresh(d); return;
     }
     if(paneTab === 'ads'){
       document.getElementById('pane').innerHTML = h + adsHtml(d) + freshLine();

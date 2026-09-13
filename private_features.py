@@ -2360,9 +2360,26 @@ def spend_meta_refresh():
         logger.error('meta refresh: creative mirror failed: %s', e)
         mirrored = {'ok': False, 'error': str(e)[:120]}
 
-    return jsonify({'ok': True, 'accounts': synced.get('synced'),
-                    'failed': synced.get('failed'), 'linked': linked,
-                    'mirrored': mirrored.get('mirrored')})
+    # sync_account returns ok=True when the daily numbers land but the ads call is refused,
+    # and the ads ARE the per-district figures, so reporting a bare success here would tell
+    # someone their numbers are fresh when Meta never handed them over.
+    results = synced.get('results') or []
+    warnings = [r['warning'] for r in results if r.get('warning')]
+    errors = ['%s: %s' % (r.get('name'), r.get('error'))
+              for r in results if not r.get('ok')]
+    ads_rows = sum(r.get('ads') or 0 for r in results)
+
+    note = None
+    if errors:
+        note = 'Meta refused: ' + '; '.join(errors)
+    elif warnings:
+        note = ' '.join(warnings)
+
+    return jsonify({'ok': not errors, 'accounts': synced.get('synced'),
+                    'failed': synced.get('failed'), 'ads': ads_rows,
+                    'linked': (linked or {}).get('linked'),
+                    'mirrored': mirrored.get('mirrored'),
+                    'note': note, 'error': note if errors else None})
 
 
 @private_bp.route('/spend-plan/save', methods=['POST'])
