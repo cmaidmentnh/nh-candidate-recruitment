@@ -598,8 +598,11 @@ from ad_monitor import admon_bp, init_ad_monitor, register_cli as _admon_cli
 # and the tables are created here if they are missing, so a deploy needs no psql step.
 init_meta_ads(get_db_connection, release_db_connection, secret_key=app.secret_key)
 init_ad_monitor(get_db_connection, release_db_connection)
+from meta_races import races_bp, init_meta_races
+init_meta_races(get_db_connection, release_db_connection)
 app.register_blueprint(meta_bp)
 app.register_blueprint(admon_bp)
+app.register_blueprint(races_bp)
 csrf.exempt(app.view_functions['meta.cron_sync'])
 csrf.exempt(app.view_functions['admon.cron_sync'])
 _meta_cli(app)

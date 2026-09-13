@@ -60,7 +60,8 @@ _fallback_key = None
 # Who may open /meta/settings and paste a token. The super admin always can.
 SETTINGS_EDITORS = {e.strip().lower() for e in (os.environ.get('META_SETTINGS_EDITORS') or 'berryrm0@gmail.com').split(',') if e.strip()}
 
-MIGRATIONS = ('031_meta_ads.sql', '032_meta_settings.sql')
+MIGRATIONS = ('031_meta_ads.sql', '032_meta_settings.sql', '033_meta_district_link.sql', '034_meta_creative.sql',
+              '035_meta_races.sql')
 
 
 def init_meta_ads(db_conn_func, db_release_func, secret_key=None):
@@ -929,6 +930,9 @@ def sync_account(row):
                     ((warning or '')[:1000] or None, row['id']))
         conn.commit()
         cur.close()
+        # New campaigns get their race worked out straight away, or queued to ask about.
+        import meta_races
+        meta_races.attribute_after_sync()
         return {**base, 'ok': True, 'rows': len(by_key), 'ads': ads, 'warning': warning}
     except Exception as e:
         conn.rollback()
@@ -1254,8 +1258,15 @@ def page():
     live_list = [a for a in ads if a['delivering']]
     former_list = [a for a in ads if not a['delivering']]
     live_ads = len(live_list)
+    # Which race each campaign is for, and the ones still to be decided.
+    import meta_races
+    races = meta_races.page_data()
+    for c in overview['campaigns']:
+        c['race'] = races['by_campaign'].get(c['campaign_id'])
+    for a in ads:
+        a['race'] = races['by_campaign'].get(a['campaign_id']) if a.get('campaign_id') else None
     return render_template('meta/meta.html', accounts=accounts, overview=overview, ads=ads, live_ads=live_ads,
-                           live_list=live_list, former_list=former_list,
+                           live_list=live_list, former_list=former_list, races=races,
                            days=days, ranges=RANGES, has_server_key=has_server_token(),
                            server_key_problem=server_token_problem(), server_key_source=server_token_source(),
                            encryption_problem=encryption_problem(),

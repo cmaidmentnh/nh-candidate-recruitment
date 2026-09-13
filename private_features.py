@@ -1218,7 +1218,21 @@ def district_from_campaign_name(name, known=None):
 
 def sync_meta_campaign_districts(cur, who='auto'):
     """Link every Meta campaign we can read a district off. Only ever ADDS auto rows and never
-    touches a manual one, so a hand correction survives the next sync."""
+    touches a manual one, so a hand correction survives the next sync.
+
+    Delegates to meta_races, which scores the name AND the words in the ads (towns, candidate
+    names) and only links at 90% or better; the rest are asked about on the Meta ads page.
+    The old name-only parser below is kept as the fallback if that module is missing."""
+    try:
+        import meta_races
+        from psycopg2.extras import RealDictCursor
+        rc = cur.connection.cursor(cursor_factory=RealDictCursor)
+        try:
+            return meta_races.auto_attribute(rc, who)
+        finally:
+            rc.close()
+    except ImportError:
+        pass
     cur.execute("SELECT full_district_code FROM districts WHERE full_district_code IS NOT NULL")
     known = {r[0] for r in cur.fetchall()}
     cur.execute("""SELECT DISTINCT campaign_id, campaign_name FROM meta_insights

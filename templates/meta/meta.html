@@ -85,6 +85,29 @@
   .msg{font-size:.76rem;margin-top:6px;color:var(--muted)}
   .msg.bad{color:var(--red);font-weight:600}
   .msg.good{color:var(--green);font-weight:600}
+  .race{display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px;
+    background:#eef3fb;color:var(--navy);border:1px solid #d3deef;white-space:nowrap}
+  .race.none{background:#f1f3f6;color:var(--muted);border-color:#d6dbe3;font-weight:600}
+  .race.ask{background:#fdf6e0;color:var(--amber);border-color:#ead9a0;cursor:pointer}
+  .race .src{font-weight:400;color:var(--muted);font-size:.62rem}
+  .race-edit{font-size:.68rem;color:var(--muted);margin-left:4px;cursor:pointer}
+  .race-edit:hover{color:var(--navy)}
+  .askq{background:#fff;border:1px solid #ead9a0;border-left:4px solid var(--amber);border-radius:8px;padding:12px 14px}
+  .askq h5{margin:0 0 2px;color:var(--navy);font-size:1rem}
+  .askq .sub{color:var(--muted);font-size:.76rem;margin:0 0 8px}
+  .askq .q{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--rule);flex-wrap:wrap}
+  .askq .q .nm{flex:1 1 260px;min-width:220px}
+  .askq .q .nm b{color:var(--navy);font-size:.86rem}
+  .askq .q .nm .dim{color:var(--muted);font-size:.72rem}
+  .askq .q .sg{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .askq .sgb{font-size:.72rem;padding:3px 9px;border-radius:12px;border:1px solid #c9d1dc;background:#fff;color:var(--navy);cursor:pointer}
+  .askq .sgb:hover{background:var(--soft)}
+  .askq .sgb .pc{font-weight:700}
+  .askq .sgb.strong{border-color:#bfe3cb;background:#eaf7ee;color:var(--green)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+  .chips .ch{display:inline-flex;gap:6px;align-items:center;font-size:.76rem;padding:3px 9px;border-radius:12px;background:#eef3fb;border:1px solid #d3deef;color:var(--navy);font-weight:600}
+  .chips .ch a{color:var(--red);cursor:pointer;font-weight:700}
+  .why{font-size:.72rem;color:var(--muted)}
   details.former{margin-top:14px}
   details.former summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:9px 12px;
     background:#fff;border:1px solid var(--rule);border-radius:8px;font-weight:700;color:var(--navy);font-size:.84rem}
@@ -96,6 +119,16 @@
 </style>
 {% endblock %}
 {% block content %}
+{% macro race_tag(cid, r) %}
+  {%- if r is none -%}
+    <span class="race ask openPick" data-cid="{{ cid }}" title="Not 90% clear which race this is. Click to decide."><i class="fas fa-question-circle"></i> Which race?</span>
+  {%- elif not r.codes -%}
+    <span class="race none" title="{{ r.evidence }}">No race</span><span class="race-edit openPick" data-cid="{{ cid }}" title="Change"><i class="fas fa-pencil-alt"></i></span>
+  {%- else -%}
+    {%- for code in r.codes -%}<span class="race" title="{{ 'Set by hand' if r.source == 'manual' else 'Matched on its own: ' ~ r.evidence }}">{{ code }}{% if r.source == 'auto' %} <span class="src">{{ r.confidence }}%</span>{% endif %}</span> {% endfor -%}
+    <span class="race-edit openPick" data-cid="{{ cid }}" title="Change"><i class="fas fa-pencil-alt"></i></span>
+  {%- endif -%}
+{% endmacro %}
 {% macro ad_card(a) %}
       {% set pic = a.image_url or a.thumbnail_url %}
       <div class="ad">
@@ -110,6 +143,7 @@
           </div>
           {% if a.body %}<div class="txt">{{ a.body }}</div>{% endif %}
           <div class="meta">{{ a.account_name }}{% if a.campaign_name %} · {{ a.campaign_name }}{% endif %}</div>
+          {% if a.campaign_id %}<div>{{ race_tag(a.campaign_id, a.race) }}</div>{% endif %}
           {% if a.status_label.kind == 'warn' %}
           <div class="meta" style="color:var(--amber)">
             {% if a.lifetime_budget and a.budget_remaining is not none and a.budget_remaining <= 0 %}Lifetime budget of {{ a.lifetime_budget|money_exact }} is spent.
@@ -194,6 +228,29 @@
   </section>
   {% endif %}
 
+  {# ---- Races to decide: campaigns the clues were not 90% sure about ---- #}
+  {% if races.open %}
+  <section>
+    <div class="askq">
+      <h5><i class="fas fa-question-circle"></i> Which race? {{ races.open|length }} campaign{{ '' if races.open|length == 1 else 's' }} to decide</h5>
+      <p class="sub">The rest were matched on their own from the district, town or candidate in the name and the ads. These were not 90% clear. Click a guess to accept it, or <b>Choose</b> to pick any district - or say it is statewide.</p>
+      {% for q in races.open %}
+      <div class="q" data-cid="{{ q.campaign_id }}">
+        <div class="nm"><b>{{ q.campaign_name }}</b><div class="dim">{{ q.account_name }} · {{ q.spend|money_exact }} this cycle</div></div>
+        <div class="sg">
+          {% for sg in q.suggestions %}
+          <button type="button" class="sgb {{ 'strong' if sg.score >= 80 }} pick1" data-cid="{{ q.campaign_id }}" data-code="{{ sg.code }}" title="{{ sg.why }}">{{ sg.code }} <span class="pc">{{ sg.score }}%</span></button>
+          {% endfor %}
+          {% if not q.suggestions %}<span class="why">No district, town or candidate found in the name or the ads.</span>{% endif %}
+          <button type="button" class="btn-ln openPick" data-cid="{{ q.campaign_id }}">Choose…</button>
+          <button type="button" class="btn-ln pickNone" data-cid="{{ q.campaign_id }}" title="Statewide, an issue, or a test: not one district's race">No race</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {# ---- Daily spend ---- #}
   <section>
     <div class="card-nv">
@@ -211,11 +268,12 @@
       {% else %}
       <div class="table-responsive">
       <table class="mtab">
-        <thead><tr><th>Campaign</th><th>Status</th><th class="n">Spend</th><th class="n">Impressions</th><th class="n">People</th><th class="n">CPM</th><th class="n">Clicks</th><th class="n">CTR</th><th class="n">CPC</th></tr></thead>
+        <thead><tr><th>Campaign</th><th>Race</th><th>Status</th><th class="n">Spend</th><th class="n">Impressions</th><th class="n">People</th><th class="n">CPM</th><th class="n">Clicks</th><th class="n">CTR</th><th class="n">CPC</th></tr></thead>
         <tbody>
         {% for c in overview.campaigns %}
         <tr>
           <td><div style="font-weight:600;max-width:280px" title="{{ c.campaign_name }}">{{ c.campaign_name }}</div><div class="dim">{{ c.account_name }}</div></td>
+          <td>{{ race_tag(c.campaign_id, c.race) }}</td>
           <td>{% if c.status %}{% set s = c.status|upper %}<span class="chip {{ 'live' if s == 'ACTIVE' else 'paused' if 'PAUSED' in s else 'muted' }}">{{ s|replace('_',' ')|capitalize }}</span>{% else %}<span class="dim">-</span>{% endif %}</td>
           <td class="n" style="font-weight:600">{{ c.spend|money_exact }}</td>
           <td class="n">{{ c.impressions|num }}</td>
@@ -228,7 +286,7 @@
         {% endfor %}
         </tbody>
         <tfoot>{% set ct = overview.campaign_totals %}
-          <tr><td colspan="2">All campaigns</td><td class="n">{{ ct.spend|money_exact }}</td><td class="n">{{ ct.impressions|num }}</td>
+          <tr><td colspan="3">All campaigns</td><td class="n">{{ ct.spend|money_exact }}</td><td class="n">{{ ct.impressions|num }}</td>
             <td class="n" title="Across the whole account, so one person who saw two campaigns counts once">{{ t.reach|num }}</td>
             <td class="n">{{ ct.cpm|money_exact }}</td><td class="n">{{ ct.clicks|num }}</td><td class="n">{{ ct.ctr|pct }}</td><td class="n">{{ ct.cpc|money_exact }}</td></tr>
         </tfoot>
@@ -343,6 +401,31 @@
   </section>
 </div>
 
+{# ---- Race picker: one dialog, used from the panel, the table and the cards ---- #}
+<div class="modal fade" id="racePick" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title" style="color:var(--navy)">Which race is this campaign for?</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
+    <div class="modal-body mt">
+      <div style="font-weight:700;color:var(--navy)" id="rpName"></div>
+      <div class="why" id="rpWhy" style="margin-bottom:8px"></div>
+      <div id="rpSugg" class="askq" style="border:0;padding:0;background:none"></div>
+      <label style="margin-top:8px">Districts</label>
+      <div class="chips" id="rpChips"></div>
+      <div style="display:flex;gap:6px">
+        <input class="form-control" id="rpInput" list="districtList" placeholder="Type a district, e.g. Belknap 2" autocomplete="off">
+        <button type="button" class="btn-ln" id="rpAdd">Add</button>
+      </div>
+      <small class="form-text text-muted">A campaign can cover more than one district. Every ad under it takes the same race.</small>
+      <div class="msg" id="rpMsg"></div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button type="button" class="btn-ln" id="rpNone" title="Statewide, an issue, or a test">No race</button>
+      <button type="button" class="btn-nv" id="rpSave">Save</button>
+    </div>
+  </div></div>
+</div>
+<datalist id="districtList">{% for d in races.district_codes %}<option value="{{ d }}">{% endfor %}</datalist>
+
 {# ---- Add account modal ---- #}
 <div class="modal fade" id="addAccount" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document"><div class="modal-content">
@@ -424,6 +507,71 @@
       }
     });
   }
+
+  // ---- Which race? ----
+  var RACES = {{ races.by_campaign|tojson if accounts else '{}' }};
+  var OPEN = {};
+  {% if accounts %}{% for q in races.open %}OPEN[{{ q.campaign_id|tojson }}] = {{ q|tojson }};
+  {% endfor %}{% endif %}
+  var CAMPS = {};
+  {% if accounts %}{% for c in overview.campaigns %}CAMPS[{{ c.campaign_id|tojson }}] = {{ c.campaign_name|tojson }};
+  {% endfor %}{% endif %}
+  var rp = { cid: null, codes: [] };
+  function saveRace(cid, codes, done){
+    post('/meta/races/' + encodeURIComponent(cid), { districts: codes, campaign_name: CAMPS[cid] || (OPEN[cid] && OPEN[cid].campaign_name) || null })
+      .then(function(d){ if (!d.ok) { alert(d.error || 'Could not save.'); return; } if (done) done(d); else location.reload(); })
+      .catch(function(){ alert('Could not reach the server.'); });
+  }
+  function drawChips(){
+    var box = document.getElementById('rpChips'); box.innerHTML = '';
+    rp.codes.forEach(function(c){
+      var el = document.createElement('span'); el.className = 'ch'; el.textContent = c + ' ';
+      var x = document.createElement('a'); x.textContent = '×'; x.title = 'Remove';
+      x.addEventListener('click', function(){ rp.codes = rp.codes.filter(function(k){ return k !== c; }); drawChips(); });
+      el.appendChild(x); box.appendChild(el);
+    });
+    if (!rp.codes.length) box.innerHTML = '<span class="why">None yet.</span>';
+  }
+  function openPick(cid){
+    rp.cid = cid;
+    var cur = RACES[cid]; rp.codes = cur && cur.codes ? cur.codes.slice() : [];
+    document.getElementById('rpName').textContent = CAMPS[cid] || (OPEN[cid] && OPEN[cid].campaign_name) || cid;
+    document.getElementById('rpWhy').textContent = cur ? (cur.source === 'manual' ? 'Set by hand.' : 'Matched on its own: ' + cur.evidence) : 'Not decided yet.';
+    var sg = document.getElementById('rpSugg'); sg.innerHTML = '';
+    var q = OPEN[cid];
+    if (q && q.suggestions.length) {
+      var lab = document.createElement('div'); lab.className = 'why'; lab.textContent = 'Guesses from the name and the ads - click to add:'; sg.appendChild(lab);
+      var row = document.createElement('div'); row.className = 'sg';
+      q.suggestions.forEach(function(s){
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'sgb' + (s.score >= 80 ? ' strong' : ''); b.title = s.why;
+        b.innerHTML = '<span></span> <span class="pc"></span>'; b.firstChild.textContent = s.code; b.lastChild.textContent = s.score + '%';
+        b.addEventListener('click', function(){ if (rp.codes.indexOf(s.code) < 0) rp.codes.push(s.code); drawChips(); });
+        row.appendChild(b);
+      });
+      sg.appendChild(row);
+    }
+    document.getElementById('rpMsg').textContent = ''; document.getElementById('rpInput').value = '';
+    drawChips();
+    jQuery('#racePick').modal('show');
+  }
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('.openPick, .pick1, .pickNone'); if (!t) return;
+    var cid = t.getAttribute('data-cid');
+    if (t.classList.contains('pick1')) { saveRace(cid, [t.getAttribute('data-code')]); }
+    else if (t.classList.contains('pickNone')) { saveRace(cid, []); }
+    else { openPick(cid); }
+  });
+  document.getElementById('rpAdd').addEventListener('click', function(){
+    var v = document.getElementById('rpInput').value.trim(); if (!v) return;
+    var opts = Array.prototype.map.call(document.querySelectorAll('#districtList option'), function(o){ return o.value; });
+    var hit = opts.find(function(o){ return o.toLowerCase() === v.toLowerCase(); });
+    if (!hit) { document.getElementById('rpMsg').className = 'msg bad'; document.getElementById('rpMsg').textContent = 'Not a district. Pick one from the list, like "Belknap 2".'; return; }
+    if (rp.codes.indexOf(hit) < 0) rp.codes.push(hit);
+    document.getElementById('rpInput').value = ''; document.getElementById('rpMsg').textContent = ''; drawChips();
+  });
+  document.getElementById('rpInput').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); document.getElementById('rpAdd').click(); } });
+  document.getElementById('rpSave').addEventListener('click', function(){ if (!rp.codes.length) { document.getElementById('rpMsg').className = 'msg bad'; document.getElementById('rpMsg').textContent = 'Add a district, or press No race.'; return; } saveRace(rp.cid, rp.codes); });
+  document.getElementById('rpNone').addEventListener('click', function(){ saveRace(rp.cid, []); });
 
   // ---- Add account dialog ----
   var useServer = document.getElementById('useServer');
