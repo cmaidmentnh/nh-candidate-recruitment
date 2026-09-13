@@ -137,7 +137,13 @@
     font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
     color:#7b8494;
   }
-  table.ascard tr.grouprow td{font-size:inherit;color:inherit;font-weight:inherit}
+  /* The cell inside it is still a table-cell, which shrinks to its content inside a block row
+     and clips the district name. It has to become a block like everything else. */
+  table.ascard tr.grouprow td{
+    display:block;width:auto;
+    font-size:inherit;color:inherit;font-weight:inherit;
+    background:none !important;padding:0 3px !important;
+  }
   table.ascard tr.grouprow td::before{display:none}
 
   /* ======================================================================
