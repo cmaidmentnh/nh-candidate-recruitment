@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin-mobile.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block head %}{% endblock %}
 </head>
@@ -792,6 +793,34 @@
     <script>
     // Auto-add CSRF token to all forms
     document.addEventListener('DOMContentLoaded', function() {
+        // A table wider than its column must scroll inside its own box. Doing it here rather
+        // than in eighteen templates means a page added later gets it for free.
+        (function wrapWideTables(){
+            function wrap(){
+                document.querySelectorAll('table').forEach(function(t){
+                    if (t.closest('.tscroll') || t.closest('.navbar')) return;
+                    var p = t.parentElement;
+                    if (!p || t.offsetWidth <= p.clientWidth) return;
+                    var box = document.createElement('div');
+                    box.className = 'tscroll';
+                    p.insertBefore(box, t);
+                    box.appendChild(t);
+                });
+            }
+            wrap();
+            // Panes on the spend plan and the whip pages render their tables from script
+            // after load, so watch for them rather than checking once and giving up.
+            if (window.MutationObserver) {
+                var pending = null;
+                new MutationObserver(function(){
+                    clearTimeout(pending);
+                    pending = setTimeout(wrap, 120);
+                }).observe(document.body, {childList:true, subtree:true});
+            }
+            window.addEventListener('resize', function(){ clearTimeout(window.__tw);
+                window.__tw = setTimeout(wrap, 200); });
+        })();
+
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function(form) {
             if (!form.querySelector('input[name="csrf_token"]')) {
