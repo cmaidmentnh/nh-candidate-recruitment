@@ -1,0 +1,151 @@
+{% extends "m/base.html" %}
+{% block title %}Where things stand{% endblock %}
+{% block heading %}Where things stand
+  <span class="sub">{{ d.today.strftime('%a %-d %b') }} &middot; {{ d.days_left }} days to go</span>
+{% endblock %}
+
+{% macro money(v) %}${{ '{:,.0f}'.format(v or 0) }}{% endmacro %}
+{% macro num(v) %}{{ '{:,}'.format(v or 0) }}{% endmacro %}
+
+{% block content %}
+
+{# The queue is first because it is the reason you opened this on a phone. #}
+<div class="card full" id="queue">
+  <h2>Waiting on you</h2>
+  {% if d.queue %}
+    <ul class="q">
+      {% for q in d.queue %}
+      <li>
+        <span class="n {{ 'bad' if q.tone == 'bad' }}">{{ q.n }}</span>
+        <span class="w">
+          <b>{{ q.what }}</b>
+          <span class="{{ 'bad' if q.tone == 'bad' }}">{{ q.state }}{% if q.since %},
+            oldest {{ q.since|ago }}{% endif %}</span>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="clear">Nothing waiting.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>The ballot</h2>
+  <div class="big"><span class="n">{{ num(d.ballot.nominees) }}</span>
+    <span class="of">R nominees for {{ num(d.ballot.seats) }} seats</span></div>
+  <ul class="facts">
+    {% if d.ballot.r_short_seats %}
+    <li><span class="k">Seats with no Republican</span>
+        <span class="v bad">{{ d.ballot.r_short_seats }}</span></li>
+    {% endif %}
+    <li><span class="k">Districts Democrats are short</span>
+        <span class="v good">{{ d.ballot.d_short_districts }}</span></li>
+    {% if d.ballot.no_email %}
+    <li><span class="k">Nominees with no email</span>
+        <span class="v warn">{{ d.ballot.no_email }}</span></li>
+    {% endif %}
+  </ul>
+  {% if d.ballot.pending %}
+  <p class="say bad">{{ num(d.ballot.pending) }} filings still say <b>pending</b>, so those
+    candidates are invisible to the mail, the palm cards and the check in chase.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Candidates</h2>
+  <div class="big">
+    <span class="n {{ 'bad' if d.cands.pct < 25 else 'warn' if d.cands.pct < 60 }}">{{ d.cands.pct }}%</span>
+    <span class="of">checked in, {{ d.cands.done }} of {{ d.cands.total }}</span></div>
+  <div class="bar-meter"><i class="{{ 'bad' if d.cands.pct < 25 else 'warn' if d.cands.pct < 60 }}"
+    style="width:{{ d.cands.pct }}%"></i></div>
+  <ul class="facts">
+    <li><span class="k">Need yard signs</span><span class="v">{{ d.cands.needs_signs }}</span></li>
+    <li><span class="k">Need literature</span><span class="v">{{ d.cands.needs_lit }}</span></li>
+    <li><span class="k">Need a headshot</span><span class="v">{{ d.cands.needs_headshot }}</span></li>
+    <li><span class="k">Need walk books</span><span class="v">{{ d.cands.needs_walkbooks }}</span></li>
+  </ul>
+  {% if d.cands.never_logged_in %}
+  <p class="say">{{ d.cands.never_logged_in }} have never signed in{% if d.cands.no_password %},
+    and {{ d.cands.no_password }} have no password set{% endif %}.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>The program</h2>
+  <div class="big"><span class="n">{{ money(d.program.committed) }}</span>
+    <span class="of">committed of {{ money(d.program.budget) }}</span></div>
+  {% set pct = (d.program.committed / d.program.budget * 100) if d.program.budget else 0 %}
+  <div class="bar-meter"><i class="{{ 'bad' if pct > 100 else 'warn' if pct > 90 }}"
+    style="width:{{ [pct, 100]|min }}%"></i></div>
+  <ul class="facts">
+    {% if d.program.next_drop %}
+    <li><span class="k">Next mail drop</span>
+        <span class="v">{{ d.program.next_drop.strftime('%-d %b') }}</span></li>
+    {% endif %}
+    <li><span class="k">Pieces still in draft</span>
+        <span class="v {{ 'warn' if d.program.pieces_draft }}">{{ d.program.pieces_draft }}</span></li>
+    {% if d.program.no_pieces %}
+    <li><span class="k">Districts with no piece made</span>
+        <span class="v bad">{{ d.program.no_pieces }}</span></li>
+    {% endif %}
+  </ul>
+</div>
+
+<div class="card">
+  <h2>Digital</h2>
+  <div class="big"><span class="n">{{ money(d.digital.spent) }}</span>
+    <span class="of">spent on Meta</span></div>
+  <ul class="facts">
+    <li><span class="k">Booked into Meta</span><span class="v">{{ money(d.digital.booked) }}</span></li>
+    <li><span class="k">Planned for Meta</span><span class="v">{{ money(d.digital.planned) }}</span></li>
+    <li><span class="k">Flights running now</span>
+        <span class="v {{ 'good' if d.digital.live }}">{{ d.digital.live }}</span></li>
+    <li><span class="k">Still to start</span><span class="v">{{ d.digital.scheduled }}</span></li>
+    {% if d.digital.dead %}
+    <li><span class="k">Live ads showing to nobody</span>
+        <span class="v bad">{{ d.digital.dead }}</span></li>
+    {% endif %}
+  </ul>
+  {% if d.digital.synced %}<p class="say">Meta last read {{ d.digital.synced|ago }}.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Websites and donations</h2>
+  <div class="big"><span class="n">{{ d.sites.live }}</span>
+    <span class="of">candidate sites live</span></div>
+  <ul class="facts">
+    <li><span class="k">Raised through the sites</span>
+        <span class="v good">{{ money(d.sites.donations) }}</span></li>
+    <li><span class="k">Last seven days</span><span class="v">{{ money(d.sites.donations_7d) }}</span></li>
+    <li><span class="k">Still a draft</span><span class="v">{{ d.sites.draft }}</span></li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>Field</h2>
+  <div class="big"><span class="n">{{ num(d.field.walkbooks_built) }}</span>
+    <span class="of">walkbook builds delivered</span></div>
+  <ul class="facts">
+    <li><span class="k">Districts with books</span><span class="v">{{ d.field.walkbook_districts }}</span></li>
+    <li><span class="k">Voter lists sent</span><span class="v">{{ d.field.lists_sent }}</span></li>
+    <li><span class="k">Consults booked ahead</span><span class="v">{{ d.field.consults }}</span></li>
+  </ul>
+</div>
+
+{% if d.recent %}
+<div class="card full">
+  <h2>Last three days</h2>
+  <ul class="log">
+    {% for at, action, desc in d.recent[:8] %}
+    <li><span class="tm">{{ at.strftime('%-d %b %H:%M') }}</span>{{ desc or action }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="escape full">
+  <a href="/private/overview">Open the full desktop version</a>
+</div>
+
+{% endblock %}
