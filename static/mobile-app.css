@@ -1,0 +1,148 @@
+/* The private side as a phone app.
+ *
+ * The responsive pass stopped the pages overflowing, which made them survivable rather than
+ * good. A desktop page squeezed into 390px is still a desktop page: a dense table you pinch at,
+ * a nav bar you hunt through, tap targets built for a mouse.
+ *
+ * This is the app layer. Under 780px the desktop chrome is replaced by a phone shell:
+ *
+ *   a compact top bar that says where you are and how to get back
+ *   a bottom tab bar, thumb height, for the five places worth going
+ *   rows as cards rather than table rows, because a phone reads down, not across
+ *
+ * It is CSS and a little script over the same HTML, so there is one set of pages to maintain
+ * and no second app to keep in step. Above 780px none of this exists.
+ */
+
+@media (max-width:780px){
+
+  /* ======================================================================
+     SHELL
+     ====================================================================== */
+  body{
+    padding-bottom:calc(58px + env(safe-area-inset-bottom)) !important;
+    background:#f4f6f9;
+    -webkit-text-size-adjust:100%;
+  }
+
+  /* The desktop navbar is a logo and eleven links. The app bar replaces it. */
+  body.has-appbar .navbar{display:none !important}
+
+  .appbar{
+    position:sticky;top:0;z-index:1020;
+    display:flex;align-items:center;gap:10px;
+    padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
+    background:#b4262d;color:#fff;
+    box-shadow:0 1px 0 rgba(0,0,0,.10);
+  }
+  .appbar .back{
+    color:#fff;font-size:1.15rem;line-height:1;text-decoration:none;
+    width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+    margin-left:-6px;border-radius:50%;
+  }
+  .appbar .back:active{background:rgba(255,255,255,.16)}
+  .appbar .ttl{
+    font-weight:800;font-size:1.02rem;letter-spacing:.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;
+  }
+  .appbar .act{
+    color:#fff;opacity:.92;font-size:.98rem;text-decoration:none;padding:6px;
+  }
+
+  /* Content sits on a light ground so white cards read as cards. */
+  .container, .container-fluid{padding-left:11px !important;padding-right:11px !important}
+
+  /* ======================================================================
+     BOTTOM TABS
+     ====================================================================== */
+  .apptabs{
+    position:fixed;left:0;right:0;bottom:0;z-index:1030;
+    display:flex;
+    background:rgba(255,255,255,.97);
+    backdrop-filter:saturate(180%) blur(12px);
+    -webkit-backdrop-filter:saturate(180%) blur(12px);
+    border-top:1px solid #dfe4ea;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .apptabs a{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;padding:7px 2px 6px;
+    color:#8b95a3;text-decoration:none;font-size:.58rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:.04em;
+    min-height:52px;
+  }
+  .apptabs a i{font-size:1.06rem;line-height:1}
+  .apptabs a.on{color:#b4262d}
+  .apptabs a:active{background:#f1f4f8}
+  /* A count on a tab is the one place a number earns its own shape, because it has to be
+     readable at a glance from the home screen of the page you are already on. */
+  .apptabs a .cnt{
+    position:absolute;transform:translate(14px,-10px);
+    background:#b4262d;color:#fff;font-size:.56rem;line-height:1;
+    padding:2px 5px;border-radius:9px;font-weight:800;
+  }
+
+  /* ======================================================================
+     TABLES BECOME CARDS
+     A phone reads down a column, not across a row. Each row becomes a card and each cell
+     carries the header it belongs to, so nothing depends on remembering column order.
+     Tables too wide or too numeric to card up keep the horizontal scroller instead.
+     ====================================================================== */
+  table.ascard thead{display:none}
+  table.ascard, table.ascard tbody, table.ascard tr, table.ascard td{display:block;width:auto}
+  table.ascard tr{
+    background:#fff;border:1px solid #e4e8ee;border-radius:9px;
+    padding:10px 12px;margin:0 0 9px;
+  }
+  table.ascard tr:hover{background:#fff}
+  table.ascard td{
+    border:0 !important;padding:3px 0 !important;
+    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+    font-size:.86rem;line-height:1.4;text-align:right !important;
+  }
+  table.ascard td::before{
+    content:attr(data-label);
+    color:#7b8494;font-size:.66rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.05em;text-align:left;flex:0 0 auto;max-width:52%;
+  }
+  /* The first cell is the name of the thing. It is the card's heading, not a labelled field. */
+  table.ascard td:first-child{
+    text-align:left !important;font-size:1rem;font-weight:700;color:#1e3557;
+    padding-bottom:7px !important;margin-bottom:5px;border-bottom:1px solid #f1f4f8 !important;
+    display:block;
+  }
+  table.ascard td:first-child::before{display:none}
+  table.ascard td:empty{display:none}
+
+  /* ======================================================================
+     THE PAGES' OWN FURNITURE
+     ====================================================================== */
+  /* Filter and toolbar rows were built as one line on a wide screen. */
+  .ml-auto.d-flex{
+    margin-left:0 !important;flex-wrap:wrap;width:100%;margin-top:8px;
+  }
+  .ml-auto.d-flex > *{flex:1 1 auto}
+  .ml-auto.d-flex input.form-control{width:auto !important;min-width:0 !important;flex:1 1 100%}
+
+  /* The pieces editor put four fields on a row. */
+  .frow{flex-direction:column;gap:10px !important}
+  .frow .f{width:100% !important;min-width:0 !important}
+  .ped{padding:12px 13px !important}
+
+  /* Cards, panels and rails all get the same soft card treatment. */
+  .band, .pane, .rail, .ped, .numsec, .metabox{
+    background:#fff;border-radius:10px !important;
+  }
+  .pane{border:1px solid #e4e8ee !important;padding:13px 14px !important}
+
+  /* A carded table needs no scroller, and the edge shadow on one looks like a bug. */
+  .tscroll-off{overflow-x:visible !important;background:none !important}
+
+  /* Sticky section headers inside a long list are worth more on a phone than on a desktop. */
+  .cty{position:sticky;top:0;z-index:1}
+}
+
+/* Installed to the home screen: no browser chrome, so the app bar is the only header. */
+@media (display-mode:standalone){
+  .appbar{padding-top:calc(14px + env(safe-area-inset-top))}
+}
