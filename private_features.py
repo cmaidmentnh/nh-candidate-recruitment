@@ -1571,18 +1571,24 @@ def spend_plan():
             d['nominees'] = nominees.get(code, {})
             d['meta'] = meta_by_district.get(code)
             if d['meta']:
-                budget = 0.0
+                # Digital is budgeted in dollars, so a tactic's qty IS its budget. Keep the
+                # three apart: only the meta line can ever be spent on Meta. Pacing Meta spend
+                # against the CTV and display money too makes a buy nobody has placed yet look
+                # like a district that is failing to spend.
+                dig = {'meta': 0.0, 'ctv': 0.0, 'display': 0.0}
                 for uni, byk in (d['qty'] or {}).items():
-                    for tk in ('meta', 'ctv', 'display'):
+                    for tk in dig:
                         row = byk.get(tk)
                         if row and row.get('qty'):
-                            budget += float(row['qty'])      # digital is budgeted in dollars
+                            dig[tk] += float(row['qty'])
                 try:
                     import meta_district as MD
-                    d['meta']['pacing'] = MD.pacing(d['meta'], budget)
+                    d['meta']['pacing'] = MD.pacing(d['meta'], dig['meta'])
                 except Exception:
                     d['meta']['pacing'] = None
-                d['meta']['budget'] = budget
+                d['meta']['budget'] = dig['meta']
+                d['meta']['digital'] = dig
+                d['meta']['offmeta'] = dig['ctv'] + dig['display']
             d['cands'] = cands.get(code, [])
             d['hist'] = history.get(code, [])
 
