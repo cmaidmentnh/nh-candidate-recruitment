@@ -192,6 +192,14 @@ APP_URL = os.environ.get("APP_URL", "https://recruit.nhgop.org")
 # Super Admin - full access to admin dashboard
 SUPER_ADMIN_EMAIL = "chris@maidmentnh.com"
 
+# Admin accounts that are never asked to set up a second factor. The 30-day clock is not
+# started for them and the banner stays off. A factor they switch on themselves still works.
+TWOFA_EXEMPT_EMAILS = {e.strip().lower() for e in (os.environ.get('TWOFA_EXEMPT_EMAILS') or 'berryrm0@gmail.com').split(',') if e.strip()}
+
+
+def twofa_exempt(email):
+    return bool(email) and email.strip().lower() in TWOFA_EXEMPT_EMAILS
+
 # Token serializer for secure links
 token_serializer = URLSafeTimedSerializer(app.secret_key)
 
@@ -1604,12 +1612,13 @@ def login():
             cur.execute("""UPDATE users
                               SET last_login = NOW(),
                                   twofa_required_by = CASE
+                                      WHEN LOWER(email) = ANY(%s) THEN NULL
                                       WHEN COALESCE(totp_enabled, FALSE) = FALSE
                                        AND COALESCE(twofa_sms_enabled, FALSE) = FALSE
                                        AND twofa_required_by IS NULL
                                       THEN NOW() + interval '30 days'
                                       ELSE twofa_required_by END
-                            WHERE user_id = %s""", (admin_row[0],))
+                            WHERE user_id = %s""", (list(TWOFA_EXEMPT_EMAILS), admin_row[0]))
             # Same address, two accounts. Point them at their own candidate record
             # rather than leaving them to wonder where it went.
             own = None
@@ -1687,6 +1696,8 @@ def inject_admin_twofa_state():
     an admin cannot reach the dashboard.
     """
     if not current_user.is_authenticated or getattr(current_user, 'is_candidate', True):
+        return {'admin_twofa_on': True, 'admin_twofa_days_left': None}
+    if twofa_exempt(getattr(current_user, 'email', None)):
         return {'admin_twofa_on': True, 'admin_twofa_days_left': None}
     conn = cur = None
     try:
@@ -1789,12 +1800,13 @@ def google_oauth_callback():
             cur.execute("""UPDATE users
                                SET last_login = NOW(),
                                    twofa_required_by = CASE
+                                      WHEN LOWER(email) = ANY(%s) THEN NULL
                                        WHEN COALESCE(totp_enabled, FALSE) = FALSE
                                         AND COALESCE(twofa_sms_enabled, FALSE) = FALSE
                                         AND twofa_required_by IS NULL
                                        THEN NOW() + interval '30 days'
                                        ELSE twofa_required_by END
-                             WHERE user_id = %s""", (row[0],))
+                             WHERE user_id = %s""", (list(TWOFA_EXEMPT_EMAILS), row[0]))
             conn.commit()
             session.permanent = True
             flash("Signed in with Google.", "success")
@@ -2765,11 +2777,12 @@ def admin_login():
                 c2.execute("""UPDATE users
                                  SET last_login = NOW(),
                                      twofa_required_by = CASE
+                                      WHEN LOWER(email) = ANY(%s) THEN NULL
                                          WHEN COALESCE(totp_enabled, FALSE) = FALSE
                                           AND twofa_required_by IS NULL
                                          THEN NOW() + interval '30 days'
                                          ELSE twofa_required_by END
-                               WHERE user_id = %s""", (user_row[0],))
+                               WHERE user_id = %s""", (list(TWOFA_EXEMPT_EMAILS), user_row[0]))
                 conn2.commit()
             finally:
                 c2.close(); release_db_connection(conn2)

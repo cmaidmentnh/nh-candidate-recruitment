@@ -72,6 +72,11 @@
                         <a class="nav-link" href="{{ url_for('progress.progress') }}">Progress</a>
                     </li>
                     {% endif %}
+                    {% if 'campaign_plan' in user_private_features %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('private.spend_plan') }}">Spend Plan</a>
+                    </li>
+                    {% endif %}
                     {% if can_view_meta %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="adsDropdown" role="button" data-toggle="dropdown">Ads</a>
