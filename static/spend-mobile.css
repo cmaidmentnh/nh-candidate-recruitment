@@ -100,11 +100,11 @@ button{font:inherit;color:inherit}
 .none{color:var(--muted);text-align:center;padding:34px 12px}
 
 /* ========================================================================== DETAIL */
-.sheet{
-  position:fixed;inset:0;z-index:40;background:var(--ground);
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  display:none;
-}
+/* This was position:fixed with inset:0 at a higher z-index than the top bar, so it covered
+   the back button and there was no way out of a district. It does not need to be fixed: the
+   list is already hidden when a district opens, so this is just the page, and the top bar
+   stays sticky above it exactly as it does on the list. */
+.sheet{display:none}
 .sheet.on{display:block}
 .tabs{
   position:sticky;top:0;z-index:10;display:flex;background:#fff;

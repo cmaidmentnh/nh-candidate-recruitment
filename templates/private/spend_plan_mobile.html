@@ -229,8 +229,13 @@
 
   var open = null, tab = 'plan';
 
-  function show(code){
+  function show(code, fromHistory){
     open = code; tab = 'plan';
+    // The phone's own back gesture should leave a district, not leave the planner.
+    if(!fromHistory){
+      try { history.pushState({district: code}, '', '#' + encodeURIComponent(code)); }
+      catch(e){ /* nothing depends on this working */ }
+    }
     document.getElementById('back').hidden = false;
     document.getElementById('ttl').textContent = code;
     document.getElementById('listView').style.display = 'none';
@@ -238,7 +243,11 @@
     drawTabs(); drawPane();
     window.scrollTo(0, 0);
   }
-  function close(){
+  function close(fromHistory){
+    if(open && !fromHistory){
+      try { history.back(); return; }   // popstate calls back in and closes for real
+      catch(e){ /* fall through and close directly */ }
+    }
     open = null;
     document.getElementById('back').hidden = true;
     document.getElementById('ttl').textContent = 'Spend Plan';
@@ -507,7 +516,19 @@
     if(b) show(b.getAttribute('data-c'));
   });
 
-  document.getElementById('back').addEventListener('click', close);
+  document.getElementById('back').addEventListener('click', function(){ close(); });
+
+  window.addEventListener('popstate', function(e){
+    var code = e.state && e.state.district;
+    if(code && BY[code]) show(code, true);
+    else if(open) close(true);
+  });
+
+  // Opening straight onto a district, from a shared link or a reload.
+  (function fromHash(){
+    var h = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+    if(h && BY[h]) show(h, true);
+  })();
 
   document.getElementById('tabs').addEventListener('click', function(e){
     var b = e.target.closest('button[data-t]'); if(!b) return;
