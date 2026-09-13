@@ -257,6 +257,55 @@
       </ul>
     </div>
 
+    <!-- ================= DELIVERY ================= -->
+    <div class="band wide">
+      <h5>Is the plan actually happening</h5>
+      <table style="width:100%;border-collapse:collapse;font-size:.86rem">
+        <tr style="text-align:left;color:var(--muted);font-size:.66rem;
+                   text-transform:uppercase;letter-spacing:.07em">
+          <th style="padding:0 0 7px">Tactic</th>
+          <th style="padding:0 0 7px;text-align:right">Planned</th>
+          <th style="padding:0 0 7px;text-align:right">Districts</th>
+          <th style="padding:0 0 7px;text-align:right">Under way</th>
+          <th style="padding:0 0 7px">&nbsp;</th>
+        </tr>
+        {% for t in d.delivery.rows %}
+        <tr style="border-top:1px solid #f1f4f8">
+          <td style="padding:8px 0;font-weight:700;color:var(--navy)">{{ t.label }}</td>
+          <td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums">
+            {{ money(t.dollars) }}</td>
+          <td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums">
+            {{ t.districts }}</td>
+          <td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums;
+                     font-weight:700;
+                     color:{{ 'var(--green)' if t.live and t.gap is not none and t.gap <= 0
+                             else 'var(--red)' if t.live is not none else 'var(--muted)' }}">
+            {% if t.live is none %}&mdash;{% else %}{{ t.live }}{% endif %}</td>
+          <td style="padding:8px 0 8px 14px;color:var(--muted);font-size:.8rem">
+            {% if t.note %}{{ t.note }}
+            {% elif t.gap and t.gap > 0 %}<span style="color:var(--red)">{{ t.gap }} districts
+              with nothing made</span>
+            {% elif t.live %}covered{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% if d.delivery.untracked %}
+      <p class="note bad">
+        <b>{{ money(d.delivery.untracked) }}</b> of texts, streaming and display is in the plan
+        and leaves no record anywhere in here, because all three are bought outside this system.
+        That is not proof nothing was bought. It does mean nothing in this dashboard can tell
+        you either way.
+      </p>
+      {% endif %}
+      {% if d.delivery.pieces %}
+      <p class="note">
+        Pieces:
+        {% for st, n in d.delivery.pieces.items() %}{{ n }} {{ st }}{{ ', ' if not loop.last }}{% endfor %}.
+        {% if d.program.next_drop %}Next drop {{ d.program.next_drop.strftime('%-d %b') }}.{% endif %}
+      </p>
+      {% endif %}
+    </div>
+
     <!-- ================= RECENT ================= -->
     {% if d.recent %}
     <div class="band wide">

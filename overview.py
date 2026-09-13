@@ -331,6 +331,80 @@ def _digital(cur):
 
 
 # =============================================================================
+# IS THE PLAN ACTUALLY HAPPENING
+# =============================================================================
+
+def _delivery(cur):
+    """Per tactic: what the plan commits, and whether anything is actually running.
+
+    The honest part is the third column. Mail and palm cards become pieces, and Meta becomes a
+    linked campaign, so for those "nothing yet" is a real finding. Texts, streaming and display
+    are bought outside this system and leave no record in it, so they are reported as untracked
+    rather than as zero. A zero would read as "nobody bought it", which is a claim the data
+    cannot support.
+    """
+    # Cost the plan the way the planner does: quantity times the size of ITS universe times
+    # the rate. 'base' rows size off the district mask, gotv and persuade off the model.
+    rows = _rows(cur, """
+      WITH sized AS (
+        SELECT i.tactic_key, i.district_code, i.qty, t.unit, t.label, t.sort_order,
+               COALESCE(i.rate_override, t.rate, 0) AS rate,
+               CASE WHEN i.universe = 'base' THEN du.households ELSE mu.households END AS hh,
+               CASE WHEN i.universe = 'base' THEN du.cells      ELSE mu.cells      END AS cells
+          FROM district_spend_item i
+          JOIN district_spend s   ON s.district_code = i.district_code
+          JOIN spend_tactic t     ON t.tactic_key = i.tactic_key
+          LEFT JOIN district_universe du
+                 ON du.district_code = i.district_code AND du.mask = s.mask
+          LEFT JOIN district_model_universe mu
+                 ON mu.district_code = i.district_code AND mu.uni = i.universe
+         WHERE s.include AND i.qty > 0)
+      SELECT tactic_key, label, count(DISTINCT district_code),
+             SUM(CASE WHEN unit = 'dollars'       THEN qty
+                      WHEN unit = 'per_household' THEN qty * COALESCE(hh, 0) * rate
+                      WHEN unit = 'per_cell'      THEN qty * COALESCE(cells, 0) * rate
+                      ELSE qty * rate END),
+             MIN(sort_order)
+        FROM sized GROUP BY 1, 2 ORDER BY 5""")
+
+    # What is demonstrably under way, per tactic.
+    made = dict(_rows(cur, """SELECT p.tactic_key, count(DISTINCT pd.district_code)
+                                FROM spend_piece p
+                                JOIN spend_piece_district pd ON pd.piece_id = p.id
+                               GROUP BY 1"""))
+    meta_live = _scalar(cur, """SELECT count(DISTINCT d.district_code)
+                                  FROM meta_campaign_district d
+                                  JOIN meta_ads a ON a.campaign_id = d.campaign_id
+                                 WHERE COALESCE(a.impressions, 0) > 0""")
+    meta_linked = _scalar(cur, "SELECT count(DISTINCT district_code) FROM meta_campaign_district")
+
+    # Tactics that leave no trace in this database. Naming them is the point.
+    ELSEWHERE = {
+        'mms': 'sent through RevT, not recorded here',
+        'ctv': 'bought outside this system',
+        'display': 'bought outside this system',
+        'palm_cards': 'tracked on the palm card sheet',
+    }
+
+    out = []
+    for key, label, districts, dollars, _ in rows:
+        if key == 'meta':
+            live, note = meta_live, ('%d linked, %d delivering' % (meta_linked, meta_live))
+        elif key in ELSEWHERE:
+            live, note = None, ELSEWHERE[key]
+        else:
+            live, note = made.get(key, 0), None
+        out.append({'key': key, 'label': label,
+                    'districts': districts, 'dollars': float(dollars or 0),
+                    'live': live, 'note': note,
+                    'gap': (districts - live) if live is not None else None})
+
+    untracked = sum(r['dollars'] for r in out if r['live'] is None and r['key'] != 'palm_cards')
+    return {'rows': out, 'untracked': untracked,
+            'pieces': dict(_rows(cur, "SELECT status, count(*) FROM spend_piece GROUP BY 1"))}
+
+
+# =============================================================================
 # SITES, MONEY, FIELD
 # =============================================================================
 
@@ -389,6 +463,7 @@ def gather():
             'digital': _digital(cur),
             'sites': _sites(cur),
             'field': _field(cur),
+            'delivery': _delivery(cur),
             'recent': _recent(cur),
         }
         conn.rollback()          # read-only: drop the transaction, hold nothing
