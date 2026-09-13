@@ -20,7 +20,27 @@
     { href: '#more',               icon: 'fa-ellipsis-h',  label: 'More' }
   ];
 
+  // Pages whose own heading is not the first h1/h2 on the page, or which have none, fall back
+  // to the document title, which is the site name and says nothing about where you are.
+  var TITLES = {
+    '/private/overview': 'Where things stand',
+    '/private/spend-plan': 'Spend Plan',
+    '/private/spend-plan/pieces': 'Pieces & Invoices',
+    '/private/spend-plan/versions': 'Plan Versions',
+    '/private/campaign-plan': 'Battle Plan',
+    '/private/speaker': 'Speaker Votes',
+    '/private/primaries': 'Primary Tracking',
+    '/progress': 'Candidates',
+    '/progress/checkin': 'Check In',
+    '/filings': 'Filings',
+    '/surveys': 'Surveys',
+    '/meta': 'Meta Ads',
+    '/ad-monitor': 'Ad Monitor'
+  };
+
   function titleForPage() {
+    var here = location.pathname.replace(/\/$/, '') || '/';
+    if (TITLES[here]) return TITLES[here];
     var h = document.querySelector('.ov h4, h1, h2, h4.mb-0, .content h4');
     var t = (h && h.textContent.trim()) || document.title || '';
     return t.replace(/\s*[|·-]\s*CTEHR.*$/i, '').trim().slice(0, 40);
