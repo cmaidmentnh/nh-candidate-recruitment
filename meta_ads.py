@@ -142,6 +142,11 @@ def meta_access_required(f):
 GRAPH_VERSION = 'v21.0'
 GRAPH = f'https://graph.facebook.com/{GRAPH_VERSION}'
 
+# Nothing before this date is looked at, on either page. The general-election push starts
+# in August; anything earlier is the primary, or the 2024 cycle, and would only muddy the
+# totals. Override with META_AD_CYCLE_START=YYYY-MM-DD.
+CYCLE_START = (os.environ.get('META_AD_CYCLE_START') or '2026-08-01').strip()
+
 # Meta stamps every insight row with the date in the ad account's own timezone, and these
 # accounts are all New Hampshire, so Eastern. The server runs in UTC, where the day flips at
 # 8pm Eastern - reading "today" off the server clock would drop the oldest day out of every
@@ -999,7 +1004,8 @@ def get_overview(days):
     """Everything the top of the page needs for one window: totals, per account, a daily
     pivot for the chart, and the campaign table."""
     now = datetime.now(timezone.utc)
-    since = iso_days_ago(days - 1, now)
+    # The window is "the last N days", but never a day before the cycle started.
+    since = max(iso_days_ago(days - 1, now), CYCLE_START)
     accounts = list_accounts()
     conn = get_db_connection()
     try:
@@ -1042,7 +1048,7 @@ def get_overview(days):
                             'color': FALLBACK_COLORS[i % len(FALLBACK_COLORS)],
                             'spend': spend, 'impressions': imp, 'clicks': clicks})
 
-    dates = [iso_days_ago(i, now) for i in range(days - 1, -1, -1)]
+    dates = [d for d in (iso_days_ago(i, now) for i in range(days - 1, -1, -1)) if d >= since]
     by_date = {d: {'date': d, **{str(a['id']): 0.0 for a in accounts}} for d in dates}
     for r in daily_rows:
         rec = by_date.get(r['date'].isoformat())
@@ -1063,7 +1069,8 @@ def get_overview(days):
                    'clicks': sum(c['clicks'] for c in campaigns)}
     camp_totals.update(_ratios(**camp_totals))
 
-    return {'days': days, 'since': since, 'totals': {**totals, **_ratios(totals['spend'], totals['impressions'], totals['clicks'])},
+    return {'days': days, 'since': since, 'day_count': max(1, len(dates)),
+            'totals': {**totals, **_ratios(totals['spend'], totals['impressions'], totals['clicks'])},
             'per_account': per_account, 'daily': list(by_date.values()),
             'series': [{'key': str(a['id']), 'name': a['name'], 'color': a['color']} for a in per_account],
             'campaigns': campaigns, 'campaign_totals': camp_totals}
@@ -1498,7 +1505,6 @@ def check_token(token, for_library=False):
         out['error'] = str(e)
         return out
     if for_library:
-        from ad_monitor import CYCLE_START
         try:
             rows, _ = meta_get_all_paged('ads_archive', token, {
                 'ad_reached_countries': json.dumps(['US']), 'ad_type': 'POLITICAL_AND_ISSUE_ADS',

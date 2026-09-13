@@ -397,7 +397,7 @@
             row.addEventListener('click', function(){ body.querySelector('.fPid').value = p.page_id; body.querySelector('.fPname').value = p.page_name; list.style.display = 'none'; msg.textContent = 'Picked ' + p.page_name + '.'; });
             list.appendChild(row);
           });
-          list.style.display = '';
+          list.style.display = 'block';
         }).catch(function(){ msg.className = 'msg bad'; msg.textContent = 'Could not reach the server.'; });
     });
   });

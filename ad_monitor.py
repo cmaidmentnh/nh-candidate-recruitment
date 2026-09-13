@@ -30,7 +30,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from flask_login import current_user
 from psycopg2.extras import RealDictCursor, Json, execute_values
 
-from meta_ads import (SETTINGS_PAGE_SOURCE, MetaApiError, meta_access_required, _token_shape_problem, cron_authorized, iso_days_ago,
+from meta_ads import (CYCLE_START, SETTINGS_PAGE_SOURCE, MetaApiError, meta_access_required, _token_shape_problem, cron_authorized, iso_days_ago,
                       meta_get_all_paged, report_today, server_token, server_token_source, stored_setting)
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ SIDE_LABELS = {'support': 'Our side', 'oppose': 'Opposition'}
 SIDE_LABELS_ONE = {'support': 'We support', 'oppose': 'Opponent'}
 
 # This race only. Without a floor the archive hands back seven years, including 2024.
-CYCLE_START = (os.environ.get('META_AD_CYCLE_START') or '2026-01-01').strip()
+# The date itself lives in meta_ads so both pages agree on it.
 
 AD_COUNTRY = 'US'
 AD_TYPE = 'POLITICAL_AND_ISSUE_ADS'   # the only ad type with spend attached in the US

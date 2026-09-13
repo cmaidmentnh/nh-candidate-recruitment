@@ -75,8 +75,8 @@ accounts it can see, so a dying token is visible weeks ahead.
    # Lets cron hit the two sync URLs without a login.
    CRON_SECRET=some-long-random-string
 
-   # Optional. Ad Library search floor, so the 2024 cycle stays out. Default 2026-01-01.
-   META_AD_CYCLE_START=2026-01-01
+   # Optional. Nothing before this date is shown on either page. Default 2026-08-01.
+   META_AD_CYCLE_START=2026-08-01
    ```
 
 3. Restart the app (`requirements.txt` gained `cryptography` and `tzdata`). The Meta ads

@@ -122,7 +122,7 @@
       <div class="tabs">{% for r in ranges %}<a href="{{ url_for('meta.page', days=r) }}" class="{{ 'on' if r == days }}">{{ r }} days</a>{% endfor %}</div>
     </div>
     <div class="tiles">
-      <div class="tile"><div class="cap">Spend</div><div class="big">{{ t.spend|money_exact }}</div><div class="sub">{{ (t.spend / days)|money_exact }} a day</div></div>
+      <div class="tile"><div class="cap">Spend</div><div class="big">{{ t.spend|money_exact }}</div><div class="sub">{{ (t.spend / overview.day_count)|money_exact }} a day</div></div>
       <div class="tile"><div class="cap">Impressions</div><div class="big">{{ t.impressions|num }}</div><div class="sub">times an ad was shown</div></div>
       <div class="tile"><div class="cap">Reach</div><div class="big">{{ t.reach|num }}</div><div class="sub">people reached</div></div>
       <div class="tile"><div class="cap">Clicks</div><div class="big">{{ t.clicks|num }}</div><div class="sub">{{ t.link_clicks|num }} link clicks</div></div>
@@ -431,7 +431,7 @@
         row.addEventListener('click', function(){ document.getElementById('fAct').value = a.id; document.getElementById('fName').value = a.name; discList.style.display = 'none'; discMsg.textContent = 'Picked ' + a.name + '.'; });
         discList.appendChild(row);
       });
-      discList.style.display = '';
+      discList.style.display = 'block';
     }).catch(function(){ discMsg.className = 'msg bad'; discMsg.textContent = 'Could not reach the server.'; });
   });
 
