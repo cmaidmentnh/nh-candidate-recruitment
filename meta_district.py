@@ -184,6 +184,32 @@ def district_meta(codes):
                 'lifetime_budget': float(lifebud) if lifebud else None,
                 'daily_budget': float(daybud) if daybud else None})
 
+        # The flights (ad sets) behind this district's spend. A ramped buy splits its budget
+        # across several, most of which have not started yet — so a projection built on the
+        # running flight's daily rate alone is meaningless.
+        cur.execute("""SELECT d.district_code, s.adset_id, s.name, s.lifetime_budget,
+                              s.daily_budget, s.start_time, s.end_time,
+                              COALESCE(SUM(a.spend), 0)
+                         FROM meta_campaign_district d
+                         JOIN meta_ad_sets s ON s.campaign_id = d.campaign_id
+                         LEFT JOIN meta_ads a ON a.adset_id = s.adset_id
+                        WHERE d.district_code = ANY(%s)
+                        GROUP BY d.district_code, s.adset_id, s.name, s.lifetime_budget,
+                                 s.daily_budget, s.start_time, s.end_time
+                        ORDER BY s.start_time""", (live,))
+        now = _now_utc()
+        for r in cur.fetchall():
+            st, en = r[5], r[6]
+            state = ('scheduled' if st and st > now
+                     else 'ended' if en and en < now
+                     else 'running')
+            out[r[0]].setdefault('flights', []).append(dict(
+                adset_id=r[1], name=r[2],
+                budget=float(r[3] or 0), daily_budget=float(r[4] or 0),
+                start=st.isoformat() if st else None,
+                end=en.isoformat() if en else None,
+                spend=float(r[7] or 0), state=state))
+
         # The ads, with our own copy of the picture. meta_ads.spend is a 30 DAY rollup, not
         # lifetime - worth remembering before anyone reconciles it against the daily series.
         cur.execute("""SELECT d.district_code, a.ad_id, a.name, a.effective_status,
@@ -229,9 +255,18 @@ def district_meta(codes):
 
 
 def pacing(entry, budget, today=None):
-    """Is this district going to spend its digital budget, and what happens if it carries on?
+    """Is this district going to spend its digital budget?
 
-    Returns None when there is no budget to pace against - saying "0% of $0" helps nobody.
+    A ramped buy splits its money across flights, and most of them have not started.
+    Extrapolating the running flight's daily rate to election day therefore predicts a
+    huge underspend that is not real. So three separate figures:
+
+      budget    what the plan says the district should spend
+      booked    what is actually committed inside Meta, across every flight
+      projected booked money that should land, plus anything already spent outside a flight
+
+    and the on-pace verdict is judged against the RUNNING flight's own window, not the
+    whole campaign. Unbooked money is a planning gap, not an underspend.
     """
     if not entry or not budget:
         return None
@@ -242,18 +277,51 @@ def pacing(entry, budget, today=None):
     first = datetime.fromisoformat(days[0]['date']).date()
     elapsed = max((today - first).days + 1, 1)
     left = max((ELECTION_DAY - today).days, 0)
-    per_day = entry['spend'] / elapsed
-    projected = entry['spend'] + per_day * left
-    needed = (budget - entry['spend']) / left if left else None
+    spent = entry['spend']
+    per_day = spent / elapsed
+
+    flights = entry.get('flights') or []
+    booked = sum(f['budget'] for f in flights)
+    running = [f for f in flights if f['state'] == 'running']
+    scheduled = [f for f in flights if f['state'] == 'scheduled']
+
+    # Money inside Meta should land: lifetime budgets pace themselves over their window.
+    # Anything spent outside a flight we know about still counts.
+    projected = booked if booked else spent + per_day * left
+    projected = max(projected, spent)
+
+    # Pace the running flight against its own window, which is the only rate that means
+    # anything today.
+    cur_need = cur_rate = None
+    verdict = 'on track'
+    if running:
+        f = running[0]
+        f_end = datetime.fromisoformat(f['end']).date() if f.get('end') else ELECTION_DAY
+        f_start = datetime.fromisoformat(f['start']).date() if f.get('start') else first
+        f_elapsed = max((today - f_start).days + 1, 1)
+        f_left = max((f_end - today).days, 0)
+        cur_rate = f['spend'] / f_elapsed
+        if f_left:
+            cur_need = max(f['budget'] - f['spend'], 0) / f_left
+            if cur_need and abs(cur_rate - cur_need) > 0.25 * max(cur_need, 1):
+                verdict = 'underspending' if cur_rate < cur_need else 'overspending'
+    elif not scheduled and booked and spent < booked * 0.9:
+        verdict = 'underspending'
+
     return {
-        'budget': budget, 'spent': entry['spend'],
+        'budget': budget, 'spent': spent, 'booked': booked,
+        'unbooked': max(budget - booked, 0),
         'elapsed_days': elapsed, 'days_left': left,
-        'per_day': per_day, 'needed_per_day': needed,
+        'per_day': per_day, 'needed_per_day': (max(budget - spent, 0) / left) if left else None,
         'projected': projected,
-        'pct_spent': (entry['spend'] / budget * 100) if budget else None,
+        'pct_spent': (spent / budget * 100) if budget else None,
         'pct_projected': (projected / budget * 100) if budget else None,
-        'verdict': ('on track' if needed is None or abs(per_day - needed) < 0.15 * max(needed, 1)
-                    else ('underspending' if per_day < needed else 'overspending')),
+        'flights_total': len(flights),
+        'flights_running': len(running), 'flights_scheduled': len(scheduled),
+        'current_rate': cur_rate, 'current_needed': cur_need,
+        'current_name': running[0]['name'] if running else None,
+        'current_end': running[0]['end'] if running else None,
+        'verdict': verdict,
     }
 
 

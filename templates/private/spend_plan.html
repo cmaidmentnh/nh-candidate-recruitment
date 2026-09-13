@@ -936,6 +936,8 @@
       h += '<div class="numsec"><h5>Pacing</h5><div class="pace">' +
         '<div class="g"><span class="v">' + money(p.spent) + '</span><span class="l">spent</span></div>' +
         '<div class="g"><span class="v">' + money(p.budget) + '</span><span class="l">budgeted</span></div>' +
+        (p.flights_total ? '<div class="g"><span class="v">' + money(p.booked) +
+          '</span><span class="l">booked in Meta</span></div>' : '') +
         '<div class="g"><span class="v">' + money(p.per_day) + '</span><span class="l">a day so far</span></div>' +
         (p.needed_per_day ? '<div class="g"><span class="v">' + money(p.needed_per_day) +
           '</span><span class="l">a day needed</span></div>' : '') +
@@ -947,15 +949,29 @@
            '<div style="font-size:.68rem;color:var(--muted)">' + pctS.toFixed(1) + '% spent</div>' +
            '<div class="bar"><i class="proj" style="width:' + pctP.toFixed(1) + '%"></i></div>' +
            '<div style="font-size:.68rem;color:var(--muted)">' + pctP.toFixed(1) +
-             '% projected by election day</div>';
-      h += '<div class="verdict ' + cls + '">At ' + money(p.per_day) + ' a day over ' +
-        p.elapsed_days + ' day' + (p.elapsed_days===1?'':'s') + ', this district spends about <b>' +
-        money(p.projected) + '</b> of its ' + money(p.budget) + ' by election day' +
-        (p.verdict === 'underspending'
-          ? '. That leaves <b>' + money(p.budget - p.projected) + ' unspent</b> unless the daily rate goes up.'
-          : p.verdict === 'overspending'
-            ? '. That is <b>' + money(p.projected - p.budget) + ' over</b> at the current rate.'
-            : ' and lands about right.') + '</div></div>';
+             '% of plan projected to land</div>';
+      var parts = [];
+      if(p.flights_total){
+        parts.push('<b>' + money(p.booked) + '</b> of the ' + money(p.budget) +
+          ' plan is booked into Meta across ' + p.flights_total + ' flight' +
+          (p.flights_total===1?'':'s') +
+          (p.flights_scheduled ? ', ' + p.flights_scheduled + ' of which ' +
+             (p.flights_scheduled===1?'has':'have') + ' not started yet' : '') + '.');
+        if(p.unbooked > 1){
+          parts.push('<b>' + money(p.unbooked) + '</b> of the plan is not in Meta at all yet — ' +
+            'that is a booking gap, not an underspend.');
+        }
+      }
+      if(p.current_name && p.current_needed != null){
+        parts.push('The flight running now (' + esc(p.current_name) + ', to ' +
+          fdate(p.current_end) + ') is spending <b>' + money(p.current_rate) +
+          ' a day</b> against the <b>' + money(p.current_needed) +
+          ' a day</b> it needs to finish its own budget.');
+      } else if(p.flights_scheduled && !p.flights_running){
+        parts.push('Nothing is running right now — the next flight starts later, so no daily ' +
+          'rate can be read yet.');
+      }
+      h += '<div class="verdict ' + cls + '">' + parts.join(' ') + '</div></div>';
     } else if(m.budget) {
       h += '<div class="numsec"><h5>Pacing</h5><p style="font-size:.82rem;color:var(--muted)">' +
         money(m.budget) + ' budgeted, nothing delivered yet, so there is no rate to project.</p></div>';
