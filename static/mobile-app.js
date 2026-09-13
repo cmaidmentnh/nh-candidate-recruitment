@@ -101,33 +101,47 @@
 
   /* Turn table rows into cards.
    *
-   * Only where it helps. A table with a lot of columns becomes an unreadably tall card, and a
-   * table of pure figures reads better as a grid you scroll than as a stack of labelled lines,
-   * so those keep the horizontal scroller they already have.
+   * Admin tables come in two shapes and a card has to handle both. Some are a handful of text
+   * columns, which read well as a stack of labelled lines. Others, like the progress table, are
+   * one identity column and sixteen short yes/no signals: stacked, that is a card sixteen lines
+   * tall that you scroll past rather than read.
+   *
+   * So each cell is classified by how much it holds. Short values sit side by side and wrap,
+   * the way a summary reads; long ones take a full line. The first cell is the card's heading,
+   * and a row that is one cell spanning the table is a section heading, not a card.
    */
+  var COMPACT_CHARS = 14;
+
   function cardify() {
     document.querySelectorAll('table').forEach(function (t) {
       if (t.dataset.carded || t.closest('.navbar')) return;
       var head = t.querySelector('thead tr');
       var body = t.querySelector('tbody');
-      if (!head || !body) return;
+      if (!head || !body || body.rows.length === 0) return;
       var labels = Array.prototype.map.call(head.children, function (th) {
         return th.textContent.trim();
       });
-      if (labels.length < 2 || labels.length > 9) return;   // too wide to read as a card
-      if (body.rows.length === 0) return;
+      if (labels.length < 2) return;
 
       Array.prototype.forEach.call(body.rows, function (tr) {
+        // A single cell spanning the width is a group heading, not a record.
+        if (tr.cells.length === 1 &&
+            (tr.cells[0].colSpan > 1 || labels.length > 1)) {
+          tr.classList.add('grouprow');
+          return;
+        }
         Array.prototype.forEach.call(tr.cells, function (td, i) {
-          if (!td.hasAttribute('data-label') && labels[i]) {
+          if (labels[i] && !td.hasAttribute('data-label')) {
             td.setAttribute('data-label', labels[i]);
           }
+          if (i === 0) return;
+          var len = td.textContent.trim().length;
+          td.classList.add(len === 0 ? 'blank' : (len <= COMPACT_CHARS ? 'compact' : 'wide'));
         });
       });
       t.classList.add('ascard');
       t.dataset.carded = '1';
 
-      // A carded table is no longer wide, so the scroller around it is just a box.
       var box = t.closest('.tscroll');
       if (box) box.classList.add('tscroll-off');
     });

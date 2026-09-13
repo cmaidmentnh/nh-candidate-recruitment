@@ -93,30 +93,52 @@
      Tables too wide or too numeric to card up keep the horizontal scroller instead.
      ====================================================================== */
   table.ascard thead{display:none}
-  table.ascard, table.ascard tbody, table.ascard tr, table.ascard td{display:block;width:auto}
+  table.ascard, table.ascard tbody{display:block;width:auto}
+
+  /* Each row is a card, and a card is a wrapping row of fields rather than a stack, so a table
+     of sixteen short signals stays the height of a card instead of the height of a screen. */
   table.ascard tr{
-    background:#fff;border:1px solid #e4e8ee;border-radius:9px;
-    padding:10px 12px;margin:0 0 9px;
+    display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 16px;
+    background:#fff;border:1px solid #e4e8ee;border-radius:10px;
+    padding:11px 13px;margin:0 0 9px;
   }
   table.ascard tr:hover{background:#fff}
+
   table.ascard td{
-    border:0 !important;padding:3px 0 !important;
-    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
-    font-size:.86rem;line-height:1.4;text-align:right !important;
+    border:0 !important;padding:2px 0 !important;
+    font-size:.85rem;line-height:1.45;
   }
+
+  /* The label lives above its value for short fields, beside it for long ones. */
   table.ascard td::before{
     content:attr(data-label);
-    color:#7b8494;font-size:.66rem;font-weight:700;text-transform:uppercase;
-    letter-spacing:.05em;text-align:left;flex:0 0 auto;max-width:52%;
-  }
-  /* The first cell is the name of the thing. It is the card's heading, not a labelled field. */
-  table.ascard td:first-child{
-    text-align:left !important;font-size:1rem;font-weight:700;color:#1e3557;
-    padding-bottom:7px !important;margin-bottom:5px;border-bottom:1px solid #f1f4f8 !important;
     display:block;
+    color:#8b95a3;font-size:.6rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+
+  /* The first cell names the thing: it is the card's heading. */
+  table.ascard td:first-child{
+    flex:1 1 100%;
+    font-size:1.02rem;font-weight:700;color:#1e3557;
+    padding-bottom:8px !important;margin-bottom:6px;
+    border-bottom:1px solid #f1f4f8 !important;
   }
   table.ascard td:first-child::before{display:none}
-  table.ascard td:empty{display:none}
+
+  table.ascard td.compact{flex:0 0 auto;min-width:52px}
+  table.ascard td.wide{flex:1 1 100%;margin-top:3px}
+  table.ascard td.blank{display:none}
+
+  /* A row that is one cell spanning the table is a section heading. */
+  table.ascard tr.grouprow{
+    display:block;background:none;border:0;border-radius:0;
+    padding:14px 2px 5px;margin:0;
+    font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+    color:#7b8494;
+  }
+  table.ascard tr.grouprow td{font-size:inherit;color:inherit;font-weight:inherit}
+  table.ascard tr.grouprow td::before{display:none}
 
   /* ======================================================================
      THE PAGES' OWN FURNITURE
