@@ -710,13 +710,16 @@ def page():
         days = 30
     if days not in RANGES:
         days = 30
-    show_all = request.args.get('show') == 'all'
     view = request.args.get('view') if request.args.get('view') in ('added', 'rolling') else 'total'
     side = request.args.get('side') if request.args.get('side') in SIDES else None
 
     people = list_watches()
     trend = get_trend(days)
-    ads = list_watched_ads(running_only=not show_all, side=side)
+    # Everything on file this cycle, then split: what is going out today is the page's
+    # point and sits up front; ads that have ended are kept, folded away, for the record.
+    ads = list_watched_ads(running_only=False, side=side)
+    running_ads = [a for a in ads if a['running']]
+    former_ads = [a for a in ads if not a['running']]
     reports = list_meta_reports()
     totals = _sum(people)
     oppose = _sum([p for p in people if p['side'] == 'oppose'])
@@ -726,22 +729,21 @@ def page():
     chart_data = trend['daily_added'] if view == 'added' else trend['rolling'] if view == 'rolling' else trend['daily']
 
     def href(**over):
-        q = {'days': days, 'show': 'all' if show_all else 'running', 'view': view, 'side': side or 'both', **over}
+        q = {'days': days, 'view': view, 'side': side or 'both', **over}
         out = {}
         if q['days'] != 30:
             out['days'] = q['days']
-        if q['show'] == 'all':
-            out['show'] = 'all'
         if q['view'] != 'total':
             out['view'] = q['view']
         if q['side'] in SIDES:
             out['side'] = q['side']
         return url_for('admon.page', **out)
 
-    return render_template('meta/ad_monitor.html', people=people, trend=trend, ads=ads, reports=reports,
+    return render_template('meta/ad_monitor.html', people=people, trend=trend, ads=ads, running_ads=running_ads,
+                           former_ads=former_ads, reports=reports,
                            totals=totals, oppose=oppose, support=support, in_window=in_window, days=days,
                            ranges=RANGES, views=VIEWS, view=view, current_view=current_view, chart_data=chart_data,
-                           show_all=show_all, side=side, sides=SIDES, side_labels=SIDE_LABELS, href=href,
+                           side=side, sides=SIDES, side_labels=SIDE_LABELS, href=href,
                            has_token=has_ad_library_token(), token_problem=ad_library_token_problem(),
                            token_source=ad_library_token_source(), cycle_start=CYCLE_START,
                            can_edit_settings=_can_edit_settings(),

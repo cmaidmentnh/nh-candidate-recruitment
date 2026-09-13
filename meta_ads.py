@@ -1249,8 +1249,13 @@ def page():
     accounts = list_accounts()
     overview = get_overview(days)
     ads = list_ads()
-    live_ads = sum(1 for a in ads if a['delivering'])
+    # Delivering ads are the ones the page is opened for; the rest (switched off, spent out,
+    # finished) stay on the page but folded away.
+    live_list = [a for a in ads if a['delivering']]
+    former_list = [a for a in ads if not a['delivering']]
+    live_ads = len(live_list)
     return render_template('meta/meta.html', accounts=accounts, overview=overview, ads=ads, live_ads=live_ads,
+                           live_list=live_list, former_list=former_list,
                            days=days, ranges=RANGES, has_server_key=has_server_token(),
                            server_key_problem=server_token_problem(), server_key_source=server_token_source(),
                            encryption_problem=encryption_problem(),

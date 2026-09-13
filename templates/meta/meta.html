@@ -85,9 +85,53 @@
   .msg{font-size:.76rem;margin-top:6px;color:var(--muted)}
   .msg.bad{color:var(--red);font-weight:600}
   .msg.good{color:var(--green);font-weight:600}
+  details.former{margin-top:14px}
+  details.former summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:9px 12px;
+    background:#fff;border:1px solid var(--rule);border-radius:8px;font-weight:700;color:var(--navy);font-size:.84rem}
+  details.former summary::-webkit-details-marker{display:none}
+  details.former summary i{font-size:.7rem;transition:transform .15s}
+  details.former[open] summary i{transform:rotate(90deg)}
+  details.former summary .n{background:#eef1f5;border-radius:10px;padding:1px 8px;font-size:.72rem}
+  details.former summary .dim{font-weight:400;color:var(--muted);font-size:.76rem}
 </style>
 {% endblock %}
 {% block content %}
+{% macro ad_card(a) %}
+      {% set pic = a.image_url or a.thumbnail_url %}
+      <div class="ad">
+        <div class="pic" {% if pic %}style="background-image:url('{{ pic }}')"{% endif %}>
+          {% if not pic %}<div class="none"><i class="fas fa-image"></i>&nbsp; No picture</div>{% endif %}
+          {% if a.video_id %}<span class="vid"><i class="fas fa-play"></i> Video</span>{% endif %}
+        </div>
+        <div class="bd">
+          <div style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start">
+            <div class="ttl">{{ a.title or a.name }}</div>
+            <span class="chip {{ a.status_label.kind }}">{{ a.status_label.label }}</span>
+          </div>
+          {% if a.body %}<div class="txt">{{ a.body }}</div>{% endif %}
+          <div class="meta">{{ a.account_name }}{% if a.campaign_name %} · {{ a.campaign_name }}{% endif %}</div>
+          {% if a.status_label.kind == 'warn' %}
+          <div class="meta" style="color:var(--amber)">
+            {% if a.lifetime_budget and a.budget_remaining is not none and a.budget_remaining <= 0 %}Lifetime budget of {{ a.lifetime_budget|money_exact }} is spent.
+            {% elif a.adset_end_time and a.adset_end_time < now_utc %}Schedule ended {{ a.adset_end_time|fmt_date }}.
+            {% elif a.last_delivered_on %}Last delivered {{ a.last_delivered_on|fmt_date }}.
+            {% else %}Switched on, but Meta has not delivered it in the last 3 days.{% endif %}
+          </div>
+          {% elif a.daily_budget %}<div class="meta">{{ a.daily_budget|money_exact }} a day{% if a.adset_end_time %} until {{ a.adset_end_time|fmt_date }}{% endif %}</div>
+          {% elif a.lifetime_budget %}<div class="meta">{{ a.lifetime_budget|money_exact }} lifetime{% if a.budget_remaining is not none %}, {{ a.budget_remaining|money_exact }} left{% endif %}</div>{% endif %}
+        </div>
+        <div class="nums">
+          <div><div class="c">Spend</div><div class="v">{{ a.spend|money_exact }}</div></div>
+          <div><div class="c">Shown</div><div class="v">{{ a.impressions|num }}</div></div>
+          <div><div class="c">CPM</div><div class="v">{{ a.cpm|money_exact }}</div></div>
+          <div><div class="c">Clicks</div><div class="v">{{ a.clicks|num }}</div></div>
+        </div>
+        <div class="ft">
+          <span>{% if a.delivery_days %}{{ a.delivery_days }} day{{ '' if a.delivery_days == 1 else 's' }} live{% else %}Never delivered{% endif %} · synced {{ a.synced_at|ago }}</span>
+          <span>{% if a.link_url %}<a href="{{ a.link_url }}" target="_blank" rel="noopener">Link</a> · {% endif %}{% if a.ads_manager_url %}<a href="{{ a.ads_manager_url }}" target="_blank" rel="noopener">Ads Manager <i class="fas fa-external-link-alt"></i></a>{% endif %}</span>
+        </div>
+      </div>
+{% endmacro %}
 <div class="mt">
   <div class="hdr">
     <div>
@@ -194,54 +238,29 @@
     </div>
   </section>
 
-  {# ---- Ads running ---- #}
+  {# ---- Ads delivering, then the rest folded away ---- #}
   <section>
     <div class="sec-h">
-      <div><h5>Ads running</h5>
-        <p class="sub">The real pictures and words people see, live ads first, then biggest spend. Results are the last 30 days, from the newest sync.
+      <div><h5>Ads delivering</h5>
+        <p class="sub">The real pictures and words people are seeing right now, biggest spend first. Results are the last 30 days, from the newest sync.
           {% if ads %}{{ live_ads }} of {{ ads|length }} {{ 'ad is' if ads|length == 1 else 'ads are' }} delivering right now.{% endif %}</p></div>
     </div>
     {% if not ads %}
       <div class="empty"><h5>No ads synced yet</h5><p>Press <b>Sync all</b> at the top, or <b>Sync</b> on one account below, to pull the ads and their pictures from Meta.</p></div>
+    {% elif not live_list %}
+      <div class="empty"><h5>Nothing is delivering right now</h5><p>{{ former_list|length }} ad{{ '' if former_list|length == 1 else 's' }} on file, but Meta has not shown any of them in the last 3 days. They are under <b>Former ads</b> below, each with the reason it stopped.</p></div>
     {% else %}
     <div class="gal">
-      {% for a in ads %}
-      {% set pic = a.image_url or a.thumbnail_url %}
-      <div class="ad">
-        <div class="pic" {% if pic %}style="background-image:url('{{ pic }}')"{% endif %}>
-          {% if not pic %}<div class="none"><i class="fas fa-image"></i>&nbsp; No picture</div>{% endif %}
-          {% if a.video_id %}<span class="vid"><i class="fas fa-play"></i> Video</span>{% endif %}
-        </div>
-        <div class="bd">
-          <div style="display:flex;justify-content:space-between;gap:6px;align-items:flex-start">
-            <div class="ttl">{{ a.title or a.name }}</div>
-            <span class="chip {{ a.status_label.kind }}">{{ a.status_label.label }}</span>
-          </div>
-          {% if a.body %}<div class="txt">{{ a.body }}</div>{% endif %}
-          <div class="meta">{{ a.account_name }}{% if a.campaign_name %} · {{ a.campaign_name }}{% endif %}</div>
-          {% if a.status_label.kind == 'warn' %}
-          <div class="meta" style="color:var(--amber)">
-            {% if a.lifetime_budget and a.budget_remaining is not none and a.budget_remaining <= 0 %}Lifetime budget of {{ a.lifetime_budget|money_exact }} is spent.
-            {% elif a.adset_end_time and a.adset_end_time < now_utc %}Schedule ended {{ a.adset_end_time|fmt_date }}.
-            {% elif a.last_delivered_on %}Last delivered {{ a.last_delivered_on|fmt_date }}.
-            {% else %}Switched on, but Meta has not delivered it in the last 3 days.{% endif %}
-          </div>
-          {% elif a.daily_budget %}<div class="meta">{{ a.daily_budget|money_exact }} a day{% if a.adset_end_time %} until {{ a.adset_end_time|fmt_date }}{% endif %}</div>
-          {% elif a.lifetime_budget %}<div class="meta">{{ a.lifetime_budget|money_exact }} lifetime{% if a.budget_remaining is not none %}, {{ a.budget_remaining|money_exact }} left{% endif %}</div>{% endif %}
-        </div>
-        <div class="nums">
-          <div><div class="c">Spend</div><div class="v">{{ a.spend|money_exact }}</div></div>
-          <div><div class="c">Shown</div><div class="v">{{ a.impressions|num }}</div></div>
-          <div><div class="c">CPM</div><div class="v">{{ a.cpm|money_exact }}</div></div>
-          <div><div class="c">Clicks</div><div class="v">{{ a.clicks|num }}</div></div>
-        </div>
-        <div class="ft">
-          <span>{% if a.delivery_days %}{{ a.delivery_days }} day{{ '' if a.delivery_days == 1 else 's' }} live{% else %}Never delivered{% endif %} · synced {{ a.synced_at|ago }}</span>
-          <span>{% if a.link_url %}<a href="{{ a.link_url }}" target="_blank" rel="noopener">Link</a> · {% endif %}{% if a.ads_manager_url %}<a href="{{ a.ads_manager_url }}" target="_blank" rel="noopener">Ads Manager <i class="fas fa-external-link-alt"></i></a>{% endif %}</span>
-        </div>
-      </div>
-      {% endfor %}
+      {% for a in live_list %}{{ ad_card(a) }}{% endfor %}
     </div>
+    {% endif %}
+    {% if former_list %}
+    <details class="former">
+      <summary><i class="fas fa-chevron-right"></i> Former ads <span class="n">{{ former_list|length }}</span> <span class="dim">paused, spent out, or finished. Click to open.</span></summary>
+      <div class="gal" style="margin-top:12px">
+        {% for a in former_list %}{{ ad_card(a) }}{% endfor %}
+      </div>
+    </details>
     {% endif %}
   </section>
   {% endif %}

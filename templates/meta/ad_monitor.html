@@ -81,9 +81,35 @@
   .found .row-a .dim{font-size:.7rem;color:var(--muted)}
   .msg{font-size:.76rem;margin-top:6px;color:var(--muted)}
   .msg.bad{color:var(--red);font-weight:600}
+  details.former{margin-top:14px}
+  details.former summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:9px 12px;
+    background:#fff;border:1px solid var(--rule);border-radius:8px;font-weight:700;color:var(--navy);font-size:.84rem}
+  details.former summary::-webkit-details-marker{display:none}
+  details.former summary i{font-size:.7rem;transition:transform .15s}
+  details.former[open] summary i{transform:rotate(90deg)}
+  details.former summary .n{background:#eef1f5;border-radius:10px;padding:1px 8px;font-size:.72rem}
+  details.former summary .dim{font-weight:400;color:var(--muted);font-size:.76rem}
 </style>
 {% endblock %}
 {% block content %}
+{% macro watched_card(a) %}
+      <div class="ad">
+        <div class="bd">
+          <div class="who"><span><b>{{ a.watch_name }}</b>{% if a.page_name and a.page_name != a.watch_name %} <span class="meta">· {{ a.page_name }}</span>{% endif %}</span>
+            <span class="chip {{ 'live' if a.running else 'muted' }}">{{ 'Running' if a.running else 'Ended' }}</span></div>
+          {% if a.link_title %}<div class="ttl">{{ a.link_title }}</div>{% endif %}
+          {% if a.body_text %}<div class="txt">{{ a.body_text }}</div>{% else %}<div class="meta"><i>No text in the archive for this ad.</i></div>{% endif %}
+          {% if a.bylines %}<div class="meta">Paid for by {{ a.bylines }}</div>{% endif %}
+          <div class="meta">{% if a.start_time %}Started {{ a.start_time|fmt_date }}{% endif %}{% if a.stop_time %} · ended {{ a.stop_time|fmt_date }}{% endif %}{% if a.platforms %} · {{ a.platforms|join(', ')|replace('_', ' ') }}{% endif %}</div>
+        </div>
+        <div class="nums">
+          <div><div class="c">Spend (est.)</div><div class="v">{{ a.spend_estimate|money }}</div><div class="r">{{ a.range_label }}</div></div>
+          <div><div class="c">Impressions</div><div class="v">{{ a.impressions_label }}</div></div>
+          <div><div class="c">Audience</div><div class="v">{% if a.audience_lower is not none %}{{ a.audience_lower|num }}{% if a.audience_upper and a.audience_upper > a.audience_lower %} - {{ a.audience_upper|num }}{% else %}+{% endif %}{% else %}-{% endif %}</div></div>
+        </div>
+        <div class="ft"><span>First seen {{ a.first_seen_at|fmt_date }}</span><a href="{{ a.url }}" target="_blank" rel="noopener">Open in Ad Library <i class="fas fa-external-link-alt"></i></a></div>
+      </div>
+{% endmacro %}
 <div class="am">
   <div class="hdr">
     <div>
@@ -215,42 +241,30 @@
   </section>
   {% endif %}
 
-  {# ---- The ads ---- #}
+  {# ---- The ads: what is going out today, then the rest folded away ---- #}
   <section>
     <div class="sec-h">
-      <div><h5>{% if side %}{{ side_labels[side] }}: {{ 'ads this cycle' if show_all else 'running right now' }}{% elif show_all %}All ads this cycle{% else %}What is running right now{% endif %}</h5>
-        <p class="sub">Biggest spend first. Meta does not hand out the picture through its API, so open the ad to see it.</p></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="tabs"><a href="{{ href(side='both') }}" class="{{ 'on' if not side }}">Everyone</a><a href="{{ href(side='oppose') }}" class="{{ 'on' if side == 'oppose' }}">{{ side_labels.oppose }}</a><a href="{{ href(side='support') }}" class="{{ 'on' if side == 'support' }}">{{ side_labels.support }}</a></div>
-        <div class="tabs"><a href="{{ href(show='running') }}" class="{{ 'on' if not show_all }}">Running now</a><a href="{{ href(show='all') }}" class="{{ 'on' if show_all }}">All this cycle</a></div>
-      </div>
+      <div><h5>{% if side %}{{ side_labels[side] }}: running right now{% else %}What is running right now{% endif %}</h5>
+        <p class="sub">Biggest spend first. Meta does not hand out the picture through its API, so open the ad to see it.
+          {% if ads %}{{ running_ads|length }} running, {{ former_ads|length }} ended this cycle.{% endif %}</p></div>
+      <div class="tabs"><a href="{{ href(side='both') }}" class="{{ 'on' if not side }}">Everyone</a><a href="{{ href(side='oppose') }}" class="{{ 'on' if side == 'oppose' }}">{{ side_labels.oppose }}</a><a href="{{ href(side='support') }}" class="{{ 'on' if side == 'support' }}">{{ side_labels.support }}</a></div>
     </div>
-    {% if not ads %}
-      <div class="empty"><h5>{{ 'No ads collected yet' if show_all else 'Nothing running right now' }}</h5>
-        <p>{% if show_all %}Either they are not running political ads on Meta, or their ads were never declared political. Ads without that declaration are not in the archive at all.
-           {% elif totals.ads %}They have {{ totals.ads|num }} ad{{ '' if totals.ads == 1 else 's' }} on file this cycle, but none are delivering today. Switch to "All this cycle" to see them.
-           {% else %}Nothing has been collected yet. Either they are not running political ads, or their ads were never declared political.{% endif %}</p></div>
+    {% if not running_ads %}
+      <div class="empty"><h5>Nothing running right now</h5>
+        <p>{% if former_ads %}{{ former_ads|length }} ad{{ '' if former_ads|length == 1 else 's' }} on file this cycle, but none are delivering today. They are under <b>Former ads</b> below.
+           {% else %}Nothing has been collected yet. Either they are not running political ads on Meta, or their ads were never declared political. Ads without that declaration are not in the archive at all.{% endif %}</p></div>
     {% else %}
     <div class="gal">
-      {% for a in ads %}
-      <div class="ad">
-        <div class="bd">
-          <div class="who"><span><b>{{ a.watch_name }}</b>{% if a.page_name and a.page_name != a.watch_name %} <span class="meta">· {{ a.page_name }}</span>{% endif %}</span>
-            <span class="chip {{ 'live' if a.running else 'muted' }}">{{ 'Running' if a.running else 'Ended' }}</span></div>
-          {% if a.link_title %}<div class="ttl">{{ a.link_title }}</div>{% endif %}
-          {% if a.body_text %}<div class="txt">{{ a.body_text }}</div>{% else %}<div class="meta"><i>No text in the archive for this ad.</i></div>{% endif %}
-          {% if a.bylines %}<div class="meta">Paid for by {{ a.bylines }}</div>{% endif %}
-          <div class="meta">{% if a.start_time %}Started {{ a.start_time|fmt_date }}{% endif %}{% if a.stop_time %} · ended {{ a.stop_time|fmt_date }}{% endif %}{% if a.platforms %} · {{ a.platforms|join(', ')|replace('_', ' ') }}{% endif %}</div>
-        </div>
-        <div class="nums">
-          <div><div class="c">Spend (est.)</div><div class="v">{{ a.spend_estimate|money }}</div><div class="r">{{ a.range_label }}</div></div>
-          <div><div class="c">Impressions</div><div class="v">{{ a.impressions_label }}</div></div>
-          <div><div class="c">Audience</div><div class="v">{% if a.audience_lower is not none %}{{ a.audience_lower|num }}{% if a.audience_upper and a.audience_upper > a.audience_lower %} - {{ a.audience_upper|num }}{% else %}+{% endif %}{% else %}-{% endif %}</div></div>
-        </div>
-        <div class="ft"><span>First seen {{ a.first_seen_at|fmt_date }}</span><a href="{{ a.url }}" target="_blank" rel="noopener">Open in Ad Library <i class="fas fa-external-link-alt"></i></a></div>
-      </div>
-      {% endfor %}
+      {% for a in running_ads %}{{ watched_card(a) }}{% endfor %}
     </div>
+    {% endif %}
+    {% if former_ads %}
+    <details class="former">
+      <summary><i class="fas fa-chevron-right"></i> Former ads <span class="n">{{ former_ads|length }}</span> <span class="dim">ended, still on file this cycle. Click to open.</span></summary>
+      <div class="gal" style="margin-top:12px">
+        {% for a in former_ads %}{{ watched_card(a) }}{% endfor %}
+      </div>
+    </details>
     {% endif %}
   </section>
   {% endif %}
