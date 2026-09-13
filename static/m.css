@@ -61,7 +61,7 @@ a{color:var(--navy);text-decoration:none}
   width:40px;height:40px;margin:-8px -8px -8px -10px;font-size:1.3rem;
 }
 .bar .sub{
-  display:block;font-size:.76rem;font-weight:500;opacity:.85;
+  display:block;font-size:.85rem;font-weight:500;opacity:.9;
   text-transform:none;letter-spacing:0;
 }
 
@@ -79,7 +79,7 @@ a{color:var(--navy);text-decoration:none}
 }
 .card > h2{
   margin:0 0 11px;
-  font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;
+  font-size:.82rem;text-transform:uppercase;letter-spacing:.07em;
   color:var(--muted);font-weight:700;
 }
 
@@ -138,15 +138,18 @@ a{color:var(--navy);text-decoration:none}
 .log{list-style:none;margin:0;padding:0;font-size:.9rem}
 .log li{padding:9px 0;border-top:1px solid #eef1f5;line-height:1.4}
 .log li:first-child{border-top:0}
-.log .tm{display:block;color:var(--muted);font-size:.76rem;
+.log .tm{display:block;color:var(--muted);font-size:.82rem;
   font-variant-numeric:tabular-nums}
 
 /* An honest way out to the page that can do everything. */
 .escape{
   display:flex;align-items:center;justify-content:center;
   min-height:var(--tap);margin:2px 0 16px;
-  color:var(--muted);font-size:.9rem;
+  color:var(--muted);font-size:.95rem;
 }
+/* The link is the tap target, not the text inside it. */
+.escape a{display:flex;align-items:center;justify-content:center;
+  width:100%;min-height:var(--tap);color:var(--muted)}
 
 /* ==========================================================================
    BOTTOM TABS
