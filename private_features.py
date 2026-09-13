@@ -1486,30 +1486,24 @@ def spend_plan():
                     history.setdefault(dc, []).append(
                         {'ts': was['at'], 'by': was['by'] or '', 'changes': ch})
 
-        # What Meta has actually spent in each district, against what the plan says. Only
-        # campaigns tied to a district count: a statewide issue campaign is not this
-        # district's money.
-        meta_actual = {}
+        # Everything Meta knows about these districts: totals, the daily series, the ads with
+        # our own copy of the picture, and the campaigns with their flight dates. A district
+        # with nothing running gets no entry at all, so the page can tell "nothing running"
+        # from "running badly".
+        meta_by_district, meta_median = {}, {}
         try:
-            cur.execute("""SELECT d.district_code,
-                                  SUM(i.spend), SUM(i.impressions), SUM(i.clicks),
-                                  MIN(i.date), MAX(i.date),
-                                  COUNT(DISTINCT i.campaign_id),
-                                  STRING_AGG(DISTINCT i.campaign_name, ' | ')
-                             FROM meta_campaign_district d
-                             JOIN meta_insights i ON i.campaign_id = d.campaign_id
-                                                 AND i.level = 'campaign'
-                            GROUP BY d.district_code""")
-            for dc, sp, im, cl, lo, hi, n, names in cur.fetchall():
-                meta_actual[dc] = {
-                    'spend': float(sp or 0), 'impressions': int(im or 0),
-                    'clicks': int(cl or 0),
-                    'from': lo.isoformat() if lo else None,
-                    'to': hi.isoformat() if hi else None,
-                    'campaigns': n, 'names': names or ''}
-        except Exception as e:          # the Meta tables may not exist yet
-            logger.info('meta actuals unavailable: %s', e)
+            import meta_district as MD
+            meta_by_district = MD.district_meta([d['code'] for d in districts])
+            meta_median = MD.efficiency(meta_by_district)
+        except Exception as e:
+            logger.info('meta district data unavailable: %s', e)
             conn.rollback()
+
+        cur.execute("""SELECT name, last_synced_at, last_sync_error
+                         FROM meta_ad_accounts WHERE active ORDER BY last_synced_at DESC NULLS LAST""")
+        meta_accounts = [{'name': r[0],
+                          'synced': r[1].isoformat() if r[1] else None,
+                          'error': r[2]} for r in cur.fetchall()]
 
         tac_label = {t['key']: t['label'] for t in tactics}
         cur.execute("""SELECT district_code, universe, tactic_key, qty, changed_at
@@ -1561,7 +1555,20 @@ def spend_plan():
             d['all_universe'] = {m: universe.get((code, m), {'voters': 0, 'households': 0, 'cells': 0})
                                  for m in range(1, 32)}
             d['nominees'] = nominees.get(code, {})
-            d['meta'] = meta_actual.get(code)
+            d['meta'] = meta_by_district.get(code)
+            if d['meta']:
+                budget = 0.0
+                for uni, byk in (d['qty'] or {}).items():
+                    for tk in ('meta', 'ctv', 'display'):
+                        row = byk.get(tk)
+                        if row and row.get('qty'):
+                            budget += float(row['qty'])      # digital is budgeted in dollars
+                try:
+                    import meta_district as MD
+                    d['meta']['pacing'] = MD.pacing(d['meta'], budget)
+                except Exception:
+                    d['meta']['pacing'] = None
+                d['meta']['budget'] = budget
             d['cands'] = cands.get(code, [])
             d['hist'] = history.get(code, [])
 
@@ -1570,7 +1577,8 @@ def spend_plan():
                                districts=districts, tactics=tactics, segments=SEGMENTS,
                                presets=UNIVERSE_PRESETS,
                                preset_masks=[m for m, _ in UNIVERSE_PRESETS],
-                               pieces=pieces, budget=budget)
+                               pieces=pieces, budget=budget,
+                               meta_accounts=meta_accounts, meta_median=meta_median)
     finally:
         cur.close(); release_db_connection(conn)
 
@@ -2293,6 +2301,48 @@ def spend_meta_link():
         return jsonify({'ok': False, 'error': 'Could not link.'}), 500
     finally:
         cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/meta-refresh', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_meta_refresh():
+    """Read Meta now, rather than waiting for the hourly sync.
+
+    Three steps in order, because each depends on the last: pull the accounts, link any newly
+    named campaign to its district, then mirror the creative of any ad we have not stored. The
+    mirror matters most - Meta's own image URLs expire in about four days, so an ad synced now
+    and viewed next week shows a broken picture unless we hold our own copy.
+    """
+    try:
+        import meta_ads as MA
+        synced = MA.sync_all_active()
+    except Exception as e:
+        logger.error('meta refresh: sync failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Meta would not answer: %s' % str(e)[:120]}), 502
+
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        linked = sync_meta_campaign_districts(cur, who=(current_user.email
+                                                        if current_user.is_authenticated else 'auto'))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error('meta refresh: linking failed: %s', e)
+        linked = {'error': str(e)[:120]}
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    mirrored = {}
+    try:
+        import meta_district as MD
+        mirrored = MD.mirror_creative()
+    except Exception as e:
+        logger.error('meta refresh: creative mirror failed: %s', e)
+        mirrored = {'ok': False, 'error': str(e)[:120]}
+
+    return jsonify({'ok': True, 'accounts': synced.get('synced'),
+                    'failed': synced.get('failed'), 'linked': linked,
+                    'mirrored': mirrored.get('mirrored')})
 
 
 @private_bp.route('/spend-plan/save', methods=['POST'])

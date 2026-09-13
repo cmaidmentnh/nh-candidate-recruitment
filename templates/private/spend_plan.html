@@ -35,6 +35,40 @@
   .afp-none{color:#c3c9d2}
   .afp-v{color:var(--muted);font-size:.72rem;font-style:italic}
   .afpmark{color:#b4262d;font-weight:700;font-size:.62rem;letter-spacing:.04em}
+  .adgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-top:10px}
+  .adcard{border:1px solid var(--rule);border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+  .adcard .pic{height:170px;background:#eef1f5 center/cover no-repeat;position:relative}
+  .adcard .pic .vid{position:absolute;right:6px;top:6px;background:rgba(0,0,0,.65);color:#fff;
+    font-size:.6rem;padding:2px 6px;border-radius:3px;letter-spacing:.05em}
+  .adcard .bd{padding:9px 11px;flex:1;display:flex;flex-direction:column;gap:5px}
+  .adcard .ttl{font-weight:700;color:var(--navy);font-size:.86rem;line-height:1.3}
+  .adcard .txt{font-size:.76rem;color:var(--ink);line-height:1.45}
+  .adcard .sub{font-size:.68rem;color:var(--muted)}
+  .adcard .nums{display:flex;gap:0 16px;flex-wrap:wrap;border-top:1px solid #eef1f5;
+    padding:7px 11px;background:#fbfcfe}
+  .adcard .nums div{display:flex;flex-direction:column}
+  .adcard .nums b{font-size:.9rem;color:var(--navy);font-variant-numeric:tabular-nums}
+  .adcard .nums span{font-size:.58rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .adcard.dead{opacity:.72}
+  .adcard .dead-flag{background:#fdf6f6;color:#b4262d;font-weight:700;font-size:.72rem;
+    padding:5px 11px;border-top:1px solid #f3dede}
+  .numsec{border:1px solid var(--rule);border-radius:6px;padding:12px 14px;margin:12px 0}
+  .numsec h5{margin:0 0 8px;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700}
+  .pace{display:flex;flex-wrap:wrap;gap:0 30px;align-items:baseline;margin-bottom:8px}
+  .pace .g{display:flex;flex-direction:column;gap:1px}
+  .pace .v{font-size:1.3rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+  .pace .l{font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+  .verdict{font-size:.88rem;padding:8px 11px;border-radius:4px;margin-top:4px}
+  .verdict.under{background:#fdf6f6;border-left:3px solid var(--red);color:#7d2a2a}
+  .verdict.over{background:#fff9ec;border-left:3px solid #8a6400;color:#6b4f00}
+  .verdict.ok{background:#f1f9f4;border-left:3px solid var(--green);color:#1a5c33}
+  .bar{height:9px;background:#eef1f5;border-radius:5px;overflow:hidden;margin:8px 0 3px}
+  .bar i{display:block;height:100%;background:var(--navy)}
+  .bar i.proj{background:#c9d3e2}
+  .freshline{font-size:.72rem;color:var(--muted);margin:6px 0 0}
+  .freshline button{font-size:.7rem;padding:3px 10px;border:1px solid #c9d1dc;background:#fff;
+    border-radius:4px;cursor:pointer;margin-left:8px}
   .metabox{border:1px solid var(--rule);border-radius:6px;margin:12px 0;padding:10px 12px}
   .metabox h5{margin:0 0 7px;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;
     color:var(--muted);font-weight:700}
@@ -323,12 +357,15 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 (function(){
   var TACTICS = {{ tactics|tojson }};
   var PRESETS = {{ presets|tojson }};
   var DISTRICTS = {{ districts|tojson }};
   var BUDGET = {{ budget|tojson }};
+  var META_ACCOUNTS = {{ meta_accounts|tojson }};
+  var META_MEDIAN = {{ meta_median|tojson }};
   var PIECES = {{ pieces|tojson }};
   var CSRF = document.querySelector('meta[name="csrf-token"]')
     ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
@@ -784,6 +821,199 @@
     return h + '</div>';
   }
 
+  function metaAdsFor(d){
+    // A floterial buys no ads of its own: its candidate appears in the base districts' ads,
+    // exactly as it appears on their mail.
+    var out = (d.meta && d.meta.ads) ? d.meta.ads.slice() : [];
+    if(d.rel && d.rel.kind === 'floterial'){
+      (d.ride || []).forEach(function(r){
+        var b = BY_CODE[r.base];
+        if(b && b.meta && b.meta.ads)
+          b.meta.ads.forEach(function(a){ out.push(Object.assign({}, a, {via: r.base})); });
+      });
+    }
+    return out;
+  }
+
+  function adsHtml(d){
+    var ads = metaAdsFor(d);
+    if(!ads.length){
+      return '<p style="color:#7b8494;font-size:.84rem">No Meta ads are linked to ' + d.code +
+        '. A campaign links itself when its name carries the district, like ' +
+        '<b>Wallace | BE2 General | Meredith</b>. If one is running and not showing here, ' +
+        'its name is probably off convention.</p>';
+    }
+    var dead = ads.filter(function(a){ return !a.delivering; }).length;
+    var h = '';
+    if(dead){
+      h += '<div class="verdict under" style="margin:10px 0"><b>' + dead + ' of ' + ads.length +
+        ' ads have delivered nothing.</b> They are live but no one has seen them, so the money ' +
+        'is going through the rest.</div>';
+    }
+    h += '<div class="adgrid">';
+    ads.forEach(function(a){
+      h += '<div class="adcard' + (a.delivering ? '' : ' dead') + '">' +
+        '<div class="pic"' + (a.image ? ' style="background-image:url(\'' + esc(a.image) + '\')"' : '') + '>' +
+          (a.is_video ? '<span class="vid">VIDEO</span>' : '') + '</div>' +
+        '<div class="bd">' +
+          '<div class="ttl">' + esc(a.title || a.name) + '</div>' +
+          (a.body ? '<div class="txt">' + esc(a.body) + '</div>' : '') +
+          '<div class="sub">' + esc(a.name) + '</div>' +
+          '<div class="sub">' + esc(a.campaign_name || '') +
+            (a.via ? ' &middot; running in ' + esc(a.via) : '') + '</div>' +
+          '<div class="sub">' + esc(a.status || '') +
+            (a.first ? ' &middot; ' + a.first + ' to ' + (a.last || 'now') : '') +
+            (a.delivery_days ? ' &middot; ' + a.delivery_days + ' days delivering' : '') + '</div>' +
+        '</div>' +
+        '<div class="nums">' +
+          '<div><b>' + money(a.spend) + '</b><span>spend, 30d</span></div>' +
+          '<div><b>' + num(a.impressions) + '</b><span>shown</span></div>' +
+          '<div><b>' + num(a.clicks) + '</b><span>clicks</span></div>' +
+          (a.cpm ? '<div><b>$' + a.cpm.toFixed(2) + '</b><span>CPM</span></div>' : '') +
+          (a.cpc ? '<div><b>$' + a.cpc.toFixed(2) + '</b><span>per click</span></div>' : '') +
+        '</div>' +
+        (a.delivering ? '' : '<div class="dead-flag">Not delivering</div>') +
+        '</div>';
+    });
+    return h + '</div>';
+  }
+
+  function numbersHtml(d){
+    var m = d.meta;
+    if(!m) return '<p style="color:#7b8494;font-size:.84rem">Nothing running in ' + d.code +
+      ' yet, so there is nothing to measure.</p>';
+    var h = '';
+    var p = m.pacing;
+    if(p){
+      var cls = p.verdict === 'on track' ? 'ok' : (p.verdict === 'overspending' ? 'over' : 'under');
+      h += '<div class="numsec"><h5>Pacing</h5><div class="pace">' +
+        '<div class="g"><span class="v">' + money(p.spent) + '</span><span class="l">spent</span></div>' +
+        '<div class="g"><span class="v">' + money(p.budget) + '</span><span class="l">budgeted</span></div>' +
+        '<div class="g"><span class="v">' + money(p.per_day) + '</span><span class="l">a day so far</span></div>' +
+        (p.needed_per_day ? '<div class="g"><span class="v">' + money(p.needed_per_day) +
+          '</span><span class="l">a day needed</span></div>' : '') +
+        '<div class="g"><span class="v">' + p.days_left + '</span><span class="l">days to election</span></div>' +
+        '</div>';
+      var pctS = Math.max(0, Math.min(100, p.pct_spent || 0));
+      var pctP = Math.max(0, Math.min(100, p.pct_projected || 0));
+      h += '<div class="bar"><i style="width:' + pctS.toFixed(1) + '%"></i></div>' +
+           '<div style="font-size:.68rem;color:var(--muted)">' + pctS.toFixed(1) + '% spent</div>' +
+           '<div class="bar"><i class="proj" style="width:' + pctP.toFixed(1) + '%"></i></div>' +
+           '<div style="font-size:.68rem;color:var(--muted)">' + pctP.toFixed(1) +
+             '% projected by election day</div>';
+      h += '<div class="verdict ' + cls + '">At ' + money(p.per_day) + ' a day over ' +
+        p.elapsed_days + ' day' + (p.elapsed_days===1?'':'s') + ', this district spends about <b>' +
+        money(p.projected) + '</b> of its ' + money(p.budget) + ' by election day' +
+        (p.verdict === 'underspending'
+          ? '. That leaves <b>' + money(p.budget - p.projected) + ' unspent</b> unless the daily rate goes up.'
+          : p.verdict === 'overspending'
+            ? '. That is <b>' + money(p.projected - p.budget) + ' over</b> at the current rate.'
+            : ' and lands about right.') + '</div></div>';
+    } else if(m.budget) {
+      h += '<div class="numsec"><h5>Pacing</h5><p style="font-size:.82rem;color:var(--muted)">' +
+        money(m.budget) + ' budgeted, nothing delivered yet, so there is no rate to project.</p></div>';
+    }
+
+    h += '<div class="numsec"><h5>Spend and delivery, by day</h5>' +
+         '<canvas id="distChart" height="150"></canvas></div>';
+
+    h += '<div class="numsec"><h5>Cost, against the other districts running ads</h5>';
+    var med = META_MEDIAN || {};
+    function cmp(mine, theirs, label, unit){
+      if(!mine) return '';
+      if(!theirs || (med.districts || 0) < 2)
+        return '<div class="g"><span class="v">' + unit + mine.toFixed(2) + '</span>' +
+               '<span class="l">' + label + ' &middot; no one to compare with yet</span></div>';
+      var pct = (mine - theirs) / theirs * 100;
+      return '<div class="g"><span class="v">' + unit + mine.toFixed(2) + '</span><span class="l">' +
+        label + ' &middot; ' + (Math.abs(pct) < 5 ? 'about the median'
+          : (pct > 0 ? Math.round(pct) + '% dearer than median' : Math.round(-pct) + '% cheaper than median')) +
+        '</span></div>';
+    }
+    h += '<div class="pace">' + cmp(m.cpm, med.cpm, 'CPM', '$') +
+         cmp(m.cpc, med.cpc, 'per click', '$') +
+         '<div class="g"><span class="v">' + (m.ctr ? m.ctr.toFixed(2) + '%' : '&mdash;') +
+         '</span><span class="l">click rate</span></div></div>';
+    h += '</div>';
+
+    h += '<div class="numsec"><h5>Every ad</h5><table class="cal">' +
+      '<tr><th>Ad</th><th class="n">Spend 30d</th><th class="n">Shown</th><th class="n">Clicks</th>' +
+      '<th class="n">CPM</th><th class="n">Per click</th><th>Delivering</th></tr>';
+    metaAdsFor(d).forEach(function(a){
+      h += '<tr><td>' + esc(a.title || a.name) + '<br><span style="color:#7b8494;font-size:.72rem">' +
+        esc(a.name) + '</span></td>' +
+        '<td class="n">' + money(a.spend) + '</td><td class="n">' + num(a.impressions) + '</td>' +
+        '<td class="n">' + num(a.clicks) + '</td>' +
+        '<td class="n">' + (a.cpm ? '$' + a.cpm.toFixed(2) : '&mdash;') + '</td>' +
+        '<td class="n">' + (a.cpc ? '$' + a.cpc.toFixed(2) : '&mdash;') + '</td>' +
+        '<td>' + (a.delivering ? '<span class="afp-ok">yes</span>'
+                               : '<span class="afp-bad">no</span>') + '</td></tr>';
+    });
+    return h + '</table></div>';
+  }
+
+  function drawDistrictChart(d){
+    var el = document.getElementById('distChart');
+    if(!el || !window.Chart || !d.meta || !d.meta.days) return;
+    var days = d.meta.days;
+    new Chart(el, {
+      type: 'bar',
+      data: {labels: days.map(function(x){ return x.date.slice(5); }),
+        datasets: [
+          {label: 'Spend', data: days.map(function(x){ return x.spend; }),
+           backgroundColor: '#1e3557', yAxisID: 'y', order: 2},
+          {label: 'Impressions', data: days.map(function(x){ return x.impressions; }),
+           type: 'line', borderColor: '#b4262d', backgroundColor: '#b4262d',
+           yAxisID: 'y1', tension: .25, order: 1}
+        ]},
+      options: {responsive: true, maintainAspectRatio: false,
+        plugins: {legend: {labels: {boxWidth: 10, font: {size: 10}}}},
+        scales: {
+          y:  {position: 'left',  ticks: {callback: function(v){ return '$' + v; }, font: {size: 10}}},
+          y1: {position: 'right', grid: {drawOnChartArea: false},
+               ticks: {callback: function(v){ return num(v); }, font: {size: 10}}},
+          x:  {ticks: {font: {size: 9}}}
+        }}
+    });
+  }
+
+  // Numbers are only as fresh as the last read from Meta, so say when that was.
+  function freshLine(){
+    var a = (META_ACCOUNTS || [])[0];
+    var when = a && a.synced ? new Date(a.synced) : null;
+    var txt = when ? 'Meta last read ' + agoText(when) : 'Meta has never been read';
+    return '<p class="freshline">' + txt +
+      '<button id="metaRefresh">Refresh from Meta</button>' +
+      '<span id="metaRefreshMsg" style="margin-left:8px"></span></p>';
+  }
+  function agoText(dt){
+    var s = (Date.now() - dt.getTime()) / 1000;
+    if(s < 90) return 'just now';
+    if(s < 5400) return Math.round(s/60) + ' minutes ago';
+    if(s < 172800) return Math.round(s/3600) + ' hours ago';
+    return Math.round(s/86400) + ' days ago';
+  }
+  function wireRefresh(d){
+    var b = document.getElementById('metaRefresh');
+    if(!b) return;
+    b.onclick = function(){
+      var msg = document.getElementById('metaRefreshMsg');
+      b.disabled = true; b.textContent = 'Reading...';
+      msg.textContent = 'this takes about ten seconds';
+      fetch('/private/spend-plan/meta-refresh', {method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify({code: d.code})})
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if(!j.ok) throw new Error(j.error || 'refresh failed');
+          msg.textContent = 'updated, reloading';
+          location.reload();
+        })
+        .catch(function(e){ b.disabled = false; b.textContent = 'Refresh from Meta';
+                            msg.textContent = e.message; });
+    };
+  }
+
   function linkBits(c){
     var out = [];
     if(c.website) out.push('<a href="' + c.website + '" target="_blank" rel="noopener">site</a>');
@@ -815,7 +1045,7 @@
   function drawPane(){
     var d = DISTRICTS[idx], u = uni(d), c = cost(d), r = d.nominees && d.nominees.R;
     var tabs = '<div class="ptabs">' +
-      ['plan|Plan','getting|Getting'].map(function(t){
+      ['plan|Plan','getting|Getting','ads|Ads','numbers|Numbers'].map(function(t){
         var k = t.split('|')[0];
         return '<a data-pt="' + k + '"' + (paneTab === k ? ' class="on"' : '') + '>' + t.split('|')[1] + '</a>';
       }).join('') + '</div>';
@@ -831,7 +1061,15 @@
     // On the execution tabs, show that and nothing else. Nobody wants to scroll past the
     // 2018 replay to reach a mail piece.
     if(paneTab === 'getting'){
-      document.getElementById('pane').innerHTML = h + gettingHtml(d); return;
+      document.getElementById('pane').innerHTML = h + gettingHtml(d) + freshLine(); return;
+    }
+    if(paneTab === 'ads'){
+      document.getElementById('pane').innerHTML = h + adsHtml(d) + freshLine();
+      wireRefresh(d); return;
+    }
+    if(paneTab === 'numbers'){
+      document.getElementById('pane').innerHTML = h + numbersHtml(d) + freshLine();
+      wireRefresh(d); drawDistrictChart(d); return;
     }
     h += '<div class="who"><span class="lab">Republican nominees</span>' +
       (r ? r : '<span class="none">No Republican on the ballot here</span>') + '</div>';
