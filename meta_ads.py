@@ -104,10 +104,18 @@ def _cursor(conn):
 
 
 def can_view_meta():
-    """Admins and the super admin. Not staff, not whips, and not a per-user grant: the ad
-    numbers are the campaign's money, so the rule is the role, the same as the rest of the
-    admin pages. A settings editor is trusted to paste the token, so they can see what it
-    fetches too."""
+    """The super admin, a named settings editor, or someone explicitly granted 'meta_ads'.
+
+    This used to be role == 'admin', which read as a tight rule and was not one: every single
+    account in the users table carries role 'admin', so the ad spend, creative and performance
+    were visible to all 49 logins. That included AFP, Cornerstone, Citizens Alliance, YAL,
+    NHRSC, a Senate campaign and a dozen sitting candidates. The numbers are the committee's
+    money, so access is now a named grant, the same mechanism the spend plan and the surveys
+    already use.
+
+    A settings editor keeps access: they are trusted to paste the token, so they can see what
+    it fetches.
+    """
     if not current_user.is_authenticated:
         return False
     try:
@@ -115,8 +123,11 @@ def can_view_meta():
             return True
     except Exception:
         pass
-    if getattr(current_user, 'role', None) == 'admin':
-        return True
+    try:
+        if private_features.has_feature_access('meta_ads'):
+            return True
+    except Exception:
+        pass
     return can_edit_settings()
 
 
