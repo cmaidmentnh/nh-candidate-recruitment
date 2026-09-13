@@ -142,7 +142,7 @@
   table.ascard tr.grouprow td{
     display:block;width:auto;
     font-size:inherit;color:inherit;font-weight:inherit;
-    background:none !important;padding:0 3px !important;
+    background:none !important;padding:0 14px !important;
   }
   table.ascard tr.grouprow td::before{display:none}
 
