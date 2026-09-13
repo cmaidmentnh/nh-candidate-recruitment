@@ -531,6 +531,12 @@ init_private_features(get_db_connection, release_db_connection, is_super_admin, 
                       upload_file_to_storage)
 app.register_blueprint(private_bp)
 
+# Meta ad performance per district. Read-only against meta_ads.py's tables, plus its own
+# mirror of the ad creative: Meta's CDN URLs are signed and expire in about four days, so
+# nothing user-facing may render them directly.
+from meta_district import init_meta_district
+init_meta_district(get_db_connection, release_db_connection, upload_file_to_storage)
+
 # Register candidate scout blueprint
 from candidate_scout import scout_bp, init_candidate_scout
 init_candidate_scout(get_db_connection, release_db_connection, get_voter_db_connection, release_voter_db_connection, is_super_admin, SUPER_ADMIN_EMAIL)
