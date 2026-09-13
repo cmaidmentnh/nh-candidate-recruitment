@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spend Plan</title>
+<meta name="theme-color" content="#b4262d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Spend Plan">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='images/favicon.png') }}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='spend-mobile.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+</head>
+<body>
+
+<div class="top">
+  <div class="r1">
+    <button class="back" id="back" hidden aria-label="Back">&#8249;</button>
+    <h1 id="ttl">Spend Plan</h1>
+    <a class="esc" href="?desktop=1">Desktop</a>
+  </div>
+  <div class="money" id="money"></div>
+</div>
+
+<div id="listView">
+  <div class="tools">
+    <input type="search" id="q" placeholder="District or town, e.g. Belknap or Meredith"
+           autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="list" id="list"></div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="tabs" id="tabs"></div>
+  <div class="pane" id="pane"></div>
+</div>
+
+<div class="saving" id="saving"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var TACTICS  = {{ tactics|tojson }};
+  var PRESETS  = {{ presets|tojson }};
+  var DISTRICTS= {{ districts|tojson }};
+  var BUDGET   = {{ budget|tojson }};
+  var PIECES   = {{ pieces|tojson }};
+  var META_MEDIAN = {{ meta_median|tojson }};
+  var CSRF = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+  var BY = {}; DISTRICTS.forEach(function(d){ BY[d.code] = d; });
+
+  // The three universes anything is bought against, same as the desktop planner.
+  var UNIS = [['gotv','GOTV'], ['persuade','Persuasion'], ['base','Field']];
+  var UNI_TACTICS = {gotv:  ['mail','mms','meta','ctv','display'],
+                     persuade:['mail','mms','meta','ctv','display'],
+                     base:  ['palm_cards','signs','gotv_calls','doors']};
+
+  function money(n){ return '$' + Math.round(n || 0).toLocaleString(); }
+  function num(n){ return Math.round(n || 0).toLocaleString(); }
+  function esc(s){ return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function tac(k){ return TACTICS.filter(function(t){ return t.key === k; })[0]; }
+
+  function sizeFor(d, universe){
+    if(universe === 'base') return (d.all_universe && d.all_universe[d.mask])
+                                 || {voters:0,households:0,cells:0};
+    return (d.model && d.model[universe]) || {voters:0,households:0,cells:0};
+  }
+
+  // Cost, identical arithmetic to the desktop page: quantity times universe size times rate,
+  // except digital which is budgeted in dollars so its quantity IS its cost.
+  function cost(d){
+    var out = {total:0, byUni:{}, per:{}};
+    var qty = d.qty || {};
+    Object.keys(qty).forEach(function(u){
+      var sz = sizeFor(d, u);
+      TACTICS.forEach(function(t){
+        var row = qty[u][t.key], q = (row && row.qty) || 0, c = 0;
+        if(q > 0){
+          if(t.unit === 'per_household') c = q * sz.households * t.rate;
+          else if(t.unit === 'per_cell') c = q * sz.cells * t.rate;
+          else if(t.unit === 'dollars')  c = q;
+          else if(t.unit === 'per_unit') c = (t.rate == null) ? 0 : q * t.rate;
+        }
+        if(!c) return;
+        out.per[u + '|' + t.key] = c;
+        out.total += c;
+        out.byUni[u] = (out.byUni[u] || 0) + c;
+      });
+    });
+    return out;
+  }
+
+  function planTotal(){
+    return DISTRICTS.filter(function(d){ return d.include; })
+                    .reduce(function(a, d){ return a + cost(d).total; }, 0);
+  }
+  function planSeats(){
+    return DISTRICTS.filter(function(d){ return d.include; })
+                    .reduce(function(a, d){ return a + (d.seats || 0); }, 0);
+  }
+
+  function drawMoney(){
+    var t = planTotal(), n = DISTRICTS.filter(function(d){ return d.include; }).length;
+    document.getElementById('money').innerHTML =
+      '<span><b>' + money(t) + '</b> of ' + money(BUDGET) + '</span>' +
+      '<span><b>' + n + '</b> districts</span>' +
+      '<span><b>' + planSeats() + '</b> seats</span>';
+  }
+
+  // ===================================================================== LIST
+
+  var FILTERS = [
+    ['all',      'All'],
+    ['in',       'In plan'],
+    ['t1',       'T1'], ['t2','T2'], ['t3','T3'],
+    ['untiered', 'Untiered'],
+    ['norep',    'No R'],
+    ['needs',    'Needs a piece']
+  ];
+  var filter = 'in', query = '', shown = 40;
+
+  function matches(d){
+    if(query){
+      var q = query.toLowerCase();
+      if((d.code || '').toLowerCase().indexOf(q) === -1 &&
+         (d.towns || '').toLowerCase().indexOf(q) === -1) return false;
+    }
+    switch(filter){
+      case 'in':       return !!d.include;
+      case 't1':       return d.tier === 1;
+      case 't2':       return d.tier === 2;
+      case 't3':       return d.tier === 3;
+      case 'untiered': return !d.tier;
+      case 'norep':    return !(d.nominees && d.nominees.R);
+      case 'needs':    return !!d.include && !piecesFor(d.code).length;
+      default:         return true;
+    }
+  }
+
+  function drawChips(){
+    document.getElementById('chips').innerHTML = FILTERS.map(function(f){
+      return '<button data-f="' + f[0] + '"' + (filter === f[0] ? ' class="on"' : '') + '>' +
+             f[1] + '</button>';
+    }).join('');
+  }
+
+  function drawList(){
+    var rows = DISTRICTS.filter(matches);
+    var el = document.getElementById('list');
+    if(!rows.length){
+      el.innerHTML = '<p class="none">Nothing matches.</p>';
+      return;
+    }
+    var page = rows.slice(0, shown), out = '', county = null;
+    page.forEach(function(d){
+      if(d.county !== county){ county = d.county; out += '<div class="cty">' + esc(county) + '</div>'; }
+      var c = cost(d).total;
+      var rcls = /GOP/.test(d.rating || '') ? 'r-gop'
+               : /DEM/.test(d.rating || '') ? 'r-dem' : 'r-swing';
+      out += '<button class="d" data-c="' + esc(d.code) + '">' +
+        '<span class="l">' +
+          '<span class="nm' + (d.include ? ' in' : '') + '">' + esc(d.code) +
+            (d.tier ? ' &middot; T' + d.tier : '') + '</span>' +
+          '<span class="tw">' + esc(d.towns || '') + '</span>' +
+          '<span class="rt ' + rcls + '">' + esc(d.rating || '') + '</span>' +
+        '</span>' +
+        '<span class="c"><span class="v">' + (c ? money(c) : '&mdash;') + '</span>' +
+          '<span class="t">' + (d.seats || 0) + ' seat' + (d.seats === 1 ? '' : 's') + '</span></span>' +
+        '</button>';
+    });
+    if(rows.length > shown){
+      out += '<button class="more" id="more">Show more (' + (rows.length - shown) + ' left)</button>';
+    }
+    el.innerHTML = out;
+  }
+
+  // ===================================================================== SAVE
+
+  var pending = {}, timer = null;
+  function flash(msg, bad){
+    var s = document.getElementById('saving');
+    s.textContent = msg;
+    s.className = 'saving show' + (bad ? ' bad' : '');
+    if(!bad) setTimeout(function(){ s.className = 'saving'; }, 1400);
+  }
+  function queue(code, payload){
+    pending[code] = Object.assign(pending[code] || {district_code: code}, payload);
+    if(payload.items){
+      pending[code].items = Object.assign(pending[code].items || {}, payload.items);
+    }
+    clearTimeout(timer);
+    timer = setTimeout(flush, 500);
+  }
+  function flush(){
+    var jobs = Object.keys(pending).map(function(k){ return pending[k]; });
+    if(!jobs.length) return;
+    pending = {};
+    flash('Saving');
+    Promise.all(jobs.map(function(j){
+      return fetch('/private/spend-plan/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        body: JSON.stringify(j)
+      }).then(function(r){
+        // A non-2xx was once swallowed and reported as saved, and 56 edits were thrown away.
+        // Never report success without checking.
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function(d){
+        if(!d || !d.ok) throw new Error((d && d.error) || 'rejected');
+      });
+    })).then(function(){
+      flash('Saved');
+    }).catch(function(e){
+      // Put the work back so the next edit retries it rather than losing it.
+      jobs.forEach(function(j){ pending[j.district_code] =
+        Object.assign(pending[j.district_code] || {}, j); });
+      flash('NOT saved: ' + e.message, true);
+    });
+  }
+
+  // ===================================================================== DETAIL
+
+  var open = null, tab = 'plan';
+
+  function show(code){
+    open = code; tab = 'plan';
+    document.getElementById('back').hidden = false;
+    document.getElementById('ttl').textContent = code;
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('sheet').classList.add('on');
+    drawTabs(); drawPane();
+    window.scrollTo(0, 0);
+  }
+  function close(){
+    open = null;
+    document.getElementById('back').hidden = true;
+    document.getElementById('ttl').textContent = 'Spend Plan';
+    document.getElementById('sheet').classList.remove('on');
+    document.getElementById('listView').style.display = '';
+    drawMoney(); drawList();
+  }
+
+  function drawTabs(){
+    var d = BY[open];
+    var ts = [['plan','Plan'], ['getting','Getting']];
+    if(d.meta) ts.push(['ads','Ads'], ['numbers','Numbers']);
+    document.getElementById('tabs').innerHTML = ts.map(function(t){
+      return '<button data-t="' + t[0] + '"' + (tab === t[0] ? ' class="on"' : '') + '>' +
+             t[1] + '</button>';
+    }).join('');
+  }
+
+  function drawPane(){
+    var d = BY[open];
+    var h = tab === 'plan'    ? planHtml(d)
+          : tab === 'getting' ? gettingHtml(d)
+          : tab === 'ads'     ? adsHtml(d)
+          :                     numbersHtml(d);
+    document.getElementById('pane').innerHTML = h;
+  }
+
+  function planHtml(d){
+    var c = cost(d);
+    var isFlo = d.rel && d.rel.kind === 'floterial';
+    var h = '';
+
+    h += '<div class="blk">' +
+      '<div class="sw"><span class="lab">In the plan</span>' +
+      '<button id="inPlan" class="' + (d.include ? 'on' : '') + '"><i></i></button></div>' +
+      '<ul class="facts" style="margin-top:6px">' +
+        '<li><span>Cost of this district</span><span class="v">' + money(c.total) + '</span></li>' +
+        '<li><span>Seats</span><span class="v">' + (d.seats || 0) + '</span></li>' +
+        '<li><span>Rating</span><span class="v">' + esc(d.rating || '') + '</span></li>' +
+        '<li><span>PVI</span><span class="v">' + (d.pvi == null ? '&mdash;' : d.pvi) + '</span></li>' +
+      '</ul></div>';
+
+    h += '<div class="blk"><h3>Tier</h3><div class="opts" id="tiers">' +
+      [0,1,2,3].map(function(t){
+        return '<button data-tier="' + t + '"' + ((d.tier || 0) === t ? ' class="on"' : '') + '>' +
+               (t === 0 ? 'None' : 'T' + t) + '</button>';
+      }).join('') + '</div></div>';
+
+    if(isFlo){
+      h += '<div class="blk"><p class="note">This is a floterial. It buys no household media of ' +
+           'its own: its candidates ride the mail bought in the base districts. Only field ' +
+           'items below apply.</p></div>';
+    }
+
+    h += '<div class="blk"><h3>Universe</h3>' +
+      '<select class="uni" id="mask">' + PRESETS.map(function(p){
+        return '<option value="' + p[0] + '"' + (d.mask === p[0] ? ' selected' : '') + '>' +
+               esc(p[1]) + '</option>';
+      }).join('') + '</select>';
+    var u = sizeFor(d, 'base');
+    h += '<p class="usz"><b>' + num(u.households) + '</b> households &middot; <b>' +
+         num(u.voters) + '</b> voters &middot; <b>' + num(u.cells) + '</b> cells</p></div>';
+
+    UNIS.forEach(function(U){
+      var key = U[0];
+      if(isFlo && key !== 'base') return;
+      var sz = sizeFor(d, key);
+      h += '<div class="blk"><h3>' + U[1] + '</h3>';
+      if(key !== 'base'){
+        h += '<p class="usz"><b>' + num(sz.households) + '</b> households &middot; <b>' +
+             num(sz.cells) + '</b> cells</p>';
+      }
+      UNI_TACTICS[key].forEach(function(tk){
+        var t = tac(tk); if(!t) return;
+        var row = d.qty && d.qty[key] && d.qty[key][tk];
+        var q = (row && row.qty) || 0;
+        var c2 = c.per[key + '|' + tk] || 0;
+        var dollars = t.unit === 'dollars';
+        h += '<div class="qr">' +
+          '<span class="ql"><b>' + esc(t.label) + '</b><span>' +
+            (dollars ? 'budget in dollars' : esc(t.qty_label || '')) + '</span></span>' +
+          '<span class="step' + (dollars ? ' money' : '') + '" data-u="' + key + '" data-k="' + tk + '">' +
+            '<button data-s="-1">&minus;</button>' +
+            '<input type="text" inputmode="' + (dollars ? 'decimal' : 'numeric') +
+              '" value="' + (q || 0) + '">' +
+            '<button data-s="1">+</button>' +
+          '</span>' +
+          '<span class="qc' + (c2 ? '' : ' zero') + '">' + (c2 ? money(c2) : '&mdash;') + '</span>' +
+          '</div>';
+      });
+      if(c.byUni[key]){
+        h += '<ul class="facts" style="margin-top:8px"><li><span>Subtotal</span>' +
+             '<span class="v">' + money(c.byUni[key]) + '</span></li></ul>';
+      }
+      h += '</div>';
+    });
+
+    h += '<div class="blk"><h3>Notes</h3>' +
+      '<textarea class="notes" id="notes" placeholder="Anything the plan should carry">' +
+      esc(d.notes || '') + '</textarea></div>';
+
+    if(d.nominees && (d.nominees.R || d.nominees.D)){
+      h += '<div class="blk"><h3>On the ballot</h3>';
+      if(d.nominees.R) h += '<div class="cand"><b>' + esc(d.nominees.R) + '</b>' +
+        '<span>Republican</span></div>';
+      if(d.nominees.D) h += '<div class="cand"><b>' + esc(d.nominees.D) + '</b>' +
+        '<span>Democrat</span></div>';
+      h += '</div>';
+    }
+
+    if(d.reg){
+      h += '<div class="blk"><h3>Registration</h3><ul class="facts">' +
+        '<li><span>Republican</span><span class="v">' + num(d.reg.r) + '</span></li>' +
+        '<li><span>Democrat</span><span class="v">' + num(d.reg.d) + '</span></li>' +
+        '<li><span>Undeclared</span><span class="v">' + num(d.reg.u) + '</span></li>' +
+        '</ul></div>';
+    }
+    return h;
+  }
+
+  // ------------------------------------------------------------------ GETTING
+
+  function piecesFor(code){
+    return (PIECES || []).filter(function(p){
+      return (p.districts || []).indexOf(code) !== -1;
+    });
+  }
+
+  function gettingHtml(d){
+    var mine = piecesFor(d.code);
+    var h = '';
+    if(!mine.length){
+      h += '<div class="blk"><p class="note">No piece has been made for ' + esc(d.code) +
+           ' yet.</p></div>';
+    } else {
+      h += '<div class="blk"><h3>Pieces</h3>';
+      mine.forEach(function(p){
+        h += '<div class="cand"><b>' + esc(p.name) + '</b><span>' +
+          esc(p.tactic_label || p.tactic_key || '') +
+          (p.drop_date ? ' &middot; drops ' + esc(p.drop_date) : '') +
+          (p.status ? ' &middot; ' + esc(p.status) : '') + '</span></div>';
+      });
+      h += '</div>';
+    }
+    if(d.meta){
+      h += '<div class="blk"><h3>Digital</h3><p class="note"><b>' + money(d.meta.spent) +
+        '</b> spent of ' + money(d.meta.budget || 0) + ' budgeted on Meta, ' +
+        num(d.meta.impressions) + ' shown. See the Ads and Numbers tabs.</p></div>';
+    }
+    return h;
+  }
+
+  // ------------------------------------------------------------------ ADS
+
+  function adsFor(d){
+    var out = (d.meta && d.meta.ads) ? d.meta.ads.slice() : [];
+    if(d.rel && d.rel.kind === 'floterial'){
+      (d.ride || []).forEach(function(r){
+        var b = BY[r.base];
+        if(b && b.meta && b.meta.ads){
+          b.meta.ads.forEach(function(a){ out.push(Object.assign({}, a, {via: r.base})); });
+        }
+      });
+    }
+    return out;
+  }
+
+  function adsHtml(d){
+    var ads = adsFor(d);
+    if(!ads.length) return '<div class="blk"><p class="note">No Meta ads are linked to ' +
+      esc(d.code) + '.</p></div>';
+    var dead = ads.filter(function(a){ return !a.delivering && !a.scheduled; }).length;
+    var sched = ads.filter(function(a){ return a.scheduled; }).length;
+    var h = '';
+    if(dead) h += '<div class="verdict under"><b>' + dead + ' of ' + ads.length +
+      ' ads are running and have shown to nobody.</b></div>';
+    if(sched) h += '<div class="verdict ok">' + sched + ' of ' + ads.length +
+      ' are scheduled and have not started. That is a ramped buy working as planned.</div>';
+    ads.forEach(function(a){
+      h += '<div class="ad">' +
+        (a.image ? '<div class="pic" style="background-image:url(\'' + esc(a.image) + '\')"></div>' : '') +
+        '<div class="bd"><b>' + esc(a.title || a.name) + '</b>' +
+        (a.body ? '<p>' + esc(a.body) + '</p>' : '') + '</div>' +
+        '<div class="nums">' +
+          '<span><b>' + money(a.spend) + '</b> spend</span>' +
+          '<span><b>' + num(a.impressions) + '</b> shown</span>' +
+          '<span><b>' + num(a.clicks) + '</b> clicks</span>' +
+          (a.cpm ? '<span><b>$' + a.cpm.toFixed(2) + '</b> CPM</span>' : '') +
+        '</div>' +
+        (a.delivering ? '' : a.scheduled
+          ? '<div class="dead" style="background:#f4f7fb;color:#44546b">Starts ' +
+            esc((a.flight_start || '').slice(0,10)) + '</div>'
+          : '<div class="dead">Not delivering</div>') +
+        '</div>';
+    });
+    return h;
+  }
+
+  // ------------------------------------------------------------------ NUMBERS
+
+  function numbersHtml(d){
+    var m = d.meta;
+    if(!m) return '<div class="blk"><p class="note">Nothing running here yet.</p></div>';
+    var h = '', p = m.pacing;
+    if(p){
+      var cls = p.verdict === 'on track' ? 'ok' : (p.verdict === 'overspending' ? 'over' : 'under');
+      h += '<div class="blk"><h3>Pacing</h3><ul class="facts">' +
+        '<li><span>Spent</span><span class="v">' + money(p.spent) + '</span></li>' +
+        '<li><span>Booked into Meta</span><span class="v">' + money(p.booked) + '</span></li>' +
+        '<li><span>Planned for Meta</span><span class="v">' + money(p.budget) + '</span></li>' +
+        '<li><span>Days to election</span><span class="v">' + p.days_left + '</span></li>' +
+        '</ul>';
+      var pct = Math.max(0, Math.min(100, p.pct_spent || 0));
+      h += '<div class="meter"><i class="' + (cls === 'ok' ? '' : cls === 'over' ? 'warn' : 'bad') +
+           '" style="width:' + pct.toFixed(1) + '%"></i></div>';
+      var bits = [];
+      if(p.flights_total){
+        bits.push('<b>' + money(p.booked) + '</b> of the ' + money(p.budget) +
+          ' plan is booked across ' + p.flights_total + ' flight' +
+          (p.flights_total === 1 ? '' : 's') +
+          (p.flights_scheduled ? ', ' + p.flights_scheduled + ' not started yet' : '') + '.');
+      }
+      if(p.current_name && p.current_needed != null){
+        bits.push('The flight running now is spending <b>' + money(p.current_rate) +
+          ' a day</b> against the <b>' + money(p.current_needed) +
+          ' a day</b> it needs to finish its own budget.');
+      }
+      if(m.offmeta){
+        bits.push('Another <b>' + money(m.offmeta) + '</b> of digital is planned off Meta and ' +
+          'will never show in these figures.');
+      }
+      h += '<div class="verdict ' + cls + '">' + bits.join(' ') + '</div></div>';
+    }
+    h += '<div class="blk"><h3>Cost</h3><ul class="facts">' +
+      '<li><span>CPM</span><span class="v">' + (m.cpm ? '$' + m.cpm.toFixed(2) : '&mdash;') +
+        '</span></li>' +
+      '<li><span>Per click</span><span class="v">' + (m.cpc ? '$' + m.cpc.toFixed(2) : '&mdash;') +
+        '</span></li>' +
+      '<li><span>Click rate</span><span class="v">' + (m.ctr ? m.ctr.toFixed(2) + '%' : '&mdash;') +
+        '</span></li>' +
+      '</ul>' +
+      ((META_MEDIAN && META_MEDIAN.districts > 1)
+        ? '<p class="note">Median across the ' + META_MEDIAN.districts +
+          ' districts running ads is $' + (META_MEDIAN.cpm || 0).toFixed(2) + ' CPM.</p>'
+        : '<p class="note">Too few districts are running ads to compare against.</p>') +
+      '</div>';
+    return h;
+  }
+
+  // ===================================================================== EVENTS
+
+  document.getElementById('q').addEventListener('input', function(e){
+    query = e.target.value.trim(); shown = 40; drawList();
+  });
+
+  document.getElementById('chips').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-f]'); if(!b) return;
+    filter = b.getAttribute('data-f'); shown = 40; drawChips(); drawList();
+  });
+
+  document.getElementById('list').addEventListener('click', function(e){
+    if(e.target.closest('#more')){
+      shown += 60; drawList(); return;
+    }
+    var b = e.target.closest('button[data-c]');
+    if(b) show(b.getAttribute('data-c'));
+  });
+
+  document.getElementById('back').addEventListener('click', close);
+
+  document.getElementById('tabs').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-t]'); if(!b) return;
+    tab = b.getAttribute('data-t'); drawTabs(); drawPane();
+  });
+
+  // All detail-pane interaction is delegated, because the pane is redrawn constantly.
+  document.getElementById('pane').addEventListener('click', function(e){
+    var d = BY[open]; if(!d) return;
+
+    var sw = e.target.closest('#inPlan');
+    if(sw){
+      d.include = !d.include;
+      sw.className = d.include ? 'on' : '';
+      queue(d.code, {include: d.include});
+      drawMoney();
+      return;
+    }
+
+    var tb = e.target.closest('button[data-tier]');
+    if(tb){
+      var t = parseInt(tb.getAttribute('data-tier'), 10);
+      d.tier = t || null;
+      queue(d.code, {tier: d.tier});
+      drawPane();
+      return;
+    }
+
+    var st = e.target.closest('.step button[data-s]');
+    if(st){
+      var box = st.closest('.step');
+      var inp = box.querySelector('input');
+      var tk = box.getAttribute('data-k'), u = box.getAttribute('data-u');
+      var t2 = tac(tk);
+      var stepBy = t2.unit === 'dollars' ? 100 : 1;
+      var v = (parseFloat(inp.value) || 0) + stepBy * parseInt(st.getAttribute('data-s'), 10);
+      if(v < 0) v = 0;
+      inp.value = v;
+      setQty(d, u, tk, v);
+      return;
+    }
+  });
+
+  document.getElementById('pane').addEventListener('change', function(e){
+    var d = BY[open]; if(!d) return;
+    if(e.target.id === 'mask'){
+      d.mask = parseInt(e.target.value, 10);
+      queue(d.code, {mask: d.mask});
+      drawPane();
+      return;
+    }
+    if(e.target.id === 'notes'){
+      d.notes = e.target.value;
+      queue(d.code, {notes: d.notes});
+      return;
+    }
+    var box = e.target.closest('.step');
+    if(box && e.target.tagName === 'INPUT'){
+      var v = parseFloat(e.target.value) || 0;
+      if(v < 0) v = 0;
+      e.target.value = v;
+      setQty(d, box.getAttribute('data-u'), box.getAttribute('data-k'), v);
+    }
+  });
+
+  function setQty(d, universe, tk, v){
+    d.qty = d.qty || {};
+    d.qty[universe] = d.qty[universe] || {};
+    d.qty[universe][tk] = {qty: v, rate: null};
+    var items = {}; items[tk] = v;
+    queue(d.code, {universe: universe, items: items});
+    // Redraw so the per-row cost and the subtotal move with the number, which is the whole
+    // point of editing here rather than guessing and checking on a desktop later.
+    drawPane();
+    drawMoney();
+  }
+
+  drawChips(); drawList(); drawMoney();
+})();
+</script>
+</body>
+</html>

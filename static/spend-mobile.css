@@ -1,0 +1,220 @@
+/* The spend plan, as a phone app.
+ *
+ * Served from the same URL as the desktop planner. Not the desktop page reshaped: that was
+ * tried twice and was not usable. This is its own markup and its own stylesheet, loading
+ * neither Bootstrap nor the admin sheets, so there is nothing to override and no !important
+ * anywhere in this file.
+ *
+ * Two screens. A district list you search and filter, and a district you open full screen and
+ * edit. The desktop puts those side by side in a rail and a pane, which needs 1100px; a phone
+ * has 390 and has to move between them instead.
+ *
+ * Sizes: 17px body, because below 16px iOS zooms the page when a field takes focus. 48px on
+ * anything you tap. Steppers rather than tiny number fields, because the common edit is
+ * "make it 6 drops instead of 8" and that should be one thumb tap, not a keyboard.
+ */
+
+:root{
+  --navy:#1e3557; --red:#b4262d; --green:#1a7f43; --amber:#8a6400;
+  --ink:#1c2733; --muted:#6b7684; --rule:#e2e7ee; --ground:#f2f4f7;
+  --tap:48px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  margin:0;padding:0;max-width:100%;overflow-x:hidden;
+  background:var(--ground);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  font-size:17px;line-height:1.45;
+  -webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;
+}
+a{color:var(--navy);text-decoration:none}
+button{font:inherit;color:inherit}
+
+/* ========================================================================== TOP */
+.top{
+  position:sticky;top:0;z-index:30;background:var(--red);color:#fff;
+  padding:calc(9px + env(safe-area-inset-top)) 13px 9px;
+}
+.top .r1{display:flex;align-items:center;gap:11px}
+.top h1{margin:0;font-size:1.12rem;font-weight:800;flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .back{
+  display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;margin:-6px 0 -6px -9px;font-size:1.35rem;color:#fff;
+  background:none;border:0;
+}
+.top .money{
+  display:flex;gap:0 18px;flex-wrap:wrap;margin-top:5px;
+  font-size:.85rem;opacity:.94;font-variant-numeric:tabular-nums;
+}
+.top .money b{font-weight:800}
+.top .esc{color:#fff;opacity:.8;font-size:.85rem;padding:6px}
+
+/* ========================================================================== SEARCH + FILTERS */
+.tools{position:sticky;top:0;z-index:20;background:var(--ground);
+  padding:10px 12px 6px;border-bottom:1px solid var(--rule)}
+.tools input{
+  width:100%;min-height:var(--tap);padding:11px 14px;
+  border:1px solid #cdd5df;border-radius:11px;background:#fff;
+  font-size:17px;color:var(--ink);
+}
+.chips{display:flex;gap:7px;overflow-x:auto;margin-top:8px;padding-bottom:3px;
+  scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{
+  flex:0 0 auto;min-height:38px;padding:7px 14px;
+  border:1px solid #cdd5df;border-radius:19px;background:#fff;
+  font-size:.9rem;font-weight:600;color:var(--muted);
+}
+.chips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+/* ========================================================================== LIST */
+.list{padding:10px 12px calc(28px + env(safe-area-inset-bottom))}
+.cty{font-size:.76rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);
+  font-weight:700;padding:14px 3px 6px}
+.d{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:#fff;border:1px solid var(--rule);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;min-height:var(--tap);
+}
+.d .l{flex:1;min-width:0}
+.d .nm{font-size:1.06rem;font-weight:700;color:var(--navy)}
+.d .nm.in{color:var(--green)}
+.d .tw{font-size:.84rem;color:var(--muted);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.d .rt{font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.d .c{text-align:right;font-variant-numeric:tabular-nums}
+.d .c .v{font-size:1.02rem;font-weight:800;color:var(--navy)}
+.d .c .t{font-size:.74rem;color:var(--muted)}
+.r-gop{color:#a8261f}.r-dem{color:#1d4e89}.r-swing{color:var(--amber)}
+
+.more{
+  display:block;width:100%;min-height:var(--tap);margin:6px 0 0;
+  background:#fff;border:1px solid var(--rule);border-radius:12px;
+  color:var(--navy);font-weight:700;font-size:.98rem;
+}
+.none{color:var(--muted);text-align:center;padding:34px 12px}
+
+/* ========================================================================== DETAIL */
+.sheet{
+  position:fixed;inset:0;z-index:40;background:var(--ground);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  display:none;
+}
+.sheet.on{display:block}
+.tabs{
+  position:sticky;top:0;z-index:10;display:flex;background:#fff;
+  border-bottom:1px solid var(--rule);
+}
+.tabs button{
+  flex:1;min-height:var(--tap);background:none;border:0;
+  border-bottom:3px solid transparent;
+  font-size:.94rem;font-weight:700;color:var(--muted);
+}
+.tabs button.on{color:var(--navy);border-bottom-color:var(--navy)}
+.pane{padding:12px 12px calc(30px + env(safe-area-inset-bottom))}
+
+.blk{background:#fff;border:1px solid var(--rule);border-radius:12px;
+  padding:13px 14px;margin:0 0 12px}
+.blk h3{margin:0 0 10px;font-size:.82rem;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);font-weight:700}
+.blk .note{font-size:.9rem;color:var(--muted);margin:9px 0 0;line-height:1.5}
+.blk .note.bad{color:var(--red)}
+
+/* A switch, big enough to hit without aiming. */
+.sw{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  min-height:var(--tap)}
+.sw .lab{font-size:1.02rem;font-weight:700;color:var(--navy)}
+.sw button{
+  width:60px;height:34px;border-radius:17px;border:0;background:#ccd3dc;
+  position:relative;transition:background .15s;
+}
+.sw button.on{background:var(--green)}
+.sw button i{position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;
+  background:#fff;transition:transform .15s}
+.sw button.on i{transform:translateX(26px)}
+
+/* Tier and universe: full width rows, not a row of small buttons. */
+.opts{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.opts button{
+  min-height:var(--tap);border:1px solid #cdd5df;border-radius:10px;background:#fff;
+  font-weight:700;font-size:.95rem;color:var(--muted);
+}
+.opts button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+select.uni{
+  width:100%;min-height:var(--tap);padding:11px 12px;font-size:17px;
+  border:1px solid #cdd5df;border-radius:10px;background:#fff;color:var(--ink);
+}
+.usz{font-size:.88rem;color:var(--muted);margin:8px 0 2px}
+.usz b{color:var(--navy);font-variant-numeric:tabular-nums}
+
+/* The quantity row: label, then a stepper you can work with one thumb. */
+.qr{display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-top:1px solid #eef1f5;min-height:58px}
+.qr:first-of-type{border-top:0}
+.qr .ql{flex:1;min-width:0}
+.qr .ql b{display:block;font-size:1rem;color:var(--navy);font-weight:700}
+.qr .ql span{font-size:.82rem;color:var(--muted)}
+.step{display:flex;align-items:center;gap:0;border:1px solid #cdd5df;border-radius:10px;
+  overflow:hidden;background:#fff}
+.step button{width:46px;height:46px;border:0;background:#fff;font-size:1.4rem;
+  color:var(--navy);line-height:1}
+.step button:disabled{color:#c9d0d9}
+.step input{
+  width:58px;height:46px;border:0;border-left:1px solid #eef1f5;border-right:1px solid #eef1f5;
+  text-align:center;font-size:17px;font-weight:800;color:var(--navy);
+  font-variant-numeric:tabular-nums;background:#fff;
+}
+.step.money input{width:92px;font-weight:700}
+.qr .qc{min-width:74px;text-align:right;font-size:.92rem;font-weight:700;color:var(--navy);
+  font-variant-numeric:tabular-nums}
+.qr .qc.zero{color:#c3c9d2;font-weight:500}
+
+textarea.notes{
+  width:100%;min-height:96px;padding:11px 12px;font-size:17px;font-family:inherit;
+  border:1px solid #cdd5df;border-radius:10px;background:#fff;color:var(--ink);
+  resize:vertical;
+}
+
+.facts{list-style:none;margin:0;padding:0}
+.facts li{display:flex;justify-content:space-between;gap:14px;align-items:baseline;
+  padding:9px 0;border-top:1px solid #eef1f5}
+.facts li:first-child{border-top:0}
+.facts .v{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap}
+.facts .v.bad{color:var(--red)} .facts .v.good{color:var(--green)}
+
+.cand{padding:9px 0;border-top:1px solid #eef1f5}
+.cand:first-child{border-top:0}
+.cand b{font-size:1rem;color:var(--navy)}
+.cand span{display:block;font-size:.85rem;color:var(--muted)}
+
+.ad{border:1px solid var(--rule);border-radius:11px;overflow:hidden;margin-bottom:11px}
+.ad .pic{height:190px;background:#eef1f5 center/cover no-repeat}
+.ad .bd{padding:11px 13px}
+.ad .bd b{display:block;color:var(--navy);font-size:1rem;line-height:1.3}
+.ad .bd p{margin:5px 0 0;font-size:.9rem;color:var(--ink)}
+.ad .nums{display:flex;flex-wrap:wrap;gap:4px 18px;padding:9px 13px;background:#fbfcfe;
+  border-top:1px solid #eef1f5;font-size:.85rem}
+.ad .nums b{color:var(--navy);font-variant-numeric:tabular-nums}
+.ad .dead{background:#fdf6f6;color:var(--red);font-weight:700;font-size:.85rem;
+  padding:8px 13px;border-top:1px solid #f3dede}
+
+.meter{height:10px;background:#e9edf3;border-radius:6px;overflow:hidden;margin:10px 0 4px}
+.meter i{display:block;height:100%;background:var(--navy)}
+.meter i.warn{background:var(--amber)} .meter i.bad{background:var(--red)}
+
+.verdict{font-size:.94rem;padding:10px 12px;border-radius:9px;margin-top:9px;line-height:1.5}
+.verdict.ok{background:#f1f9f4;border-left:3px solid var(--green);color:#155c33}
+.verdict.under{background:#fdf6f6;border-left:3px solid var(--red);color:#7d2a2a}
+.verdict.over{background:#fff9ec;border-left:3px solid var(--amber);color:#6b4f00}
+
+/* The save indicator has to be visible without hunting: silent failure lost 56 edits once. */
+.saving{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));
+  z-index:60;background:var(--navy);color:#fff;border-radius:22px;
+  padding:10px 20px;font-size:.92rem;font-weight:700;
+  opacity:0;transition:opacity .18s;pointer-events:none;
+}
+.saving.show{opacity:1}
+.saving.bad{background:var(--red)}

@@ -1318,6 +1318,24 @@ def overview():
     return render_template('private/overview.html', d=OV.gather())
 
 
+def _spend_template():
+    """Which spend plan to render. A phone gets the phone one unless it asks otherwise.
+
+    User-Agent rather than a viewport check because the choice has to be made on the server,
+    before anything is sent. `?desktop=1` is the way out for anyone who wants the full planner
+    on a phone or tablet, and `?mobile=1` is the way in for testing it from a desk.
+    """
+    if request.args.get('desktop'):
+        return 'private/spend_plan.html'
+    if request.args.get('mobile'):
+        return 'private/spend_plan_mobile.html'
+    ua = (request.headers.get('User-Agent') or '').lower()
+    phone = ('iphone' in ua or 'ipod' in ua
+             or ('android' in ua and 'mobile' in ua)
+             or 'windows phone' in ua)
+    return 'private/spend_plan_mobile.html' if phone else 'private/spend_plan.html'
+
+
 @private_bp.route('/spend-plan')
 @require_feature_access('campaign_plan')
 def spend_plan():
@@ -1601,7 +1619,11 @@ def spend_plan():
             d['hist'] = history.get(code, [])
 
         districts.sort(key=lambda d: _district_sort_key(d['code']))
-        return render_template('private/spend_plan.html',
+        # Same URL, two front ends. The desktop planner needs a 1100px rail beside a pane;
+        # a phone has 390 and has to move between a list and a district instead. Reshaping the
+        # desktop page at runtime was tried and was not usable, so the phone gets its own
+        # markup over exactly this payload. ?desktop=1 forces the full version.
+        return render_template(_spend_template(),
                                districts=districts, tactics=tactics, segments=SEGMENTS,
                                presets=UNIVERSE_PRESETS,
                                preset_masks=[m for m, _ in UNIVERSE_PRESETS],
