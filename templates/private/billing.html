@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .bill{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--red:#b4262d;--green:#1a7f43;
+        --amber:#8a6400;color:#22303f;font-size:.9rem;max-width:1100px}
+  .bill h4{margin:0 0 2px;color:var(--navy);font-weight:800}
+  .bill .lead{color:var(--muted);font-size:.82rem;margin:0 0 16px;line-height:1.55;max-width:760px}
+  .bill .top{display:flex;flex-wrap:wrap;gap:0 34px;padding:0 0 14px;
+    border-bottom:1px solid var(--rule);margin-bottom:16px}
+  .bill .grp{display:flex;flex-direction:column;gap:2px}
+  .bill .big{font-size:1.9rem;font-weight:800;color:var(--navy);line-height:1;
+    font-variant-numeric:tabular-nums}
+  .bill .big.bad{color:var(--red)} .bill .big.good{color:var(--green)}
+  .bill .cap{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .bill table{width:100%;border-collapse:collapse;margin-top:6px}
+  .bill th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;padding:7px;text-align:left;font-weight:700}
+  .bill th.n,.bill td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .bill td{padding:7px;border-bottom:1px solid #eef1f5}
+  .bill tr:hover{background:#f5f8fc}
+  .bill .none{color:#c3c9d2}
+  .bill .diff.over{color:var(--amber);font-weight:700}
+  .bill .diff.under{color:var(--red);font-weight:700}
+  .bill .box{border:1px solid var(--rule);border-radius:7px;padding:14px 16px;margin:0 0 16px}
+  .bill .box h5{margin:0 0 9px;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700}
+  .bill .drop{border:2px dashed #cdd5df;border-radius:8px;padding:22px;text-align:center;
+    color:var(--muted);background:#fbfcfe}
+  .bill .drop input{margin-top:9px}
+  .bill .btn{background:var(--navy);color:#fff;border:0;border-radius:5px;padding:9px 18px;
+    font-weight:700;font-size:.85rem;cursor:pointer}
+  .bill .warn{background:#fdf6f6;border-left:3px solid var(--red);padding:9px 12px;
+    border-radius:4px;color:#7d2a2a;font-size:.84rem;margin:10px 0}
+  .bill .ok{background:#f1f9f4;border-left:3px solid var(--green);padding:9px 12px;
+    border-radius:4px;color:#155c33;font-size:.84rem;margin:10px 0}
+  .bill .note{font-size:.78rem;color:var(--muted);line-height:1.55;margin:10px 0 0}
+</style>
+
+<div class="bill">
+  <h4>Meta billing</h4>
+  <p class="lead">
+    What Meta actually charged, against what it reported delivering. They are different numbers
+    and they are supposed to be: Meta bills when the account crosses its billing threshold or at
+    month end, whichever comes first, so a charge rarely matches a calendar month of delivery.
+    Over the life of the account they should converge.
+  </p>
+
+  {% set a = r.account %}
+  <div class="top">
+    <div class="grp"><span class="big">${{ '{:,.2f}'.format(r.charged_total) }}</span>
+      <span class="cap">charged, {{ r.charge_count }} payment{{ '' if r.charge_count == 1 else 's' }}</span></div>
+    <div class="grp"><span class="big">${{ '{:,.2f}'.format(r.delivered_total) }}</span>
+      <span class="cap">delivered, per Meta's own reports</span></div>
+    {% if a %}
+    <div class="grp"><span class="big">${{ '{:,.2f}'.format(a.billed_to_date) }}</span>
+      <span class="cap">billed to date, from Meta</span></div>
+    <div class="grp"><span class="big">${{ '{:,.2f}'.format(a.accrued_unbilled) }}</span>
+      <span class="cap">accrued, not yet charged</span></div>
+    <div class="grp"><span class="big" style="font-size:1.1rem">{{ a.card or 'no card on file' }}</span>
+      <span class="cap">{{ 'account active' if a.active else 'ACCOUNT NOT ACTIVE' }}</span></div>
+    {% endif %}
+  </div>
+
+  {% if r.failed_count %}
+  <div class="warn"><b>{{ r.failed_count }} failed payment{{ '' if r.failed_count == 1 else 's' }}</b>
+    totalling ${{ '{:,.2f}'.format(r.failed_total) }}. A failed charge stops delivery until it
+    clears, so these are worth chasing.</div>
+  {% endif %}
+
+  {% if not r.charge_count %}
+  <div class="warn">
+    <b>No charges imported yet.</b> Meta does not expose them through its API for this account:
+    it is funded by a card rather than a credit line, so Meta issues receipts rather than
+    invoices, and every billing endpoint either refuses or no longer exists. Export the CSV from
+    Meta's Billing and Payments page and drop it below.
+  </div>
+  {% endif %}
+
+  <div class="box">
+    <h5>Import charges from Meta</h5>
+    <form method="post" action="{{ url_for('private.billing_import') }}"
+          enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="drop">
+        In Meta Ads Manager go to <b>Billing and payments</b>, set the date range, and choose
+        <b>Export</b>. Drop that CSV here.
+        <br><input type="file" name="file" accept=".csv,text/csv" required>
+      </div>
+      <p style="margin:12px 0 0"><button class="btn" type="submit">Import</button></p>
+    </form>
+    {% if r.last_import %}
+    <p class="note">Last import: <b>{{ r.last_import.filename }}</b>,
+      {{ r.last_import.rows }} rows totalling ${{ '{:,.2f}'.format(r.last_import.total) }},
+      {{ r.last_import.at.strftime('%-d %b %Y at %H:%M') }}.</p>
+    {% endif %}
+    <p class="note">
+      Re-importing an overlapping export is safe. Rows are keyed on Meta's own transaction id,
+      so a file you have already loaded updates what is there rather than doubling it.
+    </p>
+  </div>
+
+  <div class="box">
+    <h5>Month by month</h5>
+    <table>
+      <tr><th>Month</th><th class="n">Charged</th><th class="n">Payments</th>
+          <th class="n">Delivered</th><th class="n">Difference</th><th class="n">Impressions</th></tr>
+      {% for row in r.rows %}
+      <tr>
+        <td>{{ row.month }}</td>
+        <td class="n">{% if row.charged is not none %}${{ '{:,.2f}'.format(row.charged) }}
+            {% else %}<span class="none">&mdash;</span>{% endif %}</td>
+        <td class="n">{{ row.charges or '' }}</td>
+        <td class="n">{% if row.delivered is not none %}${{ '{:,.2f}'.format(row.delivered) }}
+            {% else %}<span class="none">&mdash;</span>{% endif %}</td>
+        <td class="n">
+          {% if row.charged is not none and row.delivered is not none %}
+            {% set d = row.charged - row.delivered %}
+            <span class="diff {{ 'over' if d > 0 else 'under' }}">
+              {{ '+' if d > 0 else '' }}${{ '{:,.2f}'.format(d) }}</span>
+          {% else %}<span class="none">&mdash;</span>{% endif %}
+        </td>
+        <td class="n">{{ '{:,}'.format(row.impressions) if row.impressions else '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% if r.charge_count %}
+    <p class="note">
+      Across everything imported, charges run
+      <b>{{ '+' if r.gap > 0 else '' }}${{ '{:,.2f}'.format(r.gap) }}</b> against delivery.
+      A month-to-month difference is normal and means only that a billing cycle straddled the
+      month end. A total that keeps drifting one way is not.
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="box">
+    <h5>For the CFS filing</h5>
+    <form method="get" action="{{ url_for('private.billing') }}" style="margin-bottom:10px">
+      <label style="font-size:.8rem;color:var(--muted)">From
+        <input type="date" name="since" value="{{ cfs.since }}"></label>
+      <label style="font-size:.8rem;color:var(--muted);margin-left:10px">To
+        <input type="date" name="until" value="{{ cfs.until }}"></label>
+      <button class="btn" style="margin-left:10px" type="submit">Total it</button>
+    </form>
+    {% if cfs.charges %}
+    <div class="ok">
+      <b>${{ '{:,.2f}'.format(cfs.charged) }}</b> charged between
+      {{ cfs.first.strftime('%-d %b %Y') }} and {{ cfs.last.strftime('%-d %b %Y') }},
+      across {{ cfs.charges }} payment{{ '' if cfs.charges == 1 else 's' }}.
+    </div>
+    {% else %}
+    <p class="note">No charges imported in that range.</p>
+    {% endif %}
+    <p class="note">
+      CFS wants money actually spent, so this counts charges rather than delivery, and excludes
+      anything Meta marked as failed.
+    </p>
+  </div>
+
+  <div class="box">
+    <h5>Every charge</h5>
+    <table>
+      <tr><th>Date</th><th class="n">Amount</th><th>Status</th><th>Card</th>
+          <th>Reference</th><th>Product</th></tr>
+      {% for c in charges %}
+      <tr>
+        <td>{{ c.charged_on.strftime('%-d %b %Y') }}</td>
+        <td class="n">${{ '{:,.2f}'.format(c.amount) }}</td>
+        <td>{% if c.status and 'fail' in c.status|lower %}
+              <span style="color:var(--red);font-weight:700">{{ c.status }}</span>
+            {% else %}{{ c.status or '' }}{% endif %}</td>
+        <td>{{ c.payment_method or '' }}</td>
+        <td style="font-size:.76rem;color:var(--muted)">{{ c.reference }}</td>
+        <td style="font-size:.78rem">{{ c.product or '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="none">Nothing imported yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

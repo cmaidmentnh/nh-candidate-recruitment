@@ -548,6 +548,12 @@ init_meta_district(get_db_connection, release_db_connection, upload_file_to_stor
 from overview import init_overview
 init_overview(get_db_connection, release_db_connection)
 
+# Meta billing. Charges cannot be fetched for a card funded account, so they arrive from the
+# CSV Meta exports; what IS fetchable (billed to date, accrued balance, card, status) is read
+# straight from the ad account and shown beside them.
+from meta_billing import init_meta_billing
+init_meta_billing(get_db_connection, release_db_connection)
+
 
 
 @app.template_filter('ago')

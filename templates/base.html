@@ -734,6 +734,9 @@
             <a class="dropdown-item" href="{{ url_for('admon.page') }}">
                 <i class="fas fa-satellite-dish text-muted"></i> Ad Monitor
             </a>
+            <a class="dropdown-item" href="{{ url_for('private.billing') }}">
+                <i class="fas fa-file-invoice-dollar text-muted"></i> Meta Billing
+            </a>
             {% endif %}
             {% if can_edit_meta_settings %}
             <a class="dropdown-item" href="{{ url_for('meta.settings') }}">

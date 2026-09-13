@@ -1311,6 +1311,69 @@ def _cost_of(qty_for_district, sizes, tactics):
     return total
 
 
+@private_bp.route('/billing')
+@require_feature_access('meta_ads')
+def billing():
+    """What Meta actually charged, beside what it reported delivering."""
+    import meta_billing as MB
+    from datetime import date as _date
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT account_id FROM meta_ad_accounts WHERE active
+                        ORDER BY last_synced_at DESC NULLS LAST LIMIT 1""")
+        row = cur.fetchone()
+        account_id = row[0] if row else None
+        cur.execute("""SELECT reference, charged_on, amount, status, payment_method, product
+                         FROM meta_billing_charge
+                        ORDER BY charged_on DESC, reference LIMIT 500""")
+        charges = [dict(zip(('reference', 'charged_on', 'amount', 'status',
+                             'payment_method', 'product'), r)) for r in cur.fetchall()]
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    since = request.args.get('since') or '%d-01-01' % _date.today().year
+    until = request.args.get('until') or _date.today().isoformat()
+    return render_template('private/billing.html',
+                           r=MB.reconcile(account_id),
+                           cfs=MB.cfs_total(account_id, since, until),
+                           charges=charges)
+
+
+@private_bp.route('/billing/import', methods=['POST'])
+@require_feature_access('meta_ads')
+def billing_import():
+    """Take Meta's billing CSV. Tolerant by design: the export has changed shape before, and
+    one unreadable line should not cost the other ninety."""
+    import meta_billing as MB
+    f = request.files.get('file')
+    if not f or not f.filename:
+        flash('Choose the CSV exported from Meta first.', 'warning')
+        return redirect(url_for('private.billing'))
+    try:
+        text = f.read().decode('utf-8-sig', 'replace')
+    except Exception:
+        flash('That file could not be read as text.', 'danger')
+        return redirect(url_for('private.billing'))
+
+    rows, problems = MB.parse_csv(text)
+    if not rows:
+        flash('Nothing importable in that file. ' + (problems[0] if problems else ''), 'danger')
+        return redirect(url_for('private.billing'))
+    try:
+        res = MB.import_rows(rows, secure_filename(f.filename),
+                             getattr(current_user, 'email', '') or 'unknown')
+    except Exception as e:
+        logger.error('billing import failed: %s', e)
+        flash('The import failed and nothing was saved.', 'danger')
+        return redirect(url_for('private.billing'))
+
+    msg = '%d charges read: %d new, %d updated.' % (len(rows), res['written'], res['updated'])
+    if problems:
+        msg += ' %d line%s skipped.' % (len(problems), '' if len(problems) == 1 else 's')
+    flash(msg, 'success')
+    return redirect(url_for('private.billing'))
+
+
 @private_bp.route('/overview')
 @require_feature_access('campaign_plan')
 def overview():
