@@ -15,8 +15,7 @@
   var TABS = [
     { href: '/private/overview',   icon: 'fa-binoculars',  label: 'Stand' },
     { href: '/private/spend-plan', icon: 'fa-map-signs',   label: 'Plan' },
-    { href: '/progress',           icon: 'fa-list-check',  label: 'Candidates',
-      alt: 'fa-tasks' },
+    { href: '/progress',           icon: 'fa-tasks',       label: 'Candidates' },
     { href: '/filings',            icon: 'fa-file-signature', label: 'Filings' },
     { href: '#more',               icon: 'fa-ellipsis-h',  label: 'More' }
   ];
@@ -47,8 +46,14 @@
 
     var ttl = document.createElement('span');
     ttl.className = 'ttl';
-    ttl.textContent = titleForPage();
+    var text = titleForPage();
+    ttl.textContent = text;
     bar.appendChild(ttl);
+
+    // The app bar now says what the page is, so the page saying it again directly underneath
+    // is just a wasted first screen.
+    var h = document.querySelector('.ov h4, h1, h2, h4.mb-0, .content h4');
+    if (h && h.textContent.trim().slice(0, 40) === text) h.classList.add('appbar-dupe');
 
     document.body.insertBefore(bar, document.body.firstChild);
     document.body.classList.add('has-appbar');
