@@ -693,7 +693,31 @@
                  : (r.cost == null ? '&mdash;' : money(r.cost))) + '</td></tr>';
     });
     h += '</table>';
-    return h + plannedVsMade(d, mine);
+    return h + plannedVsMade(d, mine) + digitalLine(d);
+  }
+
+  // Getting is about print, but a tab that says nothing about the digital reads as if there
+  // is none. One line, pointing at the tab that has the detail.
+  function digitalLine(d){
+    var m = d.meta;
+    if(!m && !(d.rel && d.rel.kind === 'floterial')) {
+      var any = 0;
+      Object.keys(d.qty || {}).forEach(function(u){
+        ['meta','ctv','display'].forEach(function(k){
+          var r = d.qty[u][k]; if(r && r.qty) any += Number(r.qty);
+        });
+      });
+      if(!any) return '';
+      return '<p style="font-size:.78rem;color:#7b8494;margin-top:10px">Digital: ' + money(any) +
+        ' budgeted, nothing running yet.</p>';
+    }
+    if(!m) return '';
+    return '<p style="font-size:.78rem;color:#7b8494;margin-top:10px">Digital: <b>' +
+      money(m.spend) + '</b> spent of ' + money(m.budget || 0) + ' budgeted, ' +
+      num(m.impressions) + ' shown' +
+      (m.dead_ads ? ', <span style="color:#b4262d">' + m.dead_ads + ' ad' +
+        (m.dead_ads === 1 ? '' : 's') + ' delivering nothing</span>' : '') +
+      '. See the Ads and Numbers tabs.</p>';
   }
 
   // The plan says eight mail pieces. This says how many of them exist.
