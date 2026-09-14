@@ -1374,12 +1374,36 @@ def billing_import():
     return redirect(url_for('private.billing'))
 
 
+def _mapbox_token():
+    """The Mapbox token, from this app's env or the shared one next door.
+
+    Only a pk. token is ever returned. A pk. token is a PUBLIC token: Mapbox intends it to sit
+    in the page and restricts it by URL rather than by secrecy. An sk. token is a secret one
+    and must never reach a browser, so it is refused here rather than rendered.
+    """
+    import os
+    token = os.environ.get('MAPBOX_TOKEN') or ''
+    if not token:
+        for path in ('/opt/nh-candidate-recruitment/.env', '/opt/nh-civic-crm/.env'):
+            try:
+                for line in open(path):
+                    if line.startswith('MAPBOX_TOKEN='):
+                        token = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        break
+            except OSError:
+                continue
+            if token:
+                break
+    return token if token.startswith('pk.') else ''
+
+
 @private_bp.route('/overview')
 @require_feature_access('campaign_plan')
 def overview():
     """Where things stand, across the whole operation. Read-only."""
     import overview as OV
-    return render_template('private/overview.html', d=OV.gather())
+    return render_template('private/overview.html', d=OV.gather(),
+                           mapbox_token=_mapbox_token())
 
 
 def _spend_template():

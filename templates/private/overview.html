@@ -317,9 +317,17 @@
   var view = 'tier', layer = null;
 
   var map = L.map('map', {scrollWheelZoom: false}).setView([43.7, -71.6], 7);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution: '&copy; OpenStreetMap contributors', maxZoom: 12,
-     opacity: 0.45}).addTo(map);
+  // Mapbox where we have a token, OSM otherwise, so the map still draws if the token is
+  // ever pulled. light-v11 is deliberately pale: the district colours are the data, the
+  // basemap is only there for orientation.
+  var MB = {{ mapbox_token|tojson }};
+  L.tileLayer(
+    MB ? 'https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}?access_token=' + MB
+       : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution: MB ? '&copy; Mapbox &copy; OpenStreetMap'
+                     : '&copy; OpenStreetMap contributors',
+     maxZoom: 12, tileSize: MB ? 512 : 256, zoomOffset: MB ? -1 : 0,
+     opacity: MB ? 0.75 : 0.45}).addTo(map);
 
   function style(f){
     var r = D[f.properties.dcode];
