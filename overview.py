@@ -7,9 +7,11 @@ Two rules shaped it:
 
   * Only show a number you would act on. A count of rows in a table is not news. "31 walkbooks
     built" tells you nothing; "5 walkbook requests waiting" is a job.
-  * A number that is stale or unresolved says so. filings.result drives every roster, so a
-    district still sitting at 'pending' is invisible to the mail, the palm cards and the
-    check-in chase. That is worth saying out loud rather than quietly excluding.
+  * Say what a number means, not what it looks like it means. filings.result reads 'pending'
+    for 239 R filings, which looks like missing data and is not: every roster in the codebase
+    selects `result <> 'lost'`, so a pending filing is a nominee and is already included in
+    the mail, the palm cards and the check-in chase. 'pending' means no primary contest to
+    record, not an unknown outcome.
 
 Read-only. Nothing here writes, so it can never be the thing that breaks a deadline.
 """
