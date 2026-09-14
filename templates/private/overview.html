@@ -1,79 +1,86 @@
 {% extends "base.html" %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+{% endblock %}
 {% block content %}
 <style>
-  .ov{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--red:#b4262d;--green:#1a7f43;
-      --amber:#8a6400;--ink:#22303f;color:var(--ink);max-width:1180px;margin:0 auto}
+  .ov{--navy:#1e3557;--rule:#e4e8ee;--muted:#6b7684;--red:#b4262d;--green:#1a7f43;
+      --amber:#8a6400;--ink:#1c2733;--ground:#f4f6f9;
+      color:var(--ink);max-width:1360px;margin:0 auto;font-size:.92rem}
 
-  /* Phone first. Everything is one column until there is room for more. */
-  .ov .bands{display:grid;grid-template-columns:1fr;gap:14px}
-  @media (min-width:760px){ .ov .bands{grid-template-columns:1fr 1fr} }
-  @media (min-width:1100px){ .ov .bands{grid-template-columns:1fr 1fr 1fr} }
-  .ov .wide{grid-column:1/-1}
-
-  .ov h4{margin:0 0 2px;font-size:1.25rem;color:var(--navy);font-weight:800}
-  .ov .when{color:var(--muted);font-size:.8rem;margin:0 0 14px}
+  .ov h4{margin:0;font-size:1.4rem;color:var(--navy);font-weight:800}
+  .ov .when{color:var(--muted);font-size:.84rem;margin:2px 0 16px}
   .ov .when b{color:var(--red)}
 
-  .ov .band{border:1px solid var(--rule);border-radius:8px;padding:13px 15px;background:#fff}
-  .ov .band h5{margin:0 0 10px;font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;
+  /* ---- the five numbers ---- */
+  .ov .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;
+    margin-bottom:16px}
+  .ov .kpi{background:#fff;border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
+  .ov .kpi .lab{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;
     color:var(--muted);font-weight:700}
+  .ov .kpi .n{font-size:2rem;font-weight:800;color:var(--navy);line-height:1.1;
+    font-variant-numeric:tabular-nums;margin-top:4px}
+  .ov .kpi .n.bad{color:var(--red)} .ov .kpi .n.good{color:var(--green)}
+  .ov .kpi .n.warn{color:var(--amber)}
+  .ov .kpi .sub{font-size:.78rem;color:var(--muted);margin-top:3px;line-height:1.4}
+  .ov .kpi a{color:inherit;text-decoration:none;display:block}
+  .ov .kpi.act{border-color:#f0c9cb;background:#fffafa}
 
-  /* The headline number of a band. */
-  .ov .hero{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:3px}
-  .ov .hero .n{font-size:2.2rem;font-weight:800;color:var(--navy);line-height:1;
-    font-variant-numeric:tabular-nums}
-  .ov .hero .of{font-size:.9rem;color:var(--muted)}
-  .ov .sub{font-size:.82rem;color:var(--muted);line-height:1.5;margin:6px 0 0}
-
-  /* Rows of secondary facts. Status is carried by the words and their colour, never a pill. */
-  .ov .facts{list-style:none;padding:0;margin:10px 0 0;font-size:.86rem}
-  .ov .facts li{display:flex;justify-content:space-between;gap:12px;padding:5px 0;
-    border-top:1px solid #f1f4f8;line-height:1.4}
-  .ov .facts li:first-child{border-top:0}
-  .ov .facts .v{font-variant-numeric:tabular-nums;font-weight:700;color:var(--navy);
-    white-space:nowrap}
-  .ov .facts .v.bad{color:var(--red)}
-  .ov .facts .v.good{color:var(--green)}
-  .ov .facts .v.warn{color:var(--amber)}
-  .ov .facts .k{color:var(--ink)}
-
-  .ov .bar{height:8px;background:#eef1f5;border-radius:5px;overflow:hidden;margin:9px 0 4px}
+  .ov .bar{height:7px;background:#e9edf3;border-radius:4px;overflow:hidden;margin-top:8px}
   .ov .bar i{display:block;height:100%;background:var(--navy)}
-  .ov .bar i.warn{background:var(--amber)}
-  .ov .bar i.bad{background:var(--red)}
+  .ov .bar i.warn{background:var(--amber)} .ov .bar i.bad{background:var(--red)}
 
-  /* The queue. Biggest thing on the page on a phone, because it is the reason you opened it. */
-  .ov .q{list-style:none;padding:0;margin:0}
-  .ov .q li{display:flex;align-items:baseline;gap:11px;padding:9px 0;
-    border-top:1px solid #f1f4f8}
-  .ov .q li:first-child{border-top:0}
-  .ov .q .n{font-size:1.45rem;font-weight:800;line-height:1;min-width:1.6em;text-align:right;
-    font-variant-numeric:tabular-nums;color:var(--navy)}
-  .ov .q .n.bad{color:var(--red)}
-  .ov .q .t{flex:1;font-size:.9rem;line-height:1.35}
-  .ov .q .t b{color:var(--navy)}
-  .ov .q .t .st{color:var(--muted);font-size:.8rem;display:block}
-  .ov .q .t .st.bad{color:var(--red)}
-  .ov .clear{font-size:.9rem;color:var(--green);font-weight:700}
+  /* ---- panels ---- */
+  .ov .row{display:grid;gap:14px;margin-bottom:14px}
+  .ov .row.two{grid-template-columns:1.35fr 1fr}
+  .ov .row.three{grid-template-columns:repeat(3,1fr)}
+  @media (max-width:1000px){ .ov .row.two,.ov .row.three{grid-template-columns:1fr} }
 
-  .ov .note{font-size:.78rem;color:var(--muted);line-height:1.5;margin:9px 0 0;
+  .ov .panel{background:#fff;border:1px solid var(--rule);border-radius:10px;padding:14px 16px}
+  .ov .panel h5{margin:0 0 10px;font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);font-weight:700;display:flex;align-items:center;gap:10px}
+  .ov .panel h5 .rt{margin-left:auto;font-size:.72rem;text-transform:none;letter-spacing:0;
+    font-weight:600}
+
+  /* ---- map ---- */
+  #map{height:470px;border-radius:8px;border:1px solid var(--rule)}
+  .ov .mapctl{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+  .ov .mapctl button{border:1px solid #cdd5df;background:#fff;border-radius:16px;
+    padding:5px 13px;font-size:.8rem;font-weight:600;color:var(--muted);cursor:pointer}
+  .ov .mapctl button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .ov .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:.78rem;
+    color:var(--muted)}
+  .ov .legend span i{display:inline-block;width:12px;height:12px;border-radius:3px;
+    margin-right:5px;vertical-align:-2px}
+  .leaflet-popup-content{margin:10px 12px;font-size:.86rem;line-height:1.5}
+  .leaflet-popup-content b{color:#1e3557}
+
+  /* ---- job lists ---- */
+  .ov .jobs{list-style:none;margin:0;padding:0;max-height:230px;overflow-y:auto}
+  .ov .jobs li{display:flex;gap:10px;align-items:baseline;padding:6px 0;
+    border-top:1px solid #f1f4f8;font-size:.86rem;line-height:1.4}
+  .ov .jobs li:first-child{border-top:0}
+  .ov .jobs .who{font-weight:700;color:var(--navy)}
+  .ov .jobs .meta{color:var(--muted);font-size:.8rem;margin-left:auto;white-space:nowrap}
+  .ov .jobs .meta.bad{color:var(--red);font-weight:700}
+  .ov .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .ov .chips a{font-size:.78rem;background:#f1f4f8;border-radius:5px;padding:3px 8px;
+    color:var(--navy);text-decoration:none;font-weight:600}
+  .ov .chips a:hover{background:#e2e8f2}
+  .ov .clear{color:var(--green);font-weight:700;font-size:.9rem;margin:0}
+  .ov .note{font-size:.79rem;color:var(--muted);line-height:1.5;margin:10px 0 0;
     padding-top:9px;border-top:1px solid #f1f4f8}
   .ov .note.bad{color:var(--red)}
-  .ov a.more{font-size:.78rem;color:var(--navy);font-weight:600;text-decoration:none}
-  .ov a.more:hover{text-decoration:underline}
 
-  .ov .log{list-style:none;padding:0;margin:0;font-size:.82rem}
-  .ov .log li{padding:5px 0;border-top:1px solid #f1f4f8;display:flex;gap:10px;line-height:1.4}
-  .ov .log li:first-child{border-top:0}
-  .ov .log .tm{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;
-    min-width:68px}
-
-  @media (max-width:520px){
-    .ov h4{font-size:1.1rem}
-    .ov .hero .n{font-size:1.9rem}
-    .ov .band{padding:12px 13px}
-    .ov .log .tm{min-width:0}
-  }
+  .ov table.d{width:100%;border-collapse:collapse;font-size:.85rem}
+  .ov table.d th{text-align:left;font-size:.63rem;text-transform:uppercase;
+    letter-spacing:.07em;color:var(--muted);padding:0 0 6px;font-weight:700}
+  .ov table.d td{padding:7px 0;border-top:1px solid #f1f4f8}
+  .ov table.d .n{text-align:right;font-variant-numeric:tabular-nums}
+  .ov .ok{color:var(--green);font-weight:700}
+  .ov .no{color:var(--red);font-weight:700}
+  .ov .dash{color:#c3c9d2}
+  .chartbox{position:relative;height:210px}
 </style>
 
 {% macro money(v) %}${{ '{:,.0f}'.format(v or 0) }}{% endmacro %}
@@ -81,244 +88,345 @@
 
 <div class="ov">
   <h4>Where things stand</h4>
-  <p class="when">
-    {{ d.today.strftime('%A %-d %B') }} &middot; <b>{{ d.days_left }} days</b> to the election
-  </p>
+  <p class="when">{{ d.today.strftime('%A %-d %B') }} &middot;
+    <b>{{ d.days_left }} days</b> to the election</p>
 
-  <div class="bands">
+  {% set jobs_total = d.jobs.stuck_lists|length + d.jobs.new_walkbooks|length %}
+  {% set pct = (d.program.committed / d.program.budget * 100) if d.program.budget else 0 %}
 
-    <!-- ================= QUEUE ================= -->
-    <div class="band wide">
-      <h5>Waiting on you</h5>
-      {% if d.queue %}
-        <ul class="q">
-          {% for q in d.queue %}
-          <li>
-            <span class="n {{ 'bad' if q.tone == 'bad' }}">{{ q.n }}</span>
-            <span class="t">
-              <b>{{ q.what }}</b>
-              <span class="st {{ 'bad' if q.tone == 'bad' }}">
-                {{ q.state }}{% if q.since %}, oldest {{ q.since|ago }}{% endif %}
-              </span>
-            </span>
-          </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="clear">Nothing waiting. Every request has been dealt with.</p>
-      {% endif %}
+  <!-- ======================= THE FIVE NUMBERS ======================= -->
+  <div class="kpis">
+    <div class="kpi {{ 'act' if jobs_total }}">
+      <div class="lab">Waiting on you</div>
+      <div class="n {{ 'bad' if jobs_total }}">{{ jobs_total }}</div>
+      <div class="sub">{{ d.jobs.stuck_lists|length }} voter lists,
+        {{ d.jobs.new_walkbooks|length }} walkbooks</div>
     </div>
 
-    <!-- ================= BALLOT ================= -->
-    <div class="band">
-      <h5>The ballot</h5>
-      <div class="hero">
-        <span class="n">{{ num(d.ballot.nominees) }}</span>
-        <span class="of">R nominees for {{ num(d.ballot.seats) }} seats</span>
-      </div>
-      <ul class="facts">
-        {% if d.ballot.r_short_seats %}
-        <li><span class="k">Seats with no Republican on them</span>
-            <span class="v bad">{{ d.ballot.r_short_seats }}</span></li>
-        {% endif %}
-        <li><span class="k">Districts where Democrats are short</span>
-            <span class="v good">{{ d.ballot.d_short_districts }}</span></li>
-        <li><span class="k">Lost their primary</span>
-            <span class="v">{{ d.ballot.lost }}</span></li>
-        {% if d.ballot.no_email %}
-        <li><span class="k">Nominees with no email on file</span>
-            <span class="v warn">{{ d.ballot.no_email }}</span></li>
-        {% endif %}
-      </ul>
-      {% if d.ballot.pending %}
-      <p class="note bad">
-        {{ num(d.ballot.pending) }} filings still say <b>pending</b>, so their primary result was
-        never recorded. Every roster reads that column, which means those candidates are invisible
-        to the mail, the palm cards and the check in chase.
-      </p>
-      {% endif %}
-    </div>
-
-    <!-- ================= CANDIDATES ================= -->
-    <div class="band">
-      <h5>Candidates</h5>
-      <div class="hero">
-        <span class="n">{{ d.cands.pct }}%</span>
-        <span class="of">have checked in, {{ d.cands.done }} of {{ d.cands.total }}</span>
-      </div>
-      <div class="bar"><i class="{{ 'bad' if d.cands.pct < 25 else 'warn' if d.cands.pct < 60 }}"
-        style="width:{{ d.cands.pct }}%"></i></div>
-      <ul class="facts">
-        <li><span class="k">Need yard signs</span><span class="v">{{ d.cands.needs_signs }}</span></li>
-        <li><span class="k">Need literature</span><span class="v">{{ d.cands.needs_lit }}</span></li>
-        <li><span class="k">Need a headshot</span><span class="v">{{ d.cands.needs_headshot }}</span></li>
-        <li><span class="k">Need walk books</span><span class="v">{{ d.cands.needs_walkbooks }}</span></li>
-      </ul>
-      {% if d.cands.never_logged_in %}
-      <p class="note">
-        {{ d.cands.never_logged_in }} have never signed in{% if d.cands.no_password %},
-        and {{ d.cands.no_password }} have no password set, so they cannot{% endif %}.
-        That is the check in rate above, explained.
-      </p>
-      {% endif %}
-    </div>
-
-    <!-- ================= PROGRAM ================= -->
-    <div class="band">
-      <h5>The program</h5>
-      <div class="hero">
-        <span class="n">{{ money(d.program.committed) }}</span>
-        <span class="of">committed of {{ money(d.program.budget) }}</span>
-      </div>
-      {% set pct = (d.program.committed / d.program.budget * 100) if d.program.budget else 0 %}
+    <div class="kpi">
+      <div class="lab">Committed</div>
+      <div class="n">{{ money(d.program.committed) }}</div>
+      <div class="sub">of {{ money(d.program.budget) }} across
+        {{ d.program.districts }} districts</div>
       <div class="bar"><i class="{{ 'bad' if pct > 100 else 'warn' if pct > 90 }}"
         style="width:{{ [pct, 100]|min }}%"></i></div>
-      <p class="sub">
-        {{ d.program.districts }} districts in the plan.
-        {% if pct > 100 %}That is {{ money(d.program.committed - d.program.budget) }} over the
-        ceiling.{% else %}{{ money(d.program.budget - d.program.committed) }} still unspent.{% endif %}
-      </p>
-      <ul class="facts">
-        {% if d.program.next_drop %}
-        <li><span class="k">Next mail drop</span>
-            <span class="v">{{ d.program.next_drop.strftime('%-d %b') }}</span></li>
-        {% endif %}
-        <li><span class="k">Pieces still in draft</span>
-            <span class="v {{ 'warn' if d.program.pieces_draft }}">{{ d.program.pieces_draft }}</span></li>
-        {% if d.program.no_pieces %}
-        <li><span class="k">Districts with no piece made</span>
-            <span class="v bad">{{ d.program.no_pieces }}</span></li>
-        {% endif %}
-      </ul>
-      <p class="note"><a class="more" href="{{ url_for('private.spend_plan') }}">Open the spend plan</a></p>
     </div>
 
-    <!-- ================= DIGITAL ================= -->
-    <div class="band">
-      <h5>Digital</h5>
-      <div class="hero">
-        <span class="n">{{ money(d.digital.spent) }}</span>
-        <span class="of">spent on Meta</span>
+    <div class="kpi">
+      <div class="lab">Next mail drop</div>
+      <div class="n">{{ d.program.next_drop.strftime('%-d %b') if d.program.next_drop else '—' }}</div>
+      <div class="sub">{{ d.program.pieces_draft }} pieces still in draft,
+        {{ d.program.pieces_scheduled }} scheduled</div>
+    </div>
+
+    <div class="kpi">
+      <div class="lab">Meta delivering</div>
+      <div class="n {{ 'bad' if d.jobs.meta_missing|length > 20 }}">
+        {{ d.map.values()|selectattr('meta_live')|list|length }}</div>
+      <div class="sub">{{ d.jobs.meta_missing|length }} districts have Meta money
+        and no campaign</div>
+    </div>
+
+    <div class="kpi">
+      <div class="lab">Candidates checked in</div>
+      <div class="n {{ 'bad' if d.cands.pct < 25 else 'warn' if d.cands.pct < 60 }}">{{ d.cands.pct }}%</div>
+      <div class="sub">{{ d.cands.done }} of {{ d.cands.total }};
+        {{ d.cands.never_logged_in }} never signed in</div>
+      <div class="bar"><i class="{{ 'bad' if d.cands.pct < 25 else 'warn' if d.cands.pct < 60 }}"
+        style="width:{{ d.cands.pct }}%"></i></div>
+    </div>
+  </div>
+
+  <!-- ======================= MAP + JOBS ======================= -->
+  <div class="row two">
+    <div class="panel">
+      <h5>The map <span class="rt" id="mapNote"></span></h5>
+      <div class="mapctl" id="mapctl">
+        <button data-v="tier" class="on">Tier</button>
+        <button data-v="cost">Money</button>
+        <button data-v="meta">Meta running</button>
+        <button data-v="pieces">Mail made</button>
       </div>
-      <ul class="facts">
-        <li><span class="k">Booked into Meta</span><span class="v">{{ money(d.digital.booked) }}</span></li>
-        <li><span class="k">Planned for Meta</span><span class="v">{{ money(d.digital.planned) }}</span></li>
-        {% if d.digital.offmeta %}
-        <li><span class="k">Planned off Meta, streaming and display</span>
-            <span class="v">{{ money(d.digital.offmeta) }}</span></li>
-        {% endif %}
-        <li><span class="k">Flights running now</span>
-            <span class="v {{ 'good' if d.digital.live }}">{{ d.digital.live }}</span></li>
-        <li><span class="k">Flights still to start</span><span class="v">{{ d.digital.scheduled }}</span></li>
-        {% if d.digital.dead %}
-        <li><span class="k">Live ads showing to nobody</span>
-            <span class="v bad">{{ d.digital.dead }}</span></li>
-        {% endif %}
-      </ul>
-      {% if d.digital.districts %}
-      <p class="sub">Running in {{ d.digital.districts }} district{{ '' if d.digital.districts == 1 else 's' }}.</p>
-      {% endif %}
-      {% if d.digital.sync_error %}
-      <p class="note bad">Last read from Meta: {{ d.digital.sync_error }}</p>
-      {% elif d.digital.synced %}
-      <p class="note">Meta last read {{ d.digital.synced|ago }}.</p>
-      {% endif %}
+      <div id="map"></div>
+      <div class="legend" id="legend"></div>
     </div>
 
-    <!-- ================= SITES AND MONEY ================= -->
-    <div class="band">
-      <h5>Websites and donations</h5>
-      <div class="hero">
-        <span class="n">{{ d.sites.live }}</span>
-        <span class="of">candidate sites live</span>
-      </div>
-      <ul class="facts">
-        <li><span class="k">On their own domain</span><span class="v">{{ d.sites.custom_domain }}</span></li>
-        <li><span class="k">Still a draft</span><span class="v">{{ d.sites.draft }}</span></li>
-        <li><span class="k">Raised through the sites</span>
-            <span class="v good">{{ money(d.sites.donations) }}</span></li>
-        <li><span class="k">In the last seven days</span>
-            <span class="v">{{ money(d.sites.donations_7d) }}</span></li>
-        <li><span class="k">Donations</span><span class="v">{{ num(d.sites.donors) }}</span></li>
-      </ul>
-    </div>
-
-    <!-- ================= FIELD ================= -->
-    <div class="band">
-      <h5>Field</h5>
-      <div class="hero">
-        <span class="n">{{ num(d.field.walkbooks_built) }}</span>
-        <span class="of">walkbook builds delivered</span>
-      </div>
-      <ul class="facts">
-        <li><span class="k">Districts with books</span><span class="v">{{ d.field.walkbook_districts }}</span></li>
-        <li><span class="k">Voter lists sent</span><span class="v">{{ d.field.lists_sent }}</span></li>
-        <li><span class="k">Consults booked ahead</span><span class="v">{{ d.field.consults }}</span></li>
-      </ul>
-    </div>
-
-    <!-- ================= DELIVERY ================= -->
-    <div class="band wide">
-      <h5>Is the plan actually happening</h5>
-      <table style="width:100%;border-collapse:collapse;font-size:.86rem">
-        <tr style="text-align:left;color:var(--muted);font-size:.66rem;
-                   text-transform:uppercase;letter-spacing:.07em">
-          <th style="padding:0 0 7px">Tactic</th>
-          <th style="padding:0 0 7px;text-align:right">Planned</th>
-          <th style="padding:0 0 7px;text-align:right">Districts</th>
-          <th style="padding:0 0 7px;text-align:right">Under way</th>
-          <th style="padding:0 0 7px">&nbsp;</th>
-        </tr>
-        {% for t in d.delivery.rows %}
-        <tr style="border-top:1px solid #f1f4f8">
-          <td style="padding:8px 0;font-weight:700;color:var(--navy)">{{ t.label }}</td>
-          <td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums">
-            {{ money(t.dollars) }}</td>
-          <td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums">
-            {{ t.districts }}</td>
-          <td style="padding:8px 0;text-align:right;font-variant-numeric:tabular-nums;
-                     font-weight:700;
-                     color:{{ 'var(--green)' if t.live and t.gap is not none and t.gap <= 0
-                             else 'var(--red)' if t.live is not none else 'var(--muted)' }}">
-            {% if t.live is none %}&mdash;{% else %}{{ t.live }}{% endif %}</td>
-          <td style="padding:8px 0 8px 14px;color:var(--muted);font-size:.8rem">
-            {% if t.note %}{{ t.note }}
-            {% elif t.gap and t.gap > 0 %}<span style="color:var(--red)">{{ t.gap }} districts
-              with nothing made</span>
-            {% elif t.live %}covered{% endif %}</td>
-        </tr>
+    <div class="panel">
+      <h5>Waiting on you</h5>
+      {% if d.jobs.stuck_lists or d.jobs.new_walkbooks %}
+      <ul class="jobs">
+        {% for name, dist, status in d.jobs.stuck_lists %}
+        <li><span class="who">{{ name }}</span>
+            <span style="color:var(--muted)">{{ dist }} voter list</span>
+            <span class="meta {{ 'bad' if status in ('failed','processing') }}">{{ status }}</span></li>
         {% endfor %}
-      </table>
+        {% for name, dist in d.jobs.new_walkbooks %}
+        <li><span class="who">{{ name }}</span>
+            <span style="color:var(--muted)">{{ dist }} walkbooks</span>
+            <span class="meta">waiting</span></li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="clear">Nothing waiting.</p>{% endif %}
+
+      <h5 style="margin-top:16px">Recent activity</h5>
+      <ul class="jobs" style="max-height:150px">
+        {% for at, action, desc in d.recent[:8] %}
+        <li><span>{{ desc or action }}</span>
+            <span class="meta">{{ at.strftime('%-d %b %H:%M') }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- ======================= CHARTS ======================= -->
+  <div class="row three">
+    <div class="panel">
+      <h5>Meta spend, by day</h5>
+      <div class="chartbox"><canvas id="cMeta"></canvas></div>
+      <p class="note">{{ money(d.digital.spent) }} spent of {{ money(d.digital.booked) }}
+        booked, against {{ money(d.digital.planned) }} planned.</p>
+    </div>
+    <div class="panel">
+      <h5>Mail drops</h5>
+      <div class="chartbox"><canvas id="cDrops"></canvas></div>
+      <p class="note">{{ d.program.pieces_draft + d.program.pieces_scheduled }} pieces across
+        {{ d.charts.drops|length }} drop dates. None printed yet.</p>
+    </div>
+    <div class="panel">
+      <h5>Where the money goes</h5>
+      <div class="chartbox"><canvas id="cTactics"></canvas></div>
       {% if d.delivery.untracked %}
-      <p class="note bad">
-        <b>{{ money(d.delivery.untracked) }}</b> of texts, streaming and display is in the plan
-        and leaves no record anywhere in here, because all three are bought outside this system.
-        That is not proof nothing was bought. It does mean nothing in this dashboard can tell
-        you either way.
-      </p>
-      {% endif %}
-      {% if d.delivery.pieces %}
-      <p class="note">
-        Pieces:
-        {% for st, n in d.delivery.pieces.items() %}{{ n }} {{ st }}{{ ', ' if not loop.last }}{% endfor %}.
-        {% if d.program.next_drop %}Next drop {{ d.program.next_drop.strftime('%-d %b') }}.{% endif %}
-      </p>
+      <p class="note bad">{{ money(d.delivery.untracked) }} of texts, streaming and display is
+        bought outside this system and leaves no record here.</p>
       {% endif %}
     </div>
+  </div>
 
-    <!-- ================= RECENT ================= -->
-    {% if d.recent %}
-    <div class="band wide">
-      <h5>Last three days</h5>
-      <ul class="log">
-        {% for at, action, desc in d.recent %}
-        <li><span class="tm">{{ at.strftime('%-d %b %H:%M') }}</span>
-            <span>{{ desc or action }}</span></li>
+  <!-- ======================= THE GAPS ======================= -->
+  <div class="row three">
+    <div class="panel">
+      <h5>Meta money, no campaign
+        <span class="rt no">{{ d.jobs.meta_missing|length }}</span></h5>
+      <div class="chips">
+        {% for c in d.jobs.meta_missing %}
+        <a href="{{ url_for('private.spend_plan') }}#{{ c|urlencode }}">{{ c }}</a>
+        {% endfor %}
+      </div>
+      <p class="note">Each of these has Meta budget in the plan and nothing running.</p>
+    </div>
+
+    <div class="panel">
+      <h5>In the plan, no piece made
+        <span class="rt no">{{ d.jobs.no_piece|length }}</span></h5>
+      <div class="chips">
+        {% for c in d.jobs.no_piece %}
+        <a href="{{ url_for('private.spend_plan') }}#{{ c|urlencode }}">{{ c }}</a>
+        {% endfor %}
+      </div>
+      <p class="note">Money committed, nothing at the printer.</p>
+    </div>
+
+    <div class="panel">
+      <h5>Nominees with no email
+        <span class="rt no">{{ d.jobs.no_email|length }}</span></h5>
+      <ul class="jobs" style="max-height:190px">
+        {% for name, dist in d.jobs.no_email %}
+        <li><span class="who">{{ name }}</span><span class="meta">{{ dist }}</span></li>
         {% endfor %}
       </ul>
+      <p class="note">Unreachable by any of the blasts.</p>
     </div>
-    {% endif %}
+  </div>
 
+  <!-- ======================= DELIVERY TABLE ======================= -->
+  <div class="panel" style="margin-bottom:20px">
+    <h5>Is the plan actually happening</h5>
+    <table class="d">
+      <tr><th>Tactic</th><th class="n">Planned</th><th class="n">Districts</th>
+          <th class="n">Under way</th><th></th></tr>
+      {% for t in d.delivery.rows %}
+      <tr>
+        <td style="font-weight:700;color:var(--navy)">{{ t.label }}</td>
+        <td class="n">{{ money(t.dollars) }}</td>
+        <td class="n">{{ t.districts }}</td>
+        <td class="n">{% if t.live is none %}<span class="dash">&mdash;</span>
+            {% else %}<span class="{{ 'ok' if t.gap is not none and t.gap <= 0 else 'no' }}">{{ t.live }}</span>{% endif %}</td>
+        <td style="color:var(--muted);font-size:.8rem;padding-left:14px">
+          {% if t.note %}{{ t.note }}
+          {% elif t.gap and t.gap > 0 %}<span class="no">{{ t.gap }} districts with nothing made</span>
+          {% elif t.live %}covered{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% if d.ballot.pending %}
+    <p class="note bad">{{ num(d.ballot.pending) }} filings still say <b>pending</b>, so those
+      candidates are invisible to the mail, the palm cards and the check in chase.</p>
+    {% endif %}
   </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+  var D = {{ d.map|tojson }};
+  var C = {{ d.charts|tojson }};
+
+  function money(n){ return '$' + Math.round(n || 0).toLocaleString(); }
+
+  // ------------------------------------------------------------------ MAP
+  var TIER = {1:'#b4262d', 2:'#d97b2b', 3:'#e8c14a'};
+  var VIEWS = {
+    tier: {
+      label: 'Tier 1 is the most competitive.',
+      legend: [['#b4262d','Tier 1'],['#d97b2b','Tier 2'],['#e8c14a','Tier 3'],
+               ['#e9edf3','not in the plan']],
+      color: function(r){ return r && r.tier ? TIER[r.tier] : '#e9edf3'; }
+    },
+    cost: {
+      label: 'Darker is more money committed.',
+      legend: [['#dbe4f0','under $5k'],['#8fa8c8','$5k to $10k'],['#4a6da0','$10k to $20k'],
+               ['#1e3557','over $20k'],['#f2f4f7','nothing']],
+      color: function(r){
+        var c = r ? r.cost : 0;
+        if(!c) return '#f2f4f7';
+        return c < 5000 ? '#dbe4f0' : c < 10000 ? '#8fa8c8'
+             : c < 20000 ? '#4a6da0' : '#1e3557';
+      }
+    },
+    meta: {
+      label: 'Red is budgeted for Meta with nothing running.',
+      legend: [['#1a7f43','ads delivering'],['#b4262d','budget, no campaign'],
+               ['#e9edf3','no Meta planned']],
+      color: function(r){
+        if(!r) return '#e9edf3';
+        if(r.meta_live) return '#1a7f43';
+        return r.meta_budget > 0 ? '#b4262d' : '#e9edf3';
+      }
+    },
+    pieces: {
+      label: 'Green has at least one piece made.',
+      legend: [['#1a7f43','piece made'],['#b4262d','in the plan, nothing made'],
+               ['#e9edf3','not in the plan']],
+      color: function(r){
+        if(!r || !r.include) return '#e9edf3';
+        return r.pieces > 0 ? '#1a7f43' : '#b4262d';
+      }
+    }
+  };
+  var view = 'tier', layer = null;
+
+  var map = L.map('map', {scrollWheelZoom: false}).setView([43.7, -71.6], 7);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+    {attribution: '&copy; OpenStreetMap, &copy; CARTO', maxZoom: 12}).addTo(map);
+
+  function style(f){
+    var r = D[f.properties.dcode];
+    return {fillColor: VIEWS[view].color(r), weight: 1, color: '#fff',
+            fillOpacity: 0.85, opacity: 0.9};
+  }
+
+  function popup(f){
+    var code = f.properties.dcode, r = D[code] || {};
+    var bits = ['<b>' + code + '</b>'];
+    if(r.rating) bits.push(r.rating + (r.pvi != null ? ' &middot; PVI ' + r.pvi : ''));
+    bits.push(r.seats + ' seat' + (r.seats === 1 ? '' : 's'));
+    if(r.include){
+      bits.push('<b>' + money(r.cost) + '</b> committed' +
+                (r.tier ? ' &middot; Tier ' + r.tier : ''));
+      bits.push(r.pieces ? r.pieces + ' piece' + (r.pieces === 1 ? '' : 's') + ' made'
+                         : '<span style="color:#b4262d">no piece made</span>');
+      if(r.meta_budget > 0){
+        bits.push(r.meta_live ? '<span style="color:#1a7f43">Meta delivering</span>'
+                              : '<span style="color:#b4262d">' + money(r.meta_budget) +
+                                ' Meta budget, nothing running</span>');
+      }
+    } else {
+      bits.push('<span style="color:#6b7684">not in the plan</span>');
+    }
+    return bits.join('<br>');
+  }
+
+  function draw(){
+    if(layer) map.removeLayer(layer);
+    layer = L.geoJSON(window.__NHGEO, {
+      style: style,
+      onEachFeature: function(f, l){
+        l.bindPopup(popup(f));
+        l.on('mouseover', function(){ l.setStyle({weight: 2.5, color: '#1e3557'}); });
+        l.on('mouseout',  function(){ l.setStyle({weight: 1, color: '#fff'}); });
+      }
+    }).addTo(map);
+    document.getElementById('mapNote').textContent = VIEWS[view].label;
+    document.getElementById('legend').innerHTML = VIEWS[view].legend.map(function(x){
+      return '<span><i style="background:' + x[0] + '"></i>' + x[1] + '</span>';
+    }).join('');
+  }
+
+  fetch('{{ url_for('static', filename='data/nh-house-plan.geojson') }}')
+    .then(function(r){ return r.json(); })
+    .then(function(g){
+      // Base districts only: floterials overlap them and would hide what is underneath.
+      window.__NHGEO = {type: 'FeatureCollection',
+        features: g.features.filter(function(f){ return f.properties.kind !== 'floterial'; })};
+      draw();
+      map.fitBounds(layer.getBounds(), {padding: [8, 8]});
+    })
+    .catch(function(){
+      document.getElementById('map').innerHTML =
+        '<p style="padding:20px;color:#6b7684">The district map could not be loaded.</p>';
+    });
+
+  document.getElementById('mapctl').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-v]'); if(!b) return;
+    view = b.getAttribute('data-v');
+    document.querySelectorAll('#mapctl button').forEach(function(x){
+      x.classList.toggle('on', x === b); });
+    if(window.__NHGEO) draw();
+  });
+
+  // ------------------------------------------------------------------ CHARTS
+  var GRID = {grid: {color: '#f1f4f8'}, ticks: {font: {size: 10}, color: '#6b7684'}};
+  var NOLEG = {legend: {display: false}};
+
+  if(C.meta_daily.length){
+    new Chart(document.getElementById('cMeta'), {
+      type: 'line',
+      data: {labels: C.meta_daily.map(function(x){ return x.date.slice(5); }),
+             datasets: [{data: C.meta_daily.map(function(x){ return x.spend; }),
+                         borderColor: '#1e3557', backgroundColor: 'rgba(30,53,87,.08)',
+                         fill: true, tension: .3, pointRadius: 2}]},
+      options: {responsive: true, maintainAspectRatio: false, plugins: NOLEG,
+        scales: {y: Object.assign({}, GRID, {ticks: {callback: function(v){ return '$' + v; },
+                   font: {size: 10}, color: '#6b7684'}}), x: GRID}}
+    });
+  }
+
+  if(C.drops.length){
+    new Chart(document.getElementById('cDrops'), {
+      type: 'bar',
+      data: {labels: C.drops.map(function(x){ return x.date.slice(5); }),
+             datasets: [{data: C.drops.map(function(x){ return x.pieces; }),
+                         backgroundColor: '#b4262d', borderRadius: 3}]},
+      options: {responsive: true, maintainAspectRatio: false, plugins: NOLEG,
+        scales: {y: Object.assign({}, GRID, {beginAtZero: true,
+                   ticks: {precision: 0, font: {size: 10}, color: '#6b7684'}}), x: GRID}}
+    });
+  }
+
+  if(C.tactics.length){
+    new Chart(document.getElementById('cTactics'), {
+      type: 'bar',
+      data: {labels: C.tactics.map(function(x){ return x.label; }),
+             datasets: [{data: C.tactics.map(function(x){ return x.dollars; }),
+                         backgroundColor: ['#1e3557','#4a6da0','#8fa8c8','#b4262d',
+                                           '#d97b2b','#e8c14a'], borderRadius: 3}]},
+      options: {indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: NOLEG,
+        scales: {x: Object.assign({}, GRID, {ticks: {callback: function(v){
+                   return '$' + (v / 1000) + 'k'; }, font: {size: 10}, color: '#6b7684'}}),
+                 y: {grid: {display: false}, ticks: {font: {size: 10}, color: '#6b7684'}}}}
+    });
+  }
+})();
+</script>
 {% endblock %}
