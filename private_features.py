@@ -5,7 +5,7 @@ Access is controlled via private_feature_access table - only superadmin can gran
 """
 
 from functools import wraps
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from datetime import datetime
 import logging
@@ -1812,6 +1812,68 @@ def spend_plan_export():
                                    '' if cost is None else round(cost, 2)])
     return Response(buf.getvalue(), mimetype='text/csv',
                     headers={'Content-Disposition': 'attachment; filename=spend_plan.csv'})
+
+
+@private_bp.route('/spend-plan/<code>/spend-report')
+@require_feature_access('campaign_plan')
+def spend_plan_district_report(code):
+    """One district's Meta spend, laid out to print. The export IS the browser's own
+    print-to-PDF (a Print button, Ctrl/Cmd+P, save as PDF) rather than a server-rendered
+    file, so this never has to be kept in sync with a separate PDF library's idea of the
+    same numbers the pane already shows."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT MAX(county_name), MAX(seat_count), MAX(pvi), MAX(pvi_rating),
+                   STRING_AGG(DISTINCT CASE WHEN ward IS NOT NULL AND ward <> 0
+                              THEN town || ' Ward ' || ward ELSE town END, ', ')
+            FROM districts WHERE full_district_code = %s
+        """, (code,))
+        row = cur.fetchone()
+        if not row or row[0] is None:
+            abort(404)
+        district = {'code': code, 'county': row[0], 'seats': row[1],
+                    'pvi': float(row[2]) if row[2] is not None else None,
+                    'rating': row[3], 'towns': row[4]}
+
+        cur.execute("""SELECT tactic_key, SUM(qty) FROM district_spend_item
+                       WHERE district_code = %s AND tactic_key IN ('meta','ctv','display')
+                       GROUP BY tactic_key""", (code,))
+        dig = {'meta': 0.0, 'ctv': 0.0, 'display': 0.0}
+        for tk, q in cur.fetchall():
+            dig[tk] = float(q or 0)
+
+        # A floterial buys no ads of its own: its candidate appears in the ads its base
+        # districts bought, exactly as it appears on their mail. Without this a floterial's
+        # report would wrongly say nothing is running.
+        cur.execute("SELECT base FROM district_floterial_base WHERE floterial = %s", (code,))
+        bases = [r[0] for r in cur.fetchall()]
+
+        import meta_district as MD
+        by_code = MD.district_meta([code] + bases)
+        own = by_code.get(code)
+        meta = own
+        for base in bases:
+            bm = by_code.get(base)
+            if not bm:
+                continue
+            if meta is None:
+                meta = {'ads': [], 'spend': 0.0, 'impressions': 0, 'clicks': 0,
+                        'cpm': None, 'cpc': None, 'ctr': None}
+            meta['ads'].extend(dict(a, via=base) for a in bm['ads'])
+        if meta:
+            meta['pacing'] = MD.pacing(own, dig['meta']) if own else None
+            meta['budget'] = dig['meta']
+            meta['digital'] = dig
+            meta['offmeta'] = dig['ctv'] + dig['display']
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    now = datetime.now()
+    return render_template('private/spend_report.html', d=district, m=meta,
+                           generated='%s %d, %d at %d:%02d %s' % (
+                               now.strftime('%b'), now.day, now.year,
+                               now.hour % 12 or 12, now.minute, now.strftime('%p')))
 
 
 # =============================================================================
