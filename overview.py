@@ -405,6 +405,122 @@ def _delivery(cur):
 
 
 # =============================================================================
+# THE MAP, THE CHARTS, THE JOB LISTS
+# =============================================================================
+
+DISTRICT_COST_SQL = """
+  WITH sized AS (
+    SELECT i.district_code, i.qty, t.unit, t.tactic_key,
+           COALESCE(i.rate_override, t.rate, 0) AS rate,
+           CASE WHEN i.universe = 'base' THEN du.households ELSE mu.households END AS hh,
+           CASE WHEN i.universe = 'base' THEN du.cells      ELSE mu.cells      END AS cells
+      FROM district_spend_item i
+      JOIN district_spend s ON s.district_code = i.district_code
+      JOIN spend_tactic t   ON t.tactic_key = i.tactic_key
+      LEFT JOIN district_universe du
+             ON du.district_code = i.district_code AND du.mask = s.mask
+      LEFT JOIN district_model_universe mu
+             ON mu.district_code = i.district_code AND mu.uni = i.universe
+     WHERE s.include AND i.qty > 0)
+  SELECT district_code,
+         SUM(CASE WHEN unit = 'dollars'       THEN qty
+                  WHEN unit = 'per_household' THEN qty * COALESCE(hh, 0) * rate
+                  WHEN unit = 'per_cell'      THEN qty * COALESCE(cells, 0) * rate
+                  ELSE qty * rate END) AS cost,
+         SUM(CASE WHEN tactic_key = 'meta' THEN qty ELSE 0 END) AS meta_budget
+    FROM sized GROUP BY 1"""
+
+
+def _map(cur):
+    """One row per district, keyed the way the geojson is (dcode == district_code).
+
+    Carries everything the map might colour by, so switching the view is instant and needs no
+    second request.
+    """
+    cost = {r[0]: {'cost': float(r[1] or 0), 'meta_budget': float(r[2] or 0)}
+            for r in _rows(cur, DISTRICT_COST_SQL)}
+    meta_live = {r[0] for r in _rows(cur, """
+        SELECT DISTINCT d.district_code FROM meta_campaign_district d
+          JOIN meta_ads a ON a.campaign_id = d.campaign_id
+         WHERE COALESCE(a.impressions, 0) > 0""")}
+    pieced = {r[0]: r[1] for r in _rows(cur, """
+        SELECT pd.district_code, count(DISTINCT p.id)
+          FROM spend_piece p JOIN spend_piece_district pd ON pd.piece_id = p.id
+         GROUP BY 1""")}
+    out = {}
+    for code, tier, include, seats, rating, pvi in _rows(cur, """
+        SELECT d.full_district_code, s.tier, COALESCE(s.include, false), d.seat_count,
+               d.pvi_rating, d.pvi
+          FROM (SELECT DISTINCT full_district_code, seat_count, pvi_rating, pvi FROM districts) d
+          LEFT JOIN district_spend s ON s.district_code = d.full_district_code"""):
+        c = cost.get(code, {})
+        out[code] = {
+            'tier': tier, 'include': bool(include), 'seats': seats or 0,
+            'rating': rating, 'pvi': float(pvi) if pvi is not None else None,
+            'cost': c.get('cost', 0.0), 'meta_budget': c.get('meta_budget', 0.0),
+            'meta_live': code in meta_live, 'pieces': pieced.get(code, 0),
+        }
+    return out
+
+
+def _charts(cur):
+    """Series for the graphs. Everything from tables we already sync, so the page stays fast."""
+    meta_daily = [{'date': d.isoformat(), 'spend': float(sp or 0), 'impressions': int(im or 0)}
+                  for d, sp, im in _rows(cur, """
+        SELECT date, SUM(spend), SUM(impressions) FROM meta_insights
+         WHERE level = 'account' GROUP BY 1 ORDER BY 1""")]
+    drops = [{'date': d.isoformat(), 'pieces': n} for d, n in _rows(cur, """
+        SELECT drop_date, count(*) FROM spend_piece
+         WHERE drop_date IS NOT NULL GROUP BY 1 ORDER BY 1""")]
+    tactics = [{'label': lab, 'dollars': float(v or 0)} for lab, v in _rows(cur, """
+        WITH sized AS (""" + DISTRICT_COST_SQL.split('WITH sized AS (')[1].split(')\n  SELECT')[0] + """)
+        SELECT t.label,
+               SUM(CASE WHEN sized.unit = 'dollars'       THEN sized.qty
+                        WHEN sized.unit = 'per_household' THEN sized.qty * COALESCE(sized.hh,0) * sized.rate
+                        WHEN sized.unit = 'per_cell'      THEN sized.qty * COALESCE(sized.cells,0) * sized.rate
+                        ELSE sized.qty * sized.rate END)
+          FROM sized JOIN spend_tactic t ON t.tactic_key = sized.tactic_key
+         GROUP BY 1 ORDER BY 2 DESC""")]
+    return {'meta_daily': meta_daily, 'drops': drops, 'tactics': tactics}
+
+
+def _jobs(cur):
+    """The lists. A count tells you there is a problem; a list is the thing you act on."""
+    return {
+        'meta_missing': [r[0] for r in _rows(cur, """
+            SELECT s.district_code FROM district_spend s
+             WHERE s.include
+               AND EXISTS (SELECT 1 FROM district_spend_item i
+                            WHERE i.district_code = s.district_code
+                              AND i.tactic_key = 'meta' AND i.qty > 0)
+               AND NOT EXISTS (SELECT 1 FROM meta_campaign_district m
+                                WHERE m.district_code = s.district_code)
+             ORDER BY 1""")],
+        'no_piece': [r[0] for r in _rows(cur, """
+            SELECT s.district_code FROM district_spend s
+             WHERE s.include
+               AND NOT EXISTS (SELECT 1 FROM spend_piece_district pd
+                                WHERE pd.district_code = s.district_code)
+             ORDER BY 1""")],
+        'no_email': [(r[0], r[1]) for r in _rows(cur, """
+            SELECT c.first_name || ' ' || c.last_name, f.district_code
+              FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
+             WHERE f.election_year = %s AND f.office = %s AND f.party = 'R'
+               AND f.result <> 'lost'
+               AND COALESCE(NULLIF(TRIM(c.email),''), NULLIF(TRIM(c.email1),''),
+                            NULLIF(TRIM(c.email2),'')) IS NULL
+             ORDER BY f.district_code""", (YEAR, OFFICE))],
+        'stuck_lists': [(r[0], r[1], r[2]) for r in _rows(cur, """
+            SELECT candidate_name, district_code, status FROM voterlist_requests
+             WHERE status IN ('new', 'processing', 'failed')
+             ORDER BY created_at""")],
+        'new_walkbooks': [(r[0], r[1]) for r in _rows(cur, """
+            SELECT candidate_name, district_code FROM walkbook_requests
+             WHERE status = 'new' ORDER BY created_at""")],
+    }
+
+
+# =============================================================================
 # SITES, MONEY, FIELD
 # =============================================================================
 
@@ -464,6 +580,9 @@ def gather():
             'sites': _sites(cur),
             'field': _field(cur),
             'delivery': _delivery(cur),
+            'map': _map(cur),
+            'charts': _charts(cur),
+            'jobs': _jobs(cur),
             'recent': _recent(cur),
         }
         conn.rollback()          # read-only: drop the transaction, hold nothing
