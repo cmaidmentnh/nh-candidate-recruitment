@@ -1814,13 +1814,15 @@ def spend_plan_export():
                     headers={'Content-Disposition': 'attachment; filename=spend_plan.csv'})
 
 
-@private_bp.route('/spend-plan/<code>/spend-report')
+@private_bp.route('/spend-plan/<code>/print')
 @require_feature_access('campaign_plan')
-def spend_plan_district_report(code):
-    """One district's Meta spend, laid out to print. The export IS the browser's own
-    print-to-PDF (a Print button, Ctrl/Cmd+P, save as PDF) rather than a server-rendered
-    file, so this never has to be kept in sync with a separate PDF library's idea of the
-    same numbers the pane already shows."""
+def spend_plan_district_print(code):
+    """One district's plan, laid out to print: tier, who is being bought, each tactic with
+    its quantity and cost, the total, and what Meta has actually spent against it.
+
+    The export IS the browser's own print-to-PDF rather than a server-rendered file. A PDF
+    library would have to be installed on the server and would then be a second place the
+    numbers could drift from what the pane says; this reads the same tables."""
     conn = get_db_connection(); cur = conn.cursor()
     try:
         cur.execute("""
@@ -1832,45 +1834,114 @@ def spend_plan_district_report(code):
         row = cur.fetchone()
         if not row or row[0] is None:
             abort(404)
-        district = {'code': code, 'county': row[0], 'seats': row[1],
-                    'pvi': float(row[2]) if row[2] is not None else None,
-                    'rating': row[3], 'towns': row[4]}
+        d = {'code': code, 'county': row[0], 'seats': row[1],
+             'pvi': float(row[2]) if row[2] is not None else None,
+             'rating': row[3], 'towns': row[4]}
 
-        cur.execute("""SELECT tactic_key, SUM(qty) FROM district_spend_item
-                       WHERE district_code = %s AND tactic_key IN ('meta','ctv','display')
-                       GROUP BY tactic_key""", (code,))
+        cur.execute("SELECT mask, include, notes, tier FROM district_spend WHERE district_code = %s",
+                    (code,))
+        row = cur.fetchone()
+        d['mask'] = row[0] if row and row[0] else 3
+        d['include'] = bool(row[1]) if row else False
+        d['notes'] = (row[2] or '') if row else ''
+        d['tier'] = row[3] if row else None
+        d['universe_name'] = dict(UNIVERSE_PRESETS).get(d['mask'], 'Custom')
+
+        cur.execute("SELECT kind FROM district_relation WHERE district_code = %s", (code,))
+        row = cur.fetchone()
+        d['floterial'] = bool(row and row[0] == 'floterial')
+        cur.execute("""SELECT base FROM district_floterial_base WHERE floterial = %s
+                       ORDER BY base""", (code,))
+        d['bases'] = [r[0] for r in cur.fetchall()]
+
+        cur.execute("""SELECT party, STRING_AGG(first_name || ' ' || last_name, ', ' ORDER BY last_name)
+                       FROM filings
+                       WHERE election_year = 2026 AND office = 'State Representative'
+                         AND district_code = %s AND result <> 'lost'
+                       GROUP BY party""", (code,))
+        d['nominees'] = dict(cur.fetchall())
+
+        cur.execute("""SELECT tactic_key, label, unit, rate, qty_label, grp
+                       FROM spend_tactic WHERE active ORDER BY sort_order""")
+        tactics = [{'key': r[0], 'label': r[1], 'unit': r[2],
+                    'rate': float(r[3]) if r[3] is not None else None,
+                    'qty_label': r[4], 'grp': r[5]} for r in cur.fetchall()]
+
+        # Same sizing rule as the pane: GOTV and persuasion come from the model universes,
+        # field is the whole district under the chosen mask.
+        sizes = {}
+        cur.execute("""SELECT uni, voters, households, cells FROM district_model_universe
+                       WHERE district_code = %s""", (code,))
+        for u, v, hh, ce in cur.fetchall():
+            sizes[u] = {'voters': v or 0, 'households': hh or 0, 'cells': ce or 0}
+        cur.execute("""SELECT voters, households, cells FROM district_universe
+                       WHERE district_code = %s AND mask = %s""", (code, d['mask']))
+        row = cur.fetchone()
+        sizes['base'] = ({'voters': row[0] or 0, 'households': row[1] or 0, 'cells': row[2] or 0}
+                         if row else {'voters': 0, 'households': 0, 'cells': 0})
+
+        cur.execute("""SELECT universe, tactic_key, qty, rate_override FROM district_spend_item
+                       WHERE district_code = %s""", (code,))
+        qty = {}
+        for u, tk, q, ro in cur.fetchall():
+            qty.setdefault(u, {})[tk] = {'qty': float(q), 'rate': float(ro) if ro is not None else None}
+
         dig = {'meta': 0.0, 'ctv': 0.0, 'display': 0.0}
-        for tk, q in cur.fetchall():
-            dig[tk] = float(q or 0)
-
-        # A floterial buys no ads of its own: its candidate appears in the ads its base
-        # districts bought, exactly as it appears on their mail. Without this a floterial's
-        # report would wrongly say nothing is running.
-        cur.execute("SELECT base FROM district_floterial_base WHERE floterial = %s", (code,))
-        bases = [r[0] for r in cur.fetchall()]
+        for u, byk in qty.items():
+            for tk in dig:
+                if byk.get(tk):
+                    dig[tk] += byk[tk]['qty']
 
         import meta_district as MD
-        by_code = MD.district_meta([code] + bases)
-        own = by_code.get(code)
-        meta = own
-        for base in bases:
-            bm = by_code.get(base)
-            if not bm:
-                continue
-            if meta is None:
-                meta = {'ads': [], 'spend': 0.0, 'impressions': 0, 'clicks': 0,
-                        'cpm': None, 'cpc': None, 'ctr': None}
-            meta['ads'].extend(dict(a, via=base) for a in bm['ads'])
+        meta = MD.district_meta([code]).get(code)
         if meta:
-            meta['pacing'] = MD.pacing(own, dig['meta']) if own else None
+            meta['pacing'] = MD.pacing(meta, dig['meta'])
             meta['budget'] = dig['meta']
-            meta['digital'] = dig
-            meta['offmeta'] = dig['ctv'] + dig['display']
     finally:
         cur.close(); release_db_connection(conn)
 
+    # The plan, laid out the way the pane shows it: a block per universe, a row per tactic
+    # that has a quantity, with the reach it bills against and what it costs.
+    UNIS = [('gotv', 'GOTV', 'low-propensity Republicans'),
+            ('persuade', 'Persuasion', 'midterm voters, no partisan history or flip-floppers'),
+            ('base', 'Field', 'whole district')]
+    blocks, total = [], 0.0
+    for u, title, who in UNIS:
+        if d['floterial'] and u != 'base':
+            continue
+        sz = sizes.get(u) or {'voters': 0, 'households': 0, 'cells': 0}
+        rows = []
+        for t in tactics:
+            cell = (qty.get(u) or {}).get(t['key'])
+            q = cell['qty'] if cell else 0.0
+            if q <= 0:
+                continue
+            rate = cell['rate'] if cell['rate'] is not None else t['rate']
+            if t['unit'] == 'per_household':
+                reach, cost = q * sz['households'], q * sz['households'] * (rate or 0)
+                how = '{:,} households x ${:.2f}'.format(sz['households'], rate or 0)
+            elif t['unit'] == 'per_cell':
+                reach, cost = q * sz['cells'], q * sz['cells'] * (rate or 0)
+                how = '{:,} cells x ${:.2f}'.format(sz['cells'], rate or 0)
+            elif t['unit'] == 'dollars':
+                reach, cost, how = None, q, 'budgeted in dollars'
+            else:
+                reach = q
+                cost = None if rate is None else q * rate
+                how = 'no unit cost set' if rate is None else '${:.2f} each'.format(rate)
+            dollars = t['unit'] == 'dollars'
+            rows.append({'label': t['label'],
+                         'qty': '${:,.0f}'.format(q) if dollars else _qty_word(q),
+                         'qty_label': '' if dollars else t['qty_label'],
+                         'how': how, 'reach': reach, 'cost': cost})
+            total += cost or 0
+        if rows:
+            blocks.append({'title': title, 'who': who, 'size': sz, 'rows': rows,
+                           'subtotal': sum(r['cost'] or 0 for r in rows)})
+
     now = datetime.now()
-    return render_template('private/spend_report.html', d=district, m=meta,
+    return render_template('private/spend_plan_print.html', d=d, blocks=blocks, total=total,
+                           m=meta, dig=dig,
                            generated='%s %d, %d at %d:%02d %s' % (
                                now.strftime('%b'), now.day, now.year,
                                now.hour % 12 or 12, now.minute, now.strftime('%p')))

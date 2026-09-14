@@ -295,7 +295,9 @@
         '<li><span>Seats</span><span class="v">' + (d.seats || 0) + '</span></li>' +
         '<li><span>Rating</span><span class="v">' + esc(d.rating || '') + '</span></li>' +
         '<li><span>PVI</span><span class="v">' + (d.pvi == null ? '&mdash;' : d.pvi) + '</span></li>' +
-      '</ul></div>';
+      '</ul>' +
+      '<p class="note" style="margin-top:8px"><a href="/private/spend-plan/' + encodeURIComponent(d.code) +
+        '/print?autoprint=1" target="_blank" rel="noopener">Print this plan</a></p></div>';
 
     h += '<div class="blk"><h3>Tier</h3><div class="opts" id="tiers">' +
       [0,1,2,3].map(function(t){
@@ -402,9 +404,7 @@
     if(d.meta){
       h += '<div class="blk"><h3>Digital</h3><p class="note"><b>' + money(d.meta.spent) +
         '</b> spent of ' + money(d.meta.budget || 0) + ' budgeted on Meta, ' +
-        num(d.meta.impressions) + ' shown. See the Ads and Numbers tabs.</p>' +
-        '<p class="note"><a href="/private/spend-plan/' + encodeURIComponent(d.code) +
-        '/spend-report?autoprint=1" target="_blank" rel="noopener">Spend PDF</a></p></div>';
+        num(d.meta.impressions) + ' shown. See the Ads and Numbers tabs.</p></div>';
     }
     return h;
   }

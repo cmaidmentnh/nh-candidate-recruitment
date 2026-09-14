@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ d.code }} — spend plan</title>
+<style>
+  :root{ --navy:#0b2545; --muted:#7b8494; --rule:#dde2e8; --red:#b4262d; --green:#1a7a3c; }
+  *{ box-sizing:border-box }
+  html{ color-scheme:light; background:#fff }
+  body{ font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:#1c2530;
+        background:#fff; margin:0; padding:32px; max-width:760px }
+  h1{ font-size:1.5rem; margin:0 0 2px; color:var(--navy) }
+  .sub{ color:var(--muted); font-size:.9rem; margin:0 0 22px }
+  .toolbar{ margin-bottom:22px }
+  .toolbar button{ font-size:.85rem; padding:7px 14px; border:1px solid var(--navy);
+        background:var(--navy); color:#fff; border-radius:5px; cursor:pointer }
+  h2{ font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+      border-bottom:1px solid var(--rule); padding-bottom:6px; margin:26px 0 10px }
+  h2 small{ text-transform:none; letter-spacing:0; font-weight:400; margin-left:6px }
+  .row{ display:flex; flex-wrap:wrap; gap:0 30px; align-items:baseline; margin-bottom:6px }
+  .g{ display:flex; flex-direction:column; gap:1px; margin-bottom:10px }
+  .v{ font-size:1.2rem; font-weight:800; color:var(--navy); font-variant-numeric:tabular-nums }
+  .l{ font-size:.62rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted) }
+  .note{ font-size:.84rem; padding:9px 12px; border-radius:5px; background:#f3f5f8;
+        border-left:3px solid var(--muted); margin:8px 0 4px }
+  .note.warn{ border-left-color:var(--red) }
+  table{ width:100%; border-collapse:collapse; font-size:.84rem; margin-top:4px }
+  th,td{ padding:6px 8px; border-bottom:1px solid var(--rule); text-align:left; vertical-align:top }
+  th{ font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted) }
+  td.n, th.n{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap }
+  td.how{ color:var(--muted); font-size:.76rem }
+  tr.sum td{ border-bottom:none; font-weight:700; padding-top:8px }
+  .total{ display:flex; justify-content:space-between; align-items:baseline; margin-top:22px;
+        padding-top:12px; border-top:2px solid var(--navy) }
+  .total .v{ font-size:1.6rem }
+  .none{ color:var(--muted); font-size:.88rem }
+  .notes{ white-space:pre-wrap; font-size:.88rem; padding:10px 12px; border:1px solid var(--rule);
+        border-radius:5px; min-height:44px }
+  .foot{ margin-top:34px; font-size:.72rem; color:var(--muted) }
+  @media print{
+    body{ padding:0; max-width:none }
+    .toolbar{ display:none }
+    h2{ break-after:avoid }
+    table, .total{ break-inside:avoid }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
+
+  <h1>{{ d.code }}</h1>
+  <p class="sub">
+    {{ d.county }} &middot; {{ d.seats or 0 }} seat{{ '' if d.seats == 1 else 's' }}
+    {% if d.pvi is not none %}&middot; {{ 'R+' if d.pvi >= 0 else 'D+' }}{{ '%.1f'|format(d.pvi|abs) }} {{ d.rating or '' }}{% endif %}
+    {% if d.towns %}&middot; {{ d.towns }}{% endif %}
+    <br>Printed {{ generated }}
+  </p>
+
+  <div class="row">
+    <div class="g"><span class="v">{{ 'Tier %d'|format(d.tier) if d.tier else 'No tier' }}</span><span class="l">tier</span></div>
+    <div class="g"><span class="v">{{ 'Yes' if d.include else 'No' }}</span><span class="l">counted in the plan</span></div>
+    <div class="g"><span class="v">${{ '{:,.0f}'.format(total) }}</span><span class="l">planned here</span></div>
+  </div>
+
+  <h2>On the ballot</h2>
+  {% if d.nominees.R %}
+    <p style="margin:4px 0"><b>R:</b> {{ d.nominees.R }}</p>
+  {% else %}
+    <p class="none" style="margin:4px 0">No Republican on the ballot here.</p>
+  {% endif %}
+  {% if d.nominees.D %}<p style="margin:4px 0"><b>D:</b> {{ d.nominees.D }}</p>{% endif %}
+
+  {% if d.floterial %}
+  <div class="note"><b>Floterial.</b> Nothing is bought here. This candidate appears on the mail
+    bought in the base districts{% if d.bases %}: {{ d.bases|join(', ') }}{% endif %}.
+    What they receive is set by those bases, not by the tier on this district.</div>
+  {% endif %}
+
+  {% if not blocks %}
+    <h2>The plan</h2>
+    <p class="none">Nothing is planned in {{ d.code }} yet.</p>
+  {% endif %}
+
+  {% for b in blocks %}
+  <h2>{{ b.title }} <small>&middot; {{ b.who }}</small></h2>
+  {% if b.title != 'Field' %}
+  <p class="none" style="margin:0 0 6px">{{ '{:,}'.format(b.size.households) }} households &middot;
+    {{ '{:,}'.format(b.size.cells) }} cells &middot; {{ '{:,}'.format(b.size.voters) }} voters</p>
+  {% else %}
+  <p class="none" style="margin:0 0 6px">{{ d.universe_name }} &middot;
+    {{ '{:,}'.format(b.size.households) }} households &middot;
+    {{ '{:,}'.format(b.size.cells) }} cells &middot; {{ '{:,}'.format(b.size.voters) }} voters</p>
+  {% endif %}
+  <table>
+    <tr><th>Tactic</th><th class="n">How many</th><th>Billed as</th><th class="n">Reach</th><th class="n">Cost</th></tr>
+    {% for r in b.rows %}
+    <tr>
+      <td>{{ r.label }}</td>
+      <td class="n">{{ r.qty }} <span style="color:var(--muted);font-size:.74rem">{{ r.qty_label }}</span></td>
+      <td class="how">{{ r.how }}</td>
+      <td class="n">{% if r.reach is not none %}{{ '{:,.0f}'.format(r.reach) }}{% else %}&mdash;{% endif %}</td>
+      <td class="n">{% if r.cost is none %}not quoted{% else %}${{ '{:,.0f}'.format(r.cost) }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+    <tr class="sum"><td colspan="4">{{ b.title }} subtotal</td><td class="n">${{ '{:,.0f}'.format(b.subtotal) }}</td></tr>
+  </table>
+  {% endfor %}
+
+  {% if blocks %}
+  <div class="total"><span class="l" style="font-size:.8rem">{{ d.code }} total</span>
+    <span class="v">${{ '{:,.0f}'.format(total) }}</span></div>
+  {% endif %}
+
+  {% if m %}
+  <h2>Meta, actually running</h2>
+  <div class="row">
+    <div class="g"><span class="v">${{ '{:,.0f}'.format(m.spend) }}</span><span class="l">spent so far</span></div>
+    <div class="g"><span class="v">${{ '{:,.0f}'.format(m.budget) }}</span><span class="l">budgeted on Meta</span></div>
+    <div class="g"><span class="v">{{ '{:,}'.format(m.impressions) }}</span><span class="l">impressions</span></div>
+    <div class="g"><span class="v">{{ '{:,}'.format(m.clicks) }}</span><span class="l">clicks</span></div>
+    {% if m.pacing %}<div class="g"><span class="v">{{ m.pacing.verdict }}</span><span class="l">pacing</span></div>{% endif %}
+  </div>
+  {% elif dig.meta %}
+  <h2>Meta, actually running</h2>
+  <p class="none">${{ '{:,.0f}'.format(dig.meta) }} budgeted on Meta, nothing running yet.</p>
+  {% endif %}
+
+  <h2>Notes</h2>
+  <div class="notes">{{ d.notes }}</div>
+
+  <p class="foot">CTEHR Candidate Tracker &middot; spend plan as it stood when printed</p>
+
+  <script>
+    if (location.search.indexOf('autoprint') !== -1) window.print();
+  </script>
+</body>
+</html>
