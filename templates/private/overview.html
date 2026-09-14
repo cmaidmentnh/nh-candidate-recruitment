@@ -317,8 +317,9 @@
   var view = 'tier', layer = null;
 
   var map = L.map('map', {scrollWheelZoom: false}).setView([43.7, -71.6], 7);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
-    {attribution: '&copy; OpenStreetMap, &copy; CARTO', maxZoom: 12}).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution: '&copy; OpenStreetMap contributors', maxZoom: 12,
+     opacity: 0.45}).addTo(map);
 
   function style(f){
     var r = D[f.properties.dcode];
