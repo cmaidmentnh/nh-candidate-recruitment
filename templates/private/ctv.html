@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .ctv{--navy:#1e3557;--rule:#e4e8ee;--muted:#6b7684;--red:#b4262d;--green:#1a7f43;
+       --amber:#8a6400;color:#1c2733;max-width:1180px;margin:0 auto;font-size:.9rem}
+  .ctv h4{margin:0;font-size:1.35rem;color:var(--navy);font-weight:800}
+  .ctv .lead{color:var(--muted);font-size:.84rem;margin:3px 0 16px;max-width:820px;line-height:1.6}
+  .ctv .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;
+    margin-bottom:16px}
+  .ctv .kpi{background:#fff;border:1px solid var(--rule);border-radius:9px;padding:13px 15px}
+  .ctv .kpi .lab{font-size:.62rem;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);font-weight:700}
+  .ctv .kpi .n{font-size:1.75rem;font-weight:800;color:var(--navy);line-height:1.1;
+    font-variant-numeric:tabular-nums;margin-top:3px}
+  .ctv .kpi .sub{font-size:.76rem;color:var(--muted);margin-top:3px;line-height:1.4}
+  .ctv table{width:100%;border-collapse:collapse;background:#fff;
+    border:1px solid var(--rule);border-radius:9px;overflow:hidden}
+  .ctv th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;padding:8px;text-align:left;font-weight:700}
+  .ctv th.n,.ctv td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .ctv td{padding:8px;border-bottom:1px solid #f1f4f8}
+  .ctv tr:last-child td{border-bottom:0}
+  .ctv .nm{font-weight:700;color:var(--navy)}
+  .ctv .dim{color:var(--muted);font-size:.8rem}
+  .ctv .pend{color:var(--amber);font-weight:700;font-size:.8rem}
+  .ctv .live{color:var(--green);font-weight:700;font-size:.8rem}
+  .ctv .panel{background:#fff;border:1px solid var(--rule);border-radius:9px;
+    padding:14px 16px;margin-bottom:14px}
+  .ctv .panel h5{margin:0 0 9px;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);font-weight:700}
+  .ctv .note{font-size:.8rem;color:var(--muted);line-height:1.6;margin:12px 0 0}
+  .ctv .warn{background:#fff9ec;border-left:3px solid var(--amber);padding:10px 13px;
+    border-radius:5px;color:#6b4f00;font-size:.85rem;line-height:1.55;margin:0 0 14px}
+  .ctv .btn{background:var(--navy);color:#fff;border:0;border-radius:5px;padding:8px 16px;
+    font-weight:700;font-size:.84rem;cursor:pointer}
+</style>
+
+{% macro money(v) %}${{ '{:,.2f}'.format(v or 0) }}{% endmacro %}
+{% macro num(v) %}{{ '{:,}'.format(v or 0) }}{% endmacro %}
+
+<div class="ctv">
+  <h4>Streaming / CTV</h4>
+  <p class="lead">
+    Seven StackAdapt campaigns against the CTV money in the plan. The plan prices CTV at a
+    <b>${{ '{:,.0f}'.format(d.plan_cpm or 0) }} CPM</b>; these buys bid <b>$110</b>, which is a
+    ceiling and not a price. So the planned dollars buy somewhere between about 62,000 and
+    150,000 impressions, and only delivery settles which. That is what the last two columns
+    are for.
+  </p>
+
+  {% set delivering = d.rows|selectattr('impressions')|list|length %}
+  {% if not delivering %}
+  <div class="warn">
+    <b>Nothing has delivered yet.</b> Every campaign is still in creative review at StackAdapt,
+    which is why spend and impressions are zero. This is the expected state on day one, not a
+    broken sync. The figures fill in on their own once review clears.
+  </div>
+  {% endif %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="lab">Planned</div>
+      <div class="n">{{ money(d.planned_total) }}</div>
+      <div class="sub">across {{ d.rows|length }} districts</div></div>
+    <div class="kpi"><div class="lab">Spent</div>
+      <div class="n">{{ money(d.spent_total) }}</div>
+      <div class="sub">{{ '%.1f'|format(d.spent_total / d.planned_total * 100 if d.planned_total else 0) }}% of the plan</div></div>
+    <div class="kpi"><div class="lab">Impressions</div>
+      <div class="n">{{ num(d.impressions_total) }}</div>
+      <div class="sub">{{ num((d.planned_total / d.plan_cpm * 1000)|round|int) if d.plan_cpm else '—' }} if the plan's CPM holds</div></div>
+    <div class="kpi"><div class="lab">Actual CPM</div>
+      {% set acpm = (d.spent_total / d.impressions_total * 1000) if d.impressions_total else None %}
+      <div class="n {{ 'good' if acpm and acpm < d.plan_cpm else 'warn' if acpm else '' }}">
+        {{ '$%.2f'|format(acpm) if acpm else '—' }}</div>
+      <div class="sub">plan assumes ${{ '{:,.0f}'.format(d.plan_cpm or 0) }}, bid ceiling $110</div></div>
+  </div>
+
+  <div class="panel">
+    <h5>By district</h5>
+    <table>
+      <tr>
+        <th>District</th><th>Candidate</th>
+        <th class="n">Planned</th><th class="n">Spent</th>
+        <th class="n">Impressions</th><th class="n">Completes</th>
+        <th class="n">Actual CPM</th><th class="n">vs plan</th><th>Status</th>
+      </tr>
+      {% for r in d.rows %}
+      <tr>
+        <td class="nm">{{ r.district }}</td>
+        <td>{{ r.candidate }}</td>
+        <td class="n">{{ money(r.planned) }}</td>
+        <td class="n">{{ money(r.spent) }}</td>
+        <td class="n">{{ num(r.impressions) }}</td>
+        <td class="n">{{ num(r.completes) }}</td>
+        <td class="n">{{ '$%.2f'|format(r.actual_cpm) if r.actual_cpm else '—' }}</td>
+        <td class="n">
+          {% if r.actual_cpm and r.plan_cpm %}
+            {% set gap = (r.actual_cpm - r.plan_cpm) / r.plan_cpm * 100 %}
+            <span style="color:{{ 'var(--green)' if gap < 0 else 'var(--red)' }};font-weight:700">
+              {{ '+' if gap > 0 else '' }}{{ '%.0f'|format(gap) }}%</span>
+          {% else %}<span class="dim">—</span>{% endif %}
+        </td>
+        <td>
+          {% if r.impressions %}<span class="live">delivering</span>
+          {% elif r.status %}<span class="pend">{{ r.status|lower|replace('_',' ') }}</span>
+          {% else %}<span class="dim">no delivery yet</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="note">
+      Margaret Drye's seat is <b>Sullivan 7</b>, a floterial, which carries no spend of its own.
+      Her campaign is recorded against <b>Sullivan 3</b>, the base district that funds it, and
+      her fence covers both her bases. One district per campaign, so no dollar is counted twice.
+    </p>
+  </div>
+
+  {% if daily %}
+  <div class="panel">
+    <h5>By day</h5>
+    <table>
+      <tr><th>Date</th><th class="n">Spend</th><th class="n">Impressions</th>
+          <th class="n">CPM that day</th></tr>
+      {% for row in daily %}
+      <tr><td>{{ row.date }}</td><td class="n">{{ money(row.cost) }}</td>
+          <td class="n">{{ num(row.impressions) }}</td>
+          <td class="n">{{ '$%.2f'|format(row.cpm) if row.cpm else '—' }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="panel">
+    <h5>Sync</h5>
+    <p class="note" style="margin:0 0 10px">
+      {% if sync_error %}
+        <span style="color:var(--red)"><b>Last pull failed:</b> {{ sync_error }}</span>
+      {% elif synced %}
+        StackAdapt last read {{ synced|ago }}. It refreshes itself about every 15 minutes and
+        re-reads the last seven days each time, because StackAdapt restates recent days as
+        impressions settle.
+      {% else %}
+        Never read yet.
+      {% endif %}
+    </p>
+    <form method="post" action="{{ url_for('private.ctv_refresh') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn" type="submit">Read StackAdapt now</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

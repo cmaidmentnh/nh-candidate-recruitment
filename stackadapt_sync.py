@@ -253,6 +253,74 @@ def sync(days=LOOKBACK_DAYS):
 
 
 # =============================================================================
+# THE TIMER
+# =============================================================================
+
+# Same pattern as the Meta sync next door: one daemon thread per gunicorn worker, and the work
+# itself serialised through a Postgres advisory lock so whichever worker wakes first does the
+# pull and the rest go back to sleep. A different lock number, or the two syncs would block
+# each other for no reason.
+AUTO_SYNC_LOCK = 0x53544143_4B414450          # "STAC" "KADP"
+AUTO_SYNC_EVERY_S = 15 * 60
+AUTO_SYNC_STALE_MIN = 55
+_auto_thread = None
+
+
+def auto_sync_enabled():
+    return (os.environ.get('STACKADAPT_AUTO_SYNC') or '1').strip() \
+        not in ('0', 'false', 'no', 'off')
+
+
+def start_auto_sync():
+    import threading
+    global _auto_thread
+    if not auto_sync_enabled() or _auto_thread is not None:
+        return
+    _auto_thread = threading.Thread(target=_loop, name='stackadapt-auto-sync', daemon=True)
+    _auto_thread.start()
+
+
+def _loop():
+    time.sleep(120)   # let the app start, and stagger against the Meta sync
+    while True:
+        try:
+            auto_sync_once()
+        except Exception:
+            logger.exception('stackadapt auto sync failed')
+        time.sleep(AUTO_SYNC_EVERY_S)
+
+
+def auto_sync_once():
+    """Pull if nothing has been attempted in the last 55 minutes and the lock is free."""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (AUTO_SYNC_LOCK,))
+        if not cur.fetchone()[0]:
+            return {'lock': False}
+        try:
+            cur.execute("""SELECT count(*) FROM stackadapt_accounts
+                            WHERE active AND (last_attempt_at IS NULL
+                              OR last_attempt_at < now() - make_interval(mins => %s))""",
+                        (AUTO_SYNC_STALE_MIN,))
+            due = cur.fetchone()[0]
+            cur.close()
+            release_db_connection(conn)
+            conn = None
+            if not due:
+                return {'lock': True, 'due': 0}
+            return {'lock': True, 'due': due, 'result': sync()}
+        finally:
+            if conn is not None:
+                c2 = conn.cursor()
+                c2.execute("SELECT pg_advisory_unlock(%s)", (AUTO_SYNC_LOCK,))
+                c2.close()
+    finally:
+        if conn is not None:
+            release_db_connection(conn)
+
+
+# =============================================================================
 # PLANNED AGAINST ACTUAL
 # =============================================================================
 

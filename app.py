@@ -556,8 +556,9 @@ init_meta_billing(get_db_connection, release_db_connection)
 
 # StackAdapt CTV delivery, the CTV half of the Meta pipeline. Same table shape, same idea:
 # the plan holds CTV as dollars and this reads back what those dollars bought.
-from stackadapt_sync import init_stackadapt
+from stackadapt_sync import init_stackadapt, start_auto_sync as _sa_auto_sync
 init_stackadapt(get_db_connection, release_db_connection)
+_sa_auto_sync()
 
 
 

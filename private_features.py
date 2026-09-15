@@ -1311,6 +1311,53 @@ def _cost_of(qty_for_district, sizes, tactics):
     return total
 
 
+@private_bp.route('/ctv')
+@require_feature_access('meta_ads')
+def ctv_overview():
+    """StackAdapt CTV: what was planned, what it is buying, and at what CPM.
+
+    The plan prices CTV at $45 a thousand. These buys bid $110, which is a ceiling rather than
+    a price, so the planned dollars buy somewhere between 62,000 and 150,000 impressions and
+    only delivery settles it. That comparison is the whole reason this page exists.
+    """
+    import stackadapt_sync as SA
+    d = SA.by_district()
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT last_synced_at, last_sync_error, campaigns_seen
+                         FROM stackadapt_accounts WHERE account_id = '44108'""")
+        acct = cur.fetchone()
+        cur.execute("""SELECT date, SUM(cost), SUM(impressions),
+                              CASE WHEN SUM(impressions) > 0
+                                   THEN SUM(cost) / SUM(impressions) * 1000 END
+                         FROM stackadapt_insights GROUP BY 1 ORDER BY 1""")
+        daily = [{'date': r[0].isoformat(), 'cost': float(r[1] or 0),
+                  'impressions': int(r[2] or 0),
+                  'cpm': float(r[3]) if r[3] is not None else None}
+                 for r in cur.fetchall()]
+    finally:
+        cur.close(); release_db_connection(conn)
+    return render_template('private/ctv.html', d=d, daily=daily,
+                           synced=acct[0] if acct else None,
+                           sync_error=acct[1] if acct else None)
+
+
+@private_bp.route('/ctv/refresh', methods=['POST'])
+@require_feature_access('meta_ads')
+def ctv_refresh():
+    import stackadapt_sync as SA
+    res = SA.sync()
+    if res.get('ok'):
+        msg = '%d campaigns read, %d day rows.' % (res.get('campaigns', 0), res.get('rows', 0))
+        if res.get('pending_review'):
+            msg += (' %d still in creative review, which is why they show no delivery.'
+                    % res['pending_review'])
+        flash(msg, 'success')
+    else:
+        flash('StackAdapt would not answer: %s' % res.get('error'), 'danger')
+    return redirect(url_for('private.ctv_overview'))
+
+
 @private_bp.route('/ads')
 @require_feature_access('meta_ads')
 def ads_overview():
