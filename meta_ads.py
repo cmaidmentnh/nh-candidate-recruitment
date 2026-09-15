@@ -61,7 +61,7 @@ _fallback_key = None
 SETTINGS_EDITORS = {e.strip().lower() for e in (os.environ.get('META_SETTINGS_EDITORS') or 'berryrm0@gmail.com').split(',') if e.strip()}
 
 MIGRATIONS = ('031_meta_ads.sql', '032_meta_settings.sql', '033_meta_district_link.sql', '034_meta_creative.sql',
-              '035_meta_races.sql')
+              '035_meta_races.sql', '036_meta_billing.sql', '037_stackadapt.sql')
 
 
 def init_meta_ads(db_conn_func, db_release_func, secret_key=None):
