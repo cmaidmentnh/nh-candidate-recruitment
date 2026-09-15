@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .ao{--navy:#1e3557;--rule:#e4e8ee;--muted:#6b7684;--red:#b4262d;--green:#1a7f43;
+      --amber:#8a6400;color:#1c2733;max-width:1340px;margin:0 auto;font-size:.9rem}
+  .ao h4{margin:0;font-size:1.35rem;color:var(--navy);font-weight:800}
+  .ao .lead{color:var(--muted);font-size:.83rem;margin:3px 0 16px;max-width:820px;line-height:1.55}
+
+  .ao .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;
+    margin-bottom:16px}
+  .ao .kpi{background:#fff;border:1px solid var(--rule);border-radius:9px;padding:12px 14px}
+  .ao .kpi .lab{font-size:.62rem;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--muted);font-weight:700}
+  .ao .kpi .n{font-size:1.7rem;font-weight:800;color:var(--navy);line-height:1.1;
+    font-variant-numeric:tabular-nums;margin-top:3px}
+  .ao .kpi .n.bad{color:var(--red)} .ao .kpi .n.good{color:var(--green)}
+  .ao .kpi .sub{font-size:.76rem;color:var(--muted);margin-top:2px}
+
+  .ao .tools{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .ao .tools input{padding:7px 11px;border:1px solid #cdd5df;border-radius:7px;font-size:.88rem;
+    min-width:230px}
+  .ao .tools button{border:1px solid #cdd5df;background:#fff;border-radius:16px;padding:5px 13px;
+    font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer}
+  .ao .tools button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+  .ao .d{background:#fff;border:1px solid var(--rule);border-radius:10px;margin-bottom:10px;
+    overflow:hidden}
+  .ao .dh{display:flex;align-items:center;gap:14px;padding:11px 15px;cursor:pointer}
+  .ao .dh:hover{background:#f7f9fc}
+  .ao .dh .nm{font-weight:800;color:var(--navy);font-size:1rem;min-width:150px}
+  .ao .dh .tw{color:var(--muted);font-size:.8rem;flex:1;overflow:hidden;white-space:nowrap;
+    text-overflow:ellipsis}
+  .ao .dh .st{font-size:.8rem;font-weight:700;white-space:nowrap}
+  .ao .dh .st.live{color:var(--green)} .ao .dh .st.none{color:var(--red)}
+  .ao .dh .st.flo{color:var(--muted)} .ao .dh .st.sched{color:var(--amber)}
+  .ao .dh .num{font-variant-numeric:tabular-nums;text-align:right;min-width:88px}
+  .ao .dh .num b{color:var(--navy)} .ao .dh .num i{font-style:normal;color:var(--muted);
+    font-size:.76rem;display:block}
+  .ao .dh .cv{color:#b9c2cd;font-size:.85rem;width:14px}
+
+  .ao .body{display:none;padding:0 15px 14px;border-top:1px solid #f1f4f8}
+  .ao .d.open .body{display:block}
+  .ao .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;
+    margin-top:12px}
+  .ao .ad{border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:#fff}
+  .ao .ad .pic{height:150px;background:#eef1f5 center/cover no-repeat;position:relative}
+  .ao .ad .pic .vid{position:absolute;right:5px;top:5px;background:rgba(0,0,0,.65);color:#fff;
+    font-size:.56rem;padding:2px 5px;border-radius:3px;letter-spacing:.05em}
+  .ao .ad .bd{padding:8px 10px}
+  .ao .ad .bd b{display:block;color:var(--navy);font-size:.84rem;line-height:1.3}
+  .ao .ad .bd p{margin:4px 0 0;font-size:.76rem;color:#44546b;line-height:1.4}
+  .ao .ad .nums{display:flex;gap:0 12px;flex-wrap:wrap;padding:7px 10px;background:#fbfcfe;
+    border-top:1px solid #f1f4f8;font-size:.76rem}
+  .ao .ad .nums b{color:var(--navy);font-variant-numeric:tabular-nums}
+  .ao .ad .flag{font-size:.74rem;font-weight:700;padding:6px 10px;border-top:1px solid #f3dede}
+  .ao .ad .flag.dead{background:#fdf6f6;color:var(--red)}
+  .ao .ad .flag.sched{background:#f4f7fb;color:#44546b;border-top-color:#e4e8ee}
+  .ao .riding{background:#f7f9fc;border:1px solid var(--rule);border-radius:7px;
+    padding:10px 12px;margin-top:12px;font-size:.83rem;color:var(--muted);line-height:1.55}
+  .ao .riding b{color:var(--navy)}
+  .ao .none{color:var(--muted);font-size:.84rem;padding:12px 0}
+</style>
+
+{% macro money(v) %}${{ '{:,.2f}'.format(v or 0) }}{% endmacro %}
+{% macro num(v) %}{{ '{:,}'.format(v or 0) }}{% endmacro %}
+
+<div class="ao">
+  <h4>Facebook ads, district by district</h4>
+  <p class="lead">
+    Every district in the plan, whether anything is running in it, what the creative looks like
+    and what it has cost. A floterial buys nothing of its own, so it shows what its base
+    districts are running instead. Those dollars belong to the base and are not counted twice.
+  </p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lab">Districts in the plan</div>
+      <div class="n">{{ t.total }}</div><div class="sub">{{ t.flo }} of them floterials</div></div>
+    <div class="kpi"><div class="lab">With ads delivering</div>
+      <div class="n good">{{ t.live }}</div><div class="sub">{{ t.sched }} linked but not started</div></div>
+    <div class="kpi"><div class="lab">Nothing running</div>
+      <div class="n {{ 'bad' if t.nothing }}">{{ t.nothing }}</div>
+      <div class="sub">{{ money(t.nothing_budget) }} budgeted in them</div></div>
+    <div class="kpi"><div class="lab">Spent</div>
+      <div class="n">{{ money(t.spend) }}</div>
+      <div class="sub">of {{ money(t.budget) }} planned</div></div>
+    <div class="kpi"><div class="lab">Ads live</div>
+      <div class="n">{{ t.ads_live }}</div>
+      <div class="sub">{{ t.ads_dead }} running with no delivery</div></div>
+  </div>
+
+  <div class="tools">
+    <input type="search" id="q" placeholder="District, town or candidate">
+    <button data-f="all" class="on">All</button>
+    <button data-f="live">Delivering</button>
+    <button data-f="none">Nothing running</button>
+    <button data-f="dead">Ads not delivering</button>
+    <button data-f="flo">Floterials</button>
+  </div>
+
+  <div id="list">
+  {% for r in rows %}
+    <div class="d" data-hay="{{ r.hay }}" data-live="{{ 1 if r.live else 0 }}"
+         data-none="{{ 1 if r.nothing else 0 }}" data-dead="{{ 1 if r.dead else 0 }}"
+         data-flo="{{ 1 if r.floterial else 0 }}">
+      <div class="dh">
+        <span class="cv">&rsaquo;</span>
+        <span class="nm">{{ r.code }}{% if r.tier %} &middot; T{{ r.tier }}{% endif %}</span>
+        <span class="tw">{{ r.towns }}{% if r.candidates %} &middot; {{ r.candidates }}{% endif %}</span>
+        {% if r.floterial %}
+          <span class="st flo">floterial{% if r.riding and r.riding.any %} &middot; rides {{ r.riding.bases|length }} base{{ '' if r.riding.bases|length == 1 else 's' }}{% endif %}</span>
+        {% elif r.live %}
+          <span class="st live">{{ r.ads_live }} ad{{ '' if r.ads_live == 1 else 's' }} delivering</span>
+        {% elif r.linked %}
+          <span class="st sched">linked, not started</span>
+        {% else %}
+          <span class="st none">nothing running</span>
+        {% endif %}
+        <span class="num"><b>{{ money(r.spend) }}</b><i>spent</i></span>
+        <span class="num"><b>{{ money(r.budget) }}</b><i>planned</i></span>
+        <span class="num"><b>{{ num(r.impressions) }}</b><i>shown</i></span>
+      </div>
+
+      <div class="body">
+        {% if r.ads %}
+          <div class="grid">
+          {% for a in r.ads %}
+            <div class="ad">
+              <div class="pic"{% if a.image %} style="background-image:url('{{ a.image }}')"{% endif %}>
+                {% if a.is_video %}<span class="vid">VIDEO</span>{% endif %}
+              </div>
+              <div class="bd">
+                <b>{{ a.title or a.name }}</b>
+                {% if a.body %}<p>{{ a.body[:150] }}</p>{% endif %}
+              </div>
+              <div class="nums">
+                <span><b>{{ money(a.spend) }}</b></span>
+                <span><b>{{ num(a.impressions) }}</b> shown</span>
+                <span><b>{{ num(a.clicks) }}</b> clicks</span>
+                {% if a.cpm %}<span><b>${{ '%.2f'|format(a.cpm) }}</b> CPM</span>{% endif %}
+              </div>
+              {% if not a.delivering %}
+                {% if a.scheduled %}
+                  <div class="flag sched">Starts {{ (a.flight_start or '')[:10] }}</div>
+                {% else %}
+                  <div class="flag dead">Not delivering</div>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endfor %}
+          </div>
+        {% elif not r.floterial %}
+          <p class="none">No ads linked to {{ r.code }}.
+            {% if r.budget %}{{ money(r.budget) }} is budgeted for Meta here.{% endif %}</p>
+        {% endif %}
+
+        {% if r.riding and r.riding.any %}
+        <div class="riding">
+          <b>{{ r.code }} buys nothing of its own.</b>
+          Its candidates appear in the ads bought in
+          {% for b in r.riding.bases %}{{ b.base }}{% if b.spend %} ({{ money(b.spend) }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}.
+          That is <b>{{ money(r.riding.spend) }}</b> and {{ num(r.riding.impressions) }} impressions
+          across {{ r.riding.running }} delivering ad{{ '' if r.riding.running == 1 else 's' }},
+          counted in those base districts rather than here.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+</div>
+
+<script>
+(function(){
+  var list=document.getElementById('list'), q=document.getElementById('q'), filter='all';
+  list.addEventListener('click', function(e){
+    var h=e.target.closest('.dh'); if(!h) return;
+    h.parentElement.classList.toggle('open');
+    h.querySelector('.cv').innerHTML = h.parentElement.classList.contains('open') ? '&rsaquo;' : '&rsaquo;';
+    h.querySelector('.cv').style.transform =
+      h.parentElement.classList.contains('open') ? 'rotate(90deg)' : '';
+    h.querySelector('.cv').style.display='inline-block';
+  });
+  function apply(){
+    var s=(q.value||'').trim().toLowerCase();
+    list.querySelectorAll('.d').forEach(function(d){
+      var okF = filter==='all'
+        || (filter==='live' && d.dataset.live==='1')
+        || (filter==='none' && d.dataset.none==='1')
+        || (filter==='dead' && d.dataset.dead==='1')
+        || (filter==='flo'  && d.dataset.flo==='1');
+      var okQ = !s || (d.dataset.hay||'').indexOf(s) !== -1;
+      d.style.display = (okF && okQ) ? '' : 'none';
+    });
+  }
+  q.addEventListener('input', apply);
+  document.querySelectorAll('.tools button').forEach(function(b){
+    b.addEventListener('click', function(){
+      filter=b.getAttribute('data-f');
+      document.querySelectorAll('.tools button').forEach(function(x){
+        x.classList.toggle('on', x===b); });
+      apply();
+    });
+  });
+})();
+</script>
+{% endblock %}

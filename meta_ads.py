@@ -944,6 +944,13 @@ def sync_account(row):
         # New campaigns get their race worked out straight away, or queued to ask about.
         import meta_races
         meta_races.attribute_after_sync()
+        # And their pictures copied to our own storage. Meta's image URLs carry a four day
+        # expiry, so anything not mirrored soon after it syncs renders as a blank frame later.
+        try:
+            import meta_district
+            meta_district.mirror_after_sync()
+        except Exception:
+            logger.warning('[meta] creative mirror after sync failed', exc_info=False)
         return {**base, 'ok': True, 'rows': len(by_key), 'ads': ads, 'warning': warning}
     except Exception as e:
         conn.rollback()

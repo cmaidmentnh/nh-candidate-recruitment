@@ -1311,6 +1311,95 @@ def _cost_of(qty_for_district, sizes, tactics):
     return total
 
 
+@private_bp.route('/ads')
+@require_feature_access('meta_ads')
+def ads_overview():
+    """Every district in the plan: is anything running, what does it look like, what has it cost.
+
+    A floterial buys nothing of its own, so it shows what its bases are running, in its own
+    block and never added to any total. Those dollars belong to the base.
+    """
+    import meta_district as MD
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""SELECT s.district_code, s.tier
+                         FROM district_spend s WHERE s.include ORDER BY s.district_code""")
+        plan = cur.fetchall()
+        codes = [r[0] for r in plan]
+
+        cur.execute("""SELECT full_district_code, string_agg(DISTINCT town, ', ')
+                         FROM districts GROUP BY 1""")
+        towns = dict(cur.fetchall())
+
+        cur.execute("""SELECT f.district_code,
+                              string_agg(c.first_name || ' ' || c.last_name, ', '
+                                         ORDER BY c.last_name)
+                         FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
+                        WHERE f.election_year = 2026 AND f.office = 'State Representative'
+                          AND f.party = 'R' AND f.result <> 'lost'
+                        GROUP BY 1""")
+        cands = dict(cur.fetchall())
+
+        cur.execute("SELECT district_code, kind FROM district_relation")
+        kind = dict(cur.fetchall())
+
+        cur.execute("SELECT floterial, base FROM district_floterial_base")
+        flo_bases = {}
+        for f, b in cur.fetchall():
+            flo_bases.setdefault(f, []).append(b)
+
+        cur.execute("""SELECT i.district_code, COALESCE(SUM(i.qty), 0)
+                         FROM district_spend_item i
+                        WHERE i.tactic_key = 'meta' GROUP BY 1""")
+        budget = {k: float(v) for k, v in cur.fetchall()}
+
+        cur.execute("SELECT DISTINCT district_code FROM meta_campaign_district")
+        linked = {r[0] for r in cur.fetchall()}
+    finally:
+        cur.close(); release_db_connection(conn)
+
+    meta = MD.district_meta(codes)
+    riding = MD.riding(meta, {f: bs for f, bs in flo_bases.items() if f in codes})
+
+    rows, t = [], {'total': 0, 'flo': 0, 'live': 0, 'sched': 0, 'nothing': 0,
+                   'nothing_budget': 0.0, 'spend': 0.0, 'budget': 0.0,
+                   'ads_live': 0, 'ads_dead': 0}
+    for code, tier in plan:
+        m = meta.get(code) or {}
+        ads = m.get('ads') or []
+        live_ads = [a for a in ads if a.get('delivering')]
+        dead_ads = [a for a in ads if not a.get('delivering') and not a.get('scheduled')]
+        is_flo = kind.get(code) == 'floterial'
+        r = {
+            'code': code, 'tier': tier, 'towns': towns.get(code, ''),
+            'candidates': cands.get(code, ''), 'floterial': is_flo,
+            'budget': budget.get(code, 0.0),
+            'spend': m.get('spend', 0.0), 'impressions': m.get('impressions', 0),
+            'ads': ads, 'ads_live': len(live_ads), 'dead': bool(dead_ads),
+            'linked': code in linked, 'live': bool(live_ads),
+            'riding': riding.get(code),
+            'nothing': (not live_ads) and (not is_flo),
+        }
+        r['hay'] = ' '.join([code, r['towns'], r['candidates']]).lower()
+        rows.append(r)
+
+        t['total'] += 1
+        t['flo'] += 1 if is_flo else 0
+        t['live'] += 1 if live_ads else 0
+        t['sched'] += 1 if (code in linked and not live_ads) else 0
+        t['spend'] += r['spend']
+        t['budget'] += r['budget']
+        t['ads_live'] += len(live_ads)
+        t['ads_dead'] += len(dead_ads)
+        if r['nothing']:
+            t['nothing'] += 1
+            t['nothing_budget'] += r['budget']
+
+    # Worst first: the districts with money and nothing running are the point of the page.
+    rows.sort(key=lambda r: (r['live'], -r['budget'], r['code']))
+    return render_template('private/ads_overview.html', rows=rows, t=t)
+
+
 @private_bp.route('/billing')
 @require_feature_access('meta_ads')
 def billing():
@@ -1618,11 +1707,16 @@ def spend_plan():
         # our own copy of the picture, and the campaigns with their flight dates. A district
         # with nothing running gets no entry at all, so the page can tell "nothing running"
         # from "running badly".
-        meta_by_district, meta_median = {}, {}
+        meta_by_district, meta_median, meta_riding = {}, {}, {}
         try:
             import meta_district as MD
             meta_by_district = MD.district_meta([d['code'] for d in districts])
             meta_median = MD.efficiency(meta_by_district)
+            # A floterial buys nothing of its own, so show what its bases are running.
+            # Display only: these dollars are already counted in the base districts.
+            meta_riding = MD.riding(
+                meta_by_district,
+                {f: [b['base'] for b in bs] for f, bs in ride.items()})
         except Exception as e:
             logger.info('meta district data unavailable: %s', e)
             conn.rollback()
@@ -1684,6 +1778,7 @@ def spend_plan():
                                  for m in range(1, 32)}
             d['nominees'] = nominees.get(code, {})
             d['meta'] = meta_by_district.get(code)
+            d['riding'] = meta_riding.get(code)
             if d['meta']:
                 # Digital is budgeted in dollars, so a tactic's qty IS its budget. Keep the
                 # three apart: only the meta line can ever be spent on Meta. Pacing Meta spend

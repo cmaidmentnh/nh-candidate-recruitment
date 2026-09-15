@@ -308,6 +308,63 @@ def district_meta(codes):
     return out
 
 
+def mirror_after_sync():
+    """Mirror any new ad creative, called after each sync.
+
+    Without this the mirror only ran when someone pressed Refresh from Meta by hand, so ads
+    synced automatically arrived with no picture: 218 of 286 had never been copied, and the
+    district panes rendered blank frames. Meta's own URLs expire in about four days, so a
+    picture not copied soon after it appears is a picture lost.
+
+    Never raises: a mirroring failure must not fail the sync that called it.
+    """
+    try:
+        return mirror_creative(limit=300)
+    except Exception as e:
+        logger.warning('creative mirror after sync failed: %s', str(e)[:140])
+        return None
+
+
+def riding(all_meta, floterial_bases):
+    """What a floterial's candidates are actually getting, via the districts underneath them.
+
+    A floterial buys nothing of its own: its candidates appear in the ads bought in the base
+    districts it sits over. So its own spend is correctly zero, and a pane that stops there
+    tells a candidate in that seat nothing about whether anything is running for them.
+
+    This returns the base districts' figures for display only. They are kept in their own block
+    and never folded into the floterial's spend, because the same dollars are already counted
+    in the base. Adding them here would double the program's total, which is the exact trap the
+    plan already avoids on floterial mail.
+
+    `floterial_bases` is {floterial_code: [base_code, ...]}.
+    """
+    out = {}
+    for flo, bases in (floterial_bases or {}).items():
+        rows, spend, impressions, ads, live = [], 0.0, 0, 0, 0
+        for b in bases:
+            e = all_meta.get(b)
+            if not e:
+                rows.append({'base': b, 'spend': 0.0, 'impressions': 0, 'ads': 0, 'running': 0})
+                continue
+            n_live = sum(1 for a in e['ads'] if a.get('delivering'))
+            rows.append({'base': b, 'spend': e['spend'], 'impressions': e['impressions'],
+                         'ads': len(e['ads']), 'running': n_live})
+            spend += e['spend']
+            impressions += e['impressions']
+            ads += len(e['ads'])
+            live += n_live
+        if not rows:
+            continue
+        out[flo] = {
+            'bases': rows,
+            # Totals across the bases. Display only. Never added to the floterial's own spend.
+            'spend': spend, 'impressions': impressions, 'ads': ads, 'running': live,
+            'any': spend > 0 or live > 0,
+        }
+    return out
+
+
 def pacing(entry, budget, today=None):
     """Is this district going to spend its digital budget?
 
