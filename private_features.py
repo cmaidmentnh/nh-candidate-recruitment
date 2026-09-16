@@ -2303,8 +2303,9 @@ def _piece_targets(cur, piece_id):
 def _piece_flags(r):
     """The things a designer or a mail house must be told, in plain words."""
     out = []
-    if r['kind'] == 'floterial':
-        out.append('floterial, rides its base districts, do not mail separately')
+    if r['kind'] == 'floterial' and not r['quantity']:
+        # It is on the piece so its candidates are visible, but it buys nothing itself.
+        out.append('floterial, no quantity of its own; its candidates ride the base districts')
     if not r['candidates']:
         out.append('NO REPUBLICAN CANDIDATE on this piece')
     if r['optout']:
@@ -2361,10 +2362,10 @@ def piece_targets_csv(piece_id):
         w.writerow([r['district'], r['towns'], r['seats'] or '',
                     ('Tier %s' % r['tier']) if r['tier'] else '',
                     r['quantity'] or '', r['candidates'], r['riders'],
-                    'no' if r['kind'] == 'floterial' else 'yes',
+                    'yes' if r['quantity'] else 'no',
                     '; '.join(_piece_flags(r))])
     w.writerow([])
-    w.writerow(['%d districts' % len(rows), '', '', '',
+    w.writerow(['%d districts' % len([r for r in rows if r['quantity']]), '', '', '',
                 sum(r['quantity'] for r in rows), '', '', '',
                 '%s, drops %s' % (piece['name'],
                                   piece['drop_date'].strftime('%m/%d/%Y')

@@ -47,7 +47,7 @@
   }
 </style>
 
-{% set mailed = rows|rejectattr('kind','equalto','floterial')|list %}
+{% set mailed = rows|selectattr('quantity')|list %}
 <div class="tg">
   <a class="back" href="{{ url_for('private.spend_pieces') }}">&larr; Pieces &amp; invoices</a>
 
@@ -96,7 +96,7 @@
         <td class="dc">{{ r.district }}{% if r.tier %}<br><span class="tw">Tier {{ r.tier }}</span>{% endif %}</td>
         <td class="tw">{{ r.towns }}</td>
         <td class="n">{{ r.seats or '' }}</td>
-        <td class="n">{{ '{:,}'.format(r.quantity) if r.kind != 'floterial' else '—' }}</td>
+        <td class="n">{{ '{:,}'.format(r.quantity) if r.quantity else '—' }}</td>
         <td class="nm">
           {% if r.candidates %}{{ r.candidates }}{% else %}<span class="none">No Republican candidate</span>{% endif %}
           {% for f in r.flags %}
