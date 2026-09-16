@@ -102,7 +102,9 @@
         <td class="n">{{ r.seats or '' }}</td>
         <td class="n">{{ '{:,}'.format(r.quantity) if r.quantity else '—' }}</td>
         <td class="nm">
-          {% if r.candidates %}{{ r.candidates }}{% else %}<span class="none">No Republican candidate</span>{% endif %}
+          {% if r.candidates %}{{ r.candidates }}
+          {%- elif r.riders %}<span class="tw">see the floterial column</span>
+          {%- else %}<span class="none">No Republican candidate</span>{% endif %}
           {% for f in r.flags %}
             <span class="fl {{ 'bad' if f.startswith('do NOT') or f.startswith('NO ') }}">{{ f }}</span>
           {% endfor %}

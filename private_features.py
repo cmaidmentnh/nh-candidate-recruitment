@@ -2270,9 +2270,11 @@ def _piece_targets(cur, piece_id):
                  WHERE """ + _LIVE_R + """ AND f.district_code = pd.district_code
                    AND c.materials_optout),
                (SELECT count(*) FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
+                   LEFT JOIN candidate_campaign_progress g ON g.candidate_id = c.candidate_id
                  WHERE """ + _LIVE_R + """ AND f.district_code = pd.district_code
                    AND COALESCE(c.materials_optout, false) = false
-                   AND COALESCE(c.photo_url, '') = ''),
+                   AND COALESCE(c.photo_url, '') = ''
+                   AND NOT COALESCE(g.headshot_have, false)),
                (SELECT string_agg(x.lbl, ' | ' ORDER BY x.lbl) FROM (
                   SELECT b.floterial || ': ' || string_agg(c.first_name || ' ' || c.last_name,
                                                            ', ' ORDER BY c.last_name) AS lbl
@@ -2306,8 +2308,12 @@ def _piece_flags(r):
     if r['kind'] == 'floterial' and not r['quantity']:
         # It is on the piece so its candidates are visible, but it buys nothing itself.
         out.append('floterial, no quantity of its own; its candidates ride the base districts')
-    if not r['candidates']:
+    if not r['candidates'] and not r['riders']:
         out.append('NO REPUBLICAN CANDIDATE on this piece')
+    elif not r['candidates']:
+        # Grafton 16 is the case: no candidate filed in the base district, but the floterial
+        # candidate is on this ballot and is who the piece is for.
+        out.append('no candidate of its own; the piece carries the floterial candidate')
     if r['optout']:
         out.append('do NOT print %s, opted out of committee materials' % r['optout'])
     if r['no_photo']:
