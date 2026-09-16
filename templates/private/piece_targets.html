@@ -19,7 +19,7 @@
   .tg .tot .c{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
   .tg .jump{font-size:.78rem;margin-bottom:14px}
   .tg .jump a{margin-right:12px;white-space:nowrap}
-  .tg table{width:100%;border-collapse:collapse;font-size:.84rem}
+  .tg table{width:100%;border-collapse:collapse;font-size:.84rem;table-layout:fixed}
   .tg th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;
     letter-spacing:.05em;padding:7px 9px;text-align:left;font-weight:700}
   .tg th.n,.tg td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -72,7 +72,7 @@
     {% set flagged = rows|selectattr('flags')|list %}
     {% if flagged %}
     <div class="g"><span class="n" style="color:var(--amber)">{{ flagged|length }}</span>
-      <span class="c">Need a decision</span></div>
+      <span class="c">Need attention</span></div>
     {% endif %}
   </div>
 
@@ -82,6 +82,10 @@
   <p class="jump">{% for c in counties %}<a href="#c{{ loop.index }}">{{ c }}</a>{% endfor %}</p>
 
   <table>
+    <colgroup>
+      <col style="width:8.5em"><col style="width:15em"><col style="width:3.6em">
+      <col style="width:6em"><col><col style="width:16em">
+    </colgroup>
     <tr>
       <th>District</th><th>Towns</th><th class="n">Seats</th><th class="n">Households</th>
       <th>Candidates on the piece</th><th>Floterial candidate, same ballot</th>
