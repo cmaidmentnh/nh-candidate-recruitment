@@ -5,7 +5,9 @@
       --amber:#8a6400;color:var(--ink);font-size:.9rem}
   .pc *{box-sizing:border-box}
   .pc a{cursor:pointer}
-  .pc a.hand{color:var(--navy);text-decoration:underline}
+  .pc a.tgbtn{background:var(--navy);color:#fff;border-radius:5px;padding:6px 14px;
+    font-weight:700;font-size:.78rem;text-decoration:none;display:inline-block}
+  .pc a.tgbtn:hover{opacity:.88;color:#fff}
   .ptot{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 30px;padding:0 0 12px;
     border-bottom:1px solid var(--rule);margin-bottom:14px}
   .ptot .big{font-size:2.1rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
@@ -45,6 +47,8 @@
   .pitem.sel{background:#eef3fa;box-shadow:inset 3px 0 0 var(--navy)}
   .pitem .pn{font-weight:700;color:var(--navy)}
   .pitem .pm{font-size:.72rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+  .pitem .ptg{color:var(--navy);text-decoration:underline;font-weight:700}
+  .pitem .ptg:hover{color:var(--red)}
   .pitem .pc2{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
   .st-draft{color:var(--muted)}
   .st-scheduled{color:var(--amber);font-weight:700}
@@ -203,7 +207,9 @@
       h += '<div class="pitem' + (p.id===sel?' sel':'') + '" data-id="' + p.id + '">' +
         '<div class="pn">' + esc(p.name) + '</div>' +
         '<div class="pm"><span>' + esc(p.tactic_label) + ' &middot; ' +
-          p.districts.length + ' district' + (p.districts.length===1?'':'s') + '</span>' +
+          '<a class="ptg" href="/private/spend-plan/piece/' + p.id + '/targets" target="_blank" ' +
+          'title="The district list, to read or to send to the printer">' +
+          p.districts.length + ' district' + (p.districts.length===1?'':'s') + '</a></span>' +
           '<span class="pc2">' + money(p.planned) + '</span></div>' +
         '<div class="pm"><span class="st-' + p.status + '">' +
           (p.drop_date ? p.drop_date : 'no date') + ' &middot; ' + p.status + '</span>' +
@@ -214,6 +220,10 @@
     document.getElementById('pieceList').innerHTML = h;
     document.querySelectorAll('.pitem').forEach(function(el){
       el.onclick = function(){ sel = +el.dataset.id; draw(); };
+    });
+    // The link opens the list; it must not also select the piece underneath it.
+    document.querySelectorAll('.ptg').forEach(function(a){
+      a.onclick = function(e){ e.stopPropagation(); };
     });
   }
 
@@ -227,10 +237,11 @@
       '<h3>' + esc(p.name) + '</h3>' +
       '<p class="note">' + esc(p.tactic_label) + ' &middot; ' + esc(p.universe) +
       ' universe &middot; created by ' + esc(p.created_by) + '</p>' +
-      '<p class="note" style="margin-top:6px"><a class="hand" href="/private/spend-plan/piece/' +
-      p.id + '/targets" target="_blank"><b>Open the target list</b></a> &mdash; every district ' +
-      'with its towns, its candidates and the floterial candidates who ride on it, to read ' +
-      'or to hand to the printer.</p>';
+      '<p style="margin:10px 0 0"><a class="tgbtn" href="/private/spend-plan/piece/' +
+      p.id + '/targets" target="_blank">Target list &amp; CSV</a>' +
+      '<span class="note" style="margin-left:10px">every district with its towns, its ' +
+      'candidates and the floterial candidates who ride on it, to read or to send to the ' +
+      'printer</span></p>';
 
     h += '<div class="frow" style="margin-top:12px">' +
       fld('Name', '<input type="text" id="fName" size="34" value="' + esc(p.name) + '">') +
