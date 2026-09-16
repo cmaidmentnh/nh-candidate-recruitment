@@ -5,6 +5,7 @@
       --amber:#8a6400;color:var(--ink);font-size:.9rem}
   .pc *{box-sizing:border-box}
   .pc a{cursor:pointer}
+  .pc a.hand{color:var(--navy);text-decoration:underline}
   .ptot{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 30px;padding:0 0 12px;
     border-bottom:1px solid var(--rule);margin-bottom:14px}
   .ptot .big{font-size:2.1rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1}
@@ -225,7 +226,11 @@
     var h = '<a class="pdel" data-del="1">Delete this piece</a>' +
       '<h3>' + esc(p.name) + '</h3>' +
       '<p class="note">' + esc(p.tactic_label) + ' &middot; ' + esc(p.universe) +
-      ' universe &middot; created by ' + esc(p.created_by) + '</p>';
+      ' universe &middot; created by ' + esc(p.created_by) + '</p>' +
+      '<p class="note" style="margin-top:6px"><a class="hand" href="/private/spend-plan/piece/' +
+      p.id + '/targets" target="_blank"><b>Open the target list</b></a> &mdash; every district ' +
+      'with its towns, its candidates and the floterial candidates who ride on it, to read ' +
+      'or to hand to the printer.</p>';
 
     h += '<div class="frow" style="margin-top:12px">' +
       fld('Name', '<input type="text" id="fName" size="34" value="' + esc(p.name) + '">') +

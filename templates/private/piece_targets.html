@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .tg{--navy:#1e3557;--rule:#e4e8ee;--muted:#7b8494;--ink:#22303f;--red:#b4262d;
+      --amber:#8a6400;color:var(--ink);font-size:.9rem;max-width:1200px;margin:0 auto}
+  .tg a{color:var(--navy)}
+  .tg .back{font-size:.72rem;color:var(--muted);display:block;margin-bottom:8px}
+  .tg h3{margin:0;font-size:1.5rem;color:var(--navy);font-weight:800}
+  .tg .sub{color:var(--muted);font-size:.82rem;margin:4px 0 0}
+  .tg .head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;
+    padding-bottom:12px;border-bottom:2px solid var(--navy);margin-bottom:14px;flex-wrap:wrap}
+  .tg .dl{background:var(--navy);color:#fff;border-radius:5px;padding:8px 16px;
+    font-weight:700;font-size:.82rem;text-decoration:none;white-space:nowrap}
+  .tg .dl:hover{color:#fff;opacity:.9}
+  .tg .tot{display:flex;gap:30px;flex-wrap:wrap;margin-bottom:16px}
+  .tg .tot .g{display:flex;flex-direction:column;gap:1px}
+  .tg .tot .n{font-size:1.6rem;font-weight:800;color:var(--navy);line-height:1;
+    font-variant-numeric:tabular-nums}
+  .tg .tot .c{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+  .tg .jump{font-size:.78rem;margin-bottom:14px}
+  .tg .jump a{margin-right:12px;white-space:nowrap}
+  .tg table{width:100%;border-collapse:collapse;font-size:.84rem}
+  .tg th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;padding:7px 9px;text-align:left;font-weight:700}
+  .tg th.n,.tg td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tg td{padding:8px 9px;border-bottom:1px solid #eef1f5;vertical-align:top}
+  .tg tr:hover td{background:#f6f9fd}
+  .tg .cty td{background:#eef2f8;font-weight:800;color:var(--navy);font-size:.68rem;
+    text-transform:uppercase;letter-spacing:.08em;padding:6px 9px;border-bottom:0}
+  .tg .dc{font-weight:800;color:var(--navy);white-space:nowrap}
+  .tg .tw{color:var(--muted);font-size:.8rem}
+  .tg .nm{line-height:1.5}
+  .tg .rd{color:var(--muted);font-size:.8rem;line-height:1.5}
+  .tg .rd b{color:var(--ink);font-weight:600}
+  .tg .fl{display:block;color:var(--amber);font-size:.76rem;line-height:1.45;margin-top:3px}
+  .tg .fl.bad{color:var(--red);font-weight:700}
+  .tg .none{color:var(--red);font-weight:700}
+  .tg .foot{font-size:.8rem;color:var(--muted);line-height:1.65;margin-top:18px;
+    padding-top:12px;border-top:1px solid var(--rule);max-width:880px}
+  .tg .others{font-size:.78rem;color:var(--muted);margin-top:14px}
+  .tg .others a{margin-right:10px}
+  .tg .others a.on{font-weight:800;text-decoration:none;color:var(--ink)}
+  @media print{
+    .tg .back,.tg .dl,.tg .jump,.tg .others{display:none}
+    .tg tr:hover td{background:none}
+    .tg{max-width:none;font-size:8.5pt}
+  }
+</style>
+
+{% set mailed = rows|rejectattr('kind','equalto','floterial')|list %}
+<div class="tg">
+  <a class="back" href="{{ url_for('private.spend_pieces') }}">&larr; Pieces &amp; invoices</a>
+
+  <div class="head">
+    <div>
+      <h3>{{ piece.name }}</h3>
+      <p class="sub">
+        {% if piece.drop_date %}Drops {{ piece.drop_date.strftime('%A %-d %B %Y') }}{% else %}No drop date set{% endif %}
+        &middot; {{ piece.universe|replace('_',' ') }} universe
+        &middot; {{ piece.status }}
+      </p>
+    </div>
+    <a class="dl" href="{{ url_for('private.piece_targets_csv', piece_id=piece.id) }}">Download CSV</a>
+  </div>
+
+  <div class="tot">
+    <div class="g"><span class="n">{{ mailed|length }}</span><span class="c">Districts</span></div>
+    <div class="g"><span class="n">{{ '{:,}'.format(mailed|sum(attribute='quantity')) }}</span>
+      <span class="c">Households</span></div>
+    <div class="g"><span class="n">{{ '${:,.0f}'.format(rows|sum(attribute='cost')) }}</span>
+      <span class="c">Planned cost</span></div>
+    {% set flagged = rows|selectattr('flags')|list %}
+    {% if flagged %}
+    <div class="g"><span class="n" style="color:var(--amber)">{{ flagged|length }}</span>
+      <span class="c">Need a decision</span></div>
+    {% endif %}
+  </div>
+
+  {% set counties = [] %}
+  {% for r in rows %}{% set c = r.district.rsplit(' ',1)[0] %}
+    {% if c not in counties %}{% set _ = counties.append(c) %}{% endif %}{% endfor %}
+  <p class="jump">{% for c in counties %}<a href="#c{{ loop.index }}">{{ c }}</a>{% endfor %}</p>
+
+  <table>
+    <tr>
+      <th>District</th><th>Towns</th><th class="n">Seats</th><th class="n">Households</th>
+      <th>Candidates on the piece</th><th>Floterial candidate, same ballot</th>
+    </tr>
+    {% set ns = namespace(cty=none, i=0) %}
+    {% for r in rows %}
+      {% set c = r.district.rsplit(' ',1)[0] %}
+      {% if c != ns.cty %}{% set ns.cty = c %}{% set ns.i = ns.i + 1 %}
+      <tr class="cty"><td colspan="6" id="c{{ ns.i }}">{{ c }} County</td></tr>
+      {% endif %}
+      <tr>
+        <td class="dc">{{ r.district }}{% if r.tier %}<br><span class="tw">Tier {{ r.tier }}</span>{% endif %}</td>
+        <td class="tw">{{ r.towns }}</td>
+        <td class="n">{{ r.seats or '' }}</td>
+        <td class="n">{{ '{:,}'.format(r.quantity) if r.kind != 'floterial' else '—' }}</td>
+        <td class="nm">
+          {% if r.candidates %}{{ r.candidates }}{% else %}<span class="none">No Republican candidate</span>{% endif %}
+          {% for f in r.flags %}
+            <span class="fl {{ 'bad' if f.startswith('do NOT') or f.startswith('NO ') }}">{{ f }}</span>
+          {% endfor %}
+        </td>
+        <td class="rd">{% if r.riders %}{{ r.riders }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <p class="foot">
+    <b>Reading this.</b> Every district listed gets the piece, addressed to the household count
+    in the fourth column. The fifth column is who goes on it. The sixth is the floterial
+    candidate those same households also vote for: a floterial buys no mail of its own, so its
+    candidate rides on the base district's piece and belongs in the design even though the
+    district is not listed separately here.
+    {% if rows|selectattr('optout')|list %}
+    A name flagged in red has asked not to appear on committee materials and must be left off.
+    {% endif %}
+  </p>
+
+  {% if pieces|length > 1 %}
+  <p class="others">Other drops:
+    {% for p in pieces %}
+      <a class="{{ 'on' if p.id == piece.id }}"
+         href="{{ url_for('private.piece_targets', piece_id=p.id) }}">{{ p.name }}</a>
+    {% endfor %}
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

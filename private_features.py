@@ -2224,6 +2224,156 @@ def spend_pieces():
         cur.close(); release_db_connection(conn)
 
 
+# The named-candidate columns every vendor query needs: live Republicans in a district who
+# have not opted out of committee materials. Written once because getting it subtly different
+# between the page and the CSV is how a candidate ends up missing from a printed piece.
+_LIVE_R = """f.election_year = 2026 AND f.office = 'State Representative'
+             AND f.party = 'R' AND f.result <> 'lost'"""
+
+
+def _piece_targets(cur, piece_id):
+    """Everything the mail house and the designer need for one piece, district by district.
+
+    Two things here are not on the editing screen and are the reason this exists.
+
+    A floterial buys no household media of its own: its candidate rides the base districts.
+    So the designer laying out Sullivan 3's piece has to put Margaret Drye on it, and nothing
+    in the plan says so, because the plan is about money and she costs Sullivan 3 nothing.
+    Forty-five of the sixty-two districts on Mail 1 have a rider like that.
+
+    And a candidate who opted out of committee materials must not be printed. Those names are
+    dropped from the piece and counted separately, so the omission reads as deliberate rather
+    than as a district we forgot.
+    """
+    cur.execute("""SELECT id, name, tactic_key, universe, drop_date, status, notes,
+                          default_file_url
+                     FROM spend_piece WHERE id = %s""", (piece_id,))
+    row = cur.fetchone()
+    if not row:
+        return None, []
+    piece = dict(zip(('id', 'name', 'tactic', 'universe', 'drop_date', 'status', 'notes',
+                      'file_url'), row))
+
+    cur.execute("""
+        SELECT pd.district_code, pd.quantity, pd.planned_cost, pd.file_url,
+               s.tier, COALESCE(r.kind, 'base') AS kind,
+               (SELECT string_agg(DISTINCT d.town, ', ' ORDER BY d.town)
+                  FROM districts d WHERE d.full_district_code = pd.district_code),
+               (SELECT max(d.seat_count) FROM districts d
+                 WHERE d.full_district_code = pd.district_code),
+               (SELECT string_agg(c.first_name || ' ' || c.last_name, ', ' ORDER BY c.last_name)
+                  FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
+                 WHERE """ + _LIVE_R + """ AND f.district_code = pd.district_code
+                   AND COALESCE(c.materials_optout, false) = false),
+               (SELECT string_agg(c.first_name || ' ' || c.last_name, ', ' ORDER BY c.last_name)
+                  FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
+                 WHERE """ + _LIVE_R + """ AND f.district_code = pd.district_code
+                   AND c.materials_optout),
+               (SELECT count(*) FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
+                 WHERE """ + _LIVE_R + """ AND f.district_code = pd.district_code
+                   AND COALESCE(c.materials_optout, false) = false
+                   AND COALESCE(c.photo_url, '') = ''),
+               (SELECT string_agg(x.lbl, ' | ' ORDER BY x.lbl) FROM (
+                  SELECT b.floterial || ': ' || string_agg(c.first_name || ' ' || c.last_name,
+                                                           ', ' ORDER BY c.last_name) AS lbl
+                    FROM district_floterial_base b
+                    JOIN filings f ON f.district_code = b.floterial
+                    JOIN candidates c ON c.candidate_id = f.candidate_id
+                   WHERE b.base = pd.district_code AND """ + _LIVE_R + """
+                     AND COALESCE(c.materials_optout, false) = false
+                   GROUP BY b.floterial) x)
+          FROM spend_piece_district pd
+          LEFT JOIN district_spend s ON s.district_code = pd.district_code
+          LEFT JOIN district_relation r ON r.district_code = pd.district_code
+         WHERE pd.piece_id = %s
+         ORDER BY split_part(pd.district_code, ' ', 1),
+                  NULLIF(regexp_replace(pd.district_code, '\\D', '', 'g'), '')::int""",
+        (piece_id,))
+    rows = []
+    for (code, qty, cost, url, tier, kind, towns, seats,
+         cands, optout, nophoto, riders) in cur.fetchall():
+        rows.append({'district': code, 'quantity': int(qty or 0),
+                     'cost': float(cost or 0), 'file_url': url, 'tier': tier, 'kind': kind,
+                     'towns': towns or '', 'seats': seats or 0,
+                     'candidates': cands or '', 'optout': optout or '',
+                     'no_photo': nophoto or 0, 'riders': riders or ''})
+    return piece, rows
+
+
+def _piece_flags(r):
+    """The things a designer or a mail house must be told, in plain words."""
+    out = []
+    if r['kind'] == 'floterial':
+        out.append('floterial, rides its base districts, do not mail separately')
+    if not r['candidates']:
+        out.append('NO REPUBLICAN CANDIDATE on this piece')
+    if r['optout']:
+        out.append('do NOT print %s, opted out of committee materials' % r['optout'])
+    if r['no_photo']:
+        out.append('%d candidate%s with no photo on file'
+                   % (r['no_photo'], '' if r['no_photo'] == 1 else 's'))
+    return out
+
+
+@private_bp.route('/spend-plan/piece/<int:piece_id>/targets')
+@require_feature_access('campaign_plan')
+def piece_targets(piece_id):
+    """One piece's district list, laid out to be read rather than edited."""
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        piece, rows = _piece_targets(cur, piece_id)
+        pieces = []
+        if piece:
+            cur.execute("""SELECT id, name FROM spend_piece
+                            WHERE tactic_key = %s ORDER BY drop_date, id""", (piece['tactic'],))
+            pieces = [{'id': r[0], 'name': r[1]} for r in cur.fetchall()]
+    finally:
+        cur.close(); release_db_connection(conn)
+    if not piece:
+        flash('No such piece.', 'warning')
+        return redirect(url_for('private.spend_pieces'))
+    for r in rows:
+        r['flags'] = _piece_flags(r)
+    return render_template('private/piece_targets.html',
+                           piece=piece, rows=rows, pieces=pieces)
+
+
+@private_bp.route('/spend-plan/piece/<int:piece_id>/targets.csv')
+@require_feature_access('campaign_plan')
+def piece_targets_csv(piece_id):
+    """The same list as a CSV, which is what a mail house actually wants to be handed."""
+    import csv
+    import io as _io
+    from flask import Response
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        piece, rows = _piece_targets(cur, piece_id)
+    finally:
+        cur.close(); release_db_connection(conn)
+    if not piece:
+        flash('No such piece.', 'warning')
+        return redirect(url_for('private.spend_pieces'))
+    buf = _io.StringIO(); w = csv.writer(buf)
+    w.writerow(['District', 'Towns', 'Seats', 'Tier', 'Households',
+                'Candidates on the piece', 'Floterial candidate also on this ballot',
+                'Mail this district', 'Notes'])
+    for r in rows:
+        w.writerow([r['district'], r['towns'], r['seats'] or '',
+                    ('Tier %s' % r['tier']) if r['tier'] else '',
+                    r['quantity'] or '', r['candidates'], r['riders'],
+                    'no' if r['kind'] == 'floterial' else 'yes',
+                    '; '.join(_piece_flags(r))])
+    w.writerow([])
+    w.writerow(['%d districts' % len(rows), '', '', '',
+                sum(r['quantity'] for r in rows), '', '', '',
+                '%s, drops %s' % (piece['name'],
+                                  piece['drop_date'].strftime('%m/%d/%Y')
+                                  if piece['drop_date'] else 'unscheduled')])
+    name = _re.sub(r'[^A-Za-z0-9]+', '-', piece['name'] or 'piece').strip('-')
+    return Response(buf.getvalue(), mimetype='text/csv', headers={
+        'Content-Disposition': 'attachment; filename="%s-districts.csv"' % name})
+
+
 @private_bp.route('/spend-plan/piece/save', methods=['POST'])
 @require_feature_access('campaign_plan')
 def spend_piece_save():
