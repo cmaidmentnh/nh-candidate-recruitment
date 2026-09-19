@@ -61,6 +61,20 @@ def scp(src, dst):
     sh(f"scp -q -i {SSH_KEY} -o ProxyJump={PRIMARY} {src} {dst}")
 
 
+# Who belongs on a candidate's general-election chase list. In a primary this was simply
+# whoever took a Republican ballot; a general has no party ballot, so it is the lean bucket
+# scored from state-primary history in score_lean(). Registered Democrats and undeclared
+# voters who lean Democrat are excluded: chasing them returns ballots we do not want back.
+# Undeclared voters with no state-primary record are deliberately left out: we know nothing
+# about them, and in this environment an unknown absentee voter is likelier theirs than ours.
+CHASE_BUCKETS = ('Registered Republican', 'Undeclared, leans Republican',
+                 'Undeclared, genuinely swing')
+
+
+def in_chase(a):
+    return a['choice'] == 'REP' or a.get('bucket') in CHASE_BUCKETS
+
+
 def flatten(xlsx, rundir):
     import openpyxl
     ws = openpyxl.load_workbook(xlsx, read_only=True).active
@@ -89,7 +103,7 @@ def flatten(xlsx, rundir):
             suf=s(x['Suffix']),
             addr=' '.join(f for f in [s(x['Street Number']), s(x['Address Suffix']),
                                       s(x['Street Name']), s(x['Apartment/Unit Number'])] if f),
-            reg=s(x['Party Registered']), choice=s(x['Party Choice']),
+            reg=s(x['Party Registered']), choice=s(x.get('Party Choice')),
             requested=dt(x['Date Requested']), mailed=dt(x['Date Mailed']),
             returned=dt(x['Date Envelope Returned'])))
     with open(f'{rundir}/absentee_flat.csv', 'w', newline='') as f:
@@ -276,14 +290,11 @@ def build_district_files(rundir):
         a['bkt'] = bkt(a)
         for d in DS.get(a['voter_id'], []):
             per[d].append(a)
-    c = sqlite3.connect(ELECTIONS_DB)
+    # The general-election roster lives only in the recruitment DB: nh_elections.db holds
+    # no 2026 general, so its race_candidates are primary filers and include the 40 who lost.
     cands = collections.defaultdict(list)
-    for cty, dist, nm in c.execute(
-            """SELECT ra.county,ra.district,cd.name FROM race_candidates rc
-               JOIN races ra ON ra.id=rc.race_id JOIN elections e ON e.id=ra.election_id
-               JOIN candidates cd ON cd.id=rc.candidate_id
-               WHERE e.year=2026 AND ra.office_id=7 AND rc.party='Republican'"""):
-        cands[f"{cty} {dist}"].append(nm)
+    for r in json.load(open(f'{rundir}/r_house_candidates.json')):
+        cands[r['district']].append(f"{r['first']} {r['last']}")
     outdir = f'{rundir}/absentee_by_district'
     shutil.rmtree(outdir, ignore_errors=True)
     os.makedirs(outdir)
@@ -292,7 +303,7 @@ def build_district_files(rundir):
          'Phone', 'Email', 'Voter ID']
     summary = []
     for d, rows in sorted(per.items()):
-        rep = [a for a in rows if a['choice'] == 'REP']
+        rep = [a for a in rows if in_chase(a)]
         if not rep:
             continue
         rep.sort(key=lambda a: ({'BALLOT IN HAND': 0, 'REQUESTED, NOT YET MAILED': 1,
@@ -315,8 +326,8 @@ def build_district_files(rundir):
     with open(f'{outdir}/_SUMMARY.csv', 'w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=list(summary[0].keys()))
         w.writeheader(); w.writerows(summary)
-    print(f"{len(summary)} district files; REP-ballot voters statewide: "
-          f"{sum(1 for a in A if a['choice'] == 'REP')}; "
+    print(f"{len(summary)} district files; chase-universe voters statewide: "
+          f"{sum(1 for a in A if in_chase(a))}; "
           f"in hand {sum(r['ballot_in_hand'] for r in summary)}, "
           f"not mailed {sum(r['not_yet_mailed'] for r in summary)}, "
           f"voted {sum(r['already_voted'] for r in summary)} (incl. floterial duplication)")
@@ -329,6 +340,7 @@ cur.execute('''SELECT f.district_code, c.candidate_id, f.first_name, f.last_name
    c.email, c.email1, c.email2, c.dead_email, c.unsubscribed_email
  FROM filings f JOIN candidates c ON c.candidate_id=f.candidate_id
  WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
+   AND f.result='won'
  ORDER BY f.district_code''')
 rows=[dict(zip(['district','cid','first','last','email','email1','email2','dead','unsub'],r)) for r in cur.fetchall()]
 def pick(r):
@@ -338,7 +350,7 @@ def pick(r):
         if e and e.strip(): return e.strip()
     return None
 for r in rows: r['to']=pick(r)
-print('R State Rep filings:', len(rows),
+print('R State Rep on the general ballot:', len(rows),
       ' usable email:', sum(1 for r in rows if r['to'] and not r['dead'] and not r['unsub']))
 json.dump(rows, open('/tmp/r_house_candidates.json','w'), default=str)
 cur.close(); A.release_db_connection(conn)"""))
@@ -386,8 +398,8 @@ def main():
     score_lean(rundir)
     assign_districts(rundir)
     pull_crm_emails(rundir)
-    build_district_files(rundir)
     pull_candidates(rundir)
+    build_district_files(rundir)
     build_plan(rundir)
     print(f"\nrun dir: {rundir}")
 

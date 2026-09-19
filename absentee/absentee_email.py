@@ -35,7 +35,7 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
         ("Phone",
          f"Present for {with_phone} of the {total}, from the state file and our own records."),
         ("Lean",
-         "How the voter is registered, and for undeclared voters which primary ballots they have taken in past state primaries."),
+         "How the voter is registered, and for undeclared voters which party's ballot they have taken in past state primaries. It is the reason each name is on the list."),
     ]
     step_html = "".join(
         f"""<tr>
@@ -55,9 +55,9 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
    </td></tr>
 
    <tr><td style="padding:22px 32px 0 32px;">
-     <h1 style="margin:0;font:700 23px/1.25 Arial,Helvetica,sans-serif;color:{INK};">Who already has a primary ballot in {district}</h1>
+     <h1 style="margin:0;font:700 23px/1.25 Arial,Helvetica,sans-serif;color:{INK};">Who in {district} already has a ballot</h1>
      <p style="margin:10px 0 0 0;font:16px/1.55 Arial,Helvetica,sans-serif;color:{MUTED};">
-       {first_name}, attached is every voter in {district} who has asked the clerk for a <strong>Republican</strong> primary ballot. {total} of them, {with_phone} with a phone number.</p>
+       {first_name}, attached is every Republican and Republican-leaning voter in {district} who has asked the clerk for an absentee ballot. {total} of them, {with_phone} with a phone number.</p>
    </td></tr>
 
    <tr><td style="padding:24px 32px 0 32px;">
@@ -65,7 +65,7 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
       <tr><td style="padding:2px 0 2px 14px;">
         <p style="margin:0 0 4px 0;font:700 12px/1.2 Arial,Helvetica,sans-serif;color:{BRAND};letter-spacing:.09em;text-transform:uppercase;">Why we are sending it</p>
         <p style="margin:0;font:15px/1.7 Arial,Helvetica,sans-serif;color:{INK};">
-          These voters are casting a ballot in <strong>your primary</strong>. Once a ballot is completed and returned it cannot be changed, so the window on each name closes at a different time.</p>
+          These voters are voting before election day. Once a ballot is completed and returned it cannot be changed, so the window on each name closes at a different time, and it closes first for the ones already holding a ballot.</p>
       </td></tr>
      </table>
    </td></tr>
@@ -85,7 +85,7 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="border-top:1px solid {RULE};padding-top:18px;">
         <p style="margin:0 0 8px 0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>The file.</strong> <span style="color:{MUTED};">{filename}, opens in Excel or Numbers. Name, address, phone, what they registered as, and which bucket they are in.</span></p>
-        <p style="margin:0 0 8px 0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>Only Republican ballots.</strong> <span style="color:{MUTED};">Voters who asked for a Democratic ballot are not on here. They cannot vote in your primary.</span></p>
+        <p style="margin:0 0 8px 0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>How these names were chosen.</strong> <span style="color:{MUTED};">In November every voter gets the same ballot, so there is no Republican request list to work from. This is built from how each voter is registered and, for undeclared voters, which party's ballot they have taken in past state primaries. Registered Republicans, undeclared voters who lean Republican, and undeclared voters who genuinely swing. Registered Democrats and undeclared voters who lean Democratic are left off.</span></p>
         <p style="margin:0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>Updates are coming.</strong> <span style="color:{MUTED};">This is accurate to {asof}. The state refreshes the file regularly and we will send you an updated list each time it changes, so you can see who has moved from one column to the next.</span></p>
       </td></tr>
      </table>
@@ -104,13 +104,13 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
 
     text = f"""{first_name},
 
-Attached is every voter in {district} who has asked the clerk for a Republican
-primary ballot. {total} of them, {with_phone} with a phone number.
+Attached is every Republican and Republican-leaning voter in {district} who has
+asked the clerk for an absentee ballot. {total} of them, {with_phone} with a phone number.
 
 WHY WE ARE SENDING IT
-These voters are casting a ballot in your primary. Once a ballot is completed
-and returned it cannot be changed, so the window on each name closes at a
-different time.
+These voters are voting before election day. Once a ballot is completed and
+returned it cannot be changed, so the window on each name closes at a different
+time, and it closes first for the ones already holding a ballot.
 
 WHAT IS ON THE LIST
 {townline}. Grouped by status, then alphabetically.
@@ -127,13 +127,20 @@ WHAT THE COLUMNS MEAN
   Phone                  Present for {with_phone} of the {total}, from the state file and
                          our own records.
   Lean                   How the voter is registered, and for undeclared voters
-                         which primary ballots they have taken in past state
-                         primaries.
+                         which party's ballot they have taken in past state
+                         primaries. It is the reason each name is on the list.
 
 THE FILE
 {filename}, opens in Excel or Numbers. Name, address, phone, registration and
-bucket. Only Republican ballots are included - Democratic-ballot voters cannot
-vote in your primary.
+bucket.
+
+HOW THESE NAMES WERE CHOSEN
+In November every voter gets the same ballot, so there is no Republican request
+list to work from. This is built from how each voter is registered and, for
+undeclared voters, which party's ballot they have taken in past state primaries.
+Registered Republicans, undeclared voters who lean Republican, and undeclared
+voters who genuinely swing. Registered Democrats and undeclared voters who lean
+Democratic are left off.
 
 UPDATES ARE COMING
 This is accurate to {asof}. The state refreshes the file regularly and we will

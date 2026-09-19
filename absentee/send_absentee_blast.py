@@ -36,7 +36,7 @@ def compose(c, rundir, asof):
     html, text = build(c['first'], dist, counts, towns, phones, len(rows), base, asof)
 
     m = MIMEMultipart('mixed')
-    m['Subject'] = f"Who already has a primary ballot in {dist}"
+    m['Subject'] = f"Who in {dist} already has a ballot"
     m['From'] = SENDER
     m['Reply-To'] = SRC
     alt = MIMEMultipart('alternative')
