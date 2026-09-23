@@ -2217,8 +2217,12 @@ def _money_actuals(cur):
                 out['mail_invoiced'] = out.get('mail_invoiced', 0.0) + inv
             if status == 'paid' and inv is not None:
                 out['mail_paid'] += inv
-        elif status == 'paid' and inv is not None:
-            out['paid_other'][tk] = out['paid_other'].get(tk, 0.0) + inv
+        else:
+            if inv is not None:
+                out.setdefault('invoiced_other', {})
+                out['invoiced_other'][tk] = out['invoiced_other'].get(tk, 0.0) + inv
+            if status == 'paid' and inv is not None:
+                out['paid_other'][tk] = out['paid_other'].get(tk, 0.0) + inv
 
     out['reserve'] = 20000.0
     cur.execute("SELECT key, amount, notes FROM spend_budget WHERE key IN ('cash_on_hand','prepaid','reserve')")
