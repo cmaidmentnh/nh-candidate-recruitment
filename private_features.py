@@ -2186,6 +2186,8 @@ def _load_pieces(cur):
 # these files. Reading the same files means the plan and the dashboard can never disagree
 # about what digital has spent.
 DELIVERY_DIR = '/root/floterial'
+from zoneinfo import ZoneInfo
+_ET = ZoneInfo('America/New_York')          # the server runs on UTC; people read Eastern
 
 
 def _money_actuals(cur):
@@ -2251,7 +2253,7 @@ def _money_actuals(cur):
                 'available': float(snap[0]) if snap[0] is not None else None,
                 'beginning': float(snap[1]) if snap[1] is not None else None,
                 'pending': float(snap[2]) if snap[2] is not None else None,
-                'captured': snap[3].strftime('%b %-d, %-I:%M %p'), 'by': snap[4] or '',
+                'captured': snap[3].astimezone(_ET).strftime('%b %-d, %-I:%M %p'), 'by': snap[4] or '',
                 'last_posted': last_posted.isoformat() if last_posted else None,
                 'since': BR.PROGRAM_START.strftime('%b %-d'),
                 'by_cat': by_cat, 'unlabeled': unlabeled,
@@ -2261,7 +2263,7 @@ def _money_actuals(cur):
                 out['cash_note'] = 'from TD Bank, ' + out['bank']['captured']
         cur.execute("""SELECT id, label, monthly, end_date, notes FROM spend_recurring
                         WHERE active ORDER BY monthly DESC""")
-        today = datetime.now().date()
+        today = datetime.now(_ET).date()
         rec = []
         for i, lbl, mo, end, notes in cur.fetchall():
             # Whole months still to come AFTER this one. This month's charge is either already
@@ -2404,7 +2406,7 @@ def spend_plan_money():
         return jsonify({'ok': False, 'error': 'Enter a dollar amount.'}), 400
     who = current_user.email if current_user.is_authenticated else 'admin'
     note = (d.get('note') or '').strip()[:300]
-    stamp = 'as of %s by %s' % (datetime.now().strftime('%b %-d, %-I:%M %p'), who)
+    stamp = 'as of %s by %s' % (datetime.now(_ET).strftime('%b %-d, %-I:%M %p'), who)
     label = {'cash_on_hand': 'Cash on hand', 'prepaid': 'Prepaid, not yet invoiced',
              'reserve': 'Keep in the bank for next year'}[key]
     conn = get_db_connection(); cur = conn.cursor()
