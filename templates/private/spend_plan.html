@@ -308,6 +308,12 @@
   .mtab td:nth-child(2){color:#7b8494;font-size:.72rem}
   .mtab tr.tot td{font-weight:800;border-top:2px solid #cfd6e0}
   .mnote{font-size:.72rem;color:#7b8494;margin:6px 0 2px}
+  .money details{margin-top:4px}
+  .mbtn{padding:5px 14px;border:0;border-radius:4px;background:var(--navy);color:#fff;font-weight:700;font-size:.78rem;cursor:pointer}
+  .mflag{color:#c8102e;font-weight:700}
+  .mtab input{width:90px;padding:2px 4px;border:1px solid #cfd6e0;border-radius:3px;font-size:.78rem;text-align:right}
+  .mtab input.lbl{width:200px;text-align:left}
+  .mtab select{font-size:.75rem}
 </style>
 
 <div class="sp">
@@ -324,14 +330,34 @@
       <div class="mg"><span class="mv" id="mLeft">$0</span><span class="ml">Still to spend</span></div>
       <div class="mg"><span class="mv" id="mCash">not entered</span>
         <span class="ml">Cash on hand <a href="#" id="mCashEdit">edit</a></span></div>
+      <div class="mg"><span class="mv" id="mReserve">$0</span>
+        <span class="ml">Keep for next year <a href="#" id="mReserveEdit">edit</a></span></div>
       <div class="mg"><span class="mv" id="mNet">$0</span><span class="ml" id="mNetL">Surplus</span></div>
       <div class="mg"><span class="mv" id="mVsBudget">$0</span><span class="ml" id="mVsBudgetL">vs program budget</span></div>
     </div>
     <p class="mcheck" id="mCheck"></p>
+    <p class="mcheck" id="mFlags"></p>
     <details><summary>By channel</summary>
       <table class="mtab"><thead><tr><th>Channel</th><th>Source</th><th>Forecast</th><th>Spent</th><th>Still to spend</th></tr></thead>
       <tbody id="mRows"></tbody></table>
       <p class="mnote" id="mNote"></p>
+    </details>
+    <details><summary>Billing check: what we paid vs what was billed or delivered</summary>
+      <table class="mtab"><thead><tr><th>Vendor</th><th>What it covers</th><th>Paid (bank)</th><th>Billed / delivered</th><th>Difference</th></tr></thead>
+      <tbody id="mBill"></tbody></table>
+      <div id="mUnlabeled"></div>
+    </details>
+    <details><summary>Monthly overhead</summary>
+      <table class="mtab"><thead><tr><th>Item</th><th>Through</th><th>Monthly</th><th>Months left</th><th>Still to spend</th><th></th></tr></thead>
+      <tbody id="mRec"></tbody></table>
+      <p class="mnote">Counts whole months after this one. This month's charges are counted when they reach the bank.
+        <a href="#" id="mRecAdd">Add a line</a></p>
+    </details>
+    <details id="mBankBox"><summary>Update from TD Bank</summary>
+      <p class="mnote">On the TD Bank account page press Ctrl-A (Cmd-A on a Mac), then Ctrl-C, and paste here.
+        Transactions already imported are skipped; the pending list is replaced each time.</p>
+      <textarea id="mBankText" rows="5" style="width:100%;font-size:.75rem"></textarea>
+      <p><button type="button" id="mBankGo" class="mbtn">Import</button> <span id="mBankMsg" class="mnote"></span></p>
     </details>
   </div>
 
@@ -1421,20 +1447,51 @@
       });
     });
     var ds = MONEY.digital_spent || {}, po = MONEY.paid_other || {};
-    var rows = [];
-    rows.push(['Mail', MONEY.mail_billed + ' of ' + MONEY.mail_pieces + ' pieces invoiced, the rest at planned cost',
-               MONEY.mail_forecast, MONEY.mail_paid]);
-    if(MONEY.prepaid) rows.push(['Prepaid, not yet invoiced', MONEY.prepaid_note || 'credit against the next invoice',
-               0, MONEY.prepaid]);
-    rows.push(['Text', 'plan', plan.mms||0, po.mms||0]);
-    [['meta','Facebook / Instagram'],['ctv','Streaming TV'],['display','Display'],['audio','Streaming audio']]
-      .forEach(function(x){
-        var p = plan[x[0]]||0, s = ds[x[0]]||0;
-        rows.push([x[1], s > p ? 'spent is over the plan' : 'plan budget, platform spend', Math.max(p, s), s]);
-      });
-    var field = 0, fieldPaid = 0;
-    ['palm_cards','signs','gotv_calls','doors'].forEach(function(k){ field += plan[k]||0; fieldPaid += po[k]||0; });
-    rows.push(['Field', 'plan', Math.max(field, fieldPaid), fieldPaid]);
+    var B = MONEY.bank, bc = (B && B.by_cat) || {};
+    function paid(cat){ return (bc[cat] && bc[cat].amount) || 0; }
+    var rows = [], bill = [], flags = [];
+
+    if(B){
+      // Cash basis: "spent" is what has left the bank (pending included, because the available
+      // balance already has it taken off). Forecast never falls below what has been paid or
+      // what the vendor has already delivered, so nothing is under-assumed.
+      var mailPaid = paid('mail');
+      rows.push(['Mail (NHGOP)', MONEY.mail_billed + ' of ' + MONEY.mail_pieces + ' pieces invoiced, rest at planned cost',
+                 Math.max(MONEY.mail_forecast, mailPaid), mailPaid]);
+      bill.push(['NH Republican State Committee', 'mail, invoices incl. 1.5% fee', mailPaid, MONEY.mail_invoiced || 0]);
+      var sa = (ds.ctv||0) + (ds.display||0) + (ds.audio||0);
+      var saPlan = (plan.ctv||0) + (plan.display||0) + (plan.audio||0);
+      rows.push(['Meta (Facebook / Instagram)', 'plan budget; paid from bank', Math.max(plan.meta||0, paid('meta'), ds.meta||0), paid('meta')]);
+      bill.push(['Meta', 'reported spend, general campaigns', paid('meta'), ds.meta||0]);
+      rows.push(['StackAdapt (streaming TV, display, audio)', 'plan budget; paid from bank', Math.max(saPlan, paid('stackadapt'), sa), paid('stackadapt')]);
+      bill.push(['StackAdapt', 'reported spend: TV ' + money(ds.ctv||0) + ', display ' + money(ds.display||0) + ', audio ' + money(ds.audio||0), paid('stackadapt'), sa]);
+      var field = 0; ['palm_cards','signs','gotv_calls','doors'].forEach(function(k){ field += plan[k]||0; });
+      rows.push(['Printing (Spectrum)', 'palm cards and field plan; paid from bank', Math.max(field, paid('printing')), paid('printing')]);
+      bill.push(['Spectrum Marketing', 'printing: no invoice amount recorded in the tracker', paid('printing'), null]);
+      rows.push(['Texting', 'plan; paid from bank', Math.max(plan.mms||0, paid('texting')), paid('texting')]);
+      if(paid('google_ads')) rows.push(['Google Ads', 'bank', paid('google_ads'), paid('google_ads')]);
+      if(paid('other')) rows.push(['Other', 'bank', paid('other'), paid('other')]);
+      var ovPaid = 0; (B.overhead||[]).forEach(function(c){ ovPaid += paid(c); });
+      var recLeft = 0; (MONEY.recurring||[]).forEach(function(r){ recLeft += r.remaining; });
+      rows.push(['Overhead', 'paid from bank + ' + (MONEY.recurring||[]).length + ' monthly lines still to come',
+                 ovPaid + recLeft, ovPaid]);
+      if(paid('unlabeled')){
+        rows.push(['Not yet labeled', 'bank rows with no category', paid('unlabeled'), paid('unlabeled')]);
+        flags.push(money(paid('unlabeled')) + ' of bank payments are not labeled');
+      }
+    } else {
+      rows.push(['Mail', MONEY.mail_billed + ' of ' + MONEY.mail_pieces + ' pieces invoiced, the rest at planned cost',
+                 MONEY.mail_forecast, MONEY.mail_paid]);
+      if(MONEY.prepaid) rows.push(['Prepaid, not yet invoiced', MONEY.prepaid_note || 'credit against the next invoice', 0, MONEY.prepaid]);
+      rows.push(['Text', 'plan', plan.mms||0, po.mms||0]);
+      [['meta','Facebook / Instagram'],['ctv','Streaming TV'],['display','Display'],['audio','Streaming audio']]
+        .forEach(function(x){ var p = plan[x[0]]||0, s = ds[x[0]]||0;
+          rows.push([x[1], 'plan budget, platform spend', Math.max(p, s), s]); });
+      var fld = 0; ['palm_cards','signs','gotv_calls','doors'].forEach(function(k){ fld += plan[k]||0; });
+      rows.push(['Field', 'plan', fld, 0]);
+      var rl = 0; (MONEY.recurring||[]).forEach(function(r){ rl += r.remaining; });
+      if(rl) rows.push(['Overhead still to come', 'monthly lines', rl, 0]);
+    }
 
     var F = 0, S = 0, h = '';
     rows.forEach(function(r){
@@ -1445,8 +1502,44 @@
     h += '<tr class="tot"><td>Total</td><td></td><td>'+money(F)+'</td><td>'+money(S)+'</td><td>'+money(L)+'</td></tr>';
     document.getElementById('mRows').innerHTML = h;
 
+    var bh = '';
+    bill.forEach(function(b){
+      var diff = b[3] === null ? null : b[2] - b[3], txt;
+      if(diff === null) txt = b[2] ? '<span class="mflag">needs the invoice</span>' : '';
+      else if(Math.abs(diff) < 1) txt = 'matches';
+      else if(diff > 0) txt = money(diff) + ' paid ahead (credit)';
+      else txt = '<span class="mflag">' + money(-diff) + ' delivered, not yet billed</span>';
+      if(diff !== null && diff < -1) flags.push(b[0] + ': ' + money(-diff) + ' delivered, not yet billed');
+      if(diff === null && b[2]) flags.push(b[0] + ': ' + money(b[2]) + ' paid with no invoice recorded');
+      bh += '<tr><td>'+b[0]+'</td><td>'+b[1]+'</td><td>'+money(b[2])+'</td><td>'+(b[3]===null?'none recorded':money(b[3]))+'</td><td>'+txt+'</td></tr>';
+    });
+    document.getElementById('mBill').innerHTML = bh || '<tr><td colspan="5">Import the bank to see this.</td></tr>';
+
+    var uh = '';
+    if(B && B.unlabeled && B.unlabeled.length){
+      uh = '<p class="mnote"><b>Label these so they land in the right line:</b></p><table class="mtab">';
+      B.unlabeled.forEach(function(u){
+        uh += '<tr><td>'+u.date+(u.pending?' (pending)':'')+'</td><td>'+u.desc+'</td><td>'+money(-u.amount)+'</td><td><select data-bank="'+u.id+'"><option value="">choose</option>' +
+          B.categories.map(function(c){ return '<option>'+c+'</option>'; }).join('') + '</select></td></tr>';
+      });
+      uh += '</table>';
+    }
+    document.getElementById('mUnlabeled').innerHTML = uh;
+
+    var rh = '';
+    (MONEY.recurring||[]).forEach(function(r){
+      rh += '<tr data-rec="'+r.id+'"><td><input class="lbl" value="'+r.label.replace(/"/g,'&quot;')+'"></td><td><input value="'+r.end+'"></td>' +
+            '<td><input value="'+r.monthly+'"></td><td>'+r.months+'</td><td>'+money(r.remaining)+'</td>' +
+            '<td><a href="#" data-recsave="'+r.id+'">save</a> &middot; <a href="#" data-recdel="'+r.id+'">remove</a></td></tr>';
+    });
+    document.getElementById('mRec').innerHTML = rh || '<tr><td colspan="6">No monthly overhead entered.</td></tr>';
+
     function set(id, v, cls){ var e = document.getElementById(id); e.textContent = v; e.className = 'mv' + (cls ? ' '+cls : ''); }
     set('mForecast', money(F)); set('mSpent', money(S)); set('mLeft', money(L));
+    var R = MONEY.reserve || 0;
+    set('mReserve', money(R));
+    // With a bank import the balance comes from the bank; a typed figure would only confuse.
+    document.getElementById('mCashEdit').style.display = B ? 'none' : '';
     var vb = BUDGET - F;
     set('mVsBudget', money(Math.abs(vb)), vb < 0 ? 'neg' : 'pos');
     document.getElementById('mVsBudgetL').textContent = (vb < 0 ? 'over the ' : 'under the ') + money(BUDGET) + ' budget';
@@ -1455,22 +1548,69 @@
     if(MONEY.cash === null || MONEY.cash === undefined){
       set('mCash', 'not entered', 'muted'); set('mNet', '?', 'muted');
       document.getElementById('mNetL').textContent = 'Surplus / deficit';
-      chk += '. Enter cash on hand to see the surplus or deficit.';
+      chk += '. Import the bank or enter cash on hand to see the surplus or deficit.';
     } else {
-      var net = MONEY.cash - L;
+      var net = MONEY.cash - L - R;
       set('mCash', money(MONEY.cash));
       set('mNet', money(Math.abs(net)), net < 0 ? 'neg' : 'pos');
       document.getElementById('mNetL').textContent = net < 0 ? 'Deficit' : 'Surplus';
-      chk += '. Cash ' + money(MONEY.cash) + ' - still to spend ' + money(L) + ' = ' +
+      chk += '. Cash ' + money(MONEY.cash) + ' - still to spend ' + money(L) + ' - keep ' + money(R) + ' = ' +
              (net < 0 ? 'deficit ' : 'surplus ') + money(Math.abs(net)) + '.';
       if(MONEY.cash_note) chk += ' Cash ' + MONEY.cash_note + '.';
+      if(B && B.beginning !== null && B.pending !== null && Math.abs(B.beginning + B.pending - B.available) > 0.01)
+        flags.push('bank balances do not add up');
     }
     document.getElementById('mCheck').innerHTML = ok ? chk : '<b class="bad">Does not reconcile: </b>' + chk;
+    document.getElementById('mFlags').innerHTML = flags.length
+      ? '<span class="mflag">Check:</span> ' + flags.join(' &middot; ') : (B ? 'Every vendor reconciles.' : '');
     document.getElementById('mNote').textContent =
-      (MONEY.digital_asof ? 'Digital spend from the delivery dashboard, ' + MONEY.digital_asof + '. ' :
-       'Digital spend unavailable (' + (MONEY.digital_error||'no data') + '). ') +
+      (B ? 'Paid = TD Bank since ' + B.since + ', pending included; last import ' + B.captured + '. ' :
+           'No bank import yet. ') +
+      (MONEY.digital_asof ? 'Delivered = the delivery dashboard, ' + MONEY.digital_asof + '. ' : '') +
       'Mail invoices include the state party’s 1.5% fee.';
   }
+
+  function post(url, body){
+    return fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify(body)}).then(function(r){ return r.json(); });
+  }
+  document.getElementById('moneyPanel').addEventListener('change', function(e){
+    var id = e.target.getAttribute('data-bank');
+    if(id && e.target.value) post('/private/spend-plan/bank-category', {id:+id, category:e.target.value})
+      .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
+  });
+  document.getElementById('moneyPanel').addEventListener('click', function(e){
+    var s = e.target.getAttribute('data-recsave'), d = e.target.getAttribute('data-recdel');
+    if(!s && !d) return;
+    e.preventDefault();
+    if(d){ if(confirm('Remove this monthly line?')) post('/private/spend-plan/recurring', {id:+d, delete:true}).then(function(){ location.reload(); }); return; }
+    var tr = e.target.closest('tr'), ins = tr.querySelectorAll('input');
+    post('/private/spend-plan/recurring', {id:+s, label:ins[0].value, end:ins[1].value, monthly:ins[2].value})
+      .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
+  });
+  document.getElementById('mRecAdd').addEventListener('click', function(e){
+    e.preventDefault();
+    var label = prompt('What is it? (e.g. Consulting)'); if(!label) return;
+    var monthly = prompt('How much a month?'); if(!monthly) return;
+    var end = prompt('Last month it runs, as YYYY-MM-DD', '2026-11-30'); if(!end) return;
+    post('/private/spend-plan/recurring', {label:label, monthly:monthly, end:end})
+      .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
+  });
+  document.getElementById('mReserveEdit').addEventListener('click', function(e){
+    e.preventDefault();
+    var v = prompt('Keep this much in the bank at the end, for next year', MONEY.reserve || 20000);
+    if(v === null) return;
+    post('/private/spend-plan/money', {key:'reserve', amount:v}).then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
+  });
+  document.getElementById('mBankGo').addEventListener('click', function(){
+    var t = document.getElementById('mBankText').value, m = document.getElementById('mBankMsg');
+    m.textContent = 'Importing...';
+    post('/private/spend-plan/bank', {text:t}).then(function(j){
+      if(!j.ok){ m.textContent = j.error || 'Could not import.'; return; }
+      m.textContent = j.new_posted + ' new transactions, ' + j.pending + ' pending. Available ' + money(j.available) + '. Reloading...';
+      setTimeout(function(){ location.reload(); }, 800);
+    });
+  });
 
   document.getElementById('mCashEdit').addEventListener('click', function(e){
     e.preventDefault();

@@ -2212,17 +2212,70 @@ def _money_actuals(cur):
             out['mail_forecast'] += inv if inv is not None else float(planned)
             if inv is not None:
                 out['mail_billed'] += 1
+                out['mail_invoiced'] = out.get('mail_invoiced', 0.0) + inv
             if status == 'paid' and inv is not None:
                 out['mail_paid'] += inv
         elif status == 'paid' and inv is not None:
             out['paid_other'][tk] = out['paid_other'].get(tk, 0.0) + inv
 
-    cur.execute("SELECT key, amount, notes FROM spend_budget WHERE key IN ('cash_on_hand','prepaid')")
+    out['reserve'] = 20000.0
+    cur.execute("SELECT key, amount, notes FROM spend_budget WHERE key IN ('cash_on_hand','prepaid','reserve')")
     for key, amt, notes in cur.fetchall():
         if key == 'cash_on_hand':
             out['cash'], out['cash_note'] = float(amt), notes or ''
+        elif key == 'reserve':
+            out['reserve'] = float(amt)
         else:
             out['prepaid'], out['prepaid_note'] = float(amt), notes or ''
+
+    # The bank, when it has been pasted in, is the authority on cash and on what has been
+    # paid: it replaces the typed-in cash figure and the typed-in prepaid credit.
+    out['bank'] = None
+    try:
+        import bank_recon as BR
+        cur.execute("""SELECT available, beginning, pending, captured_at, captured_by
+                         FROM bank_snapshot ORDER BY captured_at DESC LIMIT 1""")
+        snap = cur.fetchone()
+        if snap:
+            cur.execute("""SELECT COALESCE(category, 'unlabeled'), SUM(amount), COUNT(*)
+                             FROM bank_txn WHERE txn_date >= %s GROUP BY 1""", (BR.PROGRAM_START,))
+            by_cat = {c: {'amount': -float(a), 'n': n} for c, a, n in cur.fetchall()}
+            cur.execute("""SELECT id, txn_date, description, amount, pending
+                             FROM bank_txn WHERE category IS NULL AND txn_date >= %s
+                            ORDER BY txn_date DESC""", (BR.PROGRAM_START,))
+            unlabeled = [{'id': i, 'date': d.isoformat(), 'desc': ds, 'amount': float(a), 'pending': p}
+                         for i, d, ds, a, p in cur.fetchall()]
+            cur.execute("SELECT MAX(txn_date) FROM bank_txn WHERE NOT pending")
+            last_posted = cur.fetchone()[0]
+            out['bank'] = {
+                'available': float(snap[0]) if snap[0] is not None else None,
+                'beginning': float(snap[1]) if snap[1] is not None else None,
+                'pending': float(snap[2]) if snap[2] is not None else None,
+                'captured': snap[3].strftime('%b %-d, %-I:%M %p'), 'by': snap[4] or '',
+                'last_posted': last_posted.isoformat() if last_posted else None,
+                'since': BR.PROGRAM_START.strftime('%b %-d'),
+                'by_cat': by_cat, 'unlabeled': unlabeled,
+                'categories': BR.CATEGORIES, 'overhead': list(BR.OVERHEAD)}
+            if out['bank']['available'] is not None:
+                out['cash'] = out['bank']['available']
+                out['cash_note'] = 'from TD Bank, ' + out['bank']['captured']
+        cur.execute("""SELECT id, label, monthly, end_date, notes FROM spend_recurring
+                        WHERE active ORDER BY monthly DESC""")
+        today = datetime.now().date()
+        rec = []
+        for i, lbl, mo, end, notes in cur.fetchall():
+            # Whole months still to come AFTER this one. This month's charge is either already
+            # in the bank (counted as spent) or about to be, and prorating by day would count
+            # it twice.
+            months = max(0, (end.year - today.year) * 12 + end.month - today.month)
+            rec.append({'id': i, 'label': lbl, 'monthly': float(mo), 'end': end.isoformat(),
+                        'months': months, 'remaining': round(float(mo) * months, 2), 'notes': notes or ''})
+        out['recurring'] = rec
+    except Exception as e:
+        conn_err = str(e)[:200]
+        logger.info('bank data unavailable: %s', conn_err)
+        out['bank_error'] = conn_err
+        cur.connection.rollback()
 
     try:
         import json as _json, os
@@ -2239,6 +2292,103 @@ def _money_actuals(cur):
     return out
 
 
+@private_bp.route('/spend-plan/bank', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_bank():
+    """Import a pasted TD Bank account screen. Refuses a paste whose balances do not add up,
+    because a half-copied screen would silently understate what was spent."""
+    import bank_recon as BR
+    d = request.get_json(silent=True) or {}
+    text = d.get('text') or ''
+    if len(text) < 50:
+        return jsonify({'ok': False, 'error': 'Paste the whole TD Bank account page.'}), 400
+    balances, rows = BR.parse_td(text)
+    if balances.get('available') is None or not rows:
+        return jsonify({'ok': False, 'error': 'Could not find the balance and transactions in that paste. '
+                                              'Copy the whole page (Ctrl-A, Ctrl-C) and try again.'}), 400
+    problems = BR.check_balances(balances, rows)
+    if problems and not d.get('force'):
+        return jsonify({'ok': False, 'error': 'The paste does not add up: ' + '; '.join(problems[:3])}), 400
+    who = current_user.email if current_user.is_authenticated else 'admin'
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM bank_txn WHERE pending")          # the pending list is a snapshot
+        added = 0
+        for r in rows:
+            cur.execute("""INSERT INTO bank_txn (txn_date, pending, kind, description, amount, balance,
+                                                 category, fingerprint)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (fingerprint) DO NOTHING""",
+                        (r['date'], r['pending'], r['kind'], r['description'], r['amount'],
+                         r['balance'], r['category'], r['fingerprint']))
+            added += cur.rowcount if not r['pending'] else 0
+        cur.execute("""INSERT INTO bank_snapshot (available, beginning, pending, captured_by)
+                       VALUES (%s,%s,%s,%s)""",
+                    (balances['available'], balances['beginning'], balances['pending'], who))
+        conn.commit()
+        return jsonify({'ok': True, 'new_posted': added,
+                        'pending': sum(1 for r in rows if r['pending']),
+                        'available': balances['available'], 'problems': problems})
+    except Exception as e:
+        conn.rollback()
+        logger.error('bank import failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save the import.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/bank-category', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_bank_category():
+    import bank_recon as BR
+    d = request.get_json(silent=True) or {}
+    cat = d.get('category')
+    if cat not in BR.CATEGORIES:
+        return jsonify({'ok': False, 'error': 'bad category'}), 400
+    who = current_user.email if current_user.is_authenticated else 'admin'
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("UPDATE bank_txn SET category=%s, category_set_by=%s WHERE id=%s",
+                    (cat, who, d.get('id')))
+        conn.commit()
+        return jsonify({'ok': True})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/recurring', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_recurring():
+    """Add, change or retire a monthly overhead line."""
+    d = request.get_json(silent=True) or {}
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        if d.get('delete') and d.get('id'):
+            cur.execute("UPDATE spend_recurring SET active=false WHERE id=%s", (d['id'],))
+        else:
+            label = (d.get('label') or '').strip()[:120]
+            try:
+                monthly = round(float(str(d.get('monthly', '')).replace(',', '').replace('$', '')), 2)
+                end = datetime.strptime(d.get('end') or '2026-11-30', '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'ok': False, 'error': 'Monthly amount and end date (YYYY-MM-DD) please.'}), 400
+            if not label:
+                return jsonify({'ok': False, 'error': 'Give it a name.'}), 400
+            if d.get('id'):
+                cur.execute("UPDATE spend_recurring SET label=%s, monthly=%s, end_date=%s WHERE id=%s",
+                            (label, monthly, end, d['id']))
+            else:
+                cur.execute("INSERT INTO spend_recurring (label, monthly, end_date) VALUES (%s,%s,%s)",
+                            (label, monthly, end))
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error('recurring save failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
 @private_bp.route('/spend-plan/money', methods=['POST'])
 @require_feature_access('campaign_plan')
 def spend_plan_money():
@@ -2246,7 +2396,7 @@ def spend_plan_money():
     figure without a date is worse than none."""
     d = request.get_json(silent=True) or {}
     key = d.get('key')
-    if key not in ('cash_on_hand', 'prepaid'):
+    if key not in ('cash_on_hand', 'prepaid', 'reserve'):
         return jsonify({'ok': False, 'error': 'bad key'}), 400
     try:
         amount = round(float(str(d.get('amount', '')).replace(',', '').replace('$', '')), 2)
@@ -2255,7 +2405,8 @@ def spend_plan_money():
     who = current_user.email if current_user.is_authenticated else 'admin'
     note = (d.get('note') or '').strip()[:300]
     stamp = 'as of %s by %s' % (datetime.now().strftime('%b %-d, %-I:%M %p'), who)
-    label = 'Cash on hand' if key == 'cash_on_hand' else 'Prepaid, not yet invoiced'
+    label = {'cash_on_hand': 'Cash on hand', 'prepaid': 'Prepaid, not yet invoiced',
+             'reserve': 'Keep in the bank for next year'}[key]
     conn = get_db_connection(); cur = conn.cursor()
     try:
         cur.execute("""INSERT INTO spend_budget (key, label, amount, notes) VALUES (%s,%s,%s,%s)
