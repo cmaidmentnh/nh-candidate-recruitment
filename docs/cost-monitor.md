@@ -100,7 +100,9 @@ signed with `cryptography`, already in `requirements.txt`.
 
 ## One-time Google Cloud setup (Ross or Chris)
 
-Nothing in this section has been done. The app never creates or changes anything in Google Cloud.
+Done for gcloudgpu on 2026-09-23 (checked with gcloud and bq): the service account and its three
+roles, a key (step 2A), the `billing_export` dataset in `US`, and the export. The app never
+creates or changes anything in Google Cloud.
 
 ### 1. A read-only service account
 
@@ -184,7 +186,11 @@ Without this the page shows estimates only and says "not set up" for actual spen
    https://cloud.google.com/billing/docs/how-to/export-data-bigquery-setup
 3. After a few hours a table appears in the dataset, named
    `gcp_billing_export_v1_<billing account id, with underscores>`. Set
-   `GCP_BILLING_BQ_TABLE=gcloudgpu.billing_export.gcp_billing_export_v1_XXXXXX_XXXXXX_XXXXXX`
+   `GCP_BILLING_BQ_TABLE=gcloudgpu.billing_export.gcp_billing_export_v1_XXXXXX_XXXXXX_XXXXXX`.
+   It can be set before the table exists: until Google writes the first data, the page says
+   **waiting**, not an error. A `US` or `EU` dataset then gets the whole month (and last month),
+   not only the days since. If the dataset is still empty two days after it was made, or holds a
+   billing table by another name, the page says so and what to check.
 4. Let the service account read it and run queries:
 
    ```

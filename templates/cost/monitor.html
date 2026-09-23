@@ -125,11 +125,14 @@
       {% if actual.configured and actual.ok %}
       <div class="n">{{ usd(actual.net) }}</div>
       <div class="sub">Google's billing export, hours behind</div>
+      {% elif actual.waiting %}
+      <div class="n small" style="color:var(--muted)">waiting</div>
+      <div class="sub">for Google's first billing export</div>
       {% elif actual.configured %}
       <div class="n small unk">error</div><div class="sub">see below</div>
       {% else %}
       <div class="n small" style="color:var(--muted)">not set up</div>
-      <div class="sub"><a href="{{ docs_url }}#actual-spend-the-billing-export" target="_blank" rel="noopener">how to set it up</a></div>
+      <div class="sub"><a href="{{ docs_url }}#4-optional-actual-spend-the-billing-export-to-bigquery" target="_blank" rel="noopener">how to set it up</a></div>
       {% endif %}</div>
   </div>
 
@@ -188,10 +191,14 @@
       {% if not actual.configured %}
       <p style="margin:0">Not set up. Actual spend needs Google's billing export to BigQuery, and
         <code>GCP_BILLING_BQ_TABLE</code> set on the server.
-        <a href="{{ docs_url }}#actual-spend-the-billing-export" target="_blank" rel="noopener">How to set it up</a> &middot;
+        <a href="{{ docs_url }}#4-optional-actual-spend-the-billing-export-to-bigquery" target="_blank" rel="noopener">How to set it up</a> &middot;
         <a href="{{ export_help_url }}" target="_blank" rel="noopener">Google's guide</a></p>
+      {% elif actual.waiting %}
+      <p style="margin:0;overflow-wrap:anywhere"><b>Waiting for Google.</b> {{ actual.error }}</p>
+      <p class="note">Table <code>{{ actual.table }}</code>. Nothing to fix: the numbers show up here by themselves.
+        The estimates above do not need them.</p>
       {% elif not actual.ok %}
-      <p style="margin:0" class="unk">Could not read the billing export: {{ actual.error }}</p>
+      <p style="margin:0;overflow-wrap:anywhere" class="unk">Could not read the billing export: {{ actual.error }}</p>
       {% else %}
       <p style="margin:0 0 8px"><b style="font-size:1.1rem">{{ usd(actual.net) }}</b> in {{ actual.month }}
         <span class="dim">= {{ usd(actual.cost) }} charged {% if actual.credits %}{{ usd(actual.credits) }} credits{% endif %}</span></p>

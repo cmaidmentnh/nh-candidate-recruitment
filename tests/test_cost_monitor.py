@@ -91,6 +91,7 @@ class FakeGoogle:
         self.unreachable = []
         self.fail = {}        # URL fragment -> (status, body)
         self.bq = []          # queued BigQuery answers
+        self.datasets = {}    # BigQuery dataset id -> its resource, plus 'tables': [names]
         self.calls = []
         self.stopped = []
         self.tokens_issued = 0
@@ -115,6 +116,19 @@ class FakeGoogle:
             return Resp(200, {'kind': 'compute#operation', 'status': 'RUNNING'})
         if '/queries' in url and self.bq:
             return Resp(200, self.bq.pop(0))
+        m = re.search(r'/bigquery/v2/projects/[^/]+/datasets/([^/]+)(/tables)?$', url)
+        if m:
+            ds = self.datasets.get(m.group(1))
+            if ds is None:
+                return Resp(404, {'error': {'message': f'Not found: Dataset {PROJECT}:{m.group(1)}'}})
+            if not m.group(2):
+                return Resp(200, {k: v for k, v in ds.items() if k != 'tables'})
+            names = ds.get('tables') or []
+            body = {'kind': 'bigquery#tableList', 'totalItems': len(names)}
+            if names:   # like BigQuery, an empty dataset's list has no 'tables' at all
+                body['tables'] = [{'tableReference': {'projectId': PROJECT, 'datasetId': m.group(1), 'tableId': t}}
+                                  for t in names]
+            return Resp(200, body)
         return Resp(404, {'error': {'message': 'not faked: ' + url}})
 
     def _aggregated(self, token):
@@ -451,6 +465,14 @@ class CredentialsTest(Base):
 # =============================================================================
 
 TABLE = 'gcloudgpu.billing_export.gcp_billing_export_v1_0000AA_BBBBBB_CCCCCC'
+# What BigQuery said on 2026-09-23, fifteen minutes after the export was turned on.
+TABLE_NOT_FOUND = (404, {'error': {'message': 'Not found: Table gcloudgpu:billing_export.'
+                                              'gcp_billing_export_v1_0000AA_BBBBBB_CCCCCC was not found in location US'}})
+
+
+def bq_dataset(made, tables=(), location='US'):
+    return {'kind': 'bigquery#dataset', 'datasetReference': {'projectId': PROJECT, 'datasetId': 'billing_export'},
+            'location': location, 'creationTime': str(int(made.timestamp() * 1000)), 'tables': list(tables)}
 
 
 def bq_answer(rows, complete=True):
@@ -501,7 +523,57 @@ class ActualSpendTest(Base):
         self.google.fail['/queries'] = (403, {'error': {'message': 'Access Denied: Table gcloudgpu:billing_export'}})
         a = cm.actual_spend(fresh=True, now=NOW)
         self.assertFalse(a['ok'])
+        self.assertFalse(a['waiting'])
         self.assertIn('Access Denied', a['error'])
+        self.assertEqual(self.google.urls('/datasets/'), [])   # only a missing table is looked into
+
+    def test_a_table_google_has_not_made_yet_is_waiting_not_an_error(self):
+        self.google.fail['/queries'] = TABLE_NOT_FOUND
+        self.google.datasets['billing_export'] = bq_dataset(NOW - timedelta(minutes=15))
+        a = cm.actual_spend(fresh=True, now=NOW)
+        self.assertFalse(a['ok'])
+        self.assertTrue(a['waiting'])
+        self.assertIn('a few hours', a['error'])
+        self.assertIn('made 15 min ago', a['error'])
+        self.assertIn('the whole month', a['error'])
+        self.assertNotIn('HTTP 404', a['error'])
+
+    def test_a_region_dataset_is_not_promised_the_whole_month(self):
+        self.google.fail['/queries'] = TABLE_NOT_FOUND
+        self.google.datasets['billing_export'] = bq_dataset(NOW - timedelta(hours=2), location='us-east1')
+        a = cm.actual_spend(fresh=True, now=NOW)
+        self.assertTrue(a['waiting'])
+        self.assertNotIn('whole month', a['error'])
+
+    def test_still_empty_after_two_days_is_not_waiting_any_more(self):
+        self.google.fail['/queries'] = TABLE_NOT_FOUND
+        self.google.datasets['billing_export'] = bq_dataset(NOW - timedelta(days=3))
+        a = cm.actual_spend(fresh=True, now=NOW)
+        self.assertFalse(a['waiting'])
+        self.assertIn('made 3 days ago', a['error'])
+        self.assertIn('Check that the export', a['error'])
+
+    def test_a_billing_table_by_another_name_is_named(self):
+        self.google.fail['/queries'] = TABLE_NOT_FOUND
+        other = 'gcp_billing_export_resource_v1_0000AA_BBBBBB_CCCCCC'   # the detailed export
+        self.google.datasets['billing_export'] = bq_dataset(NOW - timedelta(days=3), tables=[other, 'notes'])
+        a = cm.actual_spend(fresh=True, now=NOW)
+        self.assertFalse(a['waiting'])
+        self.assertIn(f'Set GCP_BILLING_BQ_TABLE to gcloudgpu.billing_export.{other}.', a['error'])
+        self.assertNotIn('notes', a['error'])
+
+    def test_no_such_dataset(self):
+        self.google.fail['/queries'] = TABLE_NOT_FOUND
+        a = cm.actual_spend(fresh=True, now=NOW)
+        self.assertFalse(a['waiting'])
+        self.assertIn('There is no dataset billing_export in gcloudgpu', a['error'])
+
+    def test_a_dataset_that_cannot_be_read_keeps_googles_words(self):
+        self.google.fail['/queries'] = TABLE_NOT_FOUND
+        self.google.fail['/datasets/'] = (403, {'error': {'message': 'Access Denied: Dataset gcloudgpu:billing_export'}})
+        a = cm.actual_spend(fresh=True, now=NOW)
+        self.assertFalse(a['waiting'])
+        self.assertIn('HTTP 404: Not found: Table', a['error'])
 
 
 # =============================================================================
@@ -618,6 +690,17 @@ class RoutesTest(Base):
         self.assertIn('Not set up', html)
         self.assertIn(cm.DOCS_URL, html)
         self.assertEqual(self.google.calls, [])
+
+    def test_waiting_for_the_first_billing_export(self):
+        os.environ['GCP_BILLING_BQ_TABLE'] = TABLE
+        self.google.fail['/queries'] = TABLE_NOT_FOUND
+        self.google.datasets['billing_export'] = bq_dataset(datetime.now(timezone.utc) - timedelta(minutes=15))
+        html = self.get_page()
+        self.assertIn("for Google's first billing export", html)       # the tile
+        self.assertIn('Waiting for Google.', html)                      # the panel
+        self.assertIn(TABLE, html)
+        self.assertNotIn('Could not read the billing export', html)
+        self.assertNotIn('see below', html)
 
     def test_a_google_failure_is_a_banner_not_a_crash(self):
         self.google.fail['/aggregated/instances'] = (403, {'error': {'message': 'denied'}})

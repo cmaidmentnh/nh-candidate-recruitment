@@ -76,6 +76,10 @@ INVOICE_TZ = ZoneInfo('America/Los_Angeles')
 class CostMonitorError(RuntimeError):
     """Something the page can print as it is: already worded for a person, no secrets in it."""
 
+    def __init__(self, message, status=None):
+        super().__init__(message)
+        self.status = status   # Google's HTTP status, when the error is Google's answer
+
 
 def init_cost_monitor(db_conn_func, db_release_func, email_func=None):
     """Wires the database and the app's email sender (app.send_email, which is AWS SES), and
@@ -355,7 +359,7 @@ def _call(method, url, params=None, json_body=None):
     except requests.RequestException as e:
         raise CostMonitorError(f'Google did not answer ({e.__class__.__name__}).')
     if r.status_code >= 400:
-        raise CostMonitorError(_explain(r))
+        raise CostMonitorError(_explain(r), status=r.status_code)
     try:
         return r.json()
     except ValueError:
@@ -783,6 +787,44 @@ def _bq_query(job_project, sql, params):
     return [dict(zip(fields, [c.get('v') for c in (row.get('f') or [])])) for row in d.get('rows') or []]
 
 
+# Google makes the export table the first time it writes billing data, "a few hours" after the
+# export is turned on (its setup guide). An empty dataset older than this is not waiting any more.
+FIRST_EXPORT_H = 48
+
+
+def _missing_table(proj, dataset, name, now):
+    """The query said the table is not there. Looks in the dataset to say why: usually it is
+    only that Google has not written to it yet. Returns (waiting, message)."""
+    base = f'{BIGQUERY}/projects/{proj}/datasets/{dataset}'
+    try:
+        ds = _call('GET', base)
+    except CostMonitorError as e:
+        if e.status != 404:
+            raise
+        return False, (f'There is no dataset {dataset} in {proj}. Check GCP_BILLING_BQ_TABLE, and the dataset the '
+                       'export writes to (Billing, Billing export, BigQuery export).')
+    listing = _call('GET', f'{base}/tables', params={'maxResults': 1000})
+    others = sorted(t['tableReference']['tableId'] for t in listing.get('tables') or []
+                    if (t.get('tableReference') or {}).get('tableId', '').startswith('gcp_billing_export'))
+    if others:
+        return False, (f'{proj}.{dataset} has no table {name}, but it has {", ".join(others)}. Set '
+                       f'GCP_BILLING_BQ_TABLE to {proj}.{dataset}.{others[0]}'
+                       + (', or another of those.' if len(others) > 1 else '.'))
+    try:
+        made = datetime.fromtimestamp(int(ds['creationTime']) / 1000.0, timezone.utc)
+    except (KeyError, TypeError, ValueError):
+        made = None
+    if made and (now - made).total_seconds() > FIRST_EXPORT_H * 3600:
+        return False, (f'{proj}.{dataset} was made {ago_label(made, now)} and Google has still not written to it. '
+                       'Check that the export (Billing, Billing export, BigQuery export, Standard usage cost) is on '
+                       'and writes to this dataset.')
+    # A US or EU dataset is filled back to the start of last month once the export starts.
+    whole = ' When it comes, it has the whole month.' if (ds.get('location') or '').upper() in ('US', 'EU') else ''
+    return True, ('Google has not written the first billing data yet, so the table does not exist. That takes '
+                  'a few hours after the export is turned on.'
+                  + (f' The dataset was made {ago_label(made, now)}.' if made else '') + whole)
+
+
 def actual_spend(fresh=False, now=None):
     """Month-to-date spend from the billing export, for this project: the real bill, some
     hours behind. {'configured': False} when GCP_BILLING_BQ_TABLE is not set."""
@@ -802,7 +844,13 @@ def actual_spend(fresh=False, now=None):
     try:
         rows = _bq_query(m.group(1), SPEND_SQL.replace('{table}', table), {'month': month, 'project': project()})
     except CostMonitorError as e:
-        return {'configured': True, 'ok': False, 'table': table, 'error': str(e)}
+        out = {'configured': True, 'ok': False, 'waiting': False, 'table': table, 'error': str(e)}
+        if e.status == 404:
+            try:
+                out['waiting'], out['error'] = _missing_table(m.group(1), m.group(2), m.group(3), now)
+            except CostMonitorError:
+                pass   # the dataset could not be read either: keep Google's own words
+        return out
 
     by_service, by_day = {}, {}
     for r in rows:
