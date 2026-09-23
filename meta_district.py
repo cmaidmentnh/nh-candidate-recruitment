@@ -32,7 +32,7 @@ upload_to_storage = None
 ELECTION_DAY = date(2026, 11, 3)
 
 # Digital tactics are budgeted in dollars, so their qty IS the budget.
-DIGITAL_TACTICS = ('meta', 'ctv', 'display')
+DIGITAL_TACTICS = ('meta', 'ctv', 'display', 'audio')
 
 
 def init_meta_district(db_conn_func, db_release_func, storage_upload):

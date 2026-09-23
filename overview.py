@@ -292,7 +292,7 @@ def _digital(cur):
     offmeta = _scalar(cur, """
         SELECT COALESCE(sum(i.qty), 0) FROM district_spend_item i
           JOIN district_spend s ON s.district_code = i.district_code
-         WHERE s.include AND i.tactic_key IN ('ctv','display')""")
+         WHERE s.include AND i.tactic_key IN ('ctv','display','audio')""")
 
     booked = _scalar(cur, """
         SELECT COALESCE(sum(a.lifetime_budget), 0)
@@ -385,6 +385,7 @@ def _delivery(cur):
         'mms': 'sent through RevT, not recorded here',
         'ctv': 'bought outside this system',
         'display': 'bought outside this system',
+        'audio': 'bought outside this system',
         'palm_cards': 'tracked on the palm card sheet',
     }
 

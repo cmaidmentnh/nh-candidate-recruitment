@@ -1831,7 +1831,7 @@ def spend_plan():
                 # three apart: only the meta line can ever be spent on Meta. Pacing Meta spend
                 # against the CTV and display money too makes a buy nobody has placed yet look
                 # like a district that is failing to spend.
-                dig = {'meta': 0.0, 'ctv': 0.0, 'display': 0.0}
+                dig = {'meta': 0.0, 'ctv': 0.0, 'display': 0.0, 'audio': 0.0}
                 for uni, byk in (d['qty'] or {}).items():
                     for tk in dig:
                         row = byk.get(tk)
@@ -1844,7 +1844,7 @@ def spend_plan():
                     d['meta']['pacing'] = None
                 d['meta']['budget'] = dig['meta']
                 d['meta']['digital'] = dig
-                d['meta']['offmeta'] = dig['ctv'] + dig['display']
+                d['meta']['offmeta'] = dig['ctv'] + dig['display'] + dig['audio']
             d['cands'] = cands.get(code, [])
             d['hist'] = history.get(code, [])
 
@@ -2028,7 +2028,7 @@ def spend_plan_district_print(code):
         for u, tk, q, ro in cur.fetchall():
             qty.setdefault(u, {})[tk] = {'qty': float(q), 'rate': float(ro) if ro is not None else None}
 
-        dig = {'meta': 0.0, 'ctv': 0.0, 'display': 0.0}
+        dig = {'meta': 0.0, 'ctv': 0.0, 'display': 0.0, 'audio': 0.0}
         for u, byk in qty.items():
             for tk in dig:
                 if byk.get(tk):
