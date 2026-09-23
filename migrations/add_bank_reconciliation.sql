@@ -37,3 +37,17 @@ CREATE TABLE IF NOT EXISTS spend_recurring (
     notes     TEXT,
     active    BOOLEAN       NOT NULL DEFAULT true
 );
+
+-- Bills we owe that have not reached the bank yet (e.g. the videographer's balance). Counted in
+-- still-to-spend under their category until someone marks them paid, which is the moment the
+-- payment shows up in a bank import.
+CREATE TABLE IF NOT EXISTS spend_payable (
+    id        SERIAL PRIMARY KEY,
+    label     VARCHAR(160)  NOT NULL,
+    category  VARCHAR(40)   NOT NULL,
+    amount    NUMERIC(12,2) NOT NULL,
+    due_date  DATE,
+    paid      BOOLEAN       NOT NULL DEFAULT false,
+    created_by VARCHAR(120),
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+);

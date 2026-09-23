@@ -2273,6 +2273,10 @@ def _money_actuals(cur):
             rec.append({'id': i, 'label': lbl, 'monthly': float(mo), 'end': end.isoformat(),
                         'months': months, 'remaining': round(float(mo) * months, 2), 'notes': notes or ''})
         out['recurring'] = rec
+        cur.execute("""SELECT id, label, category, amount, due_date FROM spend_payable
+                        WHERE NOT paid ORDER BY due_date NULLS LAST, id""")
+        out['payables'] = [{'id': i, 'label': l, 'category': c, 'amount': float(a),
+                            'due': d.isoformat() if d else None} for i, l, c, a, d in cur.fetchall()]
     except Exception as e:
         conn_err = str(e)[:200]
         logger.info('bank data unavailable: %s', conn_err)
@@ -2353,6 +2357,38 @@ def spend_plan_bank_category():
                     (cat, who, d.get('id')))
         conn.commit()
         return jsonify({'ok': True})
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/payable', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_payable():
+    """Add a bill we owe, or mark one paid once the payment is in the bank."""
+    import bank_recon as BR
+    d = request.get_json(silent=True) or {}
+    who = current_user.email if current_user.is_authenticated else 'admin'
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        if d.get('paid') and d.get('id'):
+            cur.execute("UPDATE spend_payable SET paid=true WHERE id=%s", (d['id'],))
+        else:
+            label = (d.get('label') or '').strip()[:160]
+            cat = d.get('category')
+            try:
+                amount = round(float(str(d.get('amount', '')).replace(',', '').replace('$', '')), 2)
+            except ValueError:
+                return jsonify({'ok': False, 'error': 'Enter a dollar amount.'}), 400
+            if not label or cat not in BR.CATEGORIES:
+                return jsonify({'ok': False, 'error': 'Give it a name and a category.'}), 400
+            cur.execute("""INSERT INTO spend_payable (label, category, amount, due_date, created_by)
+                           VALUES (%s,%s,%s,%s,%s)""", (label, cat, amount, d.get('due') or None, who))
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error('payable save failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
     finally:
         cur.close(); release_db_connection(conn)
 

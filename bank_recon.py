@@ -38,8 +38,8 @@ RULES = [
     ('operations', r'CLOUDFLARE|OPENAI|INTUIT|QBOOKS|GOOGLE WORKSPACE|X CORP|DECISION DESK|'
                    r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM'),
 ]
-CATEGORIES = ['mail', 'meta', 'stackadapt', 'printing', 'texting', 'google_ads', 'consulting',
-              'operations', 'fees', 'other', 'income', 'transfer']
+CATEGORIES = ['mail', 'meta', 'stackadapt', 'printing', 'texting', 'google_ads', 'data', 'video',
+              'consulting', 'operations', 'fees', 'other', 'income', 'transfer']
 OVERHEAD = ('consulting', 'operations', 'fees')
 
 
