@@ -646,6 +646,19 @@ _admon_cli(app)
 # crontab is needed. META_AUTO_SYNC=0 turns it off for hosts that run the cron endpoints.
 start_auto_sync()
 
+# Cloud cost monitor: the Google Cloud VMs rented for After Effects renders, what they cost,
+# and an email when one has been left on. Its own private feature ('cost_monitor'), and off
+# until GCP_COST_PROJECT is set (docs/cost-monitor.md). Warnings go out through send_email
+# (SES). /cost-monitor/cron/check takes a bearer CRON_SECRET and no session, so no CSRF.
+from cost_monitor import (cost_bp, init_cost_monitor, start_auto_check as _cost_auto_check,
+                          register_cli as _cost_cli)
+init_cost_monitor(get_db_connection, release_db_connection, send_email)
+app.register_blueprint(cost_bp)
+csrf.exempt(app.view_functions['cost.cron_check'])
+_cost_cli(app)
+# The ten-minute check, advisory-locked like the syncs above. GCP_COST_AUTO_CHECK=0 turns it off.
+_cost_auto_check()
+
 
 @app.context_processor
 def inject_progress_access():

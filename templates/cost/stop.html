@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .cs{--navy:#1e3557;--rule:#e4e8ee;--muted:#6b7684;--ink:#1c2733;--red:#b4262d;--amber:#8a6400;
+      color:var(--ink);font-size:.92rem;max-width:560px;margin:0 auto}
+  .cs h4{margin:6px 0 2px;color:var(--red);font-weight:800}
+  .cs .lead{color:var(--muted);font-size:.82rem;margin:0 0 14px;line-height:1.55}
+  .cs table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--rule);border-radius:9px;margin-bottom:14px}
+  .cs th{width:42%;color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;
+    padding:8px 10px;text-align:left;vertical-align:top}
+  .cs td{padding:8px 10px;border-bottom:1px solid #eef1f5;font-variant-numeric:tabular-nums}
+  .cs tr:last-child td{border-bottom:0}
+  .cs .warn{background:#fff9ec;border:1px solid #ead9a0;border-left:5px solid var(--amber);border-radius:8px;
+    padding:11px 13px;font-size:.84rem;line-height:1.55;margin-bottom:16px}
+  .cs .go{background:var(--red);color:#fff;border:0;border-radius:6px;padding:12px 18px;font-weight:800;
+    font-size:.95rem;width:100%;cursor:pointer}
+  .cs .cancel{display:block;text-align:center;margin-top:12px;font-weight:600}
+</style>
+{% endblock %}
+{% block content %}
+<div class="cs">
+  <a href="{{ url_for('cost.page') }}">&larr; Cloud costs</a>
+  <h4>Stop {{ r.name }}?</h4>
+  <p class="lead">The same as pressing Stop on this VM in the Google Cloud console, project {{ project }}.</p>
+
+  <table>
+    <tr><th>Status</th><td>{{ r.status }}</td></tr>
+    <tr><th>Machine</th><td>{{ r.machine_type }}, {{ r.os_label }}{% if r.gpu_label %}, {{ r.gpu_label }}{% endif %}</td></tr>
+    <tr><th>Zone</th><td>{{ r.zone }}</td></tr>
+    <tr><th>Running since</th><td>{{ when(r.started_at) }} ET{% if r.hours is not none %} ({{ dur(r.hours) }}){% endif %}</td></tr>
+    <tr><th>Est. $/hr</th><td>{{ usd(r.rate) }}</td></tr>
+    <tr><th>Est. this run</th><td>{{ usd(r.run_cost) }}</td></tr>
+  </table>
+
+  {% if r.billed %}
+  <div class="warn"><b>Whatever is running on it stops now.</b> A render in progress is lost, so save first. The disk
+    and its files are kept (the disk goes on billing), and the VM can be started again from the Google Cloud console.</div>
+  <form method="POST" action="{{ url_for('cost.stop') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="zone" value="{{ r.zone }}">
+    <input type="hidden" name="name" value="{{ r.name }}">
+    <input type="hidden" name="id" value="{{ r.id }}">
+    <input type="hidden" name="confirm" value="stop">
+    <button type="submit" class="go">Yes, stop {{ r.name }}</button>
+  </form>
+  {% else %}
+  <div class="warn">{{ r.name }} is not running ({{ r.status }}), so there is nothing to stop.</div>
+  {% endif %}
+  <a class="cancel" href="{{ url_for('cost.page') }}">Cancel</a>
+</div>
+{% endblock %}

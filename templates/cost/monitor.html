@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .cm{--navy:#1e3557;--rule:#e4e8ee;--muted:#6b7684;--ink:#1c2733;--red:#b4262d;--green:#1a7f43;
+      --amber:#8a6400;--soft:#f5f8fc;color:var(--ink);font-size:.9rem;max-width:1100px;margin:0 auto}
+  .cm h4{margin:0 0 2px;color:var(--navy);font-weight:800}
+  .cm .lead{color:var(--muted);font-size:.8rem;margin:0 0 14px;max-width:760px;line-height:1.55}
+  .cm .hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .cm .btn-ln{font-size:.78rem;padding:6px 12px;border:1px solid #c9d1dc;background:#fff;color:var(--navy);
+    border-radius:5px;font-weight:600;white-space:nowrap;display:inline-block}
+  .cm .btn-ln:hover{background:var(--soft);text-decoration:none}
+  .cm .btn-stop{font-size:.74rem;padding:4px 10px;border:1px solid #e6c3c5;background:#fff;color:var(--red);
+    border-radius:4px;font-weight:700;white-space:nowrap;display:inline-block}
+  .cm .btn-stop:hover{background:#fdf0f0;text-decoration:none}
+  .cm .banner{border-radius:9px;padding:13px 15px;margin:0 0 14px;line-height:1.5}
+  .cm .banner.run{background:#fdf0f0;border:1px solid #efc4c6;border-left:5px solid var(--red)}
+  .cm .banner.idle{background:#eef8f1;border:1px solid #bfe3cb;border-left:5px solid var(--green)}
+  .cm .banner.warn{background:#fff9ec;border:1px solid #ead9a0;border-left:5px solid var(--amber)}
+  .cm .banner.off{background:#eef1f5;border:1px solid var(--rule);border-left:5px solid var(--muted)}
+  .cm .banner .big{font-size:1.12rem;font-weight:800}
+  .cm .banner.run .big{color:var(--red)}
+  .cm .banner.idle .big{color:var(--green)}
+  .cm .banner.warn .big{color:var(--amber)}
+  .cm .banner .sub{font-size:.78rem;color:var(--muted);margin-top:4px}
+  .cm .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+  .cm .tile{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:11px 13px}
+  .cm .tile .cap{font-size:.62rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+  .cm .tile .n{font-size:1.45rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.15;margin-top:3px}
+  .cm .tile .n.hot{color:var(--red)}
+  .cm .tile .n.small{font-size:1rem}
+  .cm .tile .sub{font-size:.72rem;color:var(--muted);margin-top:2px;line-height:1.35}
+  .cm .panel{background:#fff;border:1px solid var(--rule);border-radius:9px;padding:13px 15px;margin-bottom:14px}
+  .cm .panel h5{margin:0 0 9px;font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .cm table{width:100%;border-collapse:collapse;font-size:.85rem}
+  .cm th{background:var(--navy);color:#fff;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;
+    padding:7px 8px;text-align:left;font-weight:700}
+  .cm th.n,.cm td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .cm td{padding:8px;border-bottom:1px solid #eef1f5;vertical-align:top}
+  .cm tr:last-child td{border-bottom:0}
+  .cm .nm{font-weight:700;color:var(--navy)}
+  .cm .dim{color:var(--muted);font-size:.74rem}
+  .cm .unk{color:var(--amber);font-weight:700}
+  .cm .chip{display:inline-block;font-size:.64rem;font-weight:700;padding:1px 7px;border-radius:10px;border:1px solid;
+    white-space:nowrap;vertical-align:middle}
+  .cm .chip.on{color:var(--red);border-color:#efc4c6;background:#fdf0f0}
+  .cm .chip.starting{color:var(--amber);border-color:#ead9a0;background:#fff9ec}
+  .cm .chip.off{color:#4b5563;border-color:#d6dbe3;background:#f1f3f6}
+  .cm .note{font-size:.76rem;color:var(--muted);line-height:1.55;margin:10px 0 0}
+  .cm .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .cm .two > *{min-width:0}   /* a long table name must wrap, not widen the column */
+  .cm details.panel summary{cursor:pointer;font-weight:700;color:var(--navy);font-size:.84rem}
+  .cm details.panel ul{padding-left:18px;margin:10px 0 0}
+  .cm details.panel li{font-size:.8rem;color:var(--muted);line-height:1.55;margin-bottom:4px}
+  .cm code{font-size:.74rem;background:#eef1f5;padding:1px 5px;border-radius:3px;color:var(--ink);overflow-wrap:anywhere}
+  @media (max-width:760px){.cm .two{grid-template-columns:1fr}}
+  /* Phones: each VM becomes a card, the label on the left and the value on the right. */
+  @media (max-width:640px){
+    .cm table.cards thead{display:none}
+    .cm table.cards,.cm table.cards tbody,.cm table.cards tr,.cm table.cards td{display:block;width:100%}
+    .cm table.cards tr{border:1px solid var(--rule);border-radius:8px;margin-bottom:10px;padding:6px 10px}
+    .cm table.cards td{display:flow-root;border:0;padding:4px 0;text-align:right}
+    .cm table.cards td::before{content:attr(data-label);float:left;margin-right:12px;padding-top:3px;color:var(--muted);
+      font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+    .cm table.cards td.first{display:block;text-align:left;font-size:.98rem;padding-bottom:6px}
+    .cm table.cards td.first::before{content:none}
+    .cm table.cards td.act:empty{display:none}
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="cm">
+  <div class="hdr">
+    <div>
+      <h4>Cloud costs</h4>
+      <p class="lead">Virtual machines in the Google Cloud project <b>{{ project or 'not set' }}</b>, and what they cost.
+        Every dollar marked <b>est.</b> is an estimate worked out from list prices; Google's bill is the final word.</p>
+    </div>
+    {% if configured %}<a class="btn-ln" href="{{ url_for('cost.page', fresh=1) }}"><i class="fas fa-sync-alt"></i> Check now</a>{% endif %}
+  </div>
+
+  {% if not configured %}
+  <div class="banner off">
+    <div class="big">Not set up</div>
+    <div>This page starts reading Google Cloud once <code>GCP_COST_PROJECT</code> and a read-only service account are
+      set on the server. <a href="{{ docs_url }}" target="_blank" rel="noopener">The setup steps</a>.</div>
+  </div>
+  {% elif not snap.ok %}
+  <div class="banner warn">
+    <div class="big">Could not read Google Cloud</div>
+    <div>{{ snap.error }}</div>
+    <div class="sub">Nothing below can say what is running until this is fixed.
+      <a href="{{ docs_url }}" target="_blank" rel="noopener">The setup steps</a>.</div>
+  </div>
+  {% elif snap.running %}
+  {% set n = snap.running|length %}
+  <div class="banner run">
+    <div class="big">{{ n }} VM{{ '' if n == 1 else 's' }} running now</div>
+    <div>{% for r in snap.running %}<b>{{ r.name }}</b>
+      {% if r.starting %}starting up{% else %}{{ dur(r.hours) }},
+      {% if r.rate is not none %}est. {{ usd(r.rate) }}/h, est. {{ usd(r.run_cost) }} so far{% else %}<span class="unk">rate unknown</span>{% endif %}{% endif %}{{ '; ' if not loop.last }}{% endfor %}</div>
+    <div class="sub">Est. burn rate {{ usd(snap.burn_rate) }} an hour{% if snap.burn_unknown %}, plus {{ snap.burn_unknown }} VM{{ '' if snap.burn_unknown == 1 else 's' }} with rate unknown{% endif %}.
+      A warning email goes out at {{ marks }} h in one run.</div>
+  </div>
+  {% else %}
+  <div class="banner idle">
+    <div class="big">Nothing is running</div>
+    <div>{% if snap.stopped %}{{ snap.stopped|length }} stopped VM{{ '' if snap.stopped|length == 1 else 's' }}: not billed by the hour, but their disks still are.{% else %}There are no VMs in {{ project }}.{% endif %}</div>
+  </div>
+  {% endif %}
+
+  {% if configured and snap.ok %}
+  {% if snap.unreachable %}<div class="banner warn"><div>Google could not read {{ snap.unreachable|join(', ') }} just now, so a VM there would be missing from this list.</div></div>{% endif %}
+
+  <div class="tiles">
+    <div class="tile"><div class="cap">Running now</div>
+      <div class="n {{ 'hot' if snap.running else '' }}">{{ snap.running|length }}</div>
+      <div class="sub">of {{ snap.resources|length }} VM{{ '' if snap.resources|length == 1 else 's' }} in the project</div></div>
+    <div class="tile"><div class="cap">Est. burn rate</div>
+      <div class="n {{ 'hot' if snap.burn_rate else '' }}">{{ usd(snap.burn_rate) }}<span style="font-size:.8rem">/h</span></div>
+      <div class="sub">estimate, while they run{% if snap.burn_unknown %}; {{ snap.burn_unknown }} rate unknown{% endif %}</div></div>
+    <div class="tile"><div class="cap">Est. today</div>
+      <div class="n">{{ usd(today.total) }}</div>
+      <div class="sub">estimate, since midnight ET{% if today.unknown %}; leaves out {{ today.unknown|join(', ') }} (rate unknown){% endif %}</div></div>
+    <div class="tile"><div class="cap">Actual this month</div>
+      {% if actual.configured and actual.ok %}
+      <div class="n">{{ usd(actual.net) }}</div>
+      <div class="sub">Google's billing export, hours behind</div>
+      {% elif actual.configured %}
+      <div class="n small unk">error</div><div class="sub">see below</div>
+      {% else %}
+      <div class="n small" style="color:var(--muted)">not set up</div>
+      <div class="sub"><a href="{{ docs_url }}#actual-spend-the-billing-export" target="_blank" rel="noopener">how to set it up</a></div>
+      {% endif %}</div>
+  </div>
+
+  <div class="panel">
+    <h5>Every VM in {{ project }}</h5>
+    {% if snap.resources %}
+    <table class="cards">
+      <thead><tr>
+        <th>VM</th><th>Type</th><th>GPU</th><th>Running since</th><th class="n">Hours</th>
+        <th class="n">Est. $/hr</th><th class="n">Est. this run</th>{% if can_stop %}<th></th>{% endif %}
+      </tr></thead>
+      <tbody>
+      {% for r in snap.resources %}
+      <tr>
+        <td class="first" data-label="VM">
+          <a class="nm" href="{{ r.console_url }}" target="_blank" rel="noopener" title="Open in the Google Cloud console">{{ r.name }}</a>
+          <span class="chip {{ 'on' if r.billed else 'starting' if r.starting else 'off' }}">{{ 'stopped' if r.status == 'TERMINATED' else r.status|lower }}</span>
+          <div class="dim">{{ r.zone }} &middot; {{ r.os_label }}{% if r.spot %} &middot; Spot{% endif %}</div>
+        </td>
+        <td data-label="Type">{{ r.machine_type }}{% if r.vcpus and r.memory_gb %}<div class="dim">{{ r.vcpus }} vCPU, {{ r.memory_gb|round|int }} GB</div>{% endif %}</td>
+        <td data-label="GPU">{{ r.gpu_label or '-' }}</td>
+        <td data-label="Running since">
+          {% if r.billed %}{{ when(r.started_at) }}
+          {% elif r.starting %}starting
+          {% elif r.stopped_at %}<span class="dim">stopped {{ when(r.stopped_at) }}</span>
+          {% else %}-{% endif %}</td>
+        <td class="n" data-label="Hours">
+          {% if r.billed %}{{ dur(r.hours) }}
+          {% elif r.hours is not none %}<span class="dim">last run {{ dur(r.hours) }}</span>
+          {% else %}-{% endif %}</td>
+        <td class="n" data-label="Est. $/hr">
+          {% if r.rate is not none %}{{ usd(r.rate) }}
+          {% else %}<span class="unk">rate unknown</span><div class="dim">{{ r.rate_unknown }}</div>{% endif %}</td>
+        <td class="n" data-label="Est. this run">
+          {% if r.billed %}{% if r.run_cost is not none %}<b>{{ usd(r.run_cost) }}</b>{% else %}<span class="unk">rate unknown</span>{% endif %}
+          {% elif r.run_cost is not none %}<span class="dim">{{ usd(r.run_cost) }}</span>
+          {% else %}-{% endif %}</td>
+        {% if can_stop %}<td class="act" data-label="">{% if r.billed %}<a class="btn-stop" href="{{ url_for('cost.stop_confirm', zone=r.zone, name=r.name) }}">Stop VM</a>{% endif %}</td>{% endif %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="dim" style="margin:0">No VMs in the project.</p>
+    {% endif %}
+    <p class="note">Hours are the current run: since the VM last started. A stopped VM shows its last run, dimmed.
+      {% if snap.resources|selectattr('spot')|list %}Spot VMs are priced here at the on-demand rate; they really cost less.{% endif %}
+      {% if not allow_stop %}Stop a VM in the <a href="https://console.cloud.google.com/compute/instances?project={{ project }}" target="_blank" rel="noopener">Google Cloud console</a>.{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if configured %}
+  <div class="two">
+    <div class="panel">
+      <h5>Actual spend this month (Google's bill)</h5>
+      {% if not actual.configured %}
+      <p style="margin:0">Not set up. Actual spend needs Google's billing export to BigQuery, and
+        <code>GCP_BILLING_BQ_TABLE</code> set on the server.
+        <a href="{{ docs_url }}#actual-spend-the-billing-export" target="_blank" rel="noopener">How to set it up</a> &middot;
+        <a href="{{ export_help_url }}" target="_blank" rel="noopener">Google's guide</a></p>
+      {% elif not actual.ok %}
+      <p style="margin:0" class="unk">Could not read the billing export: {{ actual.error }}</p>
+      {% else %}
+      <p style="margin:0 0 8px"><b style="font-size:1.1rem">{{ usd(actual.net) }}</b> in {{ actual.month }}
+        <span class="dim">= {{ usd(actual.cost) }} charged {% if actual.credits %}{{ usd(actual.credits) }} credits{% endif %}</span></p>
+      {% if actual.by_service %}
+      <table>
+        <thead><tr><th>Service</th><th class="n">Net</th></tr></thead>
+        <tbody>{% for s in actual.by_service %}<tr><td>{{ s.label }}</td><td class="n">{{ usd(s.net) }}</td></tr>{% endfor %}</tbody>
+      </table>
+      <table style="margin-top:10px">
+        <thead><tr><th>Day (ET)</th><th class="n">Net</th></tr></thead>
+        <tbody>{% for d in actual.by_day[:14] %}<tr><td>{{ d.label }}</td><td class="n">{{ usd(d.net) }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% else %}
+      <p class="dim" style="margin:0">Nothing billed to {{ project }} yet this month.</p>
+      {% endif %}
+      <p class="note">From <code>{{ actual.table }}</code>, project {{ project }}, read {{ ago(actual.checked_at) }}.
+        Google's export runs hours behind, so today is usually incomplete.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h5>Checks and warnings</h5>
+      <p style="margin:0 0 6px">This page read Google {{ ago(snap.checked_at) }} ({{ when(snap.checked_at) }} ET).
+        {% if state and state.last_check_at %}The background check last ran {{ ago(state.last_check_at) }}{% if state.last_error %}
+        and failed: <span class="unk">{{ state.last_error }}</span>{% else %}.{% endif %}
+        {% elif auto_check %}The background check has not run yet; it starts a few minutes after the app does.
+        {% else %}The background check is off here (<code>GCP_COST_AUTO_CHECK=0</code>), so cron must call <code>/cost-monitor/cron/check</code>.{% endif %}</p>
+      <p style="margin:0 0 6px">A warning email goes to {{ recipients|join(', ') }} when a VM passes {{ marks }} h in one run{% if alert_usd %},
+        and when today's estimate passes {{ usd(alert_usd) }}{% endif %}. One email per run per threshold.</p>
+      {% if state and state.last_alert_error %}<p class="unk" style="margin:0 0 6px">The last warning did not go: {{ state.last_alert_error }}</p>{% endif %}
+      {% if history_error %}<p class="unk" style="margin:0 0 6px">History unavailable: {{ history_error }}</p>{% endif %}
+      {% if alerts %}
+      <table>
+        <thead><tr><th>Sent</th><th>Warning</th></tr></thead>
+        <tbody>{% for a in alerts %}<tr><td class="dim" style="white-space:nowrap">{{ ago(a.sent_at) }}</td><td>{{ a.message }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% else %}
+      <p class="dim" style="margin:0">No warnings sent yet.</p>
+      {% endif %}
+      <p class="note">Google access: {{ creds or 'no credentials found' }}.</p>
+    </div>
+  </div>
+
+  <details class="panel">
+    <summary>How the estimates are made</summary>
+    <ul>
+      <li>Machine (vCPUs and RAM) plus GPUs plus the Windows licence at $0.046 per vCPU-hour, at Google's list
+        prices read {{ rates_read_on }} for {{ priced_regions|join(', ') }}.</li>
+      <li>Not counted: disks, snapshots, IP addresses and network traffic, which bill even while a VM is stopped;
+        sustained-use and committed-use discounts, credits and tax.</li>
+      <li>A machine the table cannot price shows <b>rate unknown</b>, never $0, and the totals say what they leave out.
+        Rates can be changed without a deploy with <code>GCP_COST_RATES_JSON</code>.</li>
+      {% if snap.ok %}{% for r in snap.resources if r.rate_parts %}
+      <li><b>{{ r.name }}</b>: {% for label, p in r.rate_parts %}{{ label }} {{ '$%.4f'|format(p) }}{{ ' + ' if not loop.last }}{% endfor %}
+        = {{ usd(r.rate) }}/h</li>
+      {% endfor %}{% endif %}
+    </ul>
+    {% if rates_problem %}<p class="unk note">{{ rates_problem }}</p>{% endif %}
+  </details>
+  {% endif %}
+</div>
+{% endblock %}

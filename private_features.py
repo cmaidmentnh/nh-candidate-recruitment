@@ -135,7 +135,7 @@ def manage_access():
                              users=users,
                              access_grants=access_grants,
                              features=['secret_primaries', 'speaker_votes', 'campaign_plan',
-                                       'digest', 'meta_ads'])
+                                       'digest', 'meta_ads', 'cost_monitor'])
     finally:
         cur.close()
         release_db_connection(conn)

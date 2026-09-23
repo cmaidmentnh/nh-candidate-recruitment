@@ -13,6 +13,7 @@ A Flask web application for tracking NH House candidates across election cycles.
 - Registration tokens for controlled sign-ups
 - Photo uploads to S3-compatible storage
 - Meta ads reporting (our accounts) and Ad monitor (everyone's political ads) - see [docs/meta-ads.md](docs/meta-ads.md)
+- Cloud cost monitor (the Google Cloud render VMs: what is running, what it costs, an email when one is left on) - see [docs/cost-monitor.md](docs/cost-monitor.md)
 
 ## Before You Commit (read this, Mac users)
 

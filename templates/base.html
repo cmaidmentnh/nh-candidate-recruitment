@@ -678,7 +678,7 @@
 
     <!-- Private Features Icon (bottom-left, only shown to users with access) -->
     {# whips have no private-feature grants, so they must be admitted explicitly #}
-    {% if user_private_features or can_whip or is_super_admin or can_edit_meta_settings %}
+    {% if user_private_features or can_whip or is_super_admin or can_edit_meta_settings or cost_monitor_admin %}
     <div class="dropup" style="position:fixed; bottom:20px; left:20px; z-index:1000;">
         <button class="btn btn-sm" type="button" id="privateDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="background:rgba(0,0,0,0.1); border:none; padding:8px; border-radius:8px; opacity:0.4; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#666;">
@@ -747,6 +747,12 @@
             {% if can_edit_meta_settings %}
             <a class="dropdown-item" href="{{ url_for('meta.settings') }}">
                 <i class="fas fa-key text-muted"></i> Meta Settings
+            </a>
+            {% endif %}
+            {% if cost_monitor_admin or 'cost_monitor' in user_private_features %}
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="{{ url_for('cost.page') }}">
+                <i class="fas fa-server text-muted"></i> Cloud Costs
             </a>
             {% endif %}
             {% if can_access_surveys %}
