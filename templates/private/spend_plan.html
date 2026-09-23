@@ -1479,7 +1479,7 @@
       var inv = MONEY.invoiced_other || {}, field = 0, fieldInv = 0;
       ['palm_cards','signs','gotv_calls','doors'].forEach(function(k){
         field += Math.max(plan[k]||0, inv[k]||0); fieldInv += inv[k]||0; });
-      rows.push(['Printing (Spectrum)', 'palm cards and signs: plan or invoice, whichever is larger', Math.max(field, paid('printing') + owed('printing')), paid('printing')]);
+      rows.push(['Printing (Spectrum)', 'palm cards and signs: plan or invoice, whichever is larger', Math.max(field, paid('printing')) + owed('printing'), paid('printing')]);
       bill.push(['Spectrum Marketing', 'printing invoices in the tracker (signs, palm cards)', paid('printing'), fieldInv || null]);
       rows.push(['Texting', 'plan; paid from bank', Math.max(plan.mms||0, paid('texting') + owed('texting')), paid('texting')]);
       // Any other category the bank has money in gets its own line, so a new label can never
