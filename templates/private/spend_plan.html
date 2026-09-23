@@ -291,6 +291,23 @@
   .up input[type=text],.up select{padding:4px 7px;border:1px solid #cfd6e0;border-radius:4px;font-size:.8rem}
   .up button{padding:5px 14px;border:0;border-radius:4px;background:var(--navy);color:#fff;
     font-weight:700;font-size:.78rem;cursor:pointer}
+  .money{border:1px solid #dde3ea;border-top:3px solid var(--navy);border-radius:6px;padding:12px 16px 8px;margin:0 0 14px;background:#fff}
+  .mtop{display:flex;flex-wrap:wrap;gap:8px 34px}
+  .mg{display:flex;flex-direction:column}
+  .mv{font-size:1.35rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+  .mv.neg{color:#c8102e} .mv.pos{color:#1f7a3a} .mv.muted{color:#9aa3af;font-weight:600;font-size:1rem}
+  .ml{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .ml a{text-transform:none;letter-spacing:0}
+  .mcheck{margin:8px 0 4px;font-size:.78rem;color:#4a5568;font-variant-numeric:tabular-nums}
+  .mcheck b.bad{color:#c8102e}
+  .money summary{font-size:.75rem;color:var(--navy);cursor:pointer;font-weight:700}
+  .mtab{border-collapse:collapse;width:100%;margin-top:6px;font-size:.8rem;font-variant-numeric:tabular-nums}
+  .mtab th,.mtab td{padding:4px 8px;border-bottom:1px solid #f0f3f7;text-align:right}
+  .mtab th:first-child,.mtab td:first-child,.mtab th:nth-child(2),.mtab td:nth-child(2){text-align:left}
+  .mtab th{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .mtab td:nth-child(2){color:#7b8494;font-size:.72rem}
+  .mtab tr.tot td{font-weight:800;border-top:2px solid #cfd6e0}
+  .mnote{font-size:.72rem;color:#7b8494;margin:6px 0 2px}
 </style>
 
 <div class="sp">
@@ -299,6 +316,24 @@
     Pick a district on the left. Choose who you are buying, then how many of each tactic.
     Press <b>J</b> and <b>K</b>, or the arrow keys, to move down the list.
   </p>
+
+  <div class="money" id="moneyPanel">
+    <div class="mtop">
+      <div class="mg"><span class="mv" id="mForecast">$0</span><span class="ml">Forecast total</span></div>
+      <div class="mg"><span class="mv" id="mSpent">$0</span><span class="ml">Spent to date</span></div>
+      <div class="mg"><span class="mv" id="mLeft">$0</span><span class="ml">Still to spend</span></div>
+      <div class="mg"><span class="mv" id="mCash">not entered</span>
+        <span class="ml">Cash on hand <a href="#" id="mCashEdit">edit</a></span></div>
+      <div class="mg"><span class="mv" id="mNet">$0</span><span class="ml" id="mNetL">Surplus</span></div>
+      <div class="mg"><span class="mv" id="mVsBudget">$0</span><span class="ml" id="mVsBudgetL">vs program budget</span></div>
+    </div>
+    <p class="mcheck" id="mCheck"></p>
+    <details><summary>By channel</summary>
+      <table class="mtab"><thead><tr><th>Channel</th><th>Source</th><th>Forecast</th><th>Spent</th><th>Still to spend</th></tr></thead>
+      <tbody id="mRows"></tbody></table>
+      <p class="mnote" id="mNote"></p>
+    </details>
+  </div>
 
   <div class="totals">
     <div class="grp"><span class="big" id="fTotal">$0</span>
@@ -369,6 +404,7 @@
   var PRESETS = {{ presets|tojson }};
   var DISTRICTS = {{ districts|tojson }};
   var BUDGET = {{ budget|tojson }};
+  var MONEY = {{ money|tojson }};
   var META_ACCOUNTS = {{ meta_accounts|tojson }};
   var META_MEDIAN = {{ meta_median|tojson }};
   var PIECES = {{ pieces|tojson }};
@@ -1365,7 +1401,91 @@
     document.getElementById('fTextMsgs').textContent = num(msgs) + ' messages';
     document.getElementById('fDigital').textContent = money(g.digital);
     document.getElementById('fField').textContent = money(g.field);
+    moneyPanel();
   }
+
+  // The topline has to reconcile to the penny: forecast = spent + still to spend, and
+  // surplus = cash on hand - still to spend. Mail is taken from the pieces tracker (an
+  // invoice once billed, its planned cost until then), never the district plan, because
+  // the pieces are what the state party actually bills. Digital is the plan's budget,
+  // raised to what the platform has already spent if it has overrun. Money sent ahead of
+  // an invoice is spent cash with no piece yet, so it is its own line.
+  function moneyPanel(){
+    if(!MONEY) return;
+    var plan = {};
+    DISTRICTS.forEach(function(d){
+      var c = cost(d);
+      if(!d.include && c.total === 0) return;
+      Object.keys(c.per).forEach(function(k){
+        var tk = k.split('|')[1]; plan[tk] = (plan[tk]||0) + c.per[k];
+      });
+    });
+    var ds = MONEY.digital_spent || {}, po = MONEY.paid_other || {};
+    var rows = [];
+    rows.push(['Mail', MONEY.mail_billed + ' of ' + MONEY.mail_pieces + ' pieces invoiced, the rest at planned cost',
+               MONEY.mail_forecast, MONEY.mail_paid]);
+    if(MONEY.prepaid) rows.push(['Prepaid, not yet invoiced', MONEY.prepaid_note || 'credit against the next invoice',
+               0, MONEY.prepaid]);
+    rows.push(['Text', 'plan', plan.mms||0, po.mms||0]);
+    [['meta','Facebook / Instagram'],['ctv','Streaming TV'],['display','Display'],['audio','Streaming audio']]
+      .forEach(function(x){
+        var p = plan[x[0]]||0, s = ds[x[0]]||0;
+        rows.push([x[1], s > p ? 'spent is over the plan' : 'plan budget, platform spend', Math.max(p, s), s]);
+      });
+    var field = 0, fieldPaid = 0;
+    ['palm_cards','signs','gotv_calls','doors'].forEach(function(k){ field += plan[k]||0; fieldPaid += po[k]||0; });
+    rows.push(['Field', 'plan', Math.max(field, fieldPaid), fieldPaid]);
+
+    var F = 0, S = 0, h = '';
+    rows.forEach(function(r){
+      var left = r[2] - r[3]; F += r[2]; S += r[3];
+      h += '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+money(r[2])+'</td><td>'+money(r[3])+'</td><td>'+money(left)+'</td></tr>';
+    });
+    var L = F - S;
+    h += '<tr class="tot"><td>Total</td><td></td><td>'+money(F)+'</td><td>'+money(S)+'</td><td>'+money(L)+'</td></tr>';
+    document.getElementById('mRows').innerHTML = h;
+
+    function set(id, v, cls){ var e = document.getElementById(id); e.textContent = v; e.className = 'mv' + (cls ? ' '+cls : ''); }
+    set('mForecast', money(F)); set('mSpent', money(S)); set('mLeft', money(L));
+    var vb = BUDGET - F;
+    set('mVsBudget', money(Math.abs(vb)), vb < 0 ? 'neg' : 'pos');
+    document.getElementById('mVsBudgetL').textContent = (vb < 0 ? 'over the ' : 'under the ') + money(BUDGET) + ' budget';
+    var chk = 'Spent ' + money(S) + ' + still to spend ' + money(L) + ' = forecast ' + money(F);
+    var ok = Math.abs(S + L - F) < 0.01;
+    if(MONEY.cash === null || MONEY.cash === undefined){
+      set('mCash', 'not entered', 'muted'); set('mNet', '?', 'muted');
+      document.getElementById('mNetL').textContent = 'Surplus / deficit';
+      chk += '. Enter cash on hand to see the surplus or deficit.';
+    } else {
+      var net = MONEY.cash - L;
+      set('mCash', money(MONEY.cash));
+      set('mNet', money(Math.abs(net)), net < 0 ? 'neg' : 'pos');
+      document.getElementById('mNetL').textContent = net < 0 ? 'Deficit' : 'Surplus';
+      chk += '. Cash ' + money(MONEY.cash) + ' - still to spend ' + money(L) + ' = ' +
+             (net < 0 ? 'deficit ' : 'surplus ') + money(Math.abs(net)) + '.';
+      if(MONEY.cash_note) chk += ' Cash ' + MONEY.cash_note + '.';
+    }
+    document.getElementById('mCheck').innerHTML = ok ? chk : '<b class="bad">Does not reconcile: </b>' + chk;
+    document.getElementById('mNote').textContent =
+      (MONEY.digital_asof ? 'Digital spend from the delivery dashboard, ' + MONEY.digital_asof + '. ' :
+       'Digital spend unavailable (' + (MONEY.digital_error||'no data') + '). ') +
+      'Mail invoices include the state party’s 1.5% fee.';
+  }
+
+  document.getElementById('mCashEdit').addEventListener('click', function(e){
+    e.preventDefault();
+    var v = prompt('Cash on hand, in dollars', MONEY.cash == null ? '' : MONEY.cash);
+    if(v === null) return;
+    fetch('/private/spend-plan/money', {method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+      body: JSON.stringify({key:'cash_on_hand', amount:v})})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j.ok){ alert(j.error || 'Could not save.'); return; }
+      MONEY.cash = parseFloat(String(v).replace(/[$,]/g,'')); MONEY.cash_note = 'just now';
+      moneyPanel();
+    });
+  });
 
   function redraw(){ buildClusters(); drawRail(); drawPane(); totals(); rememberPlace(); }
 

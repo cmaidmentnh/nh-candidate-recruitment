@@ -1804,6 +1804,7 @@ def spend_plan():
         cur.execute("SELECT amount FROM spend_budget WHERE key='program'")
         brow = cur.fetchone()
         budget = float(brow[0]) if brow else 600000.0
+        money = _money_actuals(cur)
 
         for d in districts:
             code = d['code']
@@ -1857,7 +1858,7 @@ def spend_plan():
                                districts=districts, tactics=tactics, segments=SEGMENTS,
                                presets=UNIVERSE_PRESETS,
                                preset_masks=[m for m, _ in UNIVERSE_PRESETS],
-                               pieces=pieces, budget=budget,
+                               pieces=pieces, budget=budget, money=money,
                                meta_accounts=meta_accounts, meta_median=meta_median)
     finally:
         cur.close(); release_db_connection(conn)
@@ -2179,6 +2180,96 @@ def _load_pieces(cur):
         p['planned'] += float(cost or 0)
         p['reach'] += float(q or 0)
     return pieces
+
+
+# The delivery dashboard (data.winthehouse.gop/delivery-...) is rebuilt every 30 minutes from
+# these files. Reading the same files means the plan and the dashboard can never disagree
+# about what digital has spent.
+DELIVERY_DIR = '/root/floterial'
+
+
+def _money_actuals(cur):
+    """What has actually happened to the money, for the plan's topline.
+
+    Mail comes from the pieces tracker, not the district plan: a billed piece counts at its
+    invoice, an unbilled one at its planned cost. Digital comes from what Meta and StackAdapt
+    report as spent. Cash sent ahead of an invoice (a prepayment to the state party) is
+    spent money even though no piece has been billed against it yet, so it is carried
+    separately rather than hidden inside a piece."""
+    out = {'mail_forecast': 0.0, 'mail_paid': 0.0, 'mail_billed': 0, 'mail_pieces': 0,
+           'paid_other': {}, 'prepaid': 0.0, 'prepaid_note': '',
+           'cash': None, 'cash_note': '',
+           'digital_spent': {}, 'digital_asof': None, 'digital_error': None}
+    cur.execute("""SELECT p.tactic_key, p.invoice_amount, p.invoice_status,
+                          COALESCE(SUM(pd.planned_cost), 0)
+                     FROM spend_piece p
+                     LEFT JOIN spend_piece_district pd ON pd.piece_id = p.id
+                    GROUP BY p.id, p.tactic_key, p.invoice_amount, p.invoice_status""")
+    for tk, inv, status, planned in cur.fetchall():
+        inv = float(inv) if inv is not None else None
+        if tk == 'mail':
+            out['mail_pieces'] += 1
+            out['mail_forecast'] += inv if inv is not None else float(planned)
+            if inv is not None:
+                out['mail_billed'] += 1
+            if status == 'paid' and inv is not None:
+                out['mail_paid'] += inv
+        elif status == 'paid' and inv is not None:
+            out['paid_other'][tk] = out['paid_other'].get(tk, 0.0) + inv
+
+    cur.execute("SELECT key, amount, notes FROM spend_budget WHERE key IN ('cash_on_hand','prepaid')")
+    for key, amt, notes in cur.fetchall():
+        if key == 'cash_on_hand':
+            out['cash'], out['cash_note'] = float(amt), notes or ''
+        else:
+            out['prepaid'], out['prepaid_note'] = float(amt), notes or ''
+
+    try:
+        import json as _json, os
+        rep = _json.load(open(os.path.join(DELIVERY_DIR, 'report_data.json')))
+        sa = _json.load(open(os.path.join(DELIVERY_DIR, 'sa_delivery.json')))
+        out['digital_spent'] = {
+            'meta': round(sum(float(r.get('meta_spend') or 0) for r in rep.get('rows', [])), 2),
+            'ctv': round(float(sa['ctv']['total']['cost'] or 0), 2),
+            'display': round(float(sa['display']['total']['cost'] or 0), 2),
+            'audio': round(float(sa.get('audio', {}).get('total', {}).get('cost') or 0), 2)}
+        out['digital_asof'] = rep.get('generated')
+    except Exception as e:                      # the page must still load if the files move
+        out['digital_error'] = str(e)[:200]
+    return out
+
+
+@private_bp.route('/spend-plan/money', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_money():
+    """Save cash on hand or the prepaid balance. Stamped with who and when, because a cash
+    figure without a date is worse than none."""
+    d = request.get_json(silent=True) or {}
+    key = d.get('key')
+    if key not in ('cash_on_hand', 'prepaid'):
+        return jsonify({'ok': False, 'error': 'bad key'}), 400
+    try:
+        amount = round(float(str(d.get('amount', '')).replace(',', '').replace('$', '')), 2)
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Enter a dollar amount.'}), 400
+    who = current_user.email if current_user.is_authenticated else 'admin'
+    note = (d.get('note') or '').strip()[:300]
+    stamp = 'as of %s by %s' % (datetime.now().strftime('%b %-d, %-I:%M %p'), who)
+    label = 'Cash on hand' if key == 'cash_on_hand' else 'Prepaid, not yet invoiced'
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        cur.execute("""INSERT INTO spend_budget (key, label, amount, notes) VALUES (%s,%s,%s,%s)
+                       ON CONFLICT (key) DO UPDATE SET amount = EXCLUDED.amount,
+                                                       notes = EXCLUDED.notes""",
+                    (key, label, amount, (note + ' ' if note else '') + stamp))
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error('money save failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
 
 
 @private_bp.route('/spend-plan/pieces')
