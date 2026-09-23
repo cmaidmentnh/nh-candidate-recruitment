@@ -2277,10 +2277,15 @@ def _money_actuals(cur):
             rec.append({'id': i, 'label': lbl, 'monthly': float(mo), 'end': end.isoformat(),
                         'months': months, 'remaining': round(float(mo) * months, 2), 'notes': notes or ''})
         out['recurring'] = rec
-        cur.execute("""SELECT id, label, category, amount, due_date FROM spend_payable
+        cur.execute("""SELECT id, label, category, amount, due_date, approx, match_hint FROM spend_payable
                         WHERE NOT paid ORDER BY due_date NULLS LAST, id""")
         out['payables'] = [{'id': i, 'label': l, 'category': c, 'amount': float(a),
-                            'due': d.isoformat() if d else None} for i, l, c, a, d in cur.fetchall()]
+                            'due': d.isoformat() if d else None, 'approx': ap, 'hint': h or ''}
+                           for i, l, c, a, d, ap, h in cur.fetchall()]
+        cur.execute("""SELECT label, amount, paid_at, match_note FROM spend_payable
+                        WHERE paid AND paid_at >= now() - interval '30 days' ORDER BY paid_at DESC""")
+        out['paid_bills'] = [{'label': l, 'amount': float(a), 'paid': p.isoformat() if p else '',
+                              'note': n or 'marked paid by hand'} for l, a, p, n in cur.fetchall()]
     except Exception as e:
         conn_err = str(e)[:200]
         logger.info('bank data unavailable: %s', conn_err)
@@ -2322,22 +2327,13 @@ def spend_plan_bank():
     who = current_user.email if current_user.is_authenticated else 'admin'
     conn = get_db_connection(); cur = conn.cursor()
     try:
-        cur.execute("DELETE FROM bank_txn WHERE pending")          # the pending list is a snapshot
-        added = 0
-        for r in rows:
-            cur.execute("""INSERT INTO bank_txn (txn_date, pending, kind, description, amount, balance,
-                                                 category, fingerprint)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (fingerprint) DO NOTHING""",
-                        (r['date'], r['pending'], r['kind'], r['description'], r['amount'],
-                         r['balance'], r['category'], r['fingerprint']))
-            added += cur.rowcount if not r['pending'] else 0
-        cur.execute("""INSERT INTO bank_snapshot (available, beginning, pending, captured_by)
-                       VALUES (%s,%s,%s,%s)""",
-                    (balances['available'], balances['beginning'], balances['pending'], who))
+        added = BR.import_rows(cur, balances, rows, who)
+        matched = BR.match_payables(cur)
         conn.commit()
         return jsonify({'ok': True, 'new_posted': added,
                         'pending': sum(1 for r in rows if r['pending']),
-                        'available': balances['available'], 'problems': problems})
+                        'available': balances['available'], 'problems': problems,
+                        'matched': matched})
     except Exception as e:
         conn.rollback()
         logger.error('bank import failed: %s', e)
@@ -2385,8 +2381,11 @@ def spend_plan_payable():
                 return jsonify({'ok': False, 'error': 'Enter a dollar amount.'}), 400
             if not label or cat not in BR.CATEGORIES:
                 return jsonify({'ok': False, 'error': 'Give it a name and a category.'}), 400
-            cur.execute("""INSERT INTO spend_payable (label, category, amount, due_date, created_by)
-                           VALUES (%s,%s,%s,%s,%s)""", (label, cat, amount, d.get('due') or None, who))
+            cur.execute("""INSERT INTO spend_payable (label, category, amount, due_date, created_by,
+                                                      match_hint, approx)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                        (label, cat, amount, d.get('due') or None, who,
+                         (d.get('hint') or '').strip()[:120] or None, bool(d.get('approx'))))
         conn.commit()
         return jsonify({'ok': True})
     except Exception as e:

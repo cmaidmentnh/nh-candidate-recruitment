@@ -139,6 +139,104 @@ def parse_td(text):
     return balances, rows
 
 
+def import_rows(cur, balances, rows, who):
+    """Write a parsed paste. Returns how many posted rows were new. The caller commits."""
+    cur.execute("DELETE FROM bank_txn WHERE pending")          # the pending list is a snapshot
+    added = 0
+    for r in rows:
+        cur.execute("""INSERT INTO bank_txn (txn_date, pending, kind, description, amount, balance,
+                                             category, fingerprint)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (fingerprint) DO NOTHING""",
+                    (r['date'], r['pending'], r['kind'], r['description'], r['amount'],
+                     r['balance'], r['category'], r['fingerprint']))
+        if not r['pending']:
+            added += cur.rowcount
+    cur.execute("""INSERT INTO bank_snapshot (available, beginning, pending, captured_by)
+                   VALUES (%s,%s,%s,%s)""",
+                (balances['available'], balances['beginning'], balances['pending'], who))
+    return added
+
+
+def match_payables(cur):
+    """Settle unpaid bills against bank payments, and keep settled ones pointed at the row
+    that paid them. Returns a list of plain-English results for the page.
+
+    A bill matches a payment when, in this order of preference:
+      1. its payee words appear in exactly one unclaimed payment, or
+      2. exactly one unclaimed payment is for exactly its amount, or
+      3. it is marked approximate and exactly one unclaimed, unlabeled-or-same-category
+         payment is within 15% of it.
+    Two or more candidates is never guessed at: it is reported for a person to decide.
+    Payments are only considered from three days before the bill was entered onward."""
+    out = []
+    cur.execute("SELECT bank_fp FROM spend_payable WHERE bank_fp IS NOT NULL")
+    claimed = {r[0] for r in cur.fetchall()}
+
+    # A bill settled by a pending charge loses its link when that charge posts under a new
+    # description. Find the posted row and move the link (and the category) onto it.
+    cur.execute("""SELECT id, category, amount, paid_at, bank_fp FROM spend_payable
+                    WHERE paid AND bank_fp LIKE 'P|%%'""")
+    for pid, cat, amt, paid_at, fp in cur.fetchall():
+        cur.execute("SELECT 1 FROM bank_txn WHERE fingerprint=%s", (fp,))
+        if cur.fetchone():
+            continue
+        cur.execute("""SELECT fingerprint, id FROM bank_txn
+                        WHERE NOT pending AND amount = %s AND txn_date BETWEEN %s - 3 AND %s + 10
+                          AND (category IS NULL OR category = %s)""",
+                    (-float(amt), paid_at, paid_at, cat))
+        c = [r for r in cur.fetchall() if r[0] not in claimed]
+        if len(c) == 1:
+            cur.execute("UPDATE spend_payable SET bank_fp=%s WHERE id=%s", (c[0][0], pid))
+            cur.execute("UPDATE bank_txn SET category=%s, category_set_by='matched' WHERE id=%s", (cat, c[0][1]))
+            claimed.add(c[0][0])
+
+    cur.execute("""SELECT id, label, category, amount, approx, match_hint, created_at
+                     FROM spend_payable WHERE NOT paid ORDER BY created_at""")
+    for pid, label, cat, amt, approx, hint, created in cur.fetchall():
+        amt = float(amt)
+        cur.execute("""SELECT id, fingerprint, txn_date, description, amount, category, pending
+                         FROM bank_txn WHERE amount < 0 AND txn_date >= %s::date - 3
+                          AND (category IS NULL OR category = %s OR category = 'other')""",
+                    (created, cat))
+        cands = [r for r in cur.fetchall() if r[1] not in claimed]
+        pick, how = None, ''
+        if hint:
+            words = [w for w in re.split(r'[\s,]+', hint.upper()) if len(w) > 2]
+            hinted = [r for r in cands if any(w in r[3].upper() for w in words)]
+            if len(hinted) == 1:
+                pick, how = hinted[0], 'payee'
+            elif len(hinted) > 1:
+                out.append('%s: %d payments mention %s; which one?' % (label, len(hinted), hint))
+                continue
+        if not pick:
+            exact = [r for r in cands if abs(-float(r[4]) - amt) < 0.005]
+            if len(exact) == 1:
+                pick, how = exact[0], 'exact amount'
+            elif len(exact) > 1:
+                out.append('%s: %d payments of exactly $%s; which one?' % (label, len(exact), '{:,.2f}'.format(amt)))
+                continue
+        if not pick and approx:
+            near = [r for r in cands if abs(-float(r[4]) - amt) <= 0.15 * amt]
+            if len(near) == 1:
+                pick, how = near[0], 'close amount'
+            elif len(near) > 1:
+                out.append('%s: %d payments near $%s; which one?' % (label, len(near), '{:,.0f}'.format(amt)))
+                continue
+        if not pick:
+            continue
+        tid, fp, tdate, desc, tamt, tcat, pend = pick
+        paid = -float(tamt)
+        note = 'matched by %s to %s %s $%s' % (how, tdate.isoformat(), desc[:60], '{:,.2f}'.format(paid))
+        if abs(paid - amt) >= 0.005:
+            note += ' (bill said $%s)' % '{:,.2f}'.format(amt)
+        cur.execute("""UPDATE spend_payable SET paid=true, paid_at=%s, bank_fp=%s, match_note=%s, amount=%s
+                        WHERE id=%s""", (tdate, fp, note, paid, pid))
+        cur.execute("UPDATE bank_txn SET category=%s, category_set_by='matched' WHERE id=%s", (cat, tid))
+        claimed.add(fp)
+        out.append('%s: paid. %s' % (label, note))
+    return out
+
+
 def check_balances(balances, rows):
     """The paste has to add up before it is trusted: pending rows sum to the pending total,
     and each posted balance is the next older balance plus this row's amount."""

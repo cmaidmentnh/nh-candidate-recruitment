@@ -1552,8 +1552,11 @@
 
     var ph = '';
     (MONEY.payables||[]).forEach(function(p){
-      ph += '<tr><td>'+p.label+'</td><td>'+p.category+'</td><td>'+(p.due||'')+'</td><td>'+money(p.amount)+'</td>' +
+      ph += '<tr><td>'+p.label+(p.hint?' <span class="mnote">(matches &ldquo;'+p.hint+'&rdquo;)</span>':'')+'</td><td>'+p.category+'</td><td>'+(p.due||'')+'</td><td>'+(p.approx?'about ':'')+money(p.amount)+'</td>' +
             '<td><a href="#" data-paypaid="'+p.id+'">mark paid</a></td></tr>';
+    });
+    (MONEY.paid_bills||[]).forEach(function(p){
+      ph += '<tr style="color:#7b8494"><td>'+p.label+'</td><td colspan="2">paid '+p.paid+': '+p.note+'</td><td>'+money(p.amount)+'</td><td></td></tr>';
     });
     document.getElementById('mPay').innerHTML = ph || '<tr><td colspan="5">Nothing owed.</td></tr>';
 
@@ -1630,8 +1633,10 @@
     var amount = prompt('How much?'); if(!amount) return;
     var cats = ((MONEY.bank && MONEY.bank.categories) || []).join(', ');
     var cat = prompt('Category, one of: ' + cats, 'video'); if(!cat) return;
+    var hint = prompt('Payee name as it will appear on the bank statement (optional; a check shows no name and is matched on amount)', '');
+    var approx = confirm('Is ' + amount + ' an estimate? OK = estimate (matched within 15%), Cancel = exact');
     var due = prompt('Due date, YYYY-MM-DD (optional)', '');
-    post('/private/spend-plan/payable', {label:label, amount:amount, category:cat.trim(), due:due||null})
+    post('/private/spend-plan/payable', {label:label, amount:amount, category:cat.trim(), due:due||null, hint:hint||null, approx:approx})
       .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
   });
   document.getElementById('mRecAdd').addEventListener('click', function(e){
@@ -1653,8 +1658,9 @@
     m.textContent = 'Importing...';
     post('/private/spend-plan/bank', {text:t}).then(function(j){
       if(!j.ok){ m.textContent = j.error || 'Could not import.'; return; }
-      m.textContent = j.new_posted + ' new transactions, ' + j.pending + ' pending. Available ' + money(j.available) + '. Reloading...';
-      setTimeout(function(){ location.reload(); }, 800);
+      m.innerHTML = j.new_posted + ' new transactions, ' + j.pending + ' pending. Available ' + money(j.available) + '.' +
+        ((j.matched||[]).length ? '<br><b>Bills:</b> ' + j.matched.join('<br>') : '') +
+        '<br><a href="#" onclick="location.reload();return false">Refresh the numbers</a>';
     });
   });
 

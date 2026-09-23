@@ -51,3 +51,10 @@ CREATE TABLE IF NOT EXISTS spend_payable (
     created_by VARCHAR(120),
     created_at TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
+
+-- Automatic matching of bills to the bank payments that settle them (2026-09-23).
+ALTER TABLE spend_payable ADD COLUMN IF NOT EXISTS match_hint  TEXT;      -- payee words to look for
+ALTER TABLE spend_payable ADD COLUMN IF NOT EXISTS approx      BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE spend_payable ADD COLUMN IF NOT EXISTS paid_at     DATE;
+ALTER TABLE spend_payable ADD COLUMN IF NOT EXISTS bank_fp     VARCHAR(300);  -- fingerprint of the paying row
+ALTER TABLE spend_payable ADD COLUMN IF NOT EXISTS match_note  TEXT;
