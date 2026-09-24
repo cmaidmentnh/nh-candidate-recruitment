@@ -1608,6 +1608,9 @@ def spend_plan():
         model_uni = {}
         for dc, uni, v, hh, ce in cur.fetchall():
             model_uni.setdefault(dc, {})[uni] = {'voters': v, 'households': hh, 'cells': ce}
+        mail_lists, mail_billed = _mail_lists(cur)
+        for dc, byu in mail_lists.items():
+            model_uni[dc] = _with_mail_lists(model_uni.get(dc), byu)
 
         # A floterial buys nothing itself: what it RECEIVES is decided by the tiers of the
         # bases it rides on, weighted by where its households sit. A tier on a floterial is
@@ -1817,6 +1820,7 @@ def spend_plan():
             d['past'] = past.get(code, [])
             d['topr'] = topr.get(code)
             d['model'] = model_uni.get(code, {})
+            d['mail_billed'] = mail_billed.get(code, {})
             d['rel'] = relation.get(code)
             d['ride'] = ride.get(code, [])
             d['r2018'] = replay18.get(code)
@@ -1894,6 +1898,8 @@ def spend_plan_export():
         sizes = {}
         for dc, u, v, hh, ce in cur.fetchall():
             sizes.setdefault(dc, {})[u] = {'voters': v, 'households': hh, 'cells': ce}
+        for dc, byu in _mail_lists(cur)[0].items():
+            sizes[dc] = _with_mail_lists(sizes.get(dc), byu)
         cur.execute("SELECT district_code, mask, voters, households, cells FROM district_universe")
         base_uni = {(r[0], r[1]): {'voters': r[2], 'households': r[3], 'cells': r[4]}
                     for r in cur.fetchall()}
@@ -2017,6 +2023,7 @@ def spend_plan_district_print(code):
                        WHERE district_code = %s""", (code,))
         for u, v, hh, ce in cur.fetchall():
             sizes[u] = {'voters': v or 0, 'households': hh or 0, 'cells': ce or 0}
+        sizes = _with_mail_lists(sizes, _mail_lists(cur)[0].get(code))
         cur.execute("""SELECT voters, households, cells FROM district_universe
                        WHERE district_code = %s AND mask = %s""", (code, d['mask']))
         row = cur.fetchone()
@@ -2098,12 +2105,58 @@ PIECE_STATUS = ('draft', 'scheduled', 'delivered')
 INVOICE_STATUS = ('unbilled', 'unpaid', 'paid')
 
 
+def _mail_lists(cur):
+    """The real mailing lists: households per district and universe, and what billed mail
+    cost over the plan rate.
+
+    Mail is priced off the lists as bought, never the modelled universes, which undercount
+    them (persuasion by more than a third). The mail pieces carry the lists: every drop to a
+    district mails the same list, and Mail 1's quantities are the downloaded Mail 1 file
+    (GOTV + Both, and Persuasion) to the household. A district added after Mail 1 carries an
+    estimate until its list is bought.
+
+    A billed piece costs its invoice, split across its districts by quantity; the excess over
+    quantity x plan rate is returned so the plan can carry it and still add up to the pieces."""
+    cur.execute("SELECT rate FROM spend_tactic WHERE tactic_key = 'mail'")
+    row = cur.fetchone()
+    rate = float(row[0] or 0) if row else 0.0
+    cur.execute("""SELECT pd.district_code, p.universe, MAX(pd.quantity)
+                     FROM spend_piece_district pd JOIN spend_piece p ON p.id = pd.piece_id
+                    WHERE p.tactic_key = 'mail' GROUP BY 1, 2""")
+    households = {}
+    for dc, u, q in cur.fetchall():
+        households.setdefault(dc, {})[u] = int(q or 0)
+    cur.execute("""SELECT pd.district_code, p.universe, pd.quantity, p.invoice_amount,
+                          SUM(pd.quantity) OVER (PARTITION BY p.id)
+                     FROM spend_piece_district pd JOIN spend_piece p ON p.id = pd.piece_id
+                    WHERE p.tactic_key = 'mail' AND p.invoice_amount IS NOT NULL""")
+    billed = {}
+    for dc, u, q, inv, tot in cur.fetchall():
+        q = float(q or 0)
+        extra = float(inv) * q / float(tot) - q * rate if tot else 0.0
+        billed.setdefault(dc, {})[u] = billed.get(dc, {}).get(u, 0.0) + extra
+    return households, billed
+
+
+def _with_mail_lists(sizes, households):
+    """Universe sizes with the mailing-list household counts put in place of the model's.
+    Only households change: texts still count cells and display still counts voters."""
+    out = {u: dict(sz) for u, sz in (sizes or {}).items()}
+    for u, hh in (households or {}).items():
+        out.setdefault(u, {'voters': 0, 'households': 0, 'cells': 0})['households'] = hh
+    return out
+
+
 def _piece_sizes(cur):
-    """Universe sizes per district, both the modelled universes and the old single mask."""
+    """Universe sizes per district, both the modelled universes and the old single mask, with
+    mail households taken from the real lists."""
     cur.execute("SELECT district_code, uni, voters, households, cells FROM district_model_universe")
     sizes = {}
     for dc, u, v, hh, ce in cur.fetchall():
         sizes.setdefault(dc, {})[u] = {'voters': v or 0, 'households': hh or 0, 'cells': ce or 0}
+    lists, _ = _mail_lists(cur)
+    for dc, byu in lists.items():
+        sizes[dc] = _with_mail_lists(sizes.get(dc), byu)
     cur.execute("""SELECT u.district_code, u.voters, u.households, u.cells
                      FROM district_universe u
                      JOIN district_spend s ON s.district_code = u.district_code
@@ -2953,7 +3006,7 @@ def _plan_totals(cur):
     for dc, u, tk, q, ro in cur.fetchall():
         qty.setdefault(dc, {}).setdefault(u, {})[tk] = {
             'qty': float(q), 'rate': float(ro) if ro is not None else None}
-    total = 0.0
+    total = sum(x for byu in _mail_lists(cur)[1].values() for x in byu.values())
     for dc, byu in qty.items():
         total += _cost_of(byu, sizes.get(dc, {}), tactics)
     cur.execute("""SELECT count(*), COALESCE(SUM((SELECT MAX(d.seat_count) FROM districts d

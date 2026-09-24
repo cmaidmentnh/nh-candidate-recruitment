@@ -531,7 +531,11 @@
         var row = qty[universe][t.key];
         var q = (row && row.qty) || 0, c = 0;
         if(q > 0){
-          if(t.unit === 'per_household'){ c = q*sz.households*t.rate; out.pieces += q*sz.households; }
+          if(t.unit === 'per_household'){
+            // households are the real mailing list; a billed drop adds what its invoice ran over the rate
+            c = q*sz.households*t.rate + ((t.key === 'mail' && (d.mail_billed||{})[universe]) || 0);
+            out.pieces += q*sz.households;
+          }
           else if(t.unit === 'per_cell'){ c = q*sz.cells*t.rate; out.msgs += q*sz.cells; }
           else if(t.unit === 'dollars'){ c = q; }
           else if(t.unit === 'per_unit'){ c = (t.rate == null) ? 0 : q*t.rate; }
