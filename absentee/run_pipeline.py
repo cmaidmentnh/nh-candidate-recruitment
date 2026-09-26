@@ -71,7 +71,15 @@ CHASE_BUCKETS = ('Registered Republican', 'Undeclared, leans Republican',
                  'Undeclared, genuinely swing')
 
 
+# Chris, 2026-09-26: "don't filter for party - let them know every voter". Candidates get
+# every absentee requester in their district; the Lean column still says who is likely whose,
+# so they can sort it themselves. CHASE_BUCKETS is kept for the statewide R-lean count only.
+SEND_EVERY_VOTER = True
+
+
 def in_chase(a):
+    if SEND_EVERY_VOTER:
+        return True
     return a['choice'] == 'REP' or a.get('bucket') in CHASE_BUCKETS
 
 
@@ -308,7 +316,7 @@ def build_district_files(rundir):
             continue
         rep.sort(key=lambda a: ({'BALLOT IN HAND': 0, 'REQUESTED, NOT YET MAILED': 1,
                                  'ALREADY VOTED': 2}[a['bkt']], a['last'], a['first']))
-        with open(f"{outdir}/{d.replace(' ', '_')}_REP_absentee.csv", 'w', newline='') as f:
+        with open(f"{outdir}/{d.replace(' ', '_')}_absentee.csv", 'w', newline='') as f:
             w = csv.writer(f); w.writerow(F)
             for a in rep:
                 w.writerow([a['bkt'], a['last'], a['first'], a['addr'], a['town'], a['ward'],
@@ -360,8 +368,8 @@ cur.close(); A.release_db_connection(conn)"""))
 def build_plan(rundir):
     C = json.load(open(f'{rundir}/r_house_candidates.json'))
     outdir = f'{rundir}/absentee_by_district'
-    have = {f[:-len('_REP_absentee.csv')].replace('_', ' ')
-            for f in os.listdir(outdir) if f.endswith('_REP_absentee.csv')}
+    have = {f[:-len('_absentee.csv')].replace('_', ' ')
+            for f in os.listdir(outdir) if f.endswith('_absentee.csv')}
     plan = []
     skip = collections.Counter()
     for c in C:
@@ -374,7 +382,7 @@ def build_plan(rundir):
         plan.append(c)
     json.dump(plan, open(f'{rundir}/send_plan.json', 'w'))
     tot = sum(len(list(csv.DictReader(open(
-        f"{outdir}/{c['district'].replace(' ', '_')}_REP_absentee.csv")))) for c in plan)
+        f"{outdir}/{c['district'].replace(' ', '_')}_absentee.csv")))) for c in plan)
     print(f"SEND PLAN: {len(plan)} candidates across "
           f"{len({c['district'] for c in plan})} districts, {tot:,} voter rows in attachments")
     for k, v in skip.most_common():

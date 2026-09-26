@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Send each R House candidate their own district's Republican-ballot absentee list.
+"""Send each R House candidate their own district's absentee list (every requester, all parties).
 
   python3 send_absentee_blast.py --run runs/2026-08-13 --asof "13 August"                 # dry run
   python3 send_absentee_blast.py --run runs/2026-08-13 --asof "13 August" --draft-to chris@maidmentnh.com
@@ -25,7 +25,7 @@ SENDER = f'"{ORG}" <{SRC}>'
 
 def compose(c, rundir, asof):
     dist = c['district']
-    fn = f"{rundir}/absentee_by_district/{dist.replace(' ', '_')}_REP_absentee.csv"
+    fn = f"{rundir}/absentee_by_district/{dist.replace(' ', '_')}_absentee.csv"
     rows = list(csv.DictReader(open(fn)))
     counts = (sum(1 for r in rows if r['Bucket'] == 'BALLOT IN HAND'),
               sum(1 for r in rows if r['Bucket'] == 'REQUESTED, NOT YET MAILED'),
@@ -65,7 +65,7 @@ def main():
     # verify every attachment exists and is non-empty before sending anything
     bad = []
     for c in plan:
-        fn = f"{rundir}/absentee_by_district/{c['district'].replace(' ', '_')}_REP_absentee.csv"
+        fn = f"{rundir}/absentee_by_district/{c['district'].replace(' ', '_')}_absentee.csv"
         if not os.path.exists(fn):
             bad.append((c['district'], 'missing file'))
         elif not list(csv.DictReader(open(fn))):
@@ -83,7 +83,7 @@ def main():
             by_size.append((n, c, m))
         n, c, m = max(by_size, key=lambda x: x[0])
         del m['Subject']
-        m['Subject'] = f"[DRAFT - not sent to candidates] Who already has a primary ballot in {c['district']}"
+        m['Subject'] = f"[DRAFT - not sent to candidates] Who in {c['district']} already has a ballot"
         del m['To']
         m['To'] = a.draft_to
         r = ses.send_raw_email(Source=SRC, Destinations=[a.draft_to],

@@ -35,7 +35,7 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
         ("Phone",
          f"Present for {with_phone} of the {total}, from the state file and our own records."),
         ("Lean",
-         "How the voter is registered, and for undeclared voters which party's ballot they have taken in past state primaries. It is the reason each name is on the list."),
+         "How the voter is registered, and for undeclared voters which party's ballot they have taken in past state primaries. Sort on it to find the voters most likely to be with you."),
     ]
     step_html = "".join(
         f"""<tr>
@@ -57,7 +57,7 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
    <tr><td style="padding:22px 32px 0 32px;">
      <h1 style="margin:0;font:700 23px/1.25 Arial,Helvetica,sans-serif;color:{INK};">Who in {district} already has a ballot</h1>
      <p style="margin:10px 0 0 0;font:16px/1.55 Arial,Helvetica,sans-serif;color:{MUTED};">
-       {first_name}, attached is every Republican and Republican-leaning voter in {district} who has asked the clerk for an absentee ballot. {total} of them, {with_phone} with a phone number.</p>
+       {first_name}, attached is every voter in {district} who has asked the clerk for an absentee ballot, whatever their party. {total} of them, {with_phone} with a phone number.</p>
    </td></tr>
 
    <tr><td style="padding:24px 32px 0 32px;">
@@ -85,7 +85,7 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="border-top:1px solid {RULE};padding-top:18px;">
         <p style="margin:0 0 8px 0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>The file.</strong> <span style="color:{MUTED};">{filename}, opens in Excel or Numbers. Name, address, phone, what they registered as, and which bucket they are in.</span></p>
-        <p style="margin:0 0 8px 0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>How these names were chosen.</strong> <span style="color:{MUTED};">In November every voter gets the same ballot, so there is no Republican request list to work from. This is built from how each voter is registered and, for undeclared voters, which party's ballot they have taken in past state primaries. Registered Republicans, undeclared voters who lean Republican, and undeclared voters who genuinely swing. Registered Democrats and undeclared voters who lean Democratic are left off.</span></p>
+        <p style="margin:0 0 8px 0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>How these names were chosen.</strong> <span style="color:{MUTED};">Everyone in your district who has requested an absentee ballot is on it, Republicans, Democrats and undeclared alike. In November every voter gets the same ballot, so the Lean column is what tells them apart: how each voter is registered and, for undeclared voters, which party's ballot they have taken in past state primaries.</span></p>
         <p style="margin:0;font:15px/1.6 Arial,Helvetica,sans-serif;color:{INK};"><strong>Updates are coming.</strong> <span style="color:{MUTED};">This is accurate to {asof}. The state refreshes the file regularly and we will send you an updated list each time it changes, so you can see who has moved from one column to the next.</span></p>
       </td></tr>
      </table>
@@ -104,8 +104,8 @@ def build(first_name, district, counts, towns, with_phone, total, filename, asof
 
     text = f"""{first_name},
 
-Attached is every Republican and Republican-leaning voter in {district} who has
-asked the clerk for an absentee ballot. {total} of them, {with_phone} with a phone number.
+Attached is every voter in {district} who has asked the clerk for an absentee
+ballot, whatever their party. {total} of them, {with_phone} with a phone number.
 
 WHY WE ARE SENDING IT
 These voters are voting before election day. Once a ballot is completed and
@@ -128,19 +128,19 @@ WHAT THE COLUMNS MEAN
                          our own records.
   Lean                   How the voter is registered, and for undeclared voters
                          which party's ballot they have taken in past state
-                         primaries. It is the reason each name is on the list.
+                         primaries. Sort on it to find the voters most likely
+                         to be with you.
 
 THE FILE
 {filename}, opens in Excel or Numbers. Name, address, phone, registration and
 bucket.
 
 HOW THESE NAMES WERE CHOSEN
-In November every voter gets the same ballot, so there is no Republican request
-list to work from. This is built from how each voter is registered and, for
-undeclared voters, which party's ballot they have taken in past state primaries.
-Registered Republicans, undeclared voters who lean Republican, and undeclared
-voters who genuinely swing. Registered Democrats and undeclared voters who lean
-Democratic are left off.
+Everyone in your district who has requested an absentee ballot is on it,
+Republicans, Democrats and undeclared alike. In November every voter gets the
+same ballot, so the Lean column is what tells them apart: how each voter is
+registered and, for undeclared voters, which party's ballot they have taken in
+past state primaries.
 
 UPDATES ARE COMING
 This is accurate to {asof}. The state refreshes the file regularly and we will
