@@ -2339,6 +2339,18 @@ def _money_actuals(cur):
                         WHERE paid AND paid_at >= now() - interval '30 days' ORDER BY paid_at DESC""")
         out['paid_bills'] = [{'label': l, 'amount': float(a), 'paid': p.isoformat() if p else '',
                               'note': n or 'marked paid by hand'} for l, a, p, n in cur.fetchall()]
+        # Money promised but not yet in the bank. It counts toward the surplus until a bank
+        # import shows the deposit; after that the bank balance already holds it.
+        cur.execute("""SELECT id, label, amount, expected_on, approx, match_hint FROM spend_receivable
+                        WHERE active AND NOT received ORDER BY expected_on NULLS LAST, id""")
+        out['receivables'] = [{'id': i, 'label': l, 'amount': float(a),
+                               'expected': d.isoformat() if d else None, 'approx': ap, 'hint': h or ''}
+                              for i, l, a, d, ap, h in cur.fetchall()]
+        cur.execute("""SELECT label, amount, received_at, match_note FROM spend_receivable
+                        WHERE active AND received AND received_at >= now() - interval '30 days'
+                        ORDER BY received_at DESC""")
+        out['received'] = [{'label': l, 'amount': float(a), 'received': r.isoformat() if r else '',
+                            'note': n or 'marked received by hand'} for l, a, r, n in cur.fetchall()]
     except Exception as e:
         conn_err = str(e)[:200]
         logger.info('bank data unavailable: %s', conn_err)
@@ -2381,7 +2393,7 @@ def spend_plan_bank():
     conn = get_db_connection(); cur = conn.cursor()
     try:
         added = BR.import_rows(cur, balances, rows, who)
-        matched = BR.match_payables(cur)
+        matched = BR.match_payables(cur) + BR.match_receivables(cur)
         conn.commit()
         return jsonify({'ok': True, 'new_posted': added,
                         'pending': sum(1 for r in rows if r['pending']),
@@ -2444,6 +2456,40 @@ def spend_plan_payable():
     except Exception as e:
         conn.rollback()
         logger.error('payable save failed: %s', e)
+        return jsonify({'ok': False, 'error': 'Could not save.'}), 500
+    finally:
+        cur.close(); release_db_connection(conn)
+
+
+@private_bp.route('/spend-plan/receivable', methods=['POST'])
+@require_feature_access('campaign_plan')
+def spend_plan_receivable():
+    """Add money we expect to receive, mark it received by hand, or drop it."""
+    d = request.get_json(silent=True) or {}
+    who = current_user.email if current_user.is_authenticated else 'admin'
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        if d.get('id') and d.get('received'):
+            cur.execute("UPDATE spend_receivable SET received=true, received_at=CURRENT_DATE WHERE id=%s", (d['id'],))
+        elif d.get('id') and d.get('delete'):
+            cur.execute("UPDATE spend_receivable SET active=false WHERE id=%s", (d['id'],))
+        else:
+            label = (d.get('label') or '').strip()[:160]
+            try:
+                amount = round(float(str(d.get('amount', '')).replace(',', '').replace('$', '')), 2)
+            except ValueError:
+                return jsonify({'ok': False, 'error': 'Enter a dollar amount.'}), 400
+            if not label or amount <= 0:
+                return jsonify({'ok': False, 'error': 'Give it a name and an amount.'}), 400
+            cur.execute("""INSERT INTO spend_receivable (label, amount, expected_on, match_hint, approx, created_by)
+                           VALUES (%s,%s,%s,%s,%s,%s)""",
+                        (label, amount, d.get('expected') or None,
+                         (d.get('hint') or '').strip()[:120] or None, bool(d.get('approx')), who))
+        conn.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        conn.rollback()
+        logger.error('receivable save failed: %s', e)
         return jsonify({'ok': False, 'error': 'Could not save.'}), 500
     finally:
         cur.close(); release_db_connection(conn)

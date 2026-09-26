@@ -330,6 +330,7 @@
       <div class="mg"><span class="mv" id="mLeft">$0</span><span class="ml">Still to spend</span></div>
       <div class="mg"><span class="mv" id="mCash">not entered</span>
         <span class="ml">Cash on hand <a href="#" id="mCashEdit">edit</a></span></div>
+      <div class="mg"><span class="mv" id="mIncoming">$0</span><span class="ml">Coming in</span></div>
       <div class="mg"><span class="mv" id="mReserve">$0</span>
         <span class="ml">Keep for next year <a href="#" id="mReserveEdit">edit</a></span></div>
       <div class="mg"><span class="mv" id="mNet">$0</span><span class="ml" id="mNetL">Surplus</span></div>
@@ -352,6 +353,12 @@
       <tbody id="mPay"></tbody></table>
       <p class="mnote">Counted in still to spend until marked paid. Mark it paid once the payment shows in a bank import.
         <a href="#" id="mPayAdd">Add a bill</a></p>
+    </details>
+    <details><summary>Money coming in, not yet in the bank</summary>
+      <table class="mtab"><thead><tr><th>From</th><th>Expected</th><th>Amount</th><th></th></tr></thead>
+      <tbody id="mInc"></tbody></table>
+      <p class="mnote">Counted toward the surplus until the deposit shows in a bank import, then matched and marked received automatically.
+        <a href="#" id="mIncAdd">Add money coming in</a></p>
     </details>
     <details><summary>Monthly overhead</summary>
       <table class="mtab"><thead><tr><th>Item</th><th>Through</th><th>Monthly</th><th>Months left</th><th>Still to spend</th><th></th></tr></thead>
@@ -1564,6 +1571,17 @@
     });
     document.getElementById('mPay').innerHTML = ph || '<tr><td colspan="5">Nothing owed.</td></tr>';
 
+    var ih = '', INC = 0;
+    (MONEY.receivables||[]).forEach(function(r){
+      INC += r.amount;
+      ih += '<tr><td>'+r.label+(r.hint?' <span class="mnote">(matches &ldquo;'+r.hint+'&rdquo;)</span>':'')+'</td><td>'+(r.expected||'')+'</td><td>'+(r.approx?'about ':'')+money(r.amount)+'</td>' +
+            '<td><a href="#" data-incgot="'+r.id+'">mark received</a> &middot; <a href="#" data-incdel="'+r.id+'">remove</a></td></tr>';
+    });
+    (MONEY.received||[]).forEach(function(r){
+      ih += '<tr style="color:#7b8494"><td>'+r.label+'</td><td>received '+r.received+': '+r.note+'</td><td>'+money(r.amount)+'</td><td></td></tr>';
+    });
+    document.getElementById('mInc').innerHTML = ih || '<tr><td colspan="4">Nothing expected.</td></tr>';
+
     var rh = '';
     (MONEY.recurring||[]).forEach(function(r){
       rh += '<tr data-rec="'+r.id+'"><td><input class="lbl" value="'+r.label.replace(/"/g,'&quot;')+'"></td><td><input value="'+r.end+'"></td>' +
@@ -1576,6 +1594,7 @@
     set('mForecast', money(F)); set('mSpent', money(S)); set('mLeft', money(L));
     var R = MONEY.reserve || 0;
     set('mReserve', money(R));
+    set('mIncoming', money(INC), INC ? 'pos' : 'muted');
     // With a bank import the balance comes from the bank; a typed figure would only confuse.
     document.getElementById('mCashEdit').style.display = B ? 'none' : '';
     var vb = BUDGET - F;
@@ -1588,12 +1607,15 @@
       document.getElementById('mNetL').textContent = 'Surplus / deficit';
       chk += '. Import the bank or enter cash on hand to see the surplus or deficit.';
     } else {
-      var net = MONEY.cash - L - R;
+      var net = MONEY.cash + INC - L - R;
       set('mCash', money(MONEY.cash));
       set('mNet', money(Math.abs(net)), net < 0 ? 'neg' : 'pos');
       document.getElementById('mNetL').textContent = net < 0 ? 'Deficit' : 'Surplus';
-      chk += '. Cash ' + money(MONEY.cash) + ' - still to spend ' + money(L) + ' - keep ' + money(R) + ' = ' +
+      chk += '. Cash ' + money(MONEY.cash) + (INC ? ' + coming in ' + money(INC) : '') +
+             ' - still to spend ' + money(L) + ' - keep ' + money(R) + ' = ' +
              (net < 0 ? 'deficit ' : 'surplus ') + money(Math.abs(net)) + '.';
+      if(INC){ var netNow = MONEY.cash - L - R;
+        chk += ' Without the money coming in: ' + (netNow < 0 ? 'deficit ' : 'surplus ') + money(Math.abs(netNow)) + '.'; }
       if(MONEY.cash_note) chk += ' Cash ' + MONEY.cash_note + '.';
       if(B && B.beginning !== null && B.pending !== null && Math.abs(B.beginning + B.pending - B.available) > 0.01)
         flags.push('bank balances do not add up');
@@ -1618,6 +1640,15 @@
       .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
   });
   document.getElementById('moneyPanel').addEventListener('click', function(e){
+    var ig = e.target.getAttribute('data-incgot'), idl = e.target.getAttribute('data-incdel');
+    if(ig){ e.preventDefault();
+      if(confirm('Mark received? Only do this once the deposit shows in a bank import, or it will be counted twice.'))
+        post('/private/spend-plan/receivable', {id:+ig, received:true}).then(function(){ location.reload(); });
+      return; }
+    if(idl){ e.preventDefault();
+      if(confirm('Remove this? It will no longer count toward the surplus.'))
+        post('/private/spend-plan/receivable', {id:+idl, delete:true}).then(function(){ location.reload(); });
+      return; }
     var pp = e.target.getAttribute('data-paypaid');
     if(pp){ e.preventDefault();
       if(confirm('Mark paid? Only do this once the payment shows in a bank import, or it will be counted twice.'))
@@ -1641,6 +1672,16 @@
     var approx = confirm('Is ' + amount + ' an estimate? OK = estimate (matched within 15%), Cancel = exact');
     var due = prompt('Due date, YYYY-MM-DD (optional)', '');
     post('/private/spend-plan/payable', {label:label, amount:amount, category:cat.trim(), due:due||null, hint:hint||null, approx:approx})
+      .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
+  });
+  document.getElementById('mIncAdd').addEventListener('click', function(e){
+    e.preventDefault();
+    var label = prompt('Where is it coming from?'); if(!label) return;
+    var amount = prompt('How much?'); if(!amount) return;
+    var hint = prompt('Payer name as it will appear on the bank statement (optional; otherwise matched on amount)', '');
+    var approx = confirm('Is ' + amount + ' an estimate? OK = estimate (matched within 15%), Cancel = exact');
+    var exp = prompt('Expected date, YYYY-MM-DD (optional)', '');
+    post('/private/spend-plan/receivable', {label:label, amount:amount, hint:hint||null, approx:approx, expected:exp||null})
       .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
   });
   document.getElementById('mRecAdd').addEventListener('click', function(e){

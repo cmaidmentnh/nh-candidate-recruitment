@@ -237,6 +237,59 @@ def match_payables(cur):
     return out
 
 
+def match_receivables(cur):
+    """Settle expected income against bank deposits, by the same rules as match_payables:
+    payer words, then exact amount, then within 15% for an estimate. Two or more candidate
+    deposits is reported, never guessed. Deposits are considered from seven days before the
+    expectation was entered onward."""
+    out = []
+    cur.execute("SELECT bank_fp FROM spend_receivable WHERE bank_fp IS NOT NULL")
+    claimed = {r[0] for r in cur.fetchall()}
+    cur.execute("""SELECT id, label, amount, approx, match_hint, created_at
+                     FROM spend_receivable WHERE active AND NOT received ORDER BY created_at""")
+    for rid, label, amt, approx, hint, created in cur.fetchall():
+        amt = float(amt)
+        cur.execute("""SELECT id, fingerprint, txn_date, description, amount, pending
+                         FROM bank_txn WHERE amount > 0 AND txn_date >= %s::date - 7""", (created,))
+        cands = [r for r in cur.fetchall() if r[1] not in claimed]
+        pick, how = None, ''
+        if hint:
+            words = [w for w in re.split(r'[\s,]+', hint.upper()) if len(w) > 2]
+            hinted = [r for r in cands if any(w in r[3].upper() for w in words)]
+            if len(hinted) == 1:
+                pick, how = hinted[0], 'payer'
+            elif len(hinted) > 1:
+                out.append('%s: %d deposits mention %s; which one?' % (label, len(hinted), hint))
+                continue
+        if not pick:
+            exact = [r for r in cands if abs(float(r[4]) - amt) < 0.005]
+            if len(exact) == 1:
+                pick, how = exact[0], 'exact amount'
+            elif len(exact) > 1:
+                out.append('%s: %d deposits of exactly $%s; which one?' % (label, len(exact), '{:,.2f}'.format(amt)))
+                continue
+        if not pick and approx:
+            near = [r for r in cands if abs(float(r[4]) - amt) <= 0.15 * amt]
+            if len(near) == 1:
+                pick, how = near[0], 'close amount'
+            elif len(near) > 1:
+                out.append('%s: %d deposits near $%s; which one?' % (label, len(near), '{:,.0f}'.format(amt)))
+                continue
+        if not pick:
+            continue
+        tid, fp, tdate, desc, tamt, pend = pick
+        got = float(tamt)
+        note = 'matched by %s to %s %s $%s' % (how, tdate.isoformat(), desc[:60], '{:,.2f}'.format(got))
+        if abs(got - amt) >= 0.005:
+            note += ' (expected $%s)' % '{:,.2f}'.format(amt)
+        cur.execute("""UPDATE spend_receivable SET received=true, received_at=%s, bank_fp=%s,
+                              match_note=%s, amount=%s WHERE id=%s""", (tdate, fp, note, got, rid))
+        cur.execute("UPDATE bank_txn SET category='income', category_set_by='matched' WHERE id=%s", (tid,))
+        claimed.add(fp)
+        out.append('%s: received. %s' % (label, note))
+    return out
+
+
 def check_balances(balances, rows):
     """The paste has to add up before it is trusted: pending rows sum to the pending total,
     and each posted balance is the next older balance plus this row's amount."""
