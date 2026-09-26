@@ -1417,6 +1417,9 @@ def ads_overview():
         live_ads = [a for a in ads if a.get('delivering')]
         dead_ads = [a for a in ads if not a.get('delivering') and not a.get('scheduled')]
         is_flo = kind.get(code) == 'floterial'
+        if is_flo:                       # Chris 26 Sep 2026: hide floterial listings; their ads run on the bases
+            t['flo'] += 1
+            continue
         r = {
             'code': code, 'tier': tier, 'towns': towns.get(code, ''),
             'candidates': cands.get(code, ''), 'floterial': is_flo,
@@ -1431,7 +1434,6 @@ def ads_overview():
         rows.append(r)
 
         t['total'] += 1
-        t['flo'] += 1 if is_flo else 0
         t['live'] += 1 if live_ads else 0
         t['sched'] += 1 if (code in linked and not live_ads) else 0
         t['spend'] += r['spend']

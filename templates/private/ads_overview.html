@@ -68,13 +68,13 @@
   <h4>Facebook ads, district by district</h4>
   <p class="lead">
     Every district in the plan, whether anything is running in it, what the creative looks like
-    and what it has cost. A floterial buys nothing of its own, so it shows what its base
-    districts are running instead. Those dollars belong to the base and are not counted twice.
+    and what it has cost. Floterials are not listed: they buy nothing of their own, and their
+    ads run in (and are counted under) their base districts.
   </p>
 
   <div class="kpis">
     <div class="kpi"><div class="lab">Districts in the plan</div>
-      <div class="n">{{ t.total }}</div><div class="sub">{{ t.flo }} of them floterials</div></div>
+      <div class="n">{{ t.total }}</div><div class="sub">base districts ({{ t.flo }} floterials not listed)</div></div>
     <div class="kpi"><div class="lab">With ads delivering</div>
       <div class="n good">{{ t.live }}</div><div class="sub">{{ t.sched }} linked but not started</div></div>
     <div class="kpi"><div class="lab">Nothing running</div>
@@ -94,7 +94,6 @@
     <button data-f="live">Delivering</button>
     <button data-f="none">Nothing running</button>
     <button data-f="dead">Ads not delivering</button>
-    <button data-f="flo">Floterials</button>
   </div>
 
   <div id="list">
