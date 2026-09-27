@@ -5068,7 +5068,7 @@ def surveys():
                               COALESCE(c.incumbent, false)
                        FROM filings f LEFT JOIN candidates c ON c.candidate_id = f.candidate_id
                        WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
-                         AND f.result <> 'lost'
+                         AND f.result NOT IN ('lost', 'withdrawn')
                        ORDER BY f.last_name, f.first_name""")
         rows = []
         by_id, by_nd = {}, {}

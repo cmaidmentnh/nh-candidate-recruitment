@@ -105,7 +105,7 @@ cur.execute("""
     JOIN candidates c ON c.candidate_id = f.candidate_id
     WHERE f.election_year = 2026 AND f.party = 'R'
       AND f.office = 'State Representative'
-      AND f.result <> 'lost'
+      AND f.result NOT IN ('lost', 'withdrawn')
       AND NOT EXISTS (SELECT 1 FROM candidate_campaign_progress p
                        WHERE p.candidate_id = c.candidate_id
                          AND p.intake_submitted_at IS NOT NULL)

@@ -348,7 +348,7 @@ cur.execute('''SELECT f.district_code, c.candidate_id, f.first_name, f.last_name
    c.email, c.email1, c.email2, c.dead_email, c.unsubscribed_email
  FROM filings f JOIN candidates c ON c.candidate_id=f.candidate_id
  WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
-   AND f.result='won'
+   AND f.result IN ('won', 'appointed')
  ORDER BY f.district_code''')
 rows=[dict(zip(['district','cid','first','last','email','email1','email2','dead','unsub'],r)) for r in cur.fetchall()]
 def pick(r):

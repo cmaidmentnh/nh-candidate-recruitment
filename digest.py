@@ -123,7 +123,7 @@ def _recipients(cur):
                    c.dead_email
             FROM filings f
             JOIN candidates c ON c.candidate_id = f.candidate_id
-            WHERE f.election_year = 2026 AND f.party = 'R' AND f.result <> 'lost'
+            WHERE f.election_year = 2026 AND f.party = 'R' AND f.result NOT IN ('lost', 'withdrawn')
               AND f.office = 'State Representative'
               AND COALESCE(NULLIF(c.email,''),NULLIF(c.email1,''),NULLIF(c.email2,'')) IS NOT NULL
         )

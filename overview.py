@@ -9,7 +9,7 @@ Two rules shaped it:
     built" tells you nothing; "5 walkbook requests waiting" is a job.
   * Say what a number means, not what it looks like it means. filings.result reads 'pending'
     for 239 R filings, which looks like missing data and is not: every roster in the codebase
-    selects `result <> 'lost'`, so a pending filing is a nominee and is already included in
+    selects `result NOT IN ('lost', 'withdrawn')`, so a pending filing is a nominee and is already included in
     the mail, the palm cards and the check-in chase. 'pending' means no primary contest to
     record, not an unknown outcome.
 
@@ -145,7 +145,7 @@ def _ballot(cur):
           SELECT DISTINCT full_district_code AS code, seat_count FROM districts
         ), r AS (
           SELECT district_code AS code, count(*) AS n FROM filings
-           WHERE election_year=%s AND office=%s AND party='R' AND result <> 'lost'
+           WHERE election_year=%s AND office=%s AND party='R' AND result NOT IN ('lost', 'withdrawn')
            GROUP BY 1
         )
         SELECT s.code, s.seat_count, COALESCE(r.n, 0)
@@ -159,7 +159,7 @@ def _ballot(cur):
           SELECT DISTINCT full_district_code AS code, seat_count FROM districts
         ), d AS (
           SELECT district_code AS code, count(*) AS n FROM filings
-           WHERE election_year=%s AND office=%s AND party='D' AND result <> 'lost'
+           WHERE election_year=%s AND office=%s AND party='D' AND result NOT IN ('lost', 'withdrawn')
            GROUP BY 1
         )
         SELECT count(*) FROM seats s LEFT JOIN d ON d.code = s.code
@@ -173,7 +173,7 @@ def _ballot(cur):
             'd_short_districts': dshort,
             'no_email': _scalar(cur, """
                 SELECT count(*) FROM filings f JOIN candidates c ON c.candidate_id=f.candidate_id
-                 WHERE f.election_year=%s AND f.office=%s AND f.party='R' AND f.result <> 'lost'
+                 WHERE f.election_year=%s AND f.office=%s AND f.party='R' AND f.result NOT IN ('lost', 'withdrawn')
                    AND COALESCE(NULLIF(TRIM(c.email),''), NULLIF(TRIM(c.email1),''),
                                 NULLIF(TRIM(c.email2),'')) IS NULL""", (YEAR, OFFICE))}
 
@@ -186,7 +186,7 @@ def _candidates(cur):
     """What the nominees have told us they need, and how many have told us anything."""
     base = """FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
                LEFT JOIN candidate_campaign_progress p ON p.candidate_id = c.candidate_id
-              WHERE f.election_year=%s AND f.office=%s AND f.party='R' AND f.result <> 'lost'"""
+              WHERE f.election_year=%s AND f.office=%s AND f.party='R' AND f.result NOT IN ('lost', 'withdrawn')"""
     args = (YEAR, OFFICE)
 
     total = _scalar(cur, "SELECT count(DISTINCT c.candidate_id) " + base, args)
@@ -509,7 +509,7 @@ def _jobs(cur):
             SELECT c.first_name || ' ' || c.last_name, f.district_code
               FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
              WHERE f.election_year = %s AND f.office = %s AND f.party = 'R'
-               AND f.result <> 'lost'
+               AND f.result NOT IN ('lost', 'withdrawn')
                AND COALESCE(NULLIF(TRIM(c.email),''), NULLIF(TRIM(c.email1),''),
                             NULLIF(TRIM(c.email2),'')) IS NULL
              ORDER BY f.district_code""", (YEAR, OFFICE))],

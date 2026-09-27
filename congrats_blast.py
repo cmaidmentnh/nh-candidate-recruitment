@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Post-primary congratulations and general-election intake for R State Rep nominees.
 
-Audience: filings 2026 / R / State Representative where result <> 'lost', i.e. everyone
+Audience: filings 2026 / R / State Representative where result NOT IN ('lost', 'withdrawn'), i.e. everyone
 on the November ballot, contested primary or not.
 
 Modes: list (preview recipients), test (one to chris@), send (full blast).
@@ -100,7 +100,7 @@ cur.execute("""
     JOIN candidates c ON c.candidate_id = f.candidate_id
     WHERE f.election_year = 2026 AND f.party = 'R'
       AND f.office = 'State Representative'
-      AND f.result <> 'lost'
+      AND f.result NOT IN ('lost', 'withdrawn')
     ORDER BY c.last_name, c.first_name
 """)
 rows = cur.fetchall()

@@ -129,7 +129,7 @@ def lookup(name, district):
                      FROM candidates c
                      JOIN filings f ON f.candidate_id=c.candidate_id
                     WHERE f.election_year=2026 AND f.office='State Representative'
-                      AND f.result<>'lost' AND lower(c.last_name)=lower(%s)
+                      AND f.result NOT IN ('lost', 'withdrawn') AND lower(c.last_name)=lower(%s)
                       AND f.district_code=%s LIMIT 1""", (ln, district))
     return cur.fetchone()
 

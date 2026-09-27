@@ -202,7 +202,7 @@ def _build_rows(cur):
                    c.email, c.email1, c.email2
             FROM filings f LEFT JOIN candidates c ON c.candidate_id = f.candidate_id
             WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
-              AND f.result <> 'lost'
+              AND f.result NOT IN ('lost', 'withdrawn')
             ORDER BY f.last_name, f.first_name
         """)
         base = cur.fetchall()
@@ -403,7 +403,7 @@ def progress_checkin():
         cur.execute("""
             SELECT count(*) FROM filings f
              WHERE f.election_year = 2026 AND f.party = 'R'
-               AND f.office = 'State Representative' AND f.result <> 'lost'""")
+               AND f.office = 'State Representative' AND f.result NOT IN ('lost', 'withdrawn')""")
         nominees = cur.fetchone()[0]
 
         money = [r for r in rows if r['raised'] is not None or r['coh'] is not None]

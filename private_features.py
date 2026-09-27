@@ -1383,7 +1383,7 @@ def ads_overview():
                                          ORDER BY c.last_name)
                          FROM filings f JOIN candidates c ON c.candidate_id = f.candidate_id
                         WHERE f.election_year = 2026 AND f.office = 'State Representative'
-                          AND f.party = 'R' AND f.result <> 'lost'
+                          AND f.party = 'R' AND f.result NOT IN ('lost', 'withdrawn')
                         GROUP BY 1""")
         cands = dict(cur.fetchall())
 
@@ -1678,7 +1678,7 @@ def spend_plan():
                               STRING_AGG(first_name || ' ' || last_name, ', ' ORDER BY last_name)
                        FROM filings
                        WHERE election_year = 2026 AND office = 'State Representative'
-                         AND result <> 'lost'
+                         AND result NOT IN ('lost', 'withdrawn')
                        GROUP BY district_code, party""")
         nominees = {}
         for dc, party, names in cur.fetchall():
@@ -1706,7 +1706,7 @@ def spend_plan():
                        JOIN candidates c ON c.candidate_id = f.candidate_id
                        LEFT JOIN candidate_campaign_progress p ON p.candidate_id = f.candidate_id
                        WHERE f.election_year = 2026 AND f.office = 'State Representative'
-                         AND f.party = 'R' AND f.result <> 'lost'
+                         AND f.party = 'R' AND f.result NOT IN ('lost', 'withdrawn')
                        ORDER BY f.district_code, c.last_name, c.first_name""")
         cands = {}
         for r in cur.fetchall():
@@ -1919,7 +1919,7 @@ def spend_plan_export():
                               STRING_AGG(first_name || ' ' || last_name, '; ' ORDER BY last_name)
                        FROM filings
                        WHERE election_year = 2026 AND office = 'State Representative'
-                         AND party = 'R' AND result <> 'lost'
+                         AND party = 'R' AND result NOT IN ('lost', 'withdrawn')
                        GROUP BY district_code""")
         nominees = dict(cur.fetchall())
     finally:
@@ -2008,7 +2008,7 @@ def spend_plan_district_print(code):
         cur.execute("""SELECT party, STRING_AGG(first_name || ' ' || last_name, ', ' ORDER BY last_name)
                        FROM filings
                        WHERE election_year = 2026 AND office = 'State Representative'
-                         AND district_code = %s AND result <> 'lost'
+                         AND district_code = %s AND result NOT IN ('lost', 'withdrawn')
                        GROUP BY party""", (code,))
         d['nominees'] = dict(cur.fetchall())
 
@@ -2612,7 +2612,7 @@ def spend_pieces():
 # have not opted out of committee materials. Written once because getting it subtly different
 # between the page and the CSV is how a candidate ends up missing from a printed piece.
 _LIVE_R = """f.election_year = 2026 AND f.office = 'State Representative'
-             AND f.party = 'R' AND f.result <> 'lost'"""
+             AND f.party = 'R' AND f.result NOT IN ('lost', 'withdrawn')"""
 
 
 def _piece_targets(cur, piece_id):
