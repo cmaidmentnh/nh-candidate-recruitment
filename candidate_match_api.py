@@ -462,6 +462,106 @@ def match_members():
     })
 
 
+@match_api_bp.route('/api/v1/general-ballot', methods=['GET'])
+@require_api_key
+def general_ballot():
+    """Every candidate on the 2026 general election ballot, from the Secretary of State's list.
+
+    Filters (all optional, case-insensitive): office (substring), party (D/R/I or the SoS label,
+    e.g. LIB), district (exact, e.g. 'Hillsborough 12' or '3'), county, town.
+    """
+    q = {k: (request.args.get(k) or '').strip() for k in ('office', 'party', 'district', 'county', 'town')}
+    where, params = ['election_year = %s'], [ELECTION_YEAR]
+    if q['office']:
+        where.append('office ILIKE %s'); params.append('%' + q['office'] + '%')
+    if q['party']:
+        where.append('(party = upper(%s) OR sos_party = upper(%s))'); params += [q['party']] * 2
+    if q['district']:
+        where.append('lower(district) = lower(%s)'); params.append(q['district'])
+    if q['county']:
+        where.append('lower(county) = lower(%s)'); params.append(q['county'])
+    if q['town']:
+        where.append('lower(town) = lower(%s)'); params.append(q['town'])
+    conn = _get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(f"""SELECT name, party, sos_party, office, district, county, town
+                          FROM sos_general_ballot WHERE {' AND '.join(where)}
+                         ORDER BY office, county NULLS FIRST, district, name""", params)
+        out = [dict(name=r[0], party=r[1], party_label=r[2], office=r[3], district=r[4],
+                    county=r[5], town=r[6]) for r in cur.fetchall()]
+        cur.close()
+    finally:
+        _release_db(conn)
+    _record_usage(getattr(request, 'api_key_id', None), 0)
+    return jsonify({'year': ELECTION_YEAR, 'source': 'NH Secretary of State general election candidate list',
+                    'count': len(out), 'candidates': out})
+
+
+def _house_districts():
+    """District -> {county, kind, seats, towns, bases/floterials}, from our reconciled tables."""
+    conn = _get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("""SELECT full_district_code, county_name, town, ward, seat_count
+                         FROM districts ORDER BY county_name, full_district_code, town, ward""")
+        d = {}
+        for code, county, town, ward, seats in cur.fetchall():
+            x = d.setdefault(code, {'district': code, 'county': county,
+                                    'number': int(code.rsplit(' ', 1)[1]), 'kind': 'base',
+                                    'seats': seats, 'towns': [], 'base_districts': [], 'floterials': []})
+            x['towns'].append({'town': town, 'ward': ward or None})
+        cur.execute('SELECT district_code, kind FROM district_relation')
+        for code, kind in cur.fetchall():
+            if code in d:
+                d[code]['kind'] = kind
+        cur.execute('SELECT floterial, base FROM district_floterial_base ORDER BY 1, 2')
+        for flot, base in cur.fetchall():
+            if flot in d and base in d:
+                d[flot]['base_districts'].append(base)
+                d[base]['floterials'].append(flot)
+        cur.close()
+    finally:
+        _release_db(conn)
+    for x in d.values():
+        if x['kind'] == 'base':
+            del x['base_districts']
+        else:
+            del x['floterials']
+    return d
+
+
+@match_api_bp.route('/api/v1/house-districts', methods=['GET'])
+@require_api_key
+def house_districts():
+    """All 203 NH House districts (400 seats): base and floterial, towns/wards, and how they nest.
+
+    Filters (optional): county, kind (base|floterial), district, town (+ ward for city wards).
+    With town, returns only the districts that town votes in (its base plus any floterial).
+    """
+    d = _house_districts()
+    county = (request.args.get('county') or '').strip().lower()
+    kind = (request.args.get('kind') or '').strip().lower()
+    code = (request.args.get('district') or '').strip().lower()
+    town = (request.args.get('town') or '').strip().lower()
+    ward = request.args.get('ward', type=int)
+    out = []
+    for x in d.values():
+        if county and x['county'].lower() != county:
+            continue
+        if kind and x['kind'] != kind:
+            continue
+        if code and x['district'].lower() != code:
+            continue
+        if town and not any(t['town'].lower() == town and (ward is None or t['ward'] in (ward, None))
+                            for t in x['towns']):
+            continue
+        out.append(x)
+    _record_usage(getattr(request, 'api_key_id', None), 0)
+    return jsonify({'year': ELECTION_YEAR, 'count': len(out), 'seats': sum(x['seats'] for x in out),
+                    'districts': out})
+
+
 @match_api_bp.route('/api/v1/health', methods=['GET'])
 def health():
     return jsonify({'ok': True, 'year': ELECTION_YEAR})

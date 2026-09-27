@@ -1,0 +1,715 @@
+Belknap 1|Amber Schaefer|DEM|CENTER HARBOR
+Belknap 1|Tom Ploszaj|REP|CENTER HARBOR
+Belknap 2|Dean S.T. Cascadden|DEM|MEREDITH
+Belknap 2|Seth Wheeler|DEM|MEREDITH
+Belknap 2|Matt Coker|REP|MEREDITH
+Belknap 2|Scott Wallace|REP|MEREDITH
+Belknap 3|William Lawrence, Jr.|DEM|TILTON
+Belknap 3|Steven Bunce|REP|TILTON
+Belknap 4|Liz Charlwood|DEM|BELMONT
+Belknap 4|Kevin M. Nugent, Jr.|REP|BELMONT
+Belknap 5|Marcia Hayward|DEM|LACONIA
+Belknap 5|Eric Hoffman|DEM|LACONIA
+Belknap 5|Lois A. Kessin|DEM|LACONIA
+Belknap 5|Denise Riley|DEM|LACONIA
+Belknap 5|Mike Bordes|REP|LACONIA
+Belknap 5|Timothy Minor|REP|LACONIA
+Belknap 5|Cody Pfaff|REP|LACONIA
+Belknap 5|Paul Rossi|REP|LACONIA
+Belknap 6|Allan Frank|DEM|GILFORD
+Belknap 6|Bob McLean|DEM|GILFORD
+Belknap 6|David Nagel|DEM|GILMANTON
+Belknap 6|Lisa Rivard|DEM|GILFORD
+Belknap 6|Glen Aldrich|REP|GILFORD
+Belknap 6|Priscilla M. Bean|REP|GILFORD
+Belknap 6|Colleen M. Harkey|REP|GILMANTON
+Belknap 6|Jade Wood|REP|GILFORD
+Belknap 7|Stephen Copithorne|DEM|ALTON
+Belknap 7|Laura Dunham|DEM|BARNSTEAD
+Belknap 7|Nancy Mitchell|DEM|ALTON
+Belknap 7|Barbara Comtois|REP|BARNSTEAD
+Belknap 7|Paul A. Terry|REP|ALTON
+Belknap 7|Peter R. Varney|REP|ALTON
+Belknap 8|Donald J. Giguere|DEM|TILTON
+Belknap 8|Don House|DEM|BELMONT
+Belknap 8|Lisa M. Freeman|REP|TILTON
+Belknap 8|Cameron Thompson|REP|SANBORNTON
+Carroll 1|Benjamin Colbath|DEM|CONWAY
+Carroll 1|Ellin M. Leonard|DEM|CONWAY
+Carroll 1|David Paige|DEM|CONWAY
+Carroll 1|Gregory T. Corrigan|REP|CONWAY
+Carroll 1|Robert W. Nelson|REP|66 EMERY LN
+Carroll 1|Karen C. Umberger|REP|CONWAY
+Carroll 2|Anita Burroughs|DEM|BARTLETT
+Carroll 2|Adam Heard|DEM|PO BOX 201
+Carroll 2|Erlon Jones|REP|CHATHAM
+Carroll 2|Jennifer LePla|REP|PO BOX 325
+Carroll 3|Todd Milliken|DEM|MADISON
+Carroll 3|Bryan Randolph|DEM|MOULTONBOROUGH
+Carroll 3|Richard R. Brown|REP|MOULTONBOROUGH
+Carroll 3|Karel A. Crawford|REP|MOULTONBOROUGH
+Carroll 4|Annie Gehring|DEM|WAKEFIELD
+Carroll 4|Lino M. Avellani|REP|WAKEFIELD
+Carroll 4|Mike Belcher|REP|WAKEFIELD
+Carroll 5|Morgan Bultman|DEM|OSSIPEE
+Carroll 5|Steven Brown|REP|OSSIPEE
+Carroll 6|Deirdre McEachern|DEM|WOLFEBORO
+Carroll 6|Phoebe VanScoy-Giessler|DEM|PO BOX 97
+Carroll 6|Tim Bauman|REP|WOLFEBORO
+Carroll 6|John T. MacDonald|REP|WOLFEBORO
+Carroll 7|Karen Burnett-Kurie|DEM|WOLFEBORO
+Carroll 7|Dale Fincher|REP|WOLFEBORO
+Carroll 8|Jim Pittman|DEM|EFFINGHAM
+Carroll 8|George Randell|DEM|MOULTONBOROUGH
+Carroll 8|Tammy Garthwaite|REP|WAKEFIELD
+Carroll 8|Colin Mitchell|REP|WAKEFIELD
+Carroll 8|George Randell|IND|MOULTONBOROUGH
+Cheshire 1|Dylan Germana|DEM|KEENE
+Cheshire 1|Timothy J. Donovan|REP|KEENE
+Cheshire 2|Dru Fox|DEM|KEENE
+Cheshire 3|Philip Jones|DEM|KEENE
+Cheshire 3|Marissa W. Salisbury|REP|KEENE
+Cheshire 4|Jodi Newell|DEM|KEENE
+Cheshire 4|Robert Johnson|REP|KEENE
+Cheshire 5|Lucy McVitty Weber|DEM|WALPOLE
+Cheshire 5|William J. Sommer|REP|WALPOLE
+Cheshire 6|Paul Berch|DEM|WESTMORELAND
+Cheshire 6|Cathryn A. Harvey|DEM|CHESTERFIELD
+Cheshire 6|Sean Graves|REP|CHESTERFIELD
+Cheshire 6|Zachary Nutting|REP|CHESTERFIELD
+Cheshire 7|Terri O'Rorke|DEM|KEENE
+Cheshire 7|Jonathan Liptak|REP|KEENE
+Cheshire 8|Christine L. Parshall|DEM|MARLBOROUGH
+Cheshire 9|Jim Gruber|DEM|ALSTEAD
+Cheshire 9|Rich Nalevanko|REP|ALSTEAD
+Cheshire 10|Alan Gross|DEM|SWANZEY
+Cheshire 10|Steve Russell|DEM|SWANZEY
+Cheshire 10|Sly Karasinski|REP|SWANZEY
+Cheshire 10|Michael Ralph York|REP|SWANZEY
+Cheshire 11|Lindseigh Picard|DEM|WINCHESTER
+Cheshire 11|Denis Vincent Murphy II|REP|WINCHESTER
+Cheshire 12|Kristan Tilton|DEM|TROY
+Cheshire 12|Dick Thackston|REP|TROY
+Cheshire 13|Tom Ahlborn-Hsu|DEM|JAFFREY
+Cheshire 13|Matthew Santonastaso|REP|JAFFREY
+Cheshire 14|Gene F. Andersen|DEM|RINDGE
+Cheshire 14|John B. Hunt|REP|RINDGE
+Cheshire 15|Nicholas Germana|DEM|KEENE
+Cheshire 15|Samantha Jacobs|DEM|KEENE
+Cheshire 15|Matthew Roach|REP|HINSDALE
+Cheshire 15|Becky Shields|REP|HINSDALE
+Cheshire 16|Lucius Parshall|DEM|MARLBOROUGH
+Cheshire 16|Alexander Nalevanko|REP|ALSTEAD
+Cheshire 17|Jennie Gomarlo|DEM|SWANZEY
+Cheshire 17|Jennifer Rhodes|REP|WINCHESTER
+Cheshire 18|Allen Davis|DEM|DUBLIN
+Cheshire 18|Rory Lovett Sherman|DEM|DUBLIN
+Cheshire 18|Rita Mattson|REP|DUBLIN
+Cheshire 18|Jim Qualey|REP|RINDGE
+Coos 1|Jay Ennis|DEM|DALTON
+Coos 1|Lee Ann Potter|DEM|LANCASTER
+Coos 1|Sam Hoehn|REP|LANCASTER
+Coos 1|Amy Norris|REP|LANCASTER
+Coos 2|Lincoln Robertson|DEM|MILAN
+Coos 2|Arnold G. Davis|REP|MILAN
+Coos 3|Mike Ouellet|REP|COLEBROOK
+Coos 4|Dave Holmander|DEM|WHITEFIELD
+Coos 4|Seth King|REP|WHITEFIELD
+Coos 4|Scott McKinnon Black|IND|WHITEFIELD
+Coos 5|Mark Evans|REP|BERLIN
+Coos 5|Peter Morency|REP|BERLIN
+Coos 5|Cassie Mason|IND|BERLIN
+Coos 6|Richard Umiker|DEM|RANDOLPH
+Coos 6|Robert Gargano|REP|GORHAM
+Coos 7|Corinne Cascadden|DEM|BERLIN
+Coos 7|Lori Korzen|REP|BERLIN
+Grafton 1|Joseph Goderic Beaulieu|DEM|MONROE
+Grafton 1|Timothy T. Egan|DEM|SUGAR HILL
+Grafton 1|Linda Massimilla|DEM|LITTLETON
+Grafton 1|Joseph Barton|REP|LITTLETON
+Grafton 1|Calvin Beaulier|REP|LITTLETON
+Grafton 1|Andrew Dorsett|REP|LYMAN
+Grafton 2|Jared Sullivan|DEM|BETHLEHEM
+Grafton 3|Jerry M. Stringham|DEM|WOODSTOCK
+Grafton 3|Bonnie Ham|REP|WOODSTOCK
+Grafton 4|Heather P. Baldwin|DEM|THORNTON
+Grafton 4|David Adams Rardin|REP|THORNTON
+Grafton 5|Dustin Vigneault|DEM|HAVERHILL
+Grafton 5|Marie Louise Bjelobrk|REP|HAVERHILL
+Grafton 5|Greg Mathieson|REP|HAVERHILL
+Grafton 6|Paul J. Goundrey|DEM|ORFORD
+Grafton 6|Linda Franz|REP|WENTWORTH
+Grafton 7|Janet Marie Lucas|DEM|CAMPTON
+Grafton 7|Jon A. Gablinske|REP|556 NH ROUTE 175
+Grafton 8|Bill Bolton|DEM|PLYMOUTH
+Grafton 8|Sallie Fellows|DEM|HOLDERNESS
+Grafton 8|Peter Lovett|DEM|HOLDERNESS
+Grafton 8|George Kirk|REP|HOLDERNESS
+Grafton 9|Ella V. Barrett|DEM|ORANGE
+Grafton 9|Bradley Macrae|REP|DORCHESTER
+Grafton 10|Marc E. Bourassa|DEM|BRISTOL
+Grafton 10|Steven Pihl Coffill|REP|BRISTOL
+Grafton 11|Roger B. Larochelle, Jr.|DEM|HEBRON
+Grafton 11|Jake Abuhav|REP|GRAFTON
+Grafton 12|Mary Hakken-Phillips|DEM|HANOVER
+Grafton 12|Russell Muirhead|DEM|HANOVER
+Grafton 12|Ellen Rockmore|DEM|HANOVER
+Grafton 12|Terry Spahr|DEM|HANOVER
+Grafton 13|Laurel Stavis|DEM|LEBANON
+Grafton 14|Kathryn Brennan|DEM|LEBANON
+Grafton 15|Zoe Hill|DEM|LEBANON
+Grafton 16|David Fracht|DEM|ENFIELD
+Grafton 17|Thomas Cormen|DEM|LEBANON
+Grafton 18|Marko Kloos|DEM|ENFIELD
+Grafton 18|Donald McFarlane|REP|ORANGE
+Hillsborough 1|Lisa Brown|DEM|PELHAM
+Hillsborough 1|Noah Lamoureaux|DEM|PELHAM
+Hillsborough 1|Debbie Ryan|DEM|PELHAM
+Hillsborough 1|Deborah Kruzel|REP|PELHAM
+Hillsborough 1|Tom Mannion|REP|PELHAM
+Hillsborough 1|Diane Rogers|REP|PELHAM
+Hillsborough 1|Jeffrey F. Tenczar|REP|PELHAM
+Hillsborough 2|Todd C. Fahey|DEM|BEDFORD
+Hillsborough 2|John K. Fitzgerald|DEM|BEDFORD
+Hillsborough 2|Jeff Kerr|DEM|BEDFORD
+Hillsborough 2|Ryan Nugent|DEM|BEDFORD
+Hillsborough 2|Sheila Quick|DEM|BEDFORD
+Hillsborough 2|Catherine A. Rombeau|DEM|BEDFORD
+Hillsborough 2|Geoffrey Wellington|DEM|BEDFORD
+Hillsborough 2|Matthew Castanien|REP|BEDFORD
+Hillsborough 2|Phil Greazzo|REP|BEDFORD
+Hillsborough 2|Peter M. Kujawski|REP|BEDFORD
+Hillsborough 2|Brian Labrie|REP|BEDFORD
+Hillsborough 2|Pat MacMonagle|REP|BEDFORD
+Hillsborough 2|Kristin Noble|REP|BEDFORD
+Hillsborough 2|John Schneller|REP|BEDFORD
+Hillsborough 3|Suzanne A. Beaulieu|DEM|NASHUA
+Hillsborough 3|Fred Davis|DEM|NASHUA
+Hillsborough 3|Michael Joseph|DEM|NASHUA
+Hillsborough 3|John Menyhard|REP|NASHUA
+Hillsborough 4|Renae Lias|DEM|NASHUA
+Hillsborough 4|Camille Pattison|DEM|NASHUA
+Hillsborough 4|Linda Vandecar Ryan|DEM|NASHUA
+Hillsborough 4|Shawn Martin|REP|NASHUA
+Hillsborough 5|Susan A. Elberger|DEM|NASHUA
+Hillsborough 5|Heather Raymond|DEM|NASHUA
+Hillsborough 5|Dale Swanson|DEM|NASHUA
+Hillsborough 5|Paul Schibbelhute|REP|NASHUA
+Hillsborough 6|Michele Roussel Buckley|DEM|NASHUA
+Hillsborough 6|Lee Ann Kluger|DEM|NASHUA
+Hillsborough 6|Adam R. Thompson|DEM|NASHUA
+Hillsborough 6|Doris Hohensee|REP|NASHUA
+Hillsborough 6|Elena Pavlou|REP|NASHUA
+Hillsborough 6|Daniel Richardson|REP|NASHUA
+Hillsborough 7|Charlene Bangs Pedersen|DEM|NASHUA
+Hillsborough 7|Louis C. Juris|DEM|NASHUA
+Hillsborough 7|Jim Mahoney|DEM|NASHUA
+Hillsborough 7|Avalon Lewis|REP|NASHUA
+Hillsborough 7|Roy H. Parker|REP|NASHUA
+Hillsborough 8|Efstathia C. Booras|DEM|NASHUA
+Hillsborough 8|Christal Lloyd|DEM|NASHUA
+Hillsborough 8|Frances Nutter-Upham|DEM|NASHUA
+Hillsborough 8|Travis Tripodi|REP|NASHUA
+Hillsborough 9|Rich Green|DEM|NASHUA
+Hillsborough 9|Sanjeev K. Manohar|DEM|NASHUA
+Hillsborough 9|Santosh D. Salvi|DEM|NASHUA
+Hillsborough 9|Joseph Cole|REP|NASHUA
+Hillsborough 10|Linda Harriott-Gathright|DEM|NASHUA
+Hillsborough 10|Marty Jack|DEM|NASHUA
+Hillsborough 10|Samantha O'Loughlin|DEM|NASHUA
+Hillsborough 10|Bill Ohm|REP|NASHUA
+Hillsborough 11|Manoj Chourasia|DEM|NASHUA
+Hillsborough 11|Will Darby|DEM|NASHUA
+Hillsborough 11|Arya Shams|DEM|NASHUA
+Hillsborough 11|Kristie Hart|REP|NASHUA
+Hillsborough 12|Rebecca Boutin|DEM|MERRIMACK
+Hillsborough 12|Matthew Brown|DEM|MERRIMACK
+Hillsborough 12|Nancy A. Murphy|DEM|MERRIMACK
+Hillsborough 12|Marc Nozell|DEM|10 WILDCAT FALLS RD
+Hillsborough 12|Mary Beth Raven|DEM|9 FOUR WINDS RD
+Hillsborough 12|Heather Robitaille|DEM|45 SPRINGFIELD CIR
+Hillsborough 12|Rosemarie L. Rung|DEM|MERRIMACK
+Hillsborough 12|Wendy E. N Thomas|DEM|10 WILDCAT FALLS RD
+Hillsborough 12|Kevin Francis Ballantine|REP|MERRIMACK
+Hillsborough 12|Bill Boyd|REP|MERRIMACK
+Hillsborough 12|Julie Miles|REP|MERRIMACK
+Hillsborough 12|Maureen Mooney|REP|PO BOX 1676
+Hillsborough 12|Jeanine Notter|REP|MERRIMACK
+Hillsborough 12|Adam Presa|REP|MERRIMACK
+Hillsborough 12|Kevin Southwick|REP|36 PETER RD
+Hillsborough 12|Wolfram von Schoen|REP|MERRIMACK
+Hillsborough 12|Kyle Haines|IND|57 NATICOOK RD
+Hillsborough 13|Luan Baci|DEM|HUDSON
+Hillsborough 13|James Battis|DEM|HUDSON
+Hillsborough 13|James M. Caron|DEM|HUDSON
+Hillsborough 13|Kate Messner|DEM|HUDSON
+Hillsborough 13|Don Staveley|DEM|HUDSON
+Hillsborough 13|Dillon Dumont|REP|HUDSON
+Hillsborough 13|Cathy Kenny|REP|HUDSON
+Hillsborough 13|Andrew Prout|REP|HUDSON
+Hillsborough 13|Tom Trost|REP|HUDSON
+Hillsborough 13|Jordan Ulery|REP|HUDSON
+Hillsborough 13|Bob Wherry|REP|HUDSON
+Hillsborough 13|C. Mark DelSesto|IND|HUDSON
+Hillsborough 14|Ray Ealy|DEM|LITCHFIELD
+Hillsborough 14|Paula Paciulan|DEM|LITCHFIELD
+Hillsborough 14|Rich Lascelles|REP|LITCHFIELD
+Hillsborough 14|Raymond C. Peeples, Jr.|REP|LITCHFIELD
+Hillsborough 15|Michael Farley|DEM|MANCHESTER
+Hillsborough 15|Michael Fitzell|DEM|MANCHESTER
+Hillsborough 15|Mark McLean|REP|MANCHESTER
+Hillsborough 15|Mark Proulx|REP|MANCHESTER
+Hillsborough 16|Ben Baroody|DEM|MANCHESTER
+Hillsborough 16|Maxine Mosley|DEM|MANCHESTER
+Hillsborough 16|David A. Smith|REP|MANCHESTER
+Hillsborough 16|Michael J. Tkacz|REP|MANCHESTER
+Hillsborough 17|Rob Fox|DEM|MANCHESTER
+Hillsborough 17|Sean Parr|DEM|MANCHESTER
+Hillsborough 17|Ben Prescott|REP|MANCHESTER
+Hillsborough 18|Jessica Grill|DEM|MANCHESTER
+Hillsborough 18|James Normand|DEM|MANCHESTER
+Hillsborough 18|Steven Kesselring|REP|MANCHESTER
+Hillsborough 19|Jane Beaulieu|DEM|MANCHESTER
+Hillsborough 19|Chrissy Simonds|DEM|MANCHESTER
+Hillsborough 19|Matt Drew|REP|MANCHESTER
+Hillsborough 19|Mickey Mullin|REP|MANCHESTER
+Hillsborough 20|Pauline Martineau|DEM|MANCHESTER
+Hillsborough 20|Alissandra Murray|DEM|MANCHESTER
+Hillsborough 20|Pierre M. Dupont|REP|MANCHESTER
+Hillsborough 20|Jose R. Marte|REP|MANCHESTER
+Hillsborough 21|Jeff Goley|DEM|MANCHESTER
+Hillsborough 21|Christine Seibert|DEM|MANCHESTER
+Hillsborough 21|Chris Morgan|REP|MANCHESTER
+Hillsborough 22|Greg Erskine|DEM|MANCHESTER
+Hillsborough 22|Nicole Leapley|DEM|MANCHESTER
+Hillsborough 22|Max Abramson|REP|MANCHESTER
+Hillsborough 22|Brittany Ping|REP|MANCHESTER
+Hillsborough 23|Mary Ngwanda Georges|DEM|MANCHESTER
+Hillsborough 23|Jean Jeudy|DEM|MANCHESTER
+Hillsborough 24|Frank Anthony|DEM|MANCHESTER
+Hillsborough 24|Jessica Margeson|DEM|MANCHESTER
+Hillsborough 24|Shuvom Ghose|REP|MANCHESTER
+Hillsborough 24|Paul LaFerriere|REP|MANCHESTER
+Hillsborough 25|Heather Deiner|DEM|MANCHESTER
+Hillsborough 25|Kathy Staub|DEM|MANCHESTER
+Hillsborough 25|Kathleen Paquette|REP|MANCHESTER
+Hillsborough 26|Mary Freitas|DEM|MANCHESTER
+Hillsborough 26|Patrick N. Long|DEM|MANCHESTER
+Hillsborough 26|Brian Cole|REP|MANCHESTER
+Hillsborough 26|Henry Emele|REP|MANCHESTER
+Hillsborough 27|Mary Murphy|REP|FRANCESTOWN
+Hillsborough 27|Timothy J. Coffin|IND|FRANCESTOWN
+Hillsborough 28|David Erikson|DEM|WEARE
+Hillsborough 28|Benson H. Goodwin|DEM|WEARE
+Hillsborough 28|Travis Corcoran|REP|WEARE
+Hillsborough 28|Keith Erf|REP|WEARE
+Hillsborough 29|Karyn Battey|DEM|GOFFSTOWN
+Hillsborough 29|Christopher Calhoun|DEM|GOFFSTOWN
+Hillsborough 29|Judi L. Lanza|DEM|GOFFSTOWN
+Hillsborough 29|Marie B. Morgan|DEM|GOFFSTOWN
+Hillsborough 29|Joe Alexander|REP|GOFFSTOWN
+Hillsborough 29|Shanun R. Carey|REP|GOFFSTOWN
+Hillsborough 29|Henry R. Giasson III|REP|GOFFSTOWN
+Hillsborough 29|Sherri Reinfurt|REP|GOFFSTOWN
+Hillsborough 30|W. Gordon Allen|DEM|ANTRIM
+Hillsborough 30|William Bryk|DEM|ANTRIM
+Hillsborough 30|Janet McEwen|DEM|ANTRIM
+Hillsborough 30|Larry Baker|REP|HILLSBOROUGH
+Hillsborough 30|Austin Cottle|REP|ANTRIM
+Hillsborough 30|Tim Morehouse|REP|ANTRIM
+Hillsborough 31|Molly C. Howard|DEM|HANCOCK
+Hillsborough 31|Jarvis M. Adams IV|REP|GREENFIELD
+Hillsborough 32|Richard Swanson|DEM|WILTON
+Hillsborough 32|Kermit Williams|DEM|WILTON
+Hillsborough 32|Diane Kelley|REP|TEMPLE
+Hillsborough 32|Jim Kofalt|REP|WILTON
+Hillsborough 32|Shane Sirois|REP|NEW IPSWICH
+Hillsborough 33|Peter R. Leishman|DEM|PETERBOROUGH
+Hillsborough 33|Jonah Orion Wheeler|DEM|PETERBOROUGH
+Hillsborough 33|Kimberly Thomas|REP|PETERBOROUGH
+Hillsborough 34|Stephanie Grund|DEM|AMHERST
+Hillsborough 34|Daniel LeClerc|DEM|AMHERST
+Hillsborough 34|Daniel T. Veilleux|DEM|AMHERST
+Hillsborough 34|Jason Hennessey|REP|AMHERST
+Hillsborough 34|Russ Hodgkins|REP|AMHERST
+Hillsborough 34|Diane Layton|REP|AMHERST
+Hillsborough 35|Kat McGhee|DEM|HOLLIS
+Hillsborough 35|Ben Ming|DEM|HOLLIS
+Hillsborough 35|Liz Barbour|REP|HOLLIS
+Hillsborough 35|Jim Kelly|REP|HOLLIS
+Hillsborough 36|Michael Pellerito|DEM|BROOKLINE
+Hillsborough 36|Stephen Spratt|DEM|GREENVILLE
+Hillsborough 36|Diane Pauer|REP|BROOKLINE
+Hillsborough 36|John W. Suiter|REP|MASON
+Hillsborough 37|Megan A. Murray|DEM|AMHERST
+Hillsborough 37|Michael E. Thornton|REP|MILFORD
+Hillsborough 37|Daryl D'Angelo|CLA|AMHERST
+Hillsborough 38|Mahendra Bakshi|DEM|LITCHFIELD
+Hillsborough 38|Heidi P. Jakoby|DEM|HUDSON
+Hillsborough 38|Adam Haverstock|REP|HUDSON
+Hillsborough 38|Ted Trost|REP|HUDSON
+Hillsborough 39|Ellen A. Boudreau|DEM|MANCHESTER
+Hillsborough 39|Tommy Katsiantonis|DEM|MANCHESTER
+Hillsborough 39|Jon DiPietro|REP|MANCHESTER
+Hillsborough 39|William Infantine|REP|MANCHESTER
+Hillsborough 40|Erin Kerwin|DEM|MANCHESTER
+Hillsborough 40|Mark S. Mackenzie|DEM|MANCHESTER
+Hillsborough 40|Robert Richard-Snipes|DEM|MANCHESTER
+Hillsborough 40|Trinidad Tellez|DEM|MANCHESTER
+Hillsborough 40|Lynne M. Cumming|REP|MANCHESTER
+Hillsborough 40|Carlos Gonzalez|REP|MANCHESTER
+Hillsborough 40|Bill O'Brien|REP|MANCHESTER
+Hillsborough 40|Robert Rivera|REP|MANCHESTER
+Hillsborough 41|Lily M. Foss|DEM|MANCHESTER
+Hillsborough 41|Bishwa Bahadur Shah|DEM|MANCHESTER
+Hillsborough 41|Tom Stewart|DEM|MANCHESTER
+Hillsborough 41|Ryan Hebert|REP|MANCHESTER
+Hillsborough 41|Jason Hodgdon|REP|MANCHESTER
+Hillsborough 41|Joseph Skinner|REP|MANCHESTER
+Hillsborough 42|Teri Harkins|DEM|NEW BOSTON
+Hillsborough 42|Lee C. Nyquist|DEM|NEW BOSTON
+Hillsborough 42|Peter Ryder|DEM|NEW BOSTON
+Hillsborough 42|Gerald Griffin|REP|MONT VERNON
+Hillsborough 42|Rob Lovett|REP|MONT VERNON
+Hillsborough 42|Lisa C. M. Post|REP|LYNDEBOROUGH
+Hillsborough 43|Ethan Aho|DEM|MILFORD
+Hillsborough 43|Paul Dargie|DEM|MILFORD
+Hillsborough 43|Claire Holston|DEM|MILFORD
+Hillsborough 43|Maria Elizabeth Perez|DEM|MILFORD
+Hillsborough 43|William J. Bieschke|REP|MILFORD
+Hillsborough 43|Gary Daniels|REP|MILFORD
+Hillsborough 43|Elizabeth Keenan|REP|MILFORD
+Hillsborough 43|Vanessa L. Sheehan|REP|MILFORD
+Hillsborough 44|Chris Conroy|DEM|WEARE
+Hillsborough 44|Bob Jones|DEM|GOFFSTOWN
+Hillsborough 44|Ross Berry|REP|WEARE
+Hillsborough 44|Lisa Mazur|REP|GOFFSTOWN
+Hillsborough 45|Jerry Roche|DEM|BROOKLINE
+Hillsborough 45|Jack Flanagan|REP|MASON
+Merrimack 1|Lorrie J. Carey|DEM|BOSCAWEN
+Merrimack 1|Rick Devoid|REP|BOSCAWEN
+Merrimack 2|Joyce May Fulweiler|DEM|NORTHFIELD
+Merrimack 2|Gregory Hill|REP|NORTHFIELD
+Merrimack 3|Scott A. Burns|DEM|FRANKLIN
+Merrimack 3|Vivian Marie Hall|DEM|FRANKLIN
+Merrimack 3|Werner D. Horn|REP|FRANKLIN
+Merrimack 3|Michael Visconti|REP|FRANKLIN
+Merrimack 4|Cody York|DEM|CANTERBURY
+Merrimack 4|Jose Eduardo Cambrils|REP|LOUDON
+Merrimack 4|Michael Moffett|REP|LOUDON
+Merrimack 5|Lorna Carlisle|DEM|SALISBURY
+Merrimack 5|Thomas Ware|DEM|ANDOVER
+Merrimack 5|Louise Andrus|REP|SALISBURY
+Merrimack 5|Deborah Aylward|REP|DANBURY
+Merrimack 6|Tom Schamberg|DEM|WILMOT
+Merrimack 6|Paul M. Little|REP|SUTTON
+Merrimack 7|Karen Elizabeth Ebel|DEM|NEW LONDON
+Merrimack 7|Gregory M. Sargent|DEM|NEW LONDON
+Merrimack 7|Dorothy L. Hitchmoth|REP|NEW LONDON
+Merrimack 8|Tony Caplan|DEM|HENNIKER
+Merrimack 8|Eileen Kelly|DEM|BRADFORD
+Merrimack 8|Stephanie Payeur|DEM|HENNIKER
+Merrimack 8|Matt Center|REP|HENNIKER
+Merrimack 8|Stephen Craig Pierce|REP|BRADFORD
+Merrimack 8|Natalie J. Wells|REP|WARNER
+Merrimack 9|Eleana M. Colby|DEM|BOW
+Merrimack 9|Muriel Hall|DEM|BOW
+Merrimack 9|David Luneau|DEM|HOPKINTON
+Merrimack 9|James Newsom|DEM|HOPKINTON
+Merrimack 9|John F. Martin|REP|BOW
+Merrimack 9|Matthew Poulin|REP|BOW
+Merrimack 10|Lucas J. Coriaty|DEM|HOOKSETT
+Merrimack 10|Ricky Gurung|DEM|HOOKSETT
+Merrimack 10|William Lynch|DEM|HOOKSETT
+Merrimack 10|Germano Mendes Martins|DEM|HOOKSETT
+Merrimack 10|Stephen Boyd|REP|HOOKSETT
+Merrimack 10|Pamela McMahon|REP|HOOKSETT
+Merrimack 10|Yury Polozov|REP|HOOKSETT
+Merrimack 10|Thomas C. Walsh|REP|HOOKSETT
+Merrimack 11|Al Turcotte|DEM|ALLENSTOWN
+Merrimack 11|Matthew Pitaro|REP|ALLENSTOWN
+Merrimack 12|Mariana R. Beer|DEM|PEMBROKE
+Merrimack 12|Kenneth Nivison|DEM|PEMBROKE
+Merrimack 12|Peter L. Mehegan|REP|PEMBROKE
+Merrimack 12|Brian Seaworth|REP|PEMBROKE
+Merrimack 13|Cyril Aures|REP|CHICHESTER
+Merrimack 13|Clayton Wood|REP|PITTSFIELD
+Merrimack 13|Becky Berk|IND|PITTSFIELD
+Merrimack 13|Paul Twomey|IND|CHICHESTER
+Merrimack 14|Glenn Horner|DEM|EPSOM
+Merrimack 14|Gary Matteson|REP|EPSOM
+Merrimack 15|Tracy Bricchi|DEM|CONCORD
+Merrimack 16|Connie Lane|DEM|CONCORD
+Merrimack 16|Laurence Weissbrot|REP|CONCORD
+Merrimack 17|Beth Richards|DEM|CONCORD
+Merrimack 18|Lisa D. Beaudoin|DEM|CONCORD
+Merrimack 18|Elijah J. Wilson|REP|CONCORD
+Merrimack 19|Mary Jane Wallner|DEM|CONCORD
+Merrimack 20|Nathan Giffard|DEM|CONCORD
+Merrimack 20|Jonathan Clark|REP|CONCORD
+Merrimack 21|Timothy Soucy|DEM|CONCORD
+Merrimack 21|Darryl Berleth|REP|CONCORD
+Merrimack 22|Alison Murphy|DEM|CONCORD
+Merrimack 22|Jonathan R. Cate|REP|CONCORD
+Merrimack 23|Kristopher Levesque|DEM|CONCORD
+Merrimack 23|Andrew Georgevits|REP|CONCORD
+Merrimack 24|Matthew Hicks|DEM|CONCORD
+Merrimack 25|Erica Russell|DEM|NORTHFIELD
+Merrimack 25|James Thibault|REP|FRANKLIN
+Merrimack 26|Harold D. Tuttle|DEM|ANDOVER
+Merrimack 26|Alvin B. See|REP|LOUDON
+Merrimack 27|Harold Kozlowski|DEM|HOOKSETT
+Merrimack 27|Phillip James Walker|DEM|DUNBARTON
+Merrimack 27|Ray Plante|REP|DUNBARTON
+Merrimack 27|Vanessa Poulin|REP|EPSOM
+Merrimack 28|Lisa Brown|DEM|CONCORD
+Merrimack 29|Kris Schultz|DEM|CONCORD
+Merrimack 30|Jason Quinno|DEM|CONCORD
+Merrimack 30|Robert C. Washburn|REP|CONCORD
+Rockingham 1|Donna Danis|DEM|NOTTINGHAM
+Rockingham 1|Hal Rafter|DEM|NOTTINGHAM
+Rockingham 1|Pamela Sanderson|DEM|NORTHWOOD
+Rockingham 1|Scott Bryer|REP|NORTHWOOD
+Rockingham 1|James Guzofski|REP|NORTHWOOD
+Rockingham 1|Paul Tudor|REP|NORTHWOOD
+Rockingham 2|Kendra Cohen|DEM|DEERFIELD
+Rockingham 2|Judith Lindsey|DEM|CANDIA
+Rockingham 2|Robert Prieto|DEM|DEERFIELD
+Rockingham 2|Will Huebner|REP|DEERFIELD
+Rockingham 2|Jason Osborne|REP|AUBURN
+Rockingham 2|James Spillane|REP|DEERFIELD
+Rockingham 3|Chuck Heuer|DEM|CHESTER
+Rockingham 3|Mary J. Ford|REP|CHESTER
+Rockingham 4|Art Hunt|DEM|RAYMOND
+Rockingham 4|Christine Pierce|DEM|RAYMOND
+Rockingham 4|Cindy Bennett|REP|RAYMOND
+Rockingham 4|Michael Drago|REP|RAYMOND
+Rockingham 4|Brian Nadeau|REP|RAYMOND
+Rockingham 5|Joseph Perry|DEM|EPPING
+Rockingham 5|Mark Vallone|DEM|EPPING
+Rockingham 5|Trevor Morse|REP|EPPING
+Rockingham 5|John Scully|REP|EPPING
+Rockingham 6|Eric S. Turer|DEM|BRENTWOOD
+Rockingham 6|Allen Cook|REP|BRENTWOOD
+Rockingham 7|JJ DeFeo|DEM|FREMONT
+Rockingham 7|Laurence A. Miner|REP|FREMONT
+Rockingham 8|Sayra Lynn DeVito|REP|DANVILLE
+Rockingham 9|Kevin M. Major|DEM|SANDOWN
+Rockingham 9|Matthew Brooks|REP|SANDOWN
+Rockingham 9|Kevin M. Major|REP|SANDOWN
+Rockingham 10|Michael Cahill|DEM|NEWMARKET
+Rockingham 10|Charlotte DiLorenzo|DEM|NEWMARKET
+Rockingham 10|Ellen Read|DEM|NEWMARKET
+Rockingham 11|Julie Gilman|DEM|EXETER
+Rockingham 11|Enna Grazier|DEM|EXETER
+Rockingham 11|Steven C. Jones|DEM|EXETER
+Rockingham 11|Mark Paige|DEM|EXETER
+Rockingham 11|Robert Goeman|REP|EXETER
+Rockingham 12|Allison Knab|DEM|STRATHAM
+Rockingham 12|Zoe Manos|DEM|STRATHAM
+Rockingham 12|Patrick Abrami|REP|STRATHAM
+Rockingham 12|James Scamman|REP|STRATHAM
+Rockingham 13|Thomas Bosia|DEM|DERRY
+Rockingham 13|Haley Carreau|DEM|DERRY
+Rockingham 13|Jamie Carreau|DEM|DERRY
+Rockingham 13|Paula Mahon d'Entremont|DEM|DERRY
+Rockingham 13|Matthew Glavin|DEM|DERRY
+Rockingham 13|Hollie Hesse|DEM|DERRY
+Rockingham 13|Jim Marshall|DEM|DERRY
+Rockingham 13|David Provencher|DEM|DERRY
+Rockingham 13|Kristine Trow|DEM|DERRY
+Rockingham 13|Thomas C. Wood|DEM|DERRY
+Rockingham 13|Michael Appleton|REP|DERRY
+Rockingham 13|Brandon Bach|REP|DERRY
+Rockingham 13|Brian K. Chirichiello|REP|DERRY
+Rockingham 13|Charles Foote|REP|DERRY
+Rockingham 13|Anthony Henry|REP|DERRY
+Rockingham 13|Erica Layon|REP|DERRY
+Rockingham 13|David C. Love|REP|DERRY
+Rockingham 13|Jodi Nelson|REP|DERRY
+Rockingham 13|John Potucek|REP|DERRY
+Rockingham 13|Richard Tripp|REP|DERRY
+Rockingham 14|Paul C. Paone|DEM|KINGSTON
+Rockingham 14|Pam Brown|REP|KINGSTON
+Rockingham 14|Kenneth L. Weyler|REP|KINGSTON
+Rockingham 15|Lisa DeMio|DEM|HAMPSTEAD
+Rockingham 15|Laurie A. Warnock|DEM|HAMPSTEAD
+Rockingham 15|Joe A. Guthrie|REP|HAMPSTEAD
+Rockingham 15|Lilli Walsh|REP|HAMPSTEAD
+Rockingham 16|Ted Combes|DEM|LONDONDERRY
+Rockingham 16|Jane Cooper|DEM|LONDONDERRY
+Rockingham 16|Bob Cote|DEM|LONDONDERRY
+Rockingham 16|Isaac Fernandez|DEM|LONDONDERRY
+Rockingham 16|Michela Hites|DEM|LONDONDERRY
+Rockingham 16|Neil Marceau|DEM|LONDONDERRY
+Rockingham 16|Paul Skudlarek|DEM|LONDONDERRY
+Rockingham 16|Gregory G. Carson|REP|LONDONDERRY
+Rockingham 16|Ron Dunn|REP|LONDONDERRY
+Rockingham 16|David Lundgren|REP|LONDONDERRY
+Rockingham 16|Wayne D. MacDonald|REP|LONDONDERRY
+Rockingham 16|Jeffrey McGraw|REP|LONDONDERRY
+Rockingham 16|Sherman Packard|REP|LONDONDERRY
+Rockingham 16|Kristine Perez|REP|LONDONDERRY
+Rockingham 17|Irene L. Harnden|DEM|WINDHAM
+Rockingham 17|David Martsolf|DEM|WINDHAM
+Rockingham 17|Darryn E. Remillard|DEM|WINDHAM
+Rockingham 17|Matthew Swoboda|DEM|WINDHAM
+Rockingham 17|Katelyn Kuttab|REP|WINDHAM
+Rockingham 17|Bob Lynn|REP|WINDHAM
+Rockingham 17|Charles E. McMahon|REP|WINDHAM
+Rockingham 17|Daniel Popovici-Muller|REP|WINDHAM
+Rockingham 18|Beth Cacciotti|DEM|ATKINSON
+Rockingham 18|Christine Duerr|DEM|ATKINSON
+Rockingham 18|Debra L. DeSimone|REP|ATKINSON
+Rockingham 18|Jay Markell|REP|ATKINSON
+Rockingham 19|Wendy Larson|DEM|KENSINGTON
+Rockingham 19|Susan M. Porcelli|REP|HAMPTON FALLS
+Rockingham 20|Rick A. Faulconer|DEM|NEWTON
+Rockingham 20|Robert Harb|REP|PLAISTOW
+Rockingham 20|Charles R. Melvin, Sr.|REP|NEWTON
+Rockingham 20|James Summers|REP|NEWTON
+Rockingham 21|Anna Howard|DEM|PORTSMOUTH
+Rockingham 22|Rebecca Audet|DEM|NEW CASTLE
+Rockingham 23|Jim Maggiore|DEM|NORTH HAMPTON
+Rockingham 23|Kirsten Larsen Schultz|IND|NORTH HAMPTON
+Rockingham 24|Dennis Malloy|DEM|GREENLAND
+Rockingham 24|Michael J. Moody|DEM|RYE
+Rockingham 24|Marilyn Page|REP|GREENLAND
+Rockingham 24|Kevin Szmyd|REP|RYE
+Rockingham 25|Claudia DeFuria|DEM|9 S POLICY ST
+Rockingham 25|Kienen Dyer|DEM|SALEM
+Rockingham 25|Donna Loranger|DEM|28 PLAY CAMP RD
+Rockingham 25|Lorie Ball|REP|22 ARLINGTON POND CT
+Rockingham 25|Edward W. Huminick|REP|PO BOX 345
+Rockingham 25|John Janigian|REP|25 LIBERTY ST
+Rockingham 25|George I. Kassas|REP|50 LAZARUS WAY
+Rockingham 25|Dennis Mannion|REP|1 MUSE TER
+Rockingham 25|Valerie McDonnell|REP|2 W DUSTON RD
+Rockingham 25|Joe Sweeney|REP|PO BOX 266
+Rockingham 25|John Sytek|REP|34 TOWN VILLAGE DR
+Rockingham 25|Susan J. Vandecasteele|REP|8 WEBB ST
+Rockingham 26|Buzz Scherr|DEM|PORTSMOUTH
+Rockingham 27|Gerald W. R. Ward|DEM|PORTSMOUTH
+Rockingham 28|Carrie Sorensen|DEM|PORTSMOUTH
+Rockingham 29|Ward Galanis|DEM|HAMPTON
+Rockingham 29|Rebecca LaPierre|DEM|HAMPTON
+Rockingham 29|Molly McCoy|DEM|HAMPTON
+Rockingham 29|Nathan Andrew Riggs|DEM|HAMPTON
+Rockingham 29|Nicholas D. Bridle|REP|HAMPTON
+Rockingham 29|Kenneth Sheffert|REP|HAMPTON
+Rockingham 29|Bruce Theriault|REP|HAMPTON
+Rockingham 29|Richard Wickson, Jr.|REP|HAMPTON
+Rockingham 30|Diana Labrecque Chapman|DEM|SEABROOK
+Rockingham 30|Jason A. Janvrin|REP|SEABROOK
+Rockingham 30|Aboul B. Khan|REP|SEABROOK
+Rockingham 31|Peter Boudreau|DEM|AUBURN
+Rockingham 31|Yaz Safarzadeh|DEM|AUBURN
+Rockingham 31|Jess Edwards|REP|AUBURN
+Rockingham 31|Terry Roy|REP|DEERFIELD
+Rockingham 32|Kaley Dvorak|DEM|BRENTWOOD
+Rockingham 32|Melissa A. Litchfield|REP|BRENTWOOD
+Rockingham 32|Kaley Dvorak|UND|BRENTWOOD
+Rockingham 33|Alexis Simpson|DEM|EXETER
+Rockingham 34|Jade DeMio|DEM|HAMPSTEAD
+Rockingham 34|Mark A. Pearson|REP|HAMPSTEAD
+Rockingham 35|Michelle Stith|DEM|WINDHAM
+Rockingham 35|Julius F. Soti|REP|WINDHAM
+Rockingham 36|Paul Bonzani|DEM|KENSINGTON
+Rockingham 36|JD Bernardy|REP|SOUTH HAMPTON
+Rockingham 37|Kate Cook|DEM|PORTSMOUTH
+Rockingham 38|Peggy Balboni|DEM|RYE
+Rockingham 38|Paul Martino|REP|NORTH HAMPTON
+Rockingham 39|Barbara M. Ward|DEM|PORTSMOUTH
+Rockingham 39|Sue Polidura|REP|PORTSMOUTH
+Rockingham 40|Justin G. Packard|DEM|SEABROOK
+Rockingham 40|Linda McGrath|REP|HAMPTON
+Strafford 1|Brian Beaverstock|DEM|FARMINGTON
+Strafford 1|Jimmy Bourque|DEM|FARMINGTON
+Strafford 1|W. Packy Campbell|REP|FARMINGTON
+Strafford 1|Andy Dow|REP|FARMINGTON
+Strafford 2|Larry Brown|DEM|MILTON
+Strafford 2|Glenn Bailey|REP|MILTON
+Strafford 2|Michael Granger|REP|MILTON
+Strafford 2|Mark F. Racic|REP|MILTON
+Strafford 3|Linda R. Adamo|DEM|MIDDLETON
+Strafford 3|Susan G. DeRoy|REP|NEW DURHAM
+Strafford 4|Kimberly S. McGlinchey|DEM|STRAFFORD
+Strafford 4|Ginna Schonwald|DEM|BARRINGTON
+Strafford 4|Scott Shepard|DEM|BARRINGTON
+Strafford 4|JoAnne Hack|REP|BARRINGTON
+Strafford 4|Tanya Rich|REP|STRAFFORD
+Strafford 4|Kurt Wuelper|REP|STRAFFORD
+Strafford 5|William F. Fessenden|DEM|ROCHESTER
+Strafford 5|Jenny Wilson|REP|ROCHESTER
+Strafford 5|William F. Fessenden|IND|ROCHESTER
+Strafford 6|Daniel Fitzpatrick|DEM|ROCHESTER
+Strafford 6|Denise DeDe-Poulin|REP|ROCHESTER
+Strafford 7|John H. Larochelle|DEM|ROCHESTER
+Strafford 7|Eric Bourgeois|REP|ROCHESTER
+Strafford 8|Ty Wyman|DEM|ROCHESTER
+Strafford 8|David Walker|REP|ROCHESTER
+Strafford 9|Nevin Dexter|DEM|ROCHESTER
+Strafford 9|Robert Qua|REP|ROCHESTER
+Strafford 10|Wayne M. Burton|DEM|DURHAM
+Strafford 10|Timothy Horrigan|DEM|DURHAM
+Strafford 10|Siena R. Schaier|DEM|DURHAM
+Strafford 10|Loren Selig|DEM|DURHAM
+Strafford 11|Erik Johnson|DEM|LEE
+Strafford 11|Thomas Southworth|DEM|DOVER
+Strafford 11|Janet G. Wall|DEM|MADBURY
+Strafford 11|Monique Meadows|REP|DOVER
+Strafford 12|Billie Butler|DEM|SOMERSWORTH
+Strafford 12|Myles England|DEM|ROLLINSFORD
+Strafford 12|Will Hurley|DEM|ROLLINSFORD
+Strafford 12|Wayne Pearson|DEM|ROLLINSFORD
+Strafford 12|Paul T. Edgar|REP|SOMERSWORTH
+Strafford 12|David Hilton|REP|SOMERSWORTH
+Strafford 12|Philip Houde|REP|SOMERSWORTH
+Strafford 12|Omero Ambriz|REP|SOMERSWORTH
+Strafford 13|Peter W. Bixby|DEM|DOVER
+Strafford 13|Daniel A. Furman|REP|DOVER
+Strafford 14|Peter B. Schmidt|DEM|DOVER
+Strafford 15|Samuel Chouinard|DEM|DOVER
+Strafford 16|Gary Gilmore|DEM|DOVER
+Strafford 17|Jessica LaMontagne|DEM|DOVER
+Strafford 17|Matthew D. Albion|REP|DOVER
+Strafford 18|Thom Flynn|DEM|STRAFFORD
+Strafford 18|Michael Harrington|REP|STRAFFORD
+Strafford 19|Jonathan J. King|DEM|ROCHESTER
+Strafford 19|Justin McIsaac|DEM|ROCHESTER
+Strafford 19|Nick Paul|DEM|ROCHESTER
+Strafford 19|Samuel Farrington|REP|ROCHESTER
+Strafford 19|James Higginbottom|REP|ROCHESTER
+Strafford 19|Jonathan Verbicky|REP|ROCHESTER
+Strafford 20|Allan Howland|DEM|DURHAM
+Strafford 20|John Colford|REP|DOVER
+Strafford 21|Seth Miller|DEM|DOVER
+Strafford 21|Geoff Smith|DEM|DOVER
+Strafford 21|Alice Wade|DEM|DOVER
+Strafford 21|Joseph D. Morganella|REP|DOVER
+Sullivan 1|Brian Sullivan|DEM|GRANTHAM
+Sullivan 1|Joel T. Hutchins|REP|GRANTHAM
+Sullivan 2|Jenny Ramsey|DEM|PLAINFIELD
+Sullivan 2|Michael Belanger|REP|CORNISH
+Sullivan 3|Lisa DeBartolomao|DEM|CHARLESTOWN
+Sullivan 3|Timothy Fitzpatrick|DEM|CHARLESTOWN
+Sullivan 3|Jeffrey F. Kessler|DEM|NEWPORT
+Sullivan 3|Skip Rollins|REP|NEWPORT
+Sullivan 3|Steven Smith|REP|CHARLESTOWN
+Sullivan 3|Walter Spilsbury|REP|CHARLESTOWN
+Sullivan 4|Christopher J. Salmon|DEM|ACWORTH
+Sullivan 4|Ron Rule|REP|LANGDON
+Sullivan 5|Judith M. Thackaberry|DEM|SUNAPEE
+Sullivan 5|George C. Grant|REP|SUNAPEE
+Sullivan 6|John R. Cloutier|DEM|CLAREMONT
+Sullivan 6|Chris Cogswell|DEM|CLAREMONT
+Sullivan 6|Lisa R. Gosselin|DEM|CLAREMONT
+Sullivan 6|Dale Girard|REP|CLAREMONT
+Sullivan 6|Wayne J. Hemingway|REP|CLAREMONT
+Sullivan 6|Emily Sandblade|REP|CLAREMONT
+Sullivan 7|Lawrence A. Schissel|DEM|NEWPORT
+Sullivan 7|Margaret M. Drye|REP|PLAINFIELD
+Sullivan 8|Hope Damon|DEM|CROYDON
+Sullivan 8|Samuel Deering|DEM|WASHINGTON
+Sullivan 8|Catherine Peschke|REP|CROYDON
+Sullivan 8|Jonathan F. Stone|REP|CLAREMONT

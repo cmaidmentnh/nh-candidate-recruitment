@@ -1,0 +1,187 @@
+Governor||Cinde Warmington|DEM|
+Governor||Kelly Ayotte|REP|
+Governor||Stephen Villee|LIB|
+United States Senator||Chris Pappas|DEM|
+United States Senator||John E. Sununu|REP|
+United States Senator||Edmond Laplante|CON|
+Representative in Congress|1|Stefany Shaheen|DEM|
+Representative in Congress|1|Anthony DiLorenzo|REP|
+Representative in Congress|2|Maggie Goodlander|DEM|
+Representative in Congress|2|Lily Tang Williams|REP|
+Representative in Congress|2|Robbie Mahrou|IND|
+Executive Councilor|1|Luz Bay|DEM|
+Executive Councilor|1|Joseph D. Kenney|REP|
+Executive Councilor|2|Karen Liot Hill|DEM|
+Executive Councilor|2|Tobin Menard|REP|
+Executive Councilor|3|Lisa Kennedy Sheldon|DEM|
+Executive Councilor|3|Janet Stevens|REP|
+Executive Councilor|4|Jim O'Connell|DEM|
+Executive Councilor|4|John Stephen|REP|
+Executive Councilor|5|Melanie Levesque|DEM|
+Executive Councilor|5|Dave Wheeler|REP|
+State Senator|1|Cathleen A. Fountain|DEM|
+State Senator|1|David Rochefort|REP|
+State Senator|2|Kurt Webber|DEM|
+State Senator|2|Timothy P. Lang|REP|
+State Senator|3|Bobbi Boudman|DEM|
+State Senator|3|Mark McConkey|REP|
+State Senator|4|David H. Watters|DEM|
+State Senator|4|Shawn Mickelonis|REP|
+State Senator|5|Suzanne M. Prentiss|DEM|
+State Senator|5|Conrad Schoeffter|REP|
+State Senator|6|Cecil Abels|DEM|
+State Senator|6|James P. Gray|REP|
+State Senator|7|Rebecca Harned|DEM|
+State Senator|7|Daniel E. Innis|REP|
+State Senator|8|David Trumble|DEM|
+State Senator|8|Jim Creighton|REP|
+State Senator|9|Matthew McLaughlin|DEM|
+State Senator|9|Denise Ricciardi|REP|
+State Senator|10|Donovan Fenton|DEM|
+State Senator|11|Shannon E. Chandley|DEM|
+State Senator|11|Tim McGough|REP|
+State Senator|12|Carryl L. Roy|DEM|
+State Senator|12|Kevin Avard|REP|
+State Senator|13|Laura Telerski|DEM|
+State Senator|13|Daniel J. Paul|REP|
+State Senator|14|Timothy T. Wyatt|DEM|
+State Senator|14|Sharon M. Carson|REP|
+State Senator|15|Tara Reardon|DEM|
+State Senator|15|Dennis Blankenbeker|REP|
+State Senator|16|Dian McCarthy|DEM|
+State Senator|16|Keith Murphy|REP|
+State Senator|17|Robert Lawliss|DEM|
+State Senator|17|Howard Pearl|REP|
+State Senator|18|Leonard Bell|DEM|
+State Senator|18|Victoria Sullivan|REP|
+State Senator|19|Michelle Moge|DEM|
+State Senator|19|Regina Birdsell|REP|
+State Senator|20|Pat T. Long|DEM|
+State Senator|20|Patrick Binder|REP|
+State Senator|21|Rebecca Perkins Kwoka|DEM|
+State Senator|21|Jeffrey Berlin|REP|
+State Senator|22|Chris Tardif|DEM|
+State Senator|22|Daryl Abbas|REP|
+State Senator|23|David Childs|DEM|
+State Senator|23|Bill Gannon|REP|
+State Senator|24|Debra Altschiller|DEM|
+State Senator|24|Lou Gargiulo|REP|
+Sheriff||Bill Wright|DEM|BELKNAP
+Sheriff||Bill Wright|REP|BELKNAP
+County Attorney||Keith Gerard Cormier|DEM|BELKNAP
+County Attorney||Keith Gerard Cormier|REP|BELKNAP
+County Treasurer||Jason Sproul|DEM|BELKNAP
+County Treasurer||Travis J. O'Hara|REP|BELKNAP
+Register of Deeds||Maureen Baxley|DEM|BELKNAP
+Register of Deeds||Laura Lapointe|REP|BELKNAP
+Register of Probate||Ruth Larson|DEM|BELKNAP
+Register of Probate||Krystie Sullivan|REP|BELKNAP
+County Commissioner|1|Peter John Spanos|REP|BELKNAP
+County Commissioner|2|Glen A. Waring|REP|BELKNAP
+Sheriff||Domenic M. Richardi|DEM|CARROLL
+Sheriff||Domenic M. Richardi|REP|CARROLL
+County Attorney||Keith D. Blair|REP|CARROLL
+County Treasurer||Matt Sawyer, Jr.|REP|CARROLL
+Register of Deeds||Karen I. Rines|DEM|CARROLL
+Register of Deeds||Karen I. Rines|REP|CARROLL
+Register of Probate||Steve Woodcock|DEM|CARROLL
+Register of Probate||Brett I. Williams|REP|CARROLL
+County Commissioner|1|Wharton Sinkler|DEM|CARROLL
+County Commissioner|1|Gene G. Chandler|REP|CARROLL
+County Commissioner|2|Tom Randell|DEM|CARROLL
+County Commissioner|2|Chuck McGee|REP|CARROLL
+County Commissioner|3|Michael Parton|DEM|CARROLL
+County Commissioner|3|Harold B. Parker|REP|CARROLL
+Sheriff||Eli Rivera|DEM|CHESHIRE
+Sheriff||Eli Rivera|REP|CHESHIRE
+County Attorney||D. Chris McLaughlin|DEM|CHESHIRE
+County Attorney||D. Chris McLaughlin|REP|CHESHIRE
+County Treasurer||Jack Wozmak|DEM|CHESHIRE
+Register of Deeds||Anna Z. Tilton|DEM|CHESHIRE
+Register of Probate||Jeremy LaPlante|DEM|CHESHIRE
+County Commissioner|1|Benjamin Tilton|DEM|CHESHIRE
+County Commissioner|1|Kate Day|REP|CHESHIRE
+County Commissioner|2|Terry M. Clark|DEM|CHESHIRE
+County Commissioner|1|Eamon Kelley|DEM|COOS
+County Commissioner|1|Robert Theberge|REP|COOS
+County Commissioner|3|Ray Gorman|DEM|COOS
+County Commissioner|3|Ray Gorman|REP|COOS
+Sheriff||Jillian E. Myers|DEM|GRAFTON
+Sheriff||Jillian E. Myers|REP|GRAFTON
+County Attorney||Martha Ann Hornick|DEM|GRAFTON
+County Attorney||Matthew D. Bjelobrk|REP|GRAFTON
+County Treasurer||Michael J. Cryans|DEM|GRAFTON
+County Treasurer||Brian Dear|REP|GRAFTON
+Register of Deeds||Brie Choate|DEM|GRAFTON
+Register of Deeds||Kelley Jean Monahan|REP|GRAFTON
+Register of Probate||Sharon Modjeska|DEM|GRAFTON
+County Commissioner|1|George Sykes|DEM|GRAFTON
+County Commissioner|3|Katie Hedberg|DEM|GRAFTON
+County Commissioner|3|Kimberly Chandonnet|REP|GRAFTON
+Sheriff||Brian Newcomb|DEM|HILLSBOROUGH
+Sheriff||Brian Newcomb|REP|HILLSBOROUGH
+County Attorney||Travis Bennett|DEM|HILLSBOROUGH
+County Attorney||John J. Coughlin|REP|HILLSBOROUGH
+County Treasurer||Beverly Cotton|DEM|HILLSBOROUGH
+County Treasurer||Christopher Maidment|REP|HILLSBOROUGH
+Register of Deeds||Mary Ann Crowell|DEM|HILLSBOROUGH
+Register of Deeds||Dennis Hogan|REP|HILLSBOROUGH
+Register of Probate||June Trisciani|DEM|HILLSBOROUGH
+Register of Probate||Ross W. Terrio|REP|HILLSBOROUGH
+County Commissioner|1|Pierre A. Cetoute|DEM|HILLSBOROUGH
+County Commissioner|1|Toni Pappas|REP|HILLSBOROUGH
+County Commissioner|2|Sherry Dutzy|DEM|HILLSBOROUGH
+County Commissioner|2|David G. Fredette|REP|HILLSBOROUGH
+County Commissioner|3|Julie Radhakrishnan|DEM|HILLSBOROUGH
+County Commissioner|3|Robert H. Rowe|REP|HILLSBOROUGH
+Sheriff||Peter Shephard|DEM|MERRIMACK
+Sheriff||Frank T. Cassidy|REP|MERRIMACK
+County Attorney||Steven Endres|DEM|MERRIMACK
+County Attorney||Meg Hagaman|REP|MERRIMACK
+County Treasurer||Kathleen Donnelly|DEM|MERRIMACK
+Register of Deeds||Erica S. Davis|DEM|MERRIMACK
+Register of Deeds||Samantha Morse|REP|MERRIMACK
+Register of Probate||Jane Bradstreet|DEM|MERRIMACK
+Register of Probate||Alyssa Ehl|REP|MERRIMACK
+County Commissioner|1|Steve Shurtleff|DEM|MERRIMACK
+County Commissioner|2|Vincent S. Ribas|DEM|MERRIMACK
+County Commissioner|2|Harold F. French|REP|MERRIMACK
+Sheriff||Chuck Massahos|DEM|ROCKINGHAM
+Sheriff||Chuck Massahos|REP|ROCKINGHAM
+County Attorney||Robert Wilson|DEM|ROCKINGHAM
+County Attorney||Patricia G. Conway|REP|ROCKINGHAM
+County Treasurer||Kevin Coyle|DEM|ROCKINGHAM
+County Treasurer||Scott Priestley|REP|ROCKINGHAM
+Register of Deeds||Cathy Stacey|DEM|ROCKINGHAM
+Register of Deeds||Cathy Stacey|REP|ROCKINGHAM
+Register of Probate||Douglas Marino|DEM|ROCKINGHAM
+Register of Probate||Jon Stark|REP|ROCKINGHAM
+County Commissioner|1|Kate Coyle|DEM|ROCKINGHAM
+County Commissioner|3|Thomas Tombarello|DEM|ROCKINGHAM
+County Commissioner|3|Thomas Tombarello|REP|ROCKINGHAM
+Sheriff||Kathryn L. Mone|DEM|STRAFFORD
+Sheriff||Richard Krauss|REP|STRAFFORD
+County Attorney||Emily C. Garod|DEM|STRAFFORD
+County Attorney||Emily C. Garod|REP|STRAFFORD
+County Treasurer||Pamela J. Arnold|DEM|STRAFFORD
+Register of Deeds||Catherine A. Berube|DEM|STRAFFORD
+Register of Deeds||Catherine A. Berube|REP|STRAFFORD
+Register of Probate||Jan Nedelka|DEM|STRAFFORD
+Register of Probate||Nancy Sirois|REP|STRAFFORD
+County Commissioner|1|John Frank Scruton|DEM|STRAFFORD
+County Commissioner|1|Susan J. Rice|REP|STRAFFORD
+County Commissioner|2|George Maglaras|DEM|STRAFFORD
+County Commissioner|2|George Maglaras|REP|STRAFFORD
+County Commissioner|3|Heath Howard|DEM|STRAFFORD
+County Commissioner|3|Robert J. Drew|REP|STRAFFORD
+Sheriff||James Ethan Yazinski|REP|SULLIVAN
+County Attorney||Christine Hilliard|DEM|SULLIVAN
+County Treasurer||Michael Sanderson|REP|SULLIVAN
+Register of Deeds||Je Austin|DEM|SULLIVAN
+Register of Deeds||Renee Simino|REP|SULLIVAN
+Register of Probate||Loren David Howard|DEM|SULLIVAN
+Register of Probate||Rodd Ward|REP|SULLIVAN
+County Commissioner|1|Benjamin Nelson|DEM|SULLIVAN
+County Commissioner|1|Joe Osgood|REP|SULLIVAN
+County Commissioner|2|Jim Bednar|DEM|SULLIVAN
+County Commissioner|2|Bennie Nelson|REP|SULLIVAN
