@@ -58,15 +58,20 @@ def read_rows():
 
 def fill_towns(cur, rows):
     cur.execute("""SELECT office, party, last_name, town FROM filings
-                    WHERE election_year = %s AND result <> 'lost'""", (YEAR,))
-    idx = {}
+                    WHERE election_year = %s""", (YEAR,))
+    idx, any_party = {}, {}
     for office, party, last, town in cur.fetchall():
         idx.setdefault((office, party, surname(last or '')), set()).add(town)
+        any_party.setdefault((office, surname(last or '')), set()).add(town)
     filled = 0
     for r in rows:
         if r['town']:
             continue
         towns = idx.get((r['office'], r['party'], surname(r['name'])), set())
+        if not towns:
+            # cross-nominations: a filed Democrat who also won the Republican line by write-in
+            # (or the reverse) has one filing, under the party they filed with
+            towns = any_party.get((r['office'], surname(r['name'])), set())
         if len(towns) == 1:
             r['town'] = title(next(iter(towns)))
             filled += 1
