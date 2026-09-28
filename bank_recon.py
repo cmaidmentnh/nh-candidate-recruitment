@@ -190,12 +190,16 @@ def match_payables(cur):
             cur.execute("UPDATE bank_txn SET category=%s, category_set_by='matched' WHERE id=%s", (cat, c[0][1]))
             claimed.add(c[0][0])
 
+    # A "Pending Verification for Deposit" debit is TD holding a new deposit while it clears
+    # (it mirrors the deposit to the cent), never a payment. On 9/28 it settled the $12,000
+    # videographer bill by "close amount" against an $11,679 hold.
     cur.execute("""SELECT id, label, category, amount, approx, match_hint, created_at
                      FROM spend_payable WHERE NOT paid ORDER BY created_at""")
     for pid, label, cat, amt, approx, hint, created in cur.fetchall():
         amt = float(amt)
         cur.execute("""SELECT id, fingerprint, txn_date, description, amount, category, pending
                          FROM bank_txn WHERE amount < 0 AND txn_date >= %s::date - 3
+                          AND description NOT ILIKE 'Pending Verification%%'
                           AND (category IS NULL OR category = %s OR category = 'other')""",
                     (created, cat))
         cands = [r for r in cur.fetchall() if r[1] not in claimed]
