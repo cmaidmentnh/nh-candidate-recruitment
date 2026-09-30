@@ -30,8 +30,9 @@ RULES = [
     ('mail',       r'NH REPUBLICAN STATE COMMITTEE|NHGOP'),
     ('meta',       r'FACEBK|FACEBOOK|META PLATFORMS'),
     ('stackadapt', r'STACKADAPT'),
-    # Hardware-store runs are yard sign stakes and supplies (Chris, 9/30), filed with the signs.
-    ('printing',   r'SPECTRUM MARKETI|SPECTRUM MARKETING|HOME DEPOT|LOWES'),
+    ('printing',   r'SPECTRUM MARKETI|SPECTRUM MARKETING'),
+    # Hardware-store runs are yard sign stakes and supplies (Chris, 9/30), not printing.
+    ('signs',      r'HOME DEPOT|LOWES'),
     ('texting',    r'REVT|TEXTING MANAGER'),
     ('google_ads', r'GOOGLE ADS'),
     ('consulting', r'1772 STRATEGIES'),
@@ -39,7 +40,7 @@ RULES = [
     ('operations', r'CLOUDFLARE|OPENAI|INTUIT|QBOOKS|GOOGLE WORKSPACE|X CORP|DECISION DESK|'
                    r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM'),
 ]
-CATEGORIES = ['mail', 'meta', 'stackadapt', 'printing', 'texting', 'google_ads', 'data', 'video',
+CATEGORIES = ['mail', 'meta', 'stackadapt', 'printing', 'signs', 'texting', 'google_ads', 'data', 'video',
               'consulting', 'operations', 'fees', 'other', 'income', 'transfer']
 OVERHEAD = ('consulting', 'operations', 'fees')
 

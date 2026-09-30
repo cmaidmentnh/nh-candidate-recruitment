@@ -1497,7 +1497,7 @@
       // fall out of the totals.
       var shown = {mail:1, meta:1, stackadapt:1, printing:1, texting:1, income:1, transfer:1, unlabeled:1};
       (B.overhead||[]).forEach(function(c){ shown[c] = 1; });
-      var NAMES = {google_ads:'Google Ads', data:'Data', video:'Video production', other:'Other'};
+      var NAMES = {google_ads:'Google Ads', data:'Data', video:'Video production', signs:'Yard sign supplies', other:'Other'};
       var cats = {}; Object.keys(bc).concat(Object.keys(OWED)).forEach(function(c){ cats[c] = 1; });
       Object.keys(cats).sort().forEach(function(cat){
         if(shown[cat] || !(paid(cat) || owed(cat))) return;
