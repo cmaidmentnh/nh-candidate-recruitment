@@ -30,7 +30,8 @@ RULES = [
     ('mail',       r'NH REPUBLICAN STATE COMMITTEE|NHGOP'),
     ('meta',       r'FACEBK|FACEBOOK|META PLATFORMS'),
     ('stackadapt', r'STACKADAPT'),
-    ('printing',   r'SPECTRUM MARKETI|SPECTRUM MARKETING'),
+    # Hardware-store runs are yard sign stakes and supplies (Chris, 9/30), filed with the signs.
+    ('printing',   r'SPECTRUM MARKETI|SPECTRUM MARKETING|HOME DEPOT|LOWES'),
     ('texting',    r'REVT|TEXTING MANAGER'),
     ('google_ads', r'GOOGLE ADS'),
     ('consulting', r'1772 STRATEGIES'),
