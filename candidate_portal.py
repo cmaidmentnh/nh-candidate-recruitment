@@ -1840,3 +1840,119 @@ def _send_consult_invite(to_email, name, start_dt, end_dt, meet_link, event_id, 
                        aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'))
     ses.send_raw_email(Source=root['From'], Destinations=[to_email],
                        RawMessage={'Data': root.as_string()})
+
+
+# =============================================================================
+# MY ADS — the live CTEHR ads a candidate appears in, ready to download and share.
+# The ctehr-candidate-website sync (tools/sync_campaign_ads.py) mirrors every live
+# district ad from Meta and StackAdapt into S3 and fills ws_campaign_ads /
+# ws_campaign_ad_placements in this same database; this only reads them.
+# =============================================================================
+
+ADS_PLATFORMS = [
+    ('tv', 'TV spots', 'Running on streaming TV. Great for Facebook, X, YouTube and texting.'),
+    ('facebook', 'Facebook & Instagram', 'Square works in the feed, vertical in Stories and Reels, wide on links.'),
+    ('audio', 'Streaming audio', 'Running on streaming radio and podcasts.'),
+    ('web', 'Web banners', 'Running on news and other websites. Mostly sized for ad slots rather than posting.'),
+]
+_ADS_SUFFIX = {'jr', 'sr', 'ii', 'iii', 'iv'}
+
+
+def _candidate_ads(cur, cid):
+    """(district, [ads]) for one candidate.
+
+    An ad counts when it runs in the candidate's district or a floterial/base
+    district tied to it, AND either names them in its campaign name or is a
+    whole-slate ad for their own district (or their floterial's base). The
+    name check is what keeps Sullivan 3's base candidates off Drye-only ads."""
+    cur.execute("""SELECT district_code, last_name FROM filings
+                   WHERE candidate_id=%s AND election_year=2026 AND party='R'
+                     AND office='State Representative'
+                     AND COALESCE(result,'') NOT IN ('lost','withdrawn')
+                   ORDER BY filing_id DESC LIMIT 1""", (cid,))
+    row = cur.fetchone()
+    if row and row[0]:
+        district, last = row
+    else:
+        p = _prefill(cur, cid) or {}
+        district, last = p.get('district_code'), p.get('last_name')
+    if not district:
+        return None, []
+    toks = [t for t in re.findall(r"[A-Za-z'-]+", last or '') if t.lower() not in _ADS_SUFFIX]
+    last = ' '.join(toks)
+    cur.execute("SELECT base FROM district_floterial_base WHERE floterial=%s", (district,))
+    bases = {r[0] for r in cur.fetchall()}
+    cur.execute("SELECT floterial FROM district_floterial_base WHERE base=%s", (district,))
+    related = {district} | bases | {r[0] for r in cur.fetchall()}
+    name_re = re.compile(r"(?<![A-Za-z])" + re.escape(last) + r"(?![A-Za-z])", re.I) if len(last) > 1 else None
+
+    cur.execute("""SELECT a.id, a.kind, a.title, a.file_name, a.width, a.height, a.duration_s,
+                          a.bytes, a.s3_url, a.is_contrast, p.district_code, p.people, p.slate, p.platform
+                   FROM ws_campaign_ad_placements p JOIN ws_campaign_ads a ON a.id = p.ad_id
+                   WHERE p.district_code = ANY(%s)""", (list(related),))
+    ads = {}
+    for (aid, kind, title, fname, w, h, dur, size, url, contrast,
+         pdist, people, slate, platform) in cur.fetchall():
+        named = bool(name_re and people and name_re.search(people.replace('_', ' ')))
+        whole_slate = (slate or not people) and (pdist == district or pdist in bases)
+        if aid in ads or not (named or whole_slate):
+            continue
+        ads[aid] = {'id': aid, 'kind': kind, 'platform': platform, 'title': title,
+                    'file_name': fname, 'width': w, 'height': h, 'duration_s': dur,
+                    'bytes': size, 'url': url, 'contrast': bool(contrast)}
+    return district, sorted(ads.values(), key=lambda a: (a['contrast'], a['file_name'] or ''))
+
+
+@portal_bp.route('/my-ads', methods=['GET'])
+def my_ads():
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        district, ads = _candidate_ads(cur, cid)
+    finally:
+        cur.close(); release_db_connection(conn)
+    groups = []
+    for key, label, blurb in ADS_PLATFORMS:
+        items = [a for a in ads if a['platform'] == key]
+        if items:
+            groups.append({'platform': key, 'label': label, 'blurb': blurb, 'ads': items})
+    return jsonify({'ok': True, 'district': district, 'count': len(ads),
+                    'image_count': sum(1 for a in ads if a['kind'] == 'image'), 'groups': groups})
+
+
+@portal_bp.route('/my-ads/zip', methods=['GET'])
+def my_ads_zip():
+    """Every image ad in one zip. Video and audio stay single downloads: a few
+    TV spots alone run to hundreds of megabytes."""
+    import io, zipfile, urllib.request
+    from flask import Response
+    cid = _cid_from_session()
+    if not cid:
+        return jsonify({'ok': False, 'error': 'Not signed in.'}), 401
+    conn = get_db_connection(); cur = conn.cursor()
+    try:
+        district, ads = _candidate_ads(cur, cid)
+    finally:
+        cur.close(); release_db_connection(conn)
+    images = [a for a in ads if a['kind'] == 'image']
+    if not images:
+        return jsonify({'ok': False, 'error': 'No graphics to download.'}), 404
+    folder = {'facebook': 'Facebook and Instagram', 'web': 'Web banners'}
+    buf, used = io.BytesIO(), set()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED) as z:
+        for a in images:
+            try:
+                body = urllib.request.urlopen(a['url'], timeout=30).read()
+            except Exception as e:
+                logger.error(f"my-ads zip: {a['url']}: {e}"); continue
+            name, n = f"{folder.get(a['platform'], 'Ads')}/{a['file_name']}", 2
+            while name in used:
+                stem, _, ext = name.rpartition('.')
+                name = f"{stem} ({n}).{ext}"; n += 1
+            used.add(name)
+            z.writestr(name, body)
+    label = re.sub(r'[^A-Za-z0-9]+', '-', district or 'ads').strip('-')
+    return Response(buf.getvalue(), mimetype='application/zip', headers={
+        'Content-Disposition': f'attachment; filename="{label}-ad-graphics.zip"'})
