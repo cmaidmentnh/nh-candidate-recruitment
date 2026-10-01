@@ -1903,7 +1903,7 @@ def _candidate_ads(cur, cid):
     return district, sorted(ads.values(), key=lambda a: (a['contrast'], a['file_name'] or ''))
 
 
-@portal_bp.route('/my-ads', methods=['GET'])
+@portal_bp.route('/my-spots', methods=['GET'])
 def my_ads():
     cid = _cid_from_session()
     if not cid:
@@ -1922,7 +1922,7 @@ def my_ads():
                     'image_count': sum(1 for a in ads if a['kind'] == 'image'), 'groups': groups})
 
 
-@portal_bp.route('/my-ads/zip', methods=['GET'])
+@portal_bp.route('/my-spots/zip', methods=['GET'])
 def my_ads_zip():
     """Every image ad in one zip. Video and audio stay single downloads: a few
     TV spots alone run to hundreds of megabytes."""
@@ -1955,4 +1955,4 @@ def my_ads_zip():
             z.writestr(name, body)
     label = re.sub(r'[^A-Za-z0-9]+', '-', district or 'ads').strip('-')
     return Response(buf.getvalue(), mimetype='application/zip', headers={
-        'Content-Disposition': f'attachment; filename="{label}-ad-graphics.zip"'})
+        'Content-Disposition': f'attachment; filename="{label}-graphics.zip"'})
