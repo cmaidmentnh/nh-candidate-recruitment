@@ -1493,9 +1493,12 @@
       rows.push(['Printing (Spectrum)', 'palm cards and signs: plan or invoice, whichever is larger', Math.max(field, paid('printing')) + owed('printing'), paid('printing')]);
       bill.push(['Spectrum Marketing', 'printing invoices in the tracker (signs, palm cards)', paid('printing'), fieldInv || null]);
       rows.push(['Texting', 'plan; paid from bank', Math.max(plan.mms||0, paid('texting') + owed('texting')), paid('texting')]);
+      // YouTube on TV is bought through Google Ads; its plan lines must count even before the
+      // card is charged, or the forecast silently drops the whole buy.
+      rows.push(['YouTube on TV (Google Ads)', 'plan budget; paid from bank', Math.max(plan.youtube||0, paid('google_ads') + owed('google_ads')), paid('google_ads')]);
       // Any other category the bank has money in gets its own line, so a new label can never
       // fall out of the totals.
-      var shown = {mail:1, meta:1, stackadapt:1, printing:1, texting:1, income:1, transfer:1, unlabeled:1};
+      var shown = {mail:1, meta:1, stackadapt:1, printing:1, texting:1, google_ads:1, income:1, transfer:1, unlabeled:1};
       (B.overhead||[]).forEach(function(c){ shown[c] = 1; });
       var NAMES = {google_ads:'Google Ads', data:'Data', video:'Video production', signs:'Yard sign supplies', other:'Other'};
       var cats = {}; Object.keys(bc).concat(Object.keys(OWED)).forEach(function(c){ cats[c] = 1; });
@@ -1517,7 +1520,7 @@
                  MONEY.mail_forecast, MONEY.mail_paid]);
       if(MONEY.prepaid) rows.push(['Prepaid, not yet invoiced', MONEY.prepaid_note || 'credit against the next invoice', 0, MONEY.prepaid]);
       rows.push(['Text', 'plan', plan.mms||0, po.mms||0]);
-      [['meta','Facebook / Instagram'],['ctv','Streaming TV'],['display','Display'],['audio','Streaming audio']]
+      [['meta','Facebook / Instagram'],['ctv','Streaming TV'],['display','Display'],['audio','Streaming audio'],['youtube','YouTube on TV']]
         .forEach(function(x){ var p = plan[x[0]]||0, s = ds[x[0]]||0;
           rows.push([x[1], 'plan budget, platform spend', Math.max(p, s), s]); });
       var fld = 0; ['palm_cards','signs','gotv_calls','doors'].forEach(function(k){ fld += plan[k]||0; });
