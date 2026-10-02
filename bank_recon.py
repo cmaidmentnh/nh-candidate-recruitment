@@ -27,7 +27,7 @@ DATE_KIND_RE = re.compile(r'^(\d{1,2})/(\d{1,2})/(\d{4})\s+(\S.*)$')
 # matters where descriptions overlap (GOOGLE ADS before GOOGLE).
 RULES = [
     ('income',     r'^\+|DEPOSIT|WINRED|STRIPE TRANSFER|ANEDOT|WIRE TRANSFER INCOMING|KALSHI'),
-    ('mail',       r'NH REPUBLICAN STATE COMMITTEE|NHGOP'),
+    ('mail',       r'NH REPUBLICAN STATE COMMITTEE|NEW HAMPSHIRE REPUBLICAN STATE|NHGOP'),
     ('meta',       r'FACEBK|FACEBOOK|META PLATFORMS'),
     ('stackadapt', r'STACKADAPT'),
     ('printing',   r'SPECTRUM MARKETI|SPECTRUM MARKETING'),
