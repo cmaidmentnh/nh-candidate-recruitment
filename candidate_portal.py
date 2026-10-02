@@ -1890,10 +1890,14 @@ def _candidate_ads(cur, cid):
                           a.bytes, a.s3_url, a.is_contrast, p.district_code, p.people, p.slate, p.platform
                    FROM ws_campaign_ad_placements p JOIN ws_campaign_ads a ON a.id = p.ad_id
                    WHERE p.district_code = ANY(%s)""", (list(related),))
+    rows = cur.fetchall()
+    # Ads that feature this candidate though the campaign name doesn't list them.
+    cur.execute("SELECT ad_id FROM ws_campaign_ad_people_extra WHERE lower(last_name)=lower(%s)", (last,))
+    extra = {r[0] for r in cur.fetchall()}
     ads = {}
     for (aid, kind, title, fname, w, h, dur, size, url, contrast,
-         pdist, people, slate, platform) in cur.fetchall():
-        named = bool(name_re and people and name_re.search(people.replace('_', ' ')))
+         pdist, people, slate, platform) in rows:
+        named = bool(name_re and people and name_re.search(people.replace('_', ' '))) or aid in extra
         whole_slate = (slate or not people) and (pdist == district or pdist in bases)
         if aid in ads or not (named or whole_slate):
             continue
