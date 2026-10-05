@@ -133,11 +133,17 @@ def parse_td(text):
                          'amount': _amount(block[money[0]]),
                          'balance': _amount(block[money[1]]) if len(money) > 1 else None})
         i = j
+    seen = {}
     for r in rows:
         r['category'] = categorize(r['description'], r['amount'])
-        r['fingerprint'] = '|'.join([
+        fp = '|'.join([
             'P' if r['pending'] else 'H', r['date'].isoformat(), r['description'][:200],
             '%.2f' % r['amount'], '' if r['balance'] is None else '%.2f' % r['balance']])
+        # Pending rows carry no running balance, so identical holds (Google Ads bills $500 at a
+        # time, 16 of them on 10/5) share a fingerprint and all but one were dropped on insert.
+        # Number the repeats so each hold is kept.
+        seen[fp] = seen.get(fp, 0) + 1
+        r['fingerprint'] = fp if seen[fp] == 1 else '%s|#%d' % (fp, seen[fp])
     return balances, rows
 
 
