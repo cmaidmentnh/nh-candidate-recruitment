@@ -35,6 +35,7 @@ RULES = [
     ('signs',      r'HOME DEPOT|LOWES'),
     ('texting',    r'REVT|TEXTING MANAGER'),
     ('google_ads', r'GOOGLE ADS'),
+    ('data',       r'I360|I-360'),
     ('consulting', r'1772 STRATEGIES'),
     ('fees',       r'WIRE TRANSFER FEE|SERVICE CHARGE|\bFEE\b'),
     ('operations', r'CLOUDFLARE|OPENAI|INTUIT|QBOOKS|GOOGLE WORKSPACE|X CORP|DECISION DESK|'
