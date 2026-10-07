@@ -39,7 +39,7 @@ RULES = [
     ('consulting', r'1772 STRATEGIES'),
     ('fees',       r'WIRE TRANSFER FEE|SERVICE CHARGE|\bFEE\b'),
     ('operations', r'CLOUDFLARE|OPENAI|INTUIT|QBOOKS|GOOGLE WORKSPACE|X CORP|DECISION DESK|'
-                   r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM'),
+                   r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM|FAL FEATURES'),
 ]
 CATEGORIES = ['mail', 'meta', 'stackadapt', 'printing', 'signs', 'texting', 'google_ads', 'data', 'video',
               'consulting', 'operations', 'fees', 'other', 'income', 'transfer']
