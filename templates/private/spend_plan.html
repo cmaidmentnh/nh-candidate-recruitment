@@ -1581,7 +1581,8 @@
             '<td><a href="#" data-incgot="'+r.id+'">mark received</a> &middot; <a href="#" data-incdel="'+r.id+'">remove</a></td></tr>';
     });
     (MONEY.received||[]).forEach(function(r){
-      ih += '<tr style="color:#7b8494"><td>'+r.label+'</td><td>received '+r.received+': '+r.note+'</td><td>'+money(r.amount)+'</td><td></td></tr>';
+      if(r.uncleared) INC += r.amount;
+      ih += '<tr style="color:#7b8494"><td>'+r.label+'</td><td>received '+r.received+': '+r.note+(r.uncleared?' (not in the bank import yet, still counted)':'')+'</td><td>'+money(r.amount)+'</td><td></td></tr>';
     });
     document.getElementById('mInc').innerHTML = ih || '<tr><td colspan="4">Nothing expected.</td></tr>';
 

@@ -259,7 +259,9 @@ def match_receivables(cur):
     cur.execute("SELECT bank_fp FROM spend_receivable WHERE bank_fp IS NOT NULL")
     claimed = {r[0] for r in cur.fetchall()}
     cur.execute("""SELECT id, label, amount, approx, match_hint, created_at
-                     FROM spend_receivable WHERE active AND NOT received ORDER BY created_at""")
+                     FROM spend_receivable
+                    WHERE active AND (NOT received OR COALESCE(bank_fp, '') = '')
+                    ORDER BY created_at""")
     for rid, label, amt, approx, hint, created in cur.fetchall():
         amt = float(amt)
         cur.execute("""SELECT id, fingerprint, txn_date, description, amount, pending

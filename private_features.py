@@ -2348,11 +2348,17 @@ def _money_actuals(cur):
         out['receivables'] = [{'id': i, 'label': l, 'amount': float(a),
                                'expected': d.isoformat() if d else None, 'approx': ap, 'hint': h or ''}
                               for i, l, a, d, ap, h in cur.fetchall()]
-        cur.execute("""SELECT label, amount, received_at, match_note FROM spend_receivable
+        cur.execute("""SELECT label, amount, received_at, match_note, bank_fp FROM spend_receivable
                         WHERE active AND received AND received_at >= now() - interval '30 days'
                         ORDER BY received_at DESC""")
+        # Marked received by hand, but the last bank import is from before that day: the
+        # bank balance above does not hold the money yet, so it still counts toward the
+        # surplus until a newer import (which then matches the deposit).
+        snap_day = snap[3].astimezone(_ET).date() if snap else None
         out['received'] = [{'label': l, 'amount': float(a), 'received': r.isoformat() if r else '',
-                            'note': n or 'marked received by hand'} for l, a, r, n in cur.fetchall()]
+                            'note': n or 'marked received by hand',
+                            'uncleared': bool(not fp and r and (snap_day is None or r >= snap_day))}
+                           for l, a, r, n, fp in cur.fetchall()]
     except Exception as e:
         conn_err = str(e)[:200]
         logger.info('bank data unavailable: %s', conn_err)
