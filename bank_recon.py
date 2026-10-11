@@ -37,12 +37,14 @@ RULES = [
     ('google_ads', r'GOOGLE ADS'),
     ('data',       r'I360|I-360'),
     ('consulting', r'1772 STRATEGIES'),
+    # Event and donor costs (Chris, 10/11): the Steakout venue, donor gifts.
+    ('fundraising', r'LLBEAN|L\.L\. ?BEAN|SKY MEADOW'),
     ('fees',       r'WIRE TRANSFER FEE|SERVICE CHARGE|\bFEE\b'),
     ('operations', r'CLOUDFLARE|OPENAI|INTUIT|QBOOKS|GOOGLE WORKSPACE|X CORP|DECISION DESK|'
-                   r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM|FAL FEATURES'),
+                   r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM|FAL FEATURES|GOOGLE CLOUD'),
 ]
 CATEGORIES = ['mail', 'meta', 'stackadapt', 'printing', 'signs', 'texting', 'google_ads', 'data', 'video',
-              'consulting', 'operations', 'fees', 'other', 'income', 'transfer']
+              'consulting', 'operations', 'fees', 'fundraising', 'other', 'income', 'transfer']
 OVERHEAD = ('consulting', 'operations', 'fees')
 
 
