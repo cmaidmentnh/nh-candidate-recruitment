@@ -49,3 +49,4 @@ parse_*.py
 proper_*.py
 reverse_*.py
 "(~*"
+gotv/runs/
