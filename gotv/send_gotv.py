@@ -15,8 +15,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 ORG = "Committee to Elect House Republicans"
-SRC = "info@electhouserepublicans.com"
-SENDER = f'"Jason Osborne, CTEHR" <{SRC}>'
+SRC = "jason@osborne4nh.com"
+SENDER = f'"Jason Osborne" <{SRC}>'
 
 
 def copy(first, dist, n, both, phones):
