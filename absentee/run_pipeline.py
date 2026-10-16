@@ -153,7 +153,7 @@ c=psycopg2.connect(host='localhost',database='election_data',user='voter_api_rea
   password=os.environ.get('VOTER_DB_PASSWORD','voter_readonly_2026'))
 cu=c.cursor()
 ids=[r['voter_id'] for r in csv.DictReader(open('/tmp/absentee_flat.csv'))]
-cu.execute('''SELECT s.id_voter, s.house_district, s.floterial_district, s.senate_district,
+cu.execute('''SELECT s.id_voter, s.house_base, s.house_flot, 'District ' || s.senate_dist,   -- town/ward districts; never the geocoded house_district etc.
    s.ad_city, s.ward, s.county, p.mobile, p.landline, p.primary_phone
  FROM statewidechecklist s LEFT JOIN voter_phones p ON p.id_voter = s.id_voter
  WHERE s.id_voter = ANY(%s)''',(ids,))
