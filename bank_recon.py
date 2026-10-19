@@ -19,7 +19,7 @@ from datetime import date
 # Spending before the general election program started (the primary) is not this plan's.
 PROGRAM_START = date(2026, 9, 9)
 
-MONEY_RE = re.compile(r'^-?\$[\d,]+\.\d\d$')
+MONEY_RE = re.compile(r'^[-+]?\$[\d,]+\.\d\d$')   # TD shows pending deposits as "+$23.82"
 DATE_ONLY_RE = re.compile(r'^(\d{1,2})/(\d{1,2})/(\d{4})$')
 DATE_KIND_RE = re.compile(r'^(\d{1,2})/(\d{1,2})/(\d{4})\s+(\S.*)$')
 
