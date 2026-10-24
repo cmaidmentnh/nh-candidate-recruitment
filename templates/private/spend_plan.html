@@ -332,8 +332,6 @@
       <div class="mg"><span class="mv" id="mCash">not entered</span>
         <span class="ml">Cash on hand <a href="#" id="mCashEdit">edit</a></span></div>
       <div class="mg"><span class="mv" id="mIncoming">$0</span><span class="ml">Coming in</span></div>
-      <div class="mg"><span class="mv" id="mReserve">$0</span>
-        <span class="ml">Keep for next year <a href="#" id="mReserveEdit">edit</a></span></div>
       <div class="mg"><span class="mv" id="mNet">$0</span><span class="ml" id="mNetL">Surplus</span></div>
       <div class="mg"><span class="mv" id="mVsBudget">$0</span><span class="ml" id="mVsBudgetL">vs program budget</span></div>
     </div>
@@ -1597,8 +1595,8 @@
 
     function set(id, v, cls){ var e = document.getElementById(id); e.textContent = v; e.className = 'mv' + (cls ? ' '+cls : ''); }
     set('mForecast', money(F)); set('mSpent', money(S)); set('mLeft', money(L));
-    var R = MONEY.reserve || 0;
-    set('mReserve', money(R));
+    // One surplus figure: money kept for next year is part of it, not taken off it (Chris, 10/24).
+    var R = 0;
     set('mIncoming', money(INC), INC ? 'pos' : 'muted');
     // With a bank import the balance comes from the bank; a typed figure would only confuse.
     document.getElementById('mCashEdit').style.display = B ? 'none' : '';
@@ -1617,7 +1615,7 @@
       set('mNet', money(Math.abs(net)), net < 0 ? 'neg' : 'pos');
       document.getElementById('mNetL').textContent = net < 0 ? 'Deficit' : 'Surplus';
       chk += '. Cash ' + money(MONEY.cash) + (INC ? ' + coming in ' + money(INC) : '') +
-             ' - still to spend ' + money(L) + ' - keep ' + money(R) + ' = ' +
+             ' - still to spend ' + money(L) + ' = ' +
              (net < 0 ? 'deficit ' : 'surplus ') + money(Math.abs(net)) + '.';
       if(INC){ var netNow = MONEY.cash - L - R;
         chk += ' Without the money coming in: ' + (netNow < 0 ? 'deficit ' : 'surplus ') + money(Math.abs(netNow)) + '.'; }
@@ -1696,12 +1694,6 @@
     var end = prompt('Last month it runs, as YYYY-MM-DD', '2026-11-30'); if(!end) return;
     post('/private/spend-plan/recurring', {label:label, monthly:monthly, end:end})
       .then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
-  });
-  document.getElementById('mReserveEdit').addEventListener('click', function(e){
-    e.preventDefault();
-    var v = prompt('Keep this much in the bank at the end, for next year', MONEY.reserve || 20000);
-    if(v === null) return;
-    post('/private/spend-plan/money', {key:'reserve', amount:v}).then(function(j){ if(j.ok) location.reload(); else alert(j.error||'Could not save.'); });
   });
   document.getElementById('mBankGo').addEventListener('click', function(){
     var t = document.getElementById('mBankText').value, m = document.getElementById('mBankMsg');
