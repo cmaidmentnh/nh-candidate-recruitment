@@ -53,6 +53,7 @@
   .st-draft{color:var(--muted)}
   .st-scheduled{color:var(--amber);font-weight:700}
   .st-delivered{color:var(--green);font-weight:700}
+  .st-cancelled{color:var(--muted);text-decoration:line-through}
   .iv-unbilled{color:var(--muted)}
   .iv-unpaid{color:var(--red);font-weight:700}
   .iv-paid{color:var(--green);font-weight:700}
@@ -183,7 +184,7 @@
     PIECES.forEach(function(p){
       planned += p.planned || 0;
       st[p.status] = (st[p.status]||0) + 1;
-      if(p.invoice_amount != null){
+      if(p.status !== 'cancelled' && p.invoice_amount != null){
         inv += p.invoice_amount;
         if(p.invoice_status === 'paid') paid += p.invoice_amount;
         else owed += p.invoice_amount;
@@ -248,7 +249,7 @@
       fld('Tactic', selOf('fTactic', TACTICS.map(function(x){ return [x.key, x.label]; }), p.tactic_key)) +
       fld('Universe', selOf('fUni', [['persuade','Persuasion'],['gotv','GOTV'],['base','Whole district']], p.universe)) +
       fld('Drop date', '<input type="date" id="fDate" value="' + (p.drop_date||'') + '">') +
-      fld('Status', selOf('fStatus', [['draft','Draft'],['scheduled','Scheduled'],['delivered','Delivered']], p.status)) +
+      fld('Status', selOf('fStatus', [['draft','Draft'],['scheduled','Scheduled'],['delivered','Delivered'],['cancelled','Cancelled']], p.status)) +
       '</div>';
 
     // --- districts ---

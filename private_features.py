@@ -2103,7 +2103,8 @@ def spend_plan_district_print(code):
 # PIECES - what we actually produced, as opposed to what we planned
 # =============================================================================
 
-PIECE_STATUS = ('draft', 'scheduled', 'delivered')
+# A cancelled piece stays in the tracker (with its districts and proofs) but costs nothing.
+PIECE_STATUS = ('draft', 'scheduled', 'delivered', 'cancelled')
 INVOICE_STATUS = ('unbilled', 'unpaid', 'paid')
 
 
@@ -2232,8 +2233,9 @@ def _load_pieces(cur):
         p['districts'].append({'code': code, 'file_url': url, 'content_type': ct,
                                'quantity': float(q or 0),
                                'cost': float(cost) if cost is not None else None})
-        p['planned'] += float(cost or 0)
-        p['reach'] += float(q or 0)
+        if p['status'] != 'cancelled':
+            p['planned'] += float(cost or 0)
+            p['reach'] += float(q or 0)
     return pieces
 
 
@@ -2261,6 +2263,7 @@ def _money_actuals(cur):
                           COALESCE(SUM(pd.planned_cost), 0)
                      FROM spend_piece p
                      LEFT JOIN spend_piece_district pd ON pd.piece_id = p.id
+                    WHERE p.status <> 'cancelled'
                     GROUP BY p.id, p.tactic_key, p.invoice_amount, p.invoice_status""")
     for tk, inv, status, planned in cur.fetchall():
         inv = float(inv) if inv is not None else None

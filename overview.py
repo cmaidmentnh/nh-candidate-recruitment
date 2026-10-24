@@ -267,7 +267,7 @@ def _program(cur):
 
     unbilled = _scalar(cur, """SELECT count(*) FROM spend_piece
                                 WHERE COALESCE(invoice_status,'unbilled') = 'unbilled'
-                                  AND status <> 'draft'""")
+                                  AND status NOT IN ('draft', 'cancelled')""")
 
     return {'budget': float(budget or 0), 'committed': float(committed or 0),
             'pieces_draft': pieces.get('draft', 0),
