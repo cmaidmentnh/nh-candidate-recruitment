@@ -263,6 +263,7 @@ def match_receivables(cur):
     cur.execute("""SELECT id, label, amount, approx, match_hint, created_at
                      FROM spend_receivable
                     WHERE active AND (NOT received OR COALESCE(bank_fp, '') = '')
+                      AND COALESCE(created_by, '') <> 'stripe-sync-held'
                     ORDER BY created_at""")
     for rid, label, amt, approx, hint, created in cur.fetchall():
         amt = float(amt)
