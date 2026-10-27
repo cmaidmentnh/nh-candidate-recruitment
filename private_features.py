@@ -2340,10 +2340,16 @@ def _money_actuals(cur):
         out['payables'] = [{'id': i, 'label': l, 'category': c, 'amount': float(a),
                             'due': d.isoformat() if d else None, 'approx': ap, 'hint': h or ''}
                            for i, l, c, a, d, ap, h in cur.fetchall()]
-        cur.execute("""SELECT label, amount, paid_at, match_note FROM spend_payable
+        cur.execute("""SELECT label, category, amount, paid_at, match_note, bank_fp FROM spend_payable
                         WHERE paid AND paid_at >= now() - interval '30 days' ORDER BY paid_at DESC""")
-        out['paid_bills'] = [{'label': l, 'amount': float(a), 'paid': p.isoformat() if p else '',
-                              'note': n or 'marked paid by hand'} for l, a, p, n in cur.fetchall()]
+        # Marked paid by hand, but the last bank import is from before that day: the bank
+        # balance above still holds the money, so it still counts as still to spend until a
+        # newer import shows the payment. Mirrors 'uncleared' on received income below.
+        snap_day_p = snap[3].astimezone(_ET).date() if snap else None
+        out['paid_bills'] = [{'label': l, 'category': c, 'amount': float(a), 'paid': p.isoformat() if p else '',
+                              'note': n or 'marked paid by hand',
+                              'uncleared': bool(not fp and p and (snap_day_p is None or p >= snap_day_p))}
+                             for l, c, a, p, n, fp in cur.fetchall()]
         # Money promised but not yet in the bank. It counts toward the surplus until a bank
         # import shows the deposit; after that the bank balance already holds it.
         cur.execute("""SELECT id, label, amount, expected_on, approx, match_hint FROM spend_receivable

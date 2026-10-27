@@ -1467,6 +1467,8 @@
     function paid(cat){ return (bc[cat] && bc[cat].amount) || 0; }
     // Bills we owe that have not reached the bank: they sit on top of what has been paid.
     var OWED = {}; (MONEY.payables||[]).forEach(function(p){ OWED[p.category] = (OWED[p.category]||0) + p.amount; });
+    // Paid by hand but not in a bank import yet: the balance still holds the money.
+    (MONEY.paid_bills||[]).forEach(function(p){ if(p.uncleared) OWED[p.category] = (OWED[p.category]||0) + p.amount; });
     function owed(cat){ return OWED[cat] || 0; }
     var rows = [], bill = [], flags = [];
 
@@ -1569,7 +1571,7 @@
             '<td><a href="#" data-paypaid="'+p.id+'">mark paid</a></td></tr>';
     });
     (MONEY.paid_bills||[]).forEach(function(p){
-      ph += '<tr style="color:#7b8494"><td>'+p.label+'</td><td colspan="2">paid '+p.paid+': '+p.note+'</td><td>'+money(p.amount)+'</td><td></td></tr>';
+      ph += '<tr style="color:#7b8494"><td>'+p.label+'</td><td colspan="2">paid '+p.paid+': '+p.note+(p.uncleared?' (not in the bank import yet, still counted)':'')+'</td><td>'+money(p.amount)+'</td><td></td></tr>';
     });
     document.getElementById('mPay').innerHTML = ph || '<tr><td colspan="5">Nothing owed.</td></tr>';
 
