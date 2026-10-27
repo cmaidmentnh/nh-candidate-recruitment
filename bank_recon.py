@@ -27,8 +27,10 @@ DATE_KIND_RE = re.compile(r'^(\d{1,2})/(\d{1,2})/(\d{4})\s+(\S.*)$')
 # matters where descriptions overlap (GOOGLE ADS before GOOGLE).
 RULES = [
     ('income',     r'^\+|DEPOSIT|WINRED|STRIPE TRANSFER|ANEDOT|WIRE TRANSFER INCOMING|KALSHI'),
+    # TD's hold on a fresh deposit mirrors the deposit to the cent; it is not spending.
+    ('transfer',   r'^PENDING VERIFICATION'),
     ('mail',       r'NH REPUBLICAN STATE COMMITTEE|NEW HAMPSHIRE REPUBLICAN STATE|NHGOP'),
-    ('meta',       r'FACEBK|FACEBOOK|META PLATFORMS'),
+    ('meta',       r'FACEBK|FACEBOOK|META PLATFORMS|METAPAY'),
     ('stackadapt', r'STACKADAPT'),
     ('printing',   r'SPECTRUM MARKETI|SPECTRUM MARKETING'),
     # Hardware-store runs are yard sign stakes and supplies (Chris, 9/30), not printing.
