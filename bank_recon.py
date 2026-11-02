@@ -27,15 +27,17 @@ DATE_KIND_RE = re.compile(r'^(\d{1,2})/(\d{1,2})/(\d{4})\s+(\S.*)$')
 # matters where descriptions overlap (GOOGLE ADS before GOOGLE).
 RULES = [
     ('income',     r'^\+|DEPOSIT|WINRED|STRIPE TRANSFER|ANEDOT|WIRE TRANSFER INCOMING|KALSHI'),
-    # TD's hold on a fresh deposit mirrors the deposit to the cent; it is not spending.
-    ('transfer',   r'^PENDING VERIFICATION'),
+    # TD's hold on a fresh deposit mirrors the deposit to the cent; it is not spending. A
+    # "MEMO POST ITEM" debit is the same hold on a memo-posted deposit (11/2: it settled two
+    # i360 bills by "close amount" against the $10,600 and $1,000 holds).
+    ('transfer',   r'^PENDING VERIFICATION|^MEMO POST ITEM'),
     ('mail',       r'NH REPUBLICAN STATE COMMITTEE|NEW HAMPSHIRE REPUBLICAN STATE|NHGOP'),
     ('meta',       r'FACEBK|FACEBOOK|META PLATFORMS|METAPAY'),
     ('stackadapt', r'STACKADAPT'),
     ('printing',   r'SPECTRUM MARKETI|SPECTRUM MARKETING'),
     # Hardware-store runs are yard sign stakes and supplies (Chris, 9/30), not printing.
     ('signs',      r'HOME DEPOT|LOWES'),
-    ('texting',    r'REVT|TEXTING MANAGER'),
+    ('texting',    r'REVT|TEXTING MANAGER|TRANSFER TO CK X5890'),   # x5890 = the texting account
     ('google_ads', r'GOOGLE ADS'),
     ('data',       r'I360|I-360'),
     ('consulting', r'1772 STRATEGIES'),
@@ -43,7 +45,7 @@ RULES = [
     ('fundraising', r'LLBEAN|L\.L\. ?BEAN|SKY MEADOW'),
     ('fees',       r'WIRE TRANSFER FEE|SERVICE CHARGE|\bFEE\b'),
     ('operations', r'CLOUDFLARE|OPENAI|INTUIT|QBOOKS|GOOGLE WORKSPACE|X CORP|DECISION DESK|'
-                   r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM|FAL FEATURES|GOOGLE CLOUD'),
+                   r'UPS STORE|ANTHROPIC|AMAZON WEB|AWS|GITHUB|ZOOM|FAL FEATURES|GOOGLE.?CLOUD'),
 ]
 CATEGORIES = ['mail', 'meta', 'stackadapt', 'printing', 'signs', 'texting', 'google_ads', 'data', 'video',
               'consulting', 'operations', 'fees', 'fundraising', 'other', 'income', 'transfer']
