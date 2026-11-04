@@ -832,7 +832,7 @@ def _ran_by_district(cur, year):
     """, {'y': year})
 
     by_dist = defaultdict(list)
-    for dist_code, name, status, cid, lost_primary in cur.fetchall():
+    for dist_code, name, cid, status, lost_primary in cur.fetchall():
         by_dist[dist_code].append({
             "name": name,
             "status": {"won": "Won", "leading": "Leading"}.get(status)
