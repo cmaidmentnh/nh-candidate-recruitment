@@ -102,6 +102,59 @@ def release_voter_db_connection(conn):
     if pool and conn:
         pool.putconn(conn)
 
+
+# The voter API (138.197.36.143) carries the current voter file; the statewidechecklist
+# behind VOTER_DATABASE_URL is an April 2025 copy, so it is only the fallback.
+VOTER_FILE_API = os.environ.get('VOTER_FILE_API', 'http://138.197.36.143:5050')
+VOTER_FILE_API_KEY = os.environ.get('VOTER_FILE_API_KEY', '')
+
+
+def _voter_api(path, params=None, timeout=15):
+    import requests
+    r = requests.get(VOTER_FILE_API + path, params=params or {},
+                     headers={'X-API-Key': VOTER_FILE_API_KEY}, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
+
+
+def _voter_record(voter_id):
+    """One voter for display and for syncing the address: current file first, old copy after."""
+    try:
+        v = _voter_api(f'/api/voter/{voter_id}', timeout=8)
+        a = v.get('address') or {}
+        return {
+            'voter_id': v['voter_id'],
+            'name': ' '.join(x for x in [v.get('first_name'), v.get('middle_name'), v.get('last_name')] if x),
+            'address': f"{a.get('number') or ''} {a.get('street') or ''}".strip(),
+            'city': a.get('city'), 'zip': a.get('zip5'), 'ward': v.get('ward'),
+            'county': v.get('county'), 'party': v.get('party'),
+            'house_district': v.get('house_district'), 'calc_party': v.get('calc_party'),
+            'source': 'current',
+        }
+    except Exception as e:
+        logger.warning(f"Voter API lookup failed for {voter_id}: {e}")
+    voter_conn = get_voter_db_connection()
+    if not voter_conn:
+        return None
+    voter_cur = voter_conn.cursor()
+    try:
+        voter_cur.execute("""
+            SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff,
+                   ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
+            FROM statewidechecklist WHERE id_voter = %s
+        """, (voter_id,))
+        v = voter_cur.fetchone()
+    finally:
+        voter_cur.close()
+        release_voter_db_connection(voter_conn)
+    if not v:
+        return None
+    return {
+        'voter_id': v[0], 'name': f"{v[1]} {v[2] or ''} {v[3]} {v[4] or ''}".strip(),
+        'address': f"{v[5] or ''} {v[6] or ''}".strip(), 'city': v[7], 'zip': v[8],
+        'ward': v[9], 'county': v[10], 'party': v[11], 'source': 'april-2025-copy',
+    }
+
 app = Flask(__name__)
 
 # Session cookie hardening.
@@ -1342,35 +1395,9 @@ def edit_candidate(candidate_id, election_year):
             
             if voter_id:
                 try:
-                    voter_conn = get_voter_db_connection()
-                    if voter_conn:
-                        voter_cur = voter_conn.cursor()
-                        try:
-                            voter_cur.execute("""
-                                SELECT id_voter, nm_first, nm_mid, nm_last, nm_suff, 
-                                       ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
-                                FROM statewidechecklist
-                                WHERE id_voter = %s
-                            """, (voter_id,))
-                            v = voter_cur.fetchone()
-                            if v:
-                                voter_info = {
-                                    'voter_id': v[0],
-                                    'name': f"{v[1]} {v[2] or ''} {v[3]} {v[4] or ''}".strip(),
-                                    'address': f"{v[5] or ''} {v[6] or ''}".strip(),
-                                    'city': v[7],
-                                    'zip': v[8],
-                                    'ward': v[9],
-                                    'county': v[10],
-                                    'party': v[11]
-                                }
-                            else:
-                                logger.warning(f"Voter ID {voter_id} not found in voter database")
-                        finally:
-                            voter_cur.close()
-                            release_voter_db_connection(voter_conn)
-                    else:
-                        logger.warning(f"Could not connect to voter database for voter_id {voter_id}")
+                    voter_info = _voter_record(voter_id)
+                    if not voter_info:
+                        logger.warning(f"Voter ID {voter_id} not found in voter database")
                 except Exception as e:
                     logger.error(f"Error fetching voter info for voter_id {voter_id}: {e}")
 
@@ -3839,25 +3866,61 @@ def confirm_match(candidate_id):
 @login_required
 @csrf.exempt
 def lookup_voter(candidate_id):
-    """Look up a candidate in the voter file by name"""
+    """Rank the voters who could be this candidate, best first, each with why.
+
+    Uses the voter API's /api/candidate-match on the current file, fed with the
+    candidate's name, address, town and House district (and that district's towns).
+    first_name / last_name / city in the query string override the record, for when
+    someone is registered under another name. Falls back to a surname search on the
+    April 2025 copy if the API is down.
+    """
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Get candidate info
         cur.execute("""
-            SELECT first_name, last_name, address, city
-            FROM candidates
-            WHERE candidate_id = %s
+            SELECT c.first_name, c.last_name, c.address, c.city, c.zip, s.district_code,
+                   (SELECT string_agg(DISTINCT d.town, ',') FROM districts d
+                     WHERE d.full_district_code = s.district_code)
+            FROM candidates c
+            LEFT JOIN LATERAL (SELECT district_code FROM candidate_election_status s
+                                WHERE s.candidate_id = c.candidate_id AND s.district_code IS NOT NULL
+                                ORDER BY election_year DESC LIMIT 1) s ON TRUE
+            WHERE c.candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
         if not candidate:
             return jsonify({'error': 'Candidate not found'}), 404
-        
-        first_name, last_name, address, city = candidate
+        first_name, last_name, address, city, zip_code, district, towns = candidate
     finally:
         cur.close()
         release_db_connection(conn)
-    
+
+    q = request.args
+    overridden = any((q.get(k) or '').strip() for k in ('first_name', 'last_name', 'city'))
+    first_name = (q.get('first_name') or '').strip() or first_name
+    last_name = (q.get('last_name') or '').strip() or last_name
+    if (q.get('city') or '').strip():
+        # A typed town replaces the record's address too: it is a different place.
+        city, address, zip_code = q['city'].strip(), '', ''
+    if not last_name:
+        return jsonify({'error': 'Last name required'}), 400
+
+    try:
+        res = _voter_api('/api/candidate-match', {
+            'first_name': first_name or '', 'last_name': last_name, 'address': address or '',
+            'city': city or '', 'zip': zip_code or '', 'district': district or '',
+            'towns': '' if overridden and q.get('city') else (towns or ''), 'limit': 25})
+        return jsonify({'voters': res['voters'], 'clear_match': res.get('clear_match'),
+                        'searched': {'first_name': first_name, 'last_name': last_name, 'city': city,
+                                     'address': address, 'district': district},
+                        'source': 'current'})
+    except Exception as e:
+        logger.warning(f"Voter API candidate-match failed for {candidate_id}: {e}")
+    return _lookup_voter_legacy(first_name, last_name)
+
+
+def _lookup_voter_legacy(first_name, last_name):
+    """Surname search on the April 2025 copy; only used when the voter API is down."""
     # Parse first name - split off middle name if present
     first_parts = first_name.split() if first_name else []
     search_first = first_parts[0] if first_parts else ''
@@ -3984,7 +4047,7 @@ def lookup_voter(candidate_id):
                 display_name += f" {v[4]}"
             
             results.append({
-                'id_voter': v[0],
+                'voter_id': v[0],
                 'name': display_name,
                 'address': f"{v[5] or ''} {v[6] or ''}".strip(),
                 'city': v[7],
@@ -3994,7 +4057,7 @@ def lookup_voter(candidate_id):
                 'party': v[11]
             })
         
-        return jsonify({'voters': results})
+        return jsonify({'voters': results, 'clear_match': None, 'source': 'april-2025-copy'})
     finally:
         voter_cur.close()
         release_voter_db_connection(voter_conn)
@@ -4343,30 +4406,12 @@ def sync_from_voter(candidate_id):
     if not voter_id:
         return jsonify({'error': 'Voter ID required'}), 400
     
-    # Get voter info
-    voter_conn = get_voter_db_connection()
-    if not voter_conn:
-        return jsonify({'error': 'Voter database not available'}), 503
-    
-    voter_cur = voter_conn.cursor()
-    try:
-        voter_cur.execute("""
-            SELECT nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party
-            FROM statewidechecklist
-            WHERE id_voter = %s
-        """, (voter_id,))
-        voter = voter_cur.fetchone()
-        
-        if not voter:
-            return jsonify({'error': 'Voter not found'}), 404
-        
-        nm_first, nm_last, ad_num, ad_str1, ad_city, ad_zip5, ward, county, cd_party = voter
-        address = f"{ad_num or ''} {ad_str1 or ''}".strip()
-        
-    finally:
-        voter_cur.close()
-        release_voter_db_connection(voter_conn)
-    
+    voter = _voter_record(voter_id)
+    if not voter:
+        return jsonify({'error': 'Voter not found'}), 404
+    address, ad_city, ad_zip5 = voter['address'], voter['city'], voter['zip']
+    ward, county, cd_party = voter['ward'], voter['county'], voter['party']
+
     # Update candidate
     conn = get_db_connection()
     cur = conn.cursor()
