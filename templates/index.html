@@ -227,11 +227,25 @@
         </div>
         <div id="collapse-{{ county_name|replace(' ', '_') }}" class="collapse{% if search_query %} show{% endif %}">
             <div class="card-body">
+                {% macro ran_cell(cand, year) -%}
+                    {# Won in green, still being counted in italic, lost in grey, primary losers in lighter grey #}
+                    {%- set cls = {'Won': 'text-success font-weight-bold', 'Leading': 'text-success font-italic',
+                                   'Lost': 'text-secondary', 'Lost primary': 'text-muted'}[cand.status] -%}
+                    {%- set note = {'Won': '', 'Leading': ' (leading)', 'Lost': ' (lost)', 'Lost primary': ' (lost primary)'}[cand.status] -%}
+                    {%- if cand.candidate_id -%}
+                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=year) }}"
+                       class="candidate-link {{ cls }}">{{ cand.name|title }}</a><small class="text-muted">{{ note }}</small>
+                    {%- else -%}
+                    <span class="{{ cls }}">{{ cand.name|title }}</span><small class="text-muted">{{ note }}</small>
+                    {%- endif -%}
+                {%- endmacro %}
                 {% for fdc, info in dist_dict.items() %}
                 {% set active_cur = info.cand_cur|rejectattr("status","equalto","Declined")|list %}
                 {% set active_prior = info.cand_prior|rejectattr("status","equalto","Declined")|list %}
                 {% set a_cur = active_cur|length %}
                 {% set a_prior = active_prior|length %}
+                {% set active_prior2 = info.cand_prior2 %}
+                {% set a_prior2 = active_prior2|length %}
                 {% set seat_count = info.seat_count %}
 
                 {% set status = 'Empty' %}
@@ -260,12 +274,13 @@
                                     <thead>
                                         <tr>
                                             <th style="width:10%">Seat</th>
-                                            <th style="width:45%">{{ cycle }} Candidate</th>
-                                            <th style="width:45%">Sitting ({{ prior }})</th>
+                                            <th style="width:30%">{{ cycle }} Candidate</th>
+                                            <th style="width:30%">{{ prior }} Candidate</th>
+                                            <th style="width:30%">{{ prior - 2 }} Candidate</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for row in range(max(seat_count, a_cur)) %}
+                                        {% for row in range(max(seat_count, a_cur, a_prior, a_prior2)) %}
                                         <tr>
                                             <td>{% if row < seat_count %}{{ row + 1 }}{% endif %}</td>
                                             <td>
@@ -301,26 +316,15 @@
                                                             data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}" title="Quick edit">
                                                         <i class="fas fa-pen"></i>
                                                     </button>
-                                                {% else %}
+                                                {% elif row < seat_count %}
                                                     <button class="btn btn-sm btn-outline-dark"
                                                             onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})">
                                                         + Add
                                                     </button>
                                                 {% endif %}
                                             </td>
-                                            <td>
-                                                {% if row < a_prior %}
-                                                    {% set cand = active_prior[row] %}
-                                                    {# Sitting R members from the results site: called seats in green, ones still being counted in italic #}
-                                                    {% set cls = 'text-success' if cand.status == 'Won' else 'text-secondary font-italic' %}
-                                                    {% if cand.candidate_id %}
-                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=prior) }}"
-                                                       class="candidate-link {{ cls }}">{{ cand.name }}{% if cand.status != 'Won' %} (leading){% endif %}</a>
-                                                    {% else %}
-                                                    <span class="{{ cls }}">{{ cand.name }}{% if cand.status != 'Won' %} (leading){% endif %}</span>
-                                                    {% endif %}
-                                                {% endif %}
-                                            </td>
+                                            <td>{% if row < a_prior %}{{ ran_cell(active_prior[row], prior) }}{% endif %}</td>
+                                            <td>{% if row < a_prior2 %}{{ ran_cell(active_prior2[row], prior - 2) }}{% endif %}</td>
                                         </tr>
                                         {% endfor %}
                                         {% if a_cur >= seat_count %}
@@ -332,6 +336,7 @@
                                                     + Add Another
                                                 </button>
                                             </td>
+                                            <td></td>
                                             <td></td>
                                         </tr>
                                         {% endif %}

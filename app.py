@@ -804,6 +804,45 @@ try:
 except ImportError as e:
     logger.warning(f"candidate_portal module not deployed; portal feature disabled: {e}")
 
+def _ran_by_district(cur, year):
+    """Every R State Rep who ran in `year`, primary losers included, by district, with how it
+    ended: won/leading from incumbents (kept in step with the results site), else lost in the
+    general or the primary. Before filings were tracked (2024) the 'Ran' status rows stand in."""
+    cur.execute("""
+        WITH ran AS (
+            SELECT DISTINCT ON (COALESCE(f.candidate_id, -f.filing_id))
+                   f.district_code, f.first_name || ' ' || f.last_name AS name, f.candidate_id,
+                   f.result = 'lost' AS lost_primary
+            FROM filings f
+            WHERE f.election_year = %(y)s AND f.party = 'R' AND f.office = 'State Representative'
+              AND f.result <> 'withdrawn'
+            ORDER BY COALESCE(f.candidate_id, -f.filing_id), (f.result = 'lost'), f.filing_id DESC
+        ), legacy AS (
+            SELECT ces.district_code, c.first_name || ' ' || c.last_name, c.candidate_id, FALSE
+            FROM candidate_election_status ces JOIN candidates c ON c.candidate_id = ces.candidate_id
+            WHERE ces.election_year = %(y)s AND c.party = 'R' AND ces.status = 'Ran'
+              AND NOT EXISTS (SELECT 1 FROM filings WHERE election_year = %(y)s)
+        ), allran AS (SELECT * FROM ran UNION ALL SELECT * FROM legacy)
+        SELECT COALESCE(a.district_code, i.district_code), COALESCE(a.name, i.name),
+               COALESCE(a.candidate_id, i.candidate_id), i.status, COALESCE(a.lost_primary, FALSE)
+        FROM allran a
+        FULL JOIN (SELECT * FROM incumbents WHERE election_year = %(y)s AND party = 'R') i
+               ON i.candidate_id = a.candidate_id
+        ORDER BY 1, (i.status IS NULL), i.status DESC, COALESCE(a.lost_primary, FALSE), 2
+    """, {'y': year})
+
+    by_dist = defaultdict(list)
+    for dist_code, name, status, cid, lost_primary in cur.fetchall():
+        by_dist[dist_code].append({
+            "name": name,
+            "status": {"won": "Won", "leading": "Leading"}.get(status)
+                      or ("Lost primary" if lost_primary else "Lost"),
+            "incumbent": status is not None,
+            "candidate_id": cid,
+        })
+    return by_dist
+
+
 def get_data_and_dashboard():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -828,14 +867,8 @@ def get_data_and_dashboard():
         """, (CYCLE,))
         cands_cur_rows = cur.fetchall()
 
-        # The R seat holders from the last general (incumbents_sync keeps them in step with the
-        # results site), so the prior column says who sits in each seat and whether it is called.
-        cur.execute("""
-            SELECT district_code, name, status, candidate_id FROM incumbents
-            WHERE election_year = %s AND party = 'R'
-            ORDER BY district_code, status DESC, name
-        """, (PRIOR,))
-        sitting_rows = cur.fetchall()
+        prior_by_dist = _ran_by_district(cur, PRIOR)
+        prior2_by_dist = _ran_by_district(cur, PRIOR - 2)
 
         # Which candidates have filed this cycle? Surface as a FILED badge.
         # The recruitment dashboard is the State Rep pipeline, so only a State Rep
@@ -860,7 +893,7 @@ def get_data_and_dashboard():
         flash("Error fetching data from database.", "danger")
         district_rows = []
         cands_cur_rows = []
-        sitting_rows = []
+        prior_by_dist = prior2_by_dist = defaultdict(list)
         filed_cur_cids = set()
         filed_rep_count = 0
     finally:
@@ -878,14 +911,6 @@ def get_data_and_dashboard():
             "email": email, "phone": phone1, "signal": signal, "signal_uuid": signal_uuid,
             "signal_registered": signal_reg,
         })
-    cand_prior_by_dist = defaultdict(list)
-    for dist_code, name, status, cid in sitting_rows:
-        cand_prior_by_dist[dist_code].append({
-            "name": name,
-            "status": "Won" if status == "won" else "Leading",
-            "incumbent": True,
-            "candidate_id": cid
-        })
 
     county_groups = defaultdict(dict)
     for row in district_rows:
@@ -902,6 +927,7 @@ def get_data_and_dashboard():
                 "towns": [],
                 "cand_cur": [],
                 "cand_prior": [],
+                "cand_prior2": [],
                 "pvi": pvi,
                 "pvi_rating": pvi_rating
             }
@@ -910,7 +936,8 @@ def get_data_and_dashboard():
     for c_name, dist_dict in county_groups.items():
         for fdc, info in dist_dict.items():
             info["cand_cur"] = cand_cur_by_dist.get(fdc, [])
-            info["cand_prior"] = cand_prior_by_dist.get(fdc, [])
+            info["cand_prior"] = prior_by_dist.get(fdc, [])
+            info["cand_prior2"] = prior2_by_dist.get(fdc, [])
     
     final_groups = defaultdict(dict)
     for old_county, dist_dict in county_groups.items():
@@ -1086,7 +1113,7 @@ def index():
                     continue
                 # Check if search matches any candidate name this cycle or last
                 match_cur = any(search_upper in c['name'].upper() for c in info['cand_cur'])
-                match_prior = any(search_upper in c['name'].upper() for c in info['cand_prior'])
+                match_prior = any(search_upper in c['name'].upper() for c in info['cand_prior'] + info['cand_prior2'])
                 if match_cur or match_prior:
                     filtered_districts[fdc] = info
             if filtered_districts:
