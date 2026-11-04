@@ -1,7 +1,7 @@
 """
 Candidate cross-reference API (/api/v1/*).
 
-Lets an outside organisation check its own membership list against the 2026 NH
+Lets an outside organisation check its own membership list against the current-cycle NH
 candidate filings without us handing over any contact information. The only
 fields that ever leave this module are name, town, party, office and district,
 all of which are public record from the filing itself.
@@ -24,12 +24,14 @@ from functools import wraps
 
 from flask import Blueprint, request, jsonify, current_app
 
+from cycle import CYCLE
+
 match_api_bp = Blueprint('match_api', __name__)
 
 _get_db = None
 _release_db = None
 
-ELECTION_YEAR = 2026
+ELECTION_YEAR = CYCLE
 MAX_BATCH = 5000
 CACHE_TTL = 300
 
@@ -207,7 +209,7 @@ ROSTER_SQL = """
 
 
 def _load_roster():
-    """Public-safe projection of the 2026 filings. Explicit column list is the
+    """Public-safe projection of this cycle's filings. Explicit column list is the
     enforcement point for 'no contact information' — do not switch to SELECT *."""
     conn = _get_db()
     try:
@@ -371,7 +373,7 @@ def _record_usage(key_id, matched):
 @match_api_bp.route('/api/v1/candidates', methods=['GET'])
 @require_api_key
 def list_candidates():
-    """Full 2026 filed-candidate roster, for callers who prefer to match locally."""
+    """Full filed-candidate roster for the cycle, for callers who prefer to match locally."""
     rows, _ = _roster()
     party = (request.args.get('party') or '').strip().upper()
     office = (request.args.get('office') or '').strip().lower()
@@ -393,7 +395,7 @@ def list_candidates():
 @match_api_bp.route('/api/v1/match', methods=['POST'])
 @require_api_key
 def match_members():
-    """Cross-reference a membership list against 2026 filed candidates.
+    """Cross-reference a membership list against this cycle's filed candidates.
 
     Body: {"records": [{"id": "...", "first_name": "...", "last_name": "...",
                         "town": "..."} , ...],
@@ -465,7 +467,7 @@ def match_members():
 @match_api_bp.route('/api/v1/general-ballot', methods=['GET'])
 @require_api_key
 def general_ballot():
-    """Every candidate on the 2026 general election ballot, from the Secretary of State's list.
+    """Every candidate on this cycle's general election ballot, from the Secretary of State's list.
 
     Filters (all optional, case-insensitive): office (substring), party (D/R/I or the SoS label,
     e.g. LIB), district (exact, e.g. 'Hillsborough 12' or '3'), county, town.

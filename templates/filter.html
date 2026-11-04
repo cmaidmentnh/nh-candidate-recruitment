@@ -43,7 +43,7 @@
 {% endfor %}
 
 {% macro district_row(d) %}
-{% set active_r = d.info.cand2026|rejectattr("status","equalto","Declined")|list|length %}
+{% set active_r = d.info.cand_cur|rejectattr("status","equalto","Declined")|list|length %}
 {% set missing = d.info.seat_count - active_r %}
 <tr class="filter-row">
     <td style="width:22%; white-space:nowrap;">
@@ -61,7 +61,7 @@
     <td style="width:16%; text-align:center;">{{ d.info.seat_count }}</td>
     {% endif %}
     <td style="width:15%; text-align:right;">
-        <button class="btn btn-sm btn-primary" onclick="openAddCandidateModal('{{ d.fdc }}', 2026)">
+        <button class="btn btn-sm btn-primary" onclick="openAddCandidateModal('{{ d.fdc }}', {{ cycle }})">
             <i class="fas fa-plus"></i> Add
         </button>
     </td>
@@ -127,25 +127,25 @@
         <tbody>
             {% for county_name, dist_dict in county_groups.items()|sort %}
                 {% for fdc, info in dist_dict.items() %}
-                    {% set active_2026 = info.cand2026|rejectattr("status","equalto","Declined")|list %}
-                    {% set confirmed_count = info.cand2026|selectattr("status","equalto","Confirmed")|list|length %}
+                    {% set active_cur = info.cand_cur|rejectattr("status","equalto","Declined")|list %}
+                    {% set confirmed_count = info.cand_cur|selectattr("status","equalto","Confirmed")|list|length %}
 
                     {% if category == 'confirmed' %}
-                        {% for cand in active_2026 if cand.status|upper == 'CONFIRMED' %}
+                        {% for cand in active_cur if cand.status|upper == 'CONFIRMED' %}
                         <tr class="filter-row">
                             <td><strong>{{ fdc }}</strong> <small class="text-muted d-none d-md-inline">{{ info.towns|join(', ') }}</small></td>
-                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-success">{{ cand.name|title }}</a>{% if cand.incumbent %} <i class="fas fa-star text-warning"></i>{% endif %}</td>
-                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">Confirmed</span></td>
+                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link text-success">{{ cand.name|title }}</a>{% if cand.incumbent %} <i class="fas fa-star text-warning"></i>{% endif %}</td>
+                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}" onclick="showStatusDropdown(this, event)">Confirmed</span></td>
                             <td><button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button></td>
                         </tr>
                         {% endfor %}
 
                     {% elif category == 'potentials' %}
-                        {% for cand in active_2026 if cand.status|upper in ['CONSIDERING', 'POTENTIAL'] %}
+                        {% for cand in active_cur if cand.status|upper in ['CONSIDERING', 'POTENTIAL'] %}
                         <tr class="filter-row">
                             <td><strong>{{ fdc }}</strong> <small class="text-muted d-none d-md-inline">{{ info.towns|join(', ') }}</small></td>
-                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-warning">{{ cand.name|title }}</a>{% if cand.incumbent %} <i class="fas fa-star text-warning"></i>{% endif %}</td>
-                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
+                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link text-warning">{{ cand.name|title }}</a>{% if cand.incumbent %} <i class="fas fa-star text-warning"></i>{% endif %}</td>
+                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
                             <td><button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button></td>
                         </tr>
                         {% endfor %}
@@ -161,48 +161,48 @@
                             </td>
                             <td><small class="text-muted">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <button class="btn btn-sm btn-primary" onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                <button class="btn btn-sm btn-primary" onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
                             </td>
                         </tr>
 
                     {% elif category == 'incumbents_running' %}
-                        {% for cand in info.cand2026 if cand.incumbent and cand.status|upper == 'CONFIRMED' %}
+                        {% for cand in info.cand_cur if cand.incumbent and cand.status|upper == 'CONFIRMED' %}
                         <tr class="filter-row">
                             <td><strong>{{ fdc }}</strong> <small class="text-muted d-none d-md-inline">{{ info.towns|join(', ') }}</small></td>
-                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-success">{{ cand.name|title }} <i class="fas fa-star text-warning"></i></a></td>
-                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
+                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link text-success">{{ cand.name|title }} <i class="fas fa-star text-warning"></i></a></td>
+                            <td><span class="status-badge badge badge-success" data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
                             <td><button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button></td>
                         </tr>
                         {% endfor %}
 
                     {% elif category == 'incumbents_not_running' %}
-                        {% for cand in info.cand2026 if cand.incumbent and cand.status|upper == 'DECLINED' %}
+                        {% for cand in info.cand_cur if cand.incumbent and cand.status|upper == 'DECLINED' %}
                         <tr class="filter-row">
                             <td><strong>{{ fdc }}</strong> <small class="text-muted d-none d-md-inline">{{ info.towns|join(', ') }}</small></td>
-                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-secondary">{{ cand.name|title }} <i class="fas fa-star text-warning"></i></a></td>
-                            <td><span class="status-badge badge badge-secondary" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">Declined</span></td>
+                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link text-secondary">{{ cand.name|title }} <i class="fas fa-star text-warning"></i></a></td>
+                            <td><span class="status-badge badge badge-secondary" data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}" onclick="showStatusDropdown(this, event)">Declined</span></td>
                             <td><button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button></td>
                         </tr>
                         {% endfor %}
 
                     {% elif category == 'incumbents_undecided' %}
-                        {% for cand in info.cand2026 if cand.incumbent and cand.status|upper not in ['CONFIRMED', 'DECLINED'] %}
+                        {% for cand in info.cand_cur if cand.incumbent and cand.status|upper not in ['CONFIRMED', 'DECLINED'] %}
                         <tr class="filter-row">
                             <td><strong>{{ fdc }}</strong> <small class="text-muted d-none d-md-inline">{{ info.towns|join(', ') }}</small></td>
-                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link text-warning">{{ cand.name|title }} <i class="fas fa-star text-warning"></i></a></td>
-                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
+                            <td><a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link text-warning">{{ cand.name|title }} <i class="fas fa-star text-warning"></i></a></td>
+                            <td><span class="status-badge badge badge-warning" data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}" onclick="showStatusDropdown(this, event)">{{ cand.status }}</span></td>
                             <td><button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}"><i class="fas fa-pen"></i></button></td>
                         </tr>
                         {% endfor %}
 
                     {% else %}
-                        {% for cand in active_2026 %}
+                        {% for cand in active_cur %}
                         <tr class="filter-row">
                             <td><strong>{{ fdc }}</strong> <small class="text-muted d-none d-md-inline">{{ info.towns|join(', ') }}</small></td>
                             <td>
-                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="candidate-link
+                                <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link
                                     {% if cand.status|upper == 'CONFIRMED' %}text-success
                                     {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
                                     {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
@@ -217,7 +217,7 @@
                                     {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}badge-warning
                                     {% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary
                                     {% else %}badge-secondary{% endif %}"
-                                    data-candidate-id="{{ cand.candidate_id }}" data-election-year="2026"
+                                    data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}"
                                     onclick="showStatusDropdown(this, event)">
                                     {{ cand.status }}
                                 </span>

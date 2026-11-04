@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        #copy2026Form { display: none; }
+        #copyCycleForm { display: none; }
         .voter-match {
             padding: 10px;
             margin: 5px 0;
@@ -181,7 +181,7 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Status (Election {{ election_year }}):</label>
-                                {% if election_year < 2026 %}
+                                {% if election_year < cycle %}
                                 <select name="status" class="form-control">
                                     <option value="Ran" selected>Ran</option>
                                 </select>
@@ -232,19 +232,19 @@
                     <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
                 </form>
 
-                {% if election_year == 2024 %}
+                {% if election_year == prior %}
                 <hr>
-                <h5 class="mt-3">Copy to 2026</h5>
-                <button class="btn btn-info btn-sm" onclick="document.getElementById('copy2026Form').style.display='block'">
-                    <i class="fas fa-copy"></i> Copy this Candidate to 2026
+                <h5 class="mt-3">Copy to {{ cycle }}</h5>
+                <button class="btn btn-info btn-sm" onclick="document.getElementById('copyCycleForm').style.display='block'">
+                    <i class="fas fa-copy"></i> Copy this Candidate to {{ cycle }}
                 </button>
-                <div id="copy2026Form" class="mt-3">
-                    <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=candidate_id) }}">
+                <div id="copyCycleForm" class="mt-3">
+                    <form method="POST" action="{{ url_for('copy_candidate_to_cycle', candidate_id=candidate_id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label>Status for 2026:</label>
+                                    <label>Status for {{ cycle }}:</label>
                                     <select name="status" class="form-control">
                                         <option value="Considering">Considering</option>
                                         <option value="Potential">Potential</option>
@@ -271,8 +271,8 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-success btn-sm">Copy to 2026</button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('copy2026Form').style.display='none'">Cancel</button>
+                        <button type="submit" class="btn btn-success btn-sm">Copy to {{ cycle }}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('copyCycleForm').style.display='none'">Cancel</button>
                     </form>
                 </div>
                 {% endif %}

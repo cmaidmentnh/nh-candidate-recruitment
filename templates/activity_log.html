@@ -38,7 +38,7 @@
                         </td>
                         <td>
                             {% if activity[3] %}
-                                <a href="{{ url_for('edit_candidate', candidate_id=activity[3], election_year=2026) }}">{{ activity[2] }}</a>
+                                <a href="{{ url_for('edit_candidate', candidate_id=activity[3], election_year=cycle) }}">{{ activity[2] }}</a>
                             {% else %}
                                 {{ activity[2] }}
                             {% endif %}

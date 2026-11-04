@@ -17,6 +17,8 @@ from decimal import Decimal
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
 
+from cycle import CYCLE, PRIOR
+
 logger = logging.getLogger(__name__)
 
 scout_bp = Blueprint('scout', __name__, url_prefix='/scout')
@@ -250,7 +252,7 @@ def refresh_districts():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
+        cur.execute(f"""
             WITH district_summary AS (
                 SELECT d.full_district_code, d.county_name,
                        STRING_AGG(DISTINCT d.town, ', ' ORDER BY d.town) as towns,
@@ -260,7 +262,7 @@ def refresh_districts():
             confirmed AS (
                 SELECT ces.district_code, COUNT(*) as cnt
                 FROM candidate_election_status ces
-                WHERE ces.election_year = 2026 AND ces.status = 'Confirmed'
+                WHERE ces.election_year = {CYCLE} AND ces.status = 'Confirmed'
                 GROUP BY ces.district_code
             ),
             prospect_counts AS (
@@ -326,11 +328,11 @@ def district_detail(district_code):
         district = cur.fetchone()
 
         # Confirmed candidates
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.candidate_id, c.first_name, c.last_name, ces.status
             FROM candidate_election_status ces
             JOIN candidates c ON c.candidate_id = ces.candidate_id
-            WHERE ces.district_code = %s AND ces.election_year = 2026
+            WHERE ces.district_code = %s AND ces.election_year = {CYCLE}
             ORDER BY ces.status, c.last_name
         """, (district_code,))
         candidates = cur.fetchall()
@@ -606,15 +608,15 @@ def promote_prospect(prospect_id):
             candidate_id = cur.fetchone()[0]
 
         # Check for existing election status
-        cur.execute("""
+        cur.execute(f"""
             SELECT 1 FROM candidate_election_status
-            WHERE candidate_id = %s AND election_year = 2026 AND district_code = %s
+            WHERE candidate_id = %s AND election_year = {CYCLE} AND district_code = %s
         """, (candidate_id, district_code))
         if not cur.fetchone():
-            cur.execute("""
+            cur.execute(f"""
                 INSERT INTO candidate_election_status
                     (candidate_id, election_year, status, is_running, added_by, district_code)
-                VALUES (%s, 2026, %s, TRUE, %s, %s)
+                VALUES (%s, {CYCLE}, %s, TRUE, %s, %s)
             """, (candidate_id, status, current_user.email, district_code))
 
         # Mark prospect as promoted
@@ -981,7 +983,7 @@ def scan_fec():
 
     api_key = os.environ.get('FEC_API_KEY', 'DEMO_KEY')
     min_amount = int(request.form.get('min_amount', 200))
-    cycle = request.form.get('cycle', '2024')
+    cycle = request.form.get('cycle', str(PRIOR))
     max_pages = int(request.form.get('max_pages', 20))
 
     conn = get_db_connection()

@@ -102,7 +102,7 @@
 <div class="covbar" id="covbar">
   <b>Coverage</b>
   <span class="cov-unassigned" id="cov-unassigned"
-        title="Filed 2026 Republicans with no whip">{{ coverage.unassigned }} unassigned</span>
+        title="Filed {{ cycle }} Republicans with no whip">{{ coverage.unassigned }} unassigned</span>
   {% for w in coverage.whips %}
     <span class="cov-w" data-uid="{{ w.user_id }}">{{ w.name }}
       <b class="cov-n">{{ w.assigned }}</b></span>

@@ -8,6 +8,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import login_required, current_user
 from datetime import datetime
+from cycle import CYCLE, PRIOR
 import logging
 import secrets
 from werkzeug.utils import secure_filename
@@ -249,36 +250,34 @@ def secret_primaries():
         target_candidate_ids = [t[3] for t in targets if t[3]]
 
         # Get "opposed" legislators from speaker vote tracking who aren't already targets
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.phone1,
-                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
+                   COALESCE(ces_cur.district_code, sit.district_code) as district_code,
                    svt.commitment_status, svt.confidence_level, svt.notes
             FROM candidates c
-            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
-                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
+            JOIN incumbents sit ON c.candidate_id = sit.candidate_id
+                AND sit.election_year = {PRIOR}
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
             JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE c.party = 'R'
-              AND c.incumbent = TRUE
-              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
+              AND (ces_cur.status IS NULL OR ces_cur.status != 'Declined')
               AND svt.commitment_status = 'opposed'
             ORDER BY c.last_name
         """)
         opposed_legislators = [leg for leg in cur.fetchall() if leg[0] not in target_candidate_ids]
 
         # Get all R incumbents for the add target dropdown (same logic as speaker votes)
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.candidate_id, c.first_name, c.last_name, c.party,
-                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
-                   COALESCE(ces2026.status, ces2024.status) as status
+                   COALESCE(ces_cur.district_code, sit.district_code) as district_code,
+                   COALESCE(ces_cur.status, 'Sitting') as status
             FROM candidates c
-            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
-                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
-            WHERE c.incumbent = TRUE
-              AND c.party = 'R'
-              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
-            ORDER BY COALESCE(ces2026.district_code, ces2024.district_code), c.last_name
+            JOIN incumbents sit ON c.candidate_id = sit.candidate_id
+                AND sit.election_year = {PRIOR}
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
+            WHERE c.party = 'R'
+              AND (ces_cur.status IS NULL OR ces_cur.status != 'Declined')
+            ORDER BY COALESCE(ces_cur.district_code, sit.district_code), c.last_name
         """)
         incumbents = cur.fetchall()
 
@@ -310,7 +309,7 @@ def new_campaign():
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description', '')
-        target_year = request.form.get('target_year', 2026)
+        target_year = request.form.get('target_year', CYCLE)
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -368,18 +367,17 @@ def view_campaign(campaign_id):
         targets = cur.fetchall()
 
         # Get all R incumbents for the add target dropdown (same logic as speaker votes)
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.candidate_id, c.first_name, c.last_name, c.party,
-                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
-                   COALESCE(ces2026.status, ces2024.status) as status
+                   COALESCE(ces_cur.district_code, sit.district_code) as district_code,
+                   COALESCE(ces_cur.status, 'Sitting') as status
             FROM candidates c
-            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
-                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
-            WHERE c.incumbent = TRUE
-              AND c.party = 'R'
-              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
-            ORDER BY COALESCE(ces2026.district_code, ces2024.district_code), c.last_name
+            JOIN incumbents sit ON c.candidate_id = sit.candidate_id
+                AND sit.election_year = {PRIOR}
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
+            WHERE c.party = 'R'
+              AND (ces_cur.status IS NULL OR ces_cur.status != 'Declined')
+            ORDER BY COALESCE(ces_cur.district_code, sit.district_code), c.last_name
         """)
         incumbents = cur.fetchall()
 
@@ -413,12 +411,12 @@ def add_target_from_opposed():
         candidate_id = request.form.get('candidate_id')
 
         # Get candidate info (with 2024 fallback for district)
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.candidate_id, c.first_name, c.last_name, c.party,
-                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code
+                   COALESCE(ces_cur.district_code, ces_prior.district_code) as district_code
             FROM candidates c
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
-            LEFT JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id AND ces2024.election_year = 2024
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
+            LEFT JOIN candidate_election_status ces_prior ON c.candidate_id = ces_prior.candidate_id AND ces_prior.election_year = {PRIOR}
             WHERE c.candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
@@ -466,12 +464,12 @@ def add_target():
         incumbent_candidate_id = request.form.get('incumbent_candidate_id')
 
         # Get incumbent info (with 2024 fallback for district)
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.candidate_id, c.first_name, c.last_name, c.party,
-                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code
+                   COALESCE(ces_cur.district_code, ces_prior.district_code) as district_code
             FROM candidates c
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
-            LEFT JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id AND ces2024.election_year = 2024
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
+            LEFT JOIN candidate_election_status ces_prior ON c.candidate_id = ces_prior.candidate_id AND ces_prior.election_year = {PRIOR}
             WHERE c.candidate_id = %s
         """, (incumbent_candidate_id,))
         incumbent = cur.fetchone()
@@ -642,20 +640,19 @@ def speaker_votes():
     try:
         # Build query with optional filters
         # R incumbents who ran in 2024, excluding 2026 Declined
-        query = """
+        query = f"""
             SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.phone1,
-                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
-                   c.incumbent,
+                   COALESCE(ces_cur.district_code, sit.district_code) as district_code,
+                   TRUE,
                    svt.id as tracking_id, svt.commitment_status, svt.confidence_level,
                    svt.notes, svt.last_contact_at, svt.assigned_caller
             FROM candidates c
-            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
-                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
+            JOIN incumbents sit ON c.candidate_id = sit.candidate_id
+                AND sit.election_year = {PRIOR}
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE c.party = 'R'
-              AND c.incumbent = TRUE
-              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
+              AND (ces_cur.status IS NULL OR ces_cur.status != 'Declined')
         """
         params = []
 
@@ -686,16 +683,15 @@ def speaker_votes():
         legislators = cur.fetchall()
 
         # Get summary counts (unfiltered for dashboard cards)
-        cur.execute("""
+        cur.execute(f"""
             SELECT COALESCE(svt.commitment_status, 'unknown') as status, COUNT(*)
             FROM candidates c
-            JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id
-                AND ces2024.election_year = 2024 AND ces2024.status = 'Ran'
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
+            JOIN incumbents sit ON c.candidate_id = sit.candidate_id
+                AND sit.election_year = {PRIOR}
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE c.party = 'R'
-              AND c.incumbent = TRUE
-              AND (ces2026.status IS NULL OR ces2026.status != 'Declined')
+              AND (ces_cur.status IS NULL OR ces_cur.status != 'Declined')
             GROUP BY COALESCE(svt.commitment_status, 'unknown')
         """)
         status_counts = dict(cur.fetchall())
@@ -738,13 +734,13 @@ def update_speaker_vote(candidate_id):
         assigned_caller = request.form.get('assigned_caller')
 
         # Get candidate name and existing tracking data (use 2026 district if available, else 2024)
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.first_name, c.last_name,
-                   COALESCE(ces2026.district_code, ces2024.district_code) as district_code,
+                   COALESCE(ces_cur.district_code, ces_prior.district_code) as district_code,
                    svt.notes, svt.assigned_caller
             FROM candidates c
-            LEFT JOIN candidate_election_status ces2026 ON c.candidate_id = ces2026.candidate_id AND ces2026.election_year = 2026
-            LEFT JOIN candidate_election_status ces2024 ON c.candidate_id = ces2024.candidate_id AND ces2024.election_year = 2024
+            LEFT JOIN candidate_election_status ces_cur ON c.candidate_id = ces_cur.candidate_id AND ces_cur.election_year = {CYCLE}
+            LEFT JOIN candidate_election_status ces_prior ON c.candidate_id = ces_prior.candidate_id AND ces_prior.election_year = {PRIOR}
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
             WHERE c.candidate_id = %s
         """, (candidate_id,))
@@ -805,16 +801,17 @@ def speaker_vote_detail(candidate_id):
     cur = conn.cursor()
     try:
         # Get candidate with tracking info
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.phone1,
                    c.address, c.city, c.zip,
-                   ces.district_code, c.incumbent,
+                   COALESCE(ces.district_code, sit.district_code), sit.candidate_id IS NOT NULL,
                    svt.id as tracking_id, svt.commitment_status, svt.confidence_level,
                    svt.notes, svt.last_contact_at
             FROM candidates c
-            JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
+            LEFT JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id AND ces.election_year = {CYCLE}
+            LEFT JOIN incumbents sit ON c.candidate_id = sit.candidate_id AND sit.election_year = {PRIOR}
             LEFT JOIN speaker_vote_tracking svt ON c.candidate_id = svt.candidate_id
-            WHERE c.candidate_id = %s AND ces.election_year = 2026
+            WHERE c.candidate_id = %s
         """, (candidate_id,))
         candidate = cur.fetchone()
 

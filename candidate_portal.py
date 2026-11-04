@@ -130,13 +130,14 @@ def _prefill(cur, candidate_id):
     p = {k: (v or '') for k, v in zip(keys, r)}
     p['town'] = p.get('city', '') or ''  # default the district town to the candidate's city
     cur.execute("""SELECT district_code FROM candidate_election_status
-                   WHERE candidate_id=%s AND election_year=2026 LIMIT 1""", (candidate_id,))
+                   WHERE candidate_id=%s ORDER BY election_year DESC LIMIT 1""", (candidate_id,))
     row = cur.fetchone()
     if row:
         p['district_code'] = row[0]
     # Only a State Rep filing carries a real House district + town (county offices etc. don't).
     cur.execute("""SELECT district_code, town FROM filings
-                   WHERE candidate_id=%s AND election_year=2026 AND office='State Representative' LIMIT 1""", (candidate_id,))
+                   WHERE candidate_id=%s AND office='State Representative'
+                   ORDER BY election_year DESC LIMIT 1""", (candidate_id,))
     row = cur.fetchone()
     if row:
         p.setdefault('district_code', row[0])
@@ -744,7 +745,10 @@ def general_intake_get():
                               NULLIF(TRIM(COALESCE(c.photo_url,'')),'')
                          FROM candidates c
                     LEFT JOIN filings f ON f.candidate_id = c.candidate_id
-                          AND f.election_year = 2026 AND f.office = 'State Representative'
+                          AND f.office = 'State Representative'
+                          AND f.election_year = (SELECT max(f2.election_year) FROM filings f2
+                                                  WHERE f2.candidate_id = c.candidate_id
+                                                    AND f2.office = 'State Representative')
                         WHERE c.candidate_id = %s
                         LIMIT 1""", (cid,))
         row = cur.fetchone()

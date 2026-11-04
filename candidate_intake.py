@@ -22,6 +22,8 @@ from flask import Blueprint, request, jsonify, render_template, redirect, url_fo
 from flask_login import current_user
 from werkzeug.utils import secure_filename
 
+from cycle import CYCLE
+
 logger = logging.getLogger(__name__)
 
 intake_bp = Blueprint('intake', __name__, url_prefix='/intake')
@@ -293,16 +295,16 @@ def _build_prefill(cur, email):
                 'twitter_x', 'facebook', 'instagram', 'photo_url']
         profile = {k: (v or '') for k, v in zip(keys, r)}
 
-        cur.execute("""
+        cur.execute(f"""
             SELECT district_code FROM candidate_election_status
-            WHERE candidate_id = %s AND election_year = 2026 LIMIT 1
+            WHERE candidate_id = %s AND election_year = {CYCLE} LIMIT 1
         """, (candidate_id,))
         row = cur.fetchone()
         if row:
             profile['district_code'] = row[0]
-        cur.execute("""
+        cur.execute(f"""
             SELECT district_code, town FROM filings
-            WHERE candidate_id = %s AND election_year = 2026 LIMIT 1
+            WHERE candidate_id = %s AND election_year = {CYCLE} LIMIT 1
         """, (candidate_id,))
         row = cur.fetchone()
         if row:
@@ -422,12 +424,12 @@ def admin_queue():
             s['suggestions'] = []
             if s['status'] != 'pending':
                 continue
-            cur.execute("""
+            cur.execute(f"""
                 SELECT c.candidate_id, c.first_name, c.last_name, c.email, c.city,
                        ces.district_code
                 FROM candidates c
                 LEFT JOIN candidate_election_status ces
-                       ON ces.candidate_id = c.candidate_id AND ces.election_year = 2026
+                       ON ces.candidate_id = c.candidate_id AND ces.election_year = {CYCLE}
                 WHERE LOWER(c.last_name) = LOWER(%s)
                   AND LOWER(SPLIT_PART(c.first_name, ' ', 1)) LIKE LOWER(%s) || '%%'
                 ORDER BY c.candidate_id LIMIT 5
@@ -512,9 +514,9 @@ def admin_create(submission_id):
               sub['instagram'], sub['headshot_url'], current_user.email))
         candidate_id = cur.fetchone()[0]
         if sub['district_code']:
-            cur.execute("""
+            cur.execute(f"""
                 INSERT INTO candidate_election_status (candidate_id, election_year, district_code, status, is_running, added_by)
-                VALUES (%s, 2026, %s, 'Confirmed', TRUE, %s)
+                VALUES (%s, {CYCLE}, %s, 'Confirmed', TRUE, %s)
             """, (candidate_id, sub['district_code'], current_user.email))
         photo_urls = sub['photo_urls'] if isinstance(sub['photo_urls'], list) else json.loads(sub['photo_urls'] or '[]')
         note_bits = [f"Created from electhouserepublicans.com/candidates intake ({sub['email']})."]

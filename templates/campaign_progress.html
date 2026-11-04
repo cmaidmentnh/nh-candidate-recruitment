@@ -45,7 +45,7 @@
     <h1 class="mb-0" style="font-size:1.6rem;"><i class="fas fa-flag-checkered text-danger"></i> Campaign Progress</h1>
     <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
 </div>
-<p class="text-muted small mb-3"><i class="fas fa-lock"></i> Private &mdash; where every filed 2026 R House candidate stands. Green = done; check the manual boxes as candidates progress.</p>
+<p class="text-muted small mb-3"><i class="fas fa-lock"></i> Private &mdash; where every filed {{ cycle }} R House candidate stands. Green = done; check the manual boxes as candidates progress.</p>
 
 <div class="tiles">
     <div class="tile"><div class="n">{{ stats.total }}</div><div class="l">Candidates</div></div>

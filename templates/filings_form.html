@@ -14,7 +14,7 @@
   <div class="form-row">
     <div class="form-group col-md-4">
       <label>Election Year</label>
-      <input type="number" name="election_year" class="form-control" value="{{ filing.election_year if filing else (prefill.election_year or 2026) }}" required>
+      <input type="number" name="election_year" class="form-control" value="{{ filing.election_year if filing else (prefill.election_year or cycle) }}" required>
     </div>
     <div class="form-group col-md-8">
       <label>Office</label>

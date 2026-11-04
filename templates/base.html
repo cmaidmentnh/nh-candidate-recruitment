@@ -234,7 +234,7 @@
                     </form>
 
                     <!-- Add Existing Form -->
-                    <form method="POST" action="{{ url_for('copy_candidate_to_2026', candidate_id=0) }}" id="addExistingForm" style="display:none;">
+                    <form method="POST" action="{{ url_for('copy_candidate_to_cycle', candidate_id=0) }}" id="addExistingForm" style="display:none;">
                         <input type="hidden" name="district_code" id="existingDistrictCode">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="status" id="existingStatus" value="Considering">
@@ -254,7 +254,7 @@
                             </select>
                         </div>
                         <button type="button" class="btn btn-secondary" onclick="backToSearch()"><i class="fas fa-arrow-left"></i> Back</button>
-                        <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add to 2026</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Add to {{ cycle }}</button>
                     </form>
                 </div>
             </div>
@@ -267,7 +267,7 @@
     {% block scripts %}
     <script>
         var currentDistrictCode = '';
-        var currentElectionYear = 2026;
+        var currentElectionYear = {{ cycle }};
 
         // Quick Edit Panel
         function openQuickEdit(candidateId) {
@@ -284,7 +284,7 @@
                     $('#qeTitle').html(d.first_name + ' ' + d.last_name);
                     var elec = (d.elections && d.elections.length > 0) ? d.elections[0] : null;
                     var statusVal = elec ? elec.status : '';
-                    var yearVal = elec ? elec.year : 2026;
+                    var yearVal = elec ? elec.year : {{ cycle }};
                     var distVal = elec ? elec.district : '';
 
                     var h = '';
@@ -441,7 +441,7 @@
             $('.status-dropdown').remove();
 
             var candidateId = $(el).data('candidate-id');
-            var electionYear = $(el).data('election-year') || 2026;
+            var electionYear = $(el).data('election-year') || {{ cycle }};
             var currentStatus = $(el).text().trim();
             var statuses = ['Confirmed', 'Considering', 'Potential', 'New Recruit', 'Declined'];
 
@@ -586,7 +586,7 @@
             $('#addNewForm').hide();
             $('#addExistingForm').show();
             $('#selectedCandidateName').text(name);
-            $('#addExistingForm').attr('action', '/copy_candidate_to_2026/' + candidateId);
+            $('#addExistingForm').attr('action', '/copy_candidate_to_cycle/' + candidateId);
         }
 
         function showAddNewForm() {

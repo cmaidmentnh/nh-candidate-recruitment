@@ -1,5 +1,5 @@
 """
-Campaign Progress Tracker (/progress) — admin matrix of where every 2026 R State
+Campaign Progress Tracker (/progress) — admin matrix of where every R State
 House candidate is in their campaign. Auto-derives signals we already store
 (website, donate page, socials, photo/bio, portal account, voter-list & video
 requests, surveys, recent activity) and lets restricted admins check off the few
@@ -15,6 +15,8 @@ from datetime import date, datetime, timedelta
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import current_user
+
+from cycle import CYCLE
 
 progress_bp = Blueprint('progress', __name__)
 
@@ -184,14 +186,14 @@ def _dkey(d):
 
 
 def _build_rows(cur):
-    """Every filed 2026 R State Rep candidate with their derived signals.
+    """Every filed R State Rep candidate with their derived signals.
 
     Extracted from the /progress route so the whip screens work off exactly the
     same data as the desktop matrix instead of a second, drifting copy.
     """
     if True:
-        # Base roster: every filed 2026 R State Rep candidate, plus their asset columns.
-        cur.execute("""
+        # Base roster: every filed R State Rep candidate this cycle, plus their asset columns.
+        cur.execute(f"""
             SELECT f.candidate_id, f.first_name, f.last_name, f.district_code, f.filed_at,
                    COALESCE(c.incumbent, false),
                    c.external_campaign_url, c.website_url, c.donate_url,
@@ -201,7 +203,7 @@ def _build_rows(cur):
                    c.signal_registered, c.phone1_type,
                    c.email, c.email1, c.email2
             FROM filings f LEFT JOIN candidates c ON c.candidate_id = f.candidate_id
-            WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
+            WHERE f.election_year={CYCLE} AND f.party='R' AND f.office='State Representative'
               AND f.result NOT IN ('lost', 'withdrawn')
             ORDER BY f.last_name, f.first_name
         """)
@@ -382,7 +384,7 @@ def progress_checkin():
     conn = _get_db()
     cur = conn.cursor()
     try:
-        cur.execute("""
+        cur.execute(f"""
             SELECT c.first_name || ' ' || c.last_name AS name,
                    f.district_code, p.intake_submitted_at,
                    p.signs_have, p.signs_count, p.lit_have, p.headshot_have, p.walkbooks_have,
@@ -392,7 +394,7 @@ def progress_checkin():
               FROM candidate_campaign_progress p
               JOIN candidates c ON c.candidate_id = p.candidate_id
               LEFT JOIN filings f ON f.candidate_id = p.candidate_id
-                   AND f.election_year = 2026 AND f.office = 'State Representative'
+                   AND f.election_year = {CYCLE} AND f.office = 'State Representative'
              WHERE p.intake_submitted_at IS NOT NULL
              ORDER BY p.intake_submitted_at DESC""")
         cols = ['name', 'district', 'at', 'signs', 'signs_count', 'lit', 'headshot', 'walkbooks',
@@ -400,9 +402,9 @@ def progress_checkin():
         rows = [dict(zip(cols, r)) for r in cur.fetchall()]
 
         # everyone the form went to, so the non-responders are visible too
-        cur.execute("""
+        cur.execute(f"""
             SELECT count(*) FROM filings f
-             WHERE f.election_year = 2026 AND f.party = 'R'
+             WHERE f.election_year = {CYCLE} AND f.party = 'R'
                AND f.office = 'State Representative' AND f.result NOT IN ('lost', 'withdrawn')""")
         nominees = cur.fetchone()[0]
 

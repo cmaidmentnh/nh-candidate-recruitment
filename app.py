@@ -1,5 +1,6 @@
 import os
 import recruit_twofa as twofa
+from cycle import CYCLE, PRIOR, PRIMARY_DAY, IS_INCUMBENT_SQL
 import re
 import json
 import csv
@@ -521,6 +522,11 @@ def survey_access_required(f):
     return decorated_function
 
 @app.context_processor
+def inject_cycle():
+    """The recruitment cycle and the one before it, for every template."""
+    return {'cycle': CYCLE, 'prior': PRIOR}
+
+@app.context_processor
 def inject_super_admin():
     """Make is_super_admin and survey access available in all templates."""
     return {'is_super_admin': is_super_admin(), 'can_access_surveys': can_access_surveys()}
@@ -560,6 +566,13 @@ from stackadapt_sync import init_stackadapt, start_auto_sync as _sa_auto_sync
 init_stackadapt(get_db_connection, release_db_connection)
 _sa_auto_sync()
 
+# Sitting members = the last general's winners, kept in step with elections.nhhouse.gop.
+from incumbents_sync import (init_incumbents_sync, start_auto_sync as _inc_auto_sync,
+                             register_cli as _inc_cli)
+init_incumbents_sync(get_db_connection, release_db_connection)
+_inc_cli(app)
+_inc_auto_sync()
+
 
 
 @app.template_filter('ago')
@@ -594,7 +607,7 @@ csrf.exempt(app.view_functions['digest.digest_submit'])
 # One-click List-Unsubscribe (RFC 8058) POSTs come from mail providers with no CSRF token.
 csrf.exempt(app.view_functions['digest.digest_unsubscribe'])
 
-# Register campaign progress tracker (admin matrix of where 2026 R House candidates stand)
+# Register campaign progress tracker (admin matrix of where this cycle's R House candidates stand)
 from campaign_progress import (progress_bp, init_campaign_progress,
                                can_access_progress, _build_rows)
 init_campaign_progress(get_db_connection, release_db_connection, is_super_admin)
@@ -607,7 +620,7 @@ app.register_blueprint(whip_bp)
 csrf.exempt(app.view_functions['progress.progress_update'])  # JSON inline-edit, admin-gated
 
 # Public candidate cross-reference API. Key-authenticated, no session, so CSRF does
-# not apply; exposes name/town/party/office/district from 2026 filings and nothing else.
+# not apply; exposes name/town/party/office/district from this cycle's filings and nothing else.
 from candidate_match_api import match_api_bp, init_match_api, register_cli as _match_cli
 init_match_api(get_db_connection, release_db_connection)
 app.register_blueprint(match_api_bp)
@@ -805,71 +818,72 @@ def get_data_and_dashboard():
         """)
         district_rows = cur.fetchall()
 
-        cur.execute("""
-            SELECT ces.district_code, ces.status, c.first_name, c.last_name, c.incumbent, c.candidate_id,
+        cur.execute(f"""
+            SELECT ces.district_code, ces.status, c.first_name, c.last_name, {IS_INCUMBENT_SQL}, c.candidate_id,
                    COALESCE(NULLIF(c.email,''),NULLIF(c.email1,''),NULLIF(c.email2,'')) AS email,
                    c.phone1, c.signal, c.signal_uuid, c.signal_registered
             FROM candidate_election_status ces
             JOIN candidates c ON ces.candidate_id = c.candidate_id
-            WHERE ces.election_year = 2026 AND c.party = 'R';
-        """)
-        cands_2026_rows = cur.fetchall()
+            WHERE ces.election_year = %s AND c.party = 'R';
+        """, (CYCLE,))
+        cands_cur_rows = cur.fetchall()
 
+        # The R seat holders from the last general (incumbents_sync keeps them in step with the
+        # results site), so the prior column says who sits in each seat and whether it is called.
         cur.execute("""
-            SELECT ces.district_code, ces.status, c.first_name, c.last_name, c.incumbent, c.candidate_id
-            FROM candidate_election_status ces
-            JOIN candidates c ON ces.candidate_id = c.candidate_id
-            WHERE ces.election_year = 2024 AND c.party = 'R';
-        """)
-        cands_2024_rows = cur.fetchall()
+            SELECT district_code, name, status, candidate_id FROM incumbents
+            WHERE election_year = %s AND party = 'R'
+            ORDER BY district_code, status DESC, name
+        """, (PRIOR,))
+        sitting_rows = cur.fetchall()
 
-        # Which candidates have filed for 2026? Surface as a FILED badge.
+        # Which candidates have filed this cycle? Surface as a FILED badge.
         # The recruitment dashboard is the State Rep pipeline, so only a State Rep
         # filing counts — a Delegate (or other office) filing must NOT mark someone
         # as filed for State Representative.
         cur.execute("""
             SELECT DISTINCT candidate_id FROM filings
-            WHERE election_year = 2026 AND office = 'State Representative'
+            WHERE election_year = %s AND office = 'State Representative'
               AND candidate_id IS NOT NULL
-        """)
-        filed_2026_cids = {row[0] for row in cur.fetchall()}
+        """, (CYCLE,))
+        filed_cur_cids = {row[0] for row in cur.fetchall()}
 
         # Count of Republican State Rep candidates who have officially filed.
         cur.execute("""
             SELECT COUNT(DISTINCT candidate_id) FROM filings
-            WHERE election_year = 2026 AND office = 'State Representative'
+            WHERE election_year = %s AND office = 'State Representative'
               AND party = 'R' AND candidate_id IS NOT NULL
-        """)
+        """, (CYCLE,))
         filed_rep_count = cur.fetchone()[0] or 0
     except Exception as e:
         logger.error(e)
         flash("Error fetching data from database.", "danger")
         district_rows = []
-        cands_2026_rows = []
-        cands_2024_rows = []
-        filed_2026_cids = set()
+        cands_cur_rows = []
+        sitting_rows = []
+        filed_cur_cids = set()
         filed_rep_count = 0
     finally:
         cur.close()
         release_db_connection(conn)
 
-    cand2026_by_dist = defaultdict(list)
-    for dist_code, status, first, last, inc, cid, email, phone1, signal, signal_uuid, signal_reg in cands_2026_rows:
-        cand2026_by_dist[dist_code].append({
+    cand_cur_by_dist = defaultdict(list)
+    for dist_code, status, first, last, inc, cid, email, phone1, signal, signal_uuid, signal_reg in cands_cur_rows:
+        cand_cur_by_dist[dist_code].append({
             "name": f"{first} {last}",
             "status": status,
             "incumbent": inc,
             "candidate_id": cid,
-            "filed": cid in filed_2026_cids,
+            "filed": cid in filed_cur_cids,
             "email": email, "phone": phone1, "signal": signal, "signal_uuid": signal_uuid,
             "signal_registered": signal_reg,
         })
-    cand2024_by_dist = defaultdict(list)
-    for dist_code, status, first, last, inc, cid in cands_2024_rows:
-        cand2024_by_dist[dist_code].append({
-            "name": f"{first} {last}",
-            "status": status,
-            "incumbent": inc,
+    cand_prior_by_dist = defaultdict(list)
+    for dist_code, name, status, cid in sitting_rows:
+        cand_prior_by_dist[dist_code].append({
+            "name": name,
+            "status": "Won" if status == "won" else "Leading",
+            "incumbent": True,
             "candidate_id": cid
         })
 
@@ -886,8 +900,8 @@ def get_data_and_dashboard():
                 "full_district_code": full_district_code,
                 "seat_count": seat_count,
                 "towns": [],
-                "cand2026": [],
-                "cand2024": [],
+                "cand_cur": [],
+                "cand_prior": [],
                 "pvi": pvi,
                 "pvi_rating": pvi_rating
             }
@@ -895,8 +909,8 @@ def get_data_and_dashboard():
     
     for c_name, dist_dict in county_groups.items():
         for fdc, info in dist_dict.items():
-            info["cand2026"] = cand2026_by_dist.get(fdc, [])
-            info["cand2024"] = cand2024_by_dist.get(fdc, [])
+            info["cand_cur"] = cand_cur_by_dist.get(fdc, [])
+            info["cand_prior"] = cand_prior_by_dist.get(fdc, [])
     
     final_groups = defaultdict(dict)
     for old_county, dist_dict in county_groups.items():
@@ -920,15 +934,15 @@ def get_data_and_dashboard():
             ordered[fdc] = val
         sorted_county_groups[county] = ordered
 
-    # Get count of 2026 candidates not matched to voter file
+    # Get count of this cycle's candidates not matched to voter file
     conn2 = get_db_connection()
     cur2 = conn2.cursor()
     try:
-        cur2.execute("""
+        cur2.execute(f"""
             SELECT COUNT(DISTINCT c.candidate_id)
             FROM candidates c
             JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-            WHERE ces.election_year = 2026
+            WHERE ces.election_year = {CYCLE}
               AND c.voter_id IS NULL
               AND ces.status != 'Declined'
         """)
@@ -956,20 +970,20 @@ def get_data_and_dashboard():
         "TOTAL_DISTRICTS": TOTAL_DISTRICTS
     }
 
-    # Build global set of all candidate IDs with 2026 records
-    all_2026_candidate_ids = set()
+    # Build global set of all candidate IDs with records this cycle
+    all_cur_candidate_ids = set()
     for county_name, dist_dict in sorted_county_groups.items():
         for fdc, info in dist_dict.items():
-            for c in info["cand2026"]:
-                all_2026_candidate_ids.add(c["candidate_id"])
+            for c in info["cand_cur"]:
+                all_cur_candidate_ids.add(c["candidate_id"])
                 
     total_confirmed = 0
     for county_name, dist_dict in sorted_county_groups.items():
         for fdc, info in dist_dict.items():
             seat_count = info["seat_count"]
-            c2026 = info["cand2026"]
-            active_2026 = [c for c in c2026 if c["status"].upper() != "DECLINED"]
-            confirmed_count = sum(1 for c in c2026 if c["status"].upper() == "CONFIRMED")
+            c_cur = info["cand_cur"]
+            active_cur = [c for c in c_cur if c["status"].upper() != "DECLINED"]
+            confirmed_count = sum(1 for c in c_cur if c["status"].upper() == "CONFIRMED")
             total_confirmed += confirmed_count
             if confirmed_count > 0:
                 dashboard["confirmed"]["districts"].append((county_name, fdc))
@@ -977,39 +991,39 @@ def get_data_and_dashboard():
             dashboard["empty_seats"]["total"] += empty_seats
             if empty_seats > 0:
                 dashboard["empty_seats"]["districts"].append((county_name, fdc))
-            if len(active_2026) == 0:
+            if len(active_cur) == 0:
                 dashboard["empty_districts"]["total"] += 1
                 dashboard["empty_districts"]["districts"].append((county_name, fdc))
-            if len(active_2026) < seat_count:
+            if len(active_cur) < seat_count:
                 dashboard["districts_with_vacancies"]["total"] += 1
                 dashboard["districts_with_vacancies"]["districts"].append((county_name, fdc))
             # Primary: more confirmed (same-party) candidates than seats
             if confirmed_count > seat_count:
                 dashboard["primaries"]["total"] += 1
                 dashboard["primaries"]["districts"].append((county_name, fdc))
-            pot_count = sum(1 for c in c2026 if c["status"].upper() in ("CONSIDERING", "POTENTIAL"))
+            pot_count = sum(1 for c in c_cur if c["status"].upper() in ("CONSIDERING", "POTENTIAL"))
             if pot_count > 0:
                 dashboard["potentials"]["total"] += pot_count
                 dashboard["potentials"]["districts"].append((county_name, fdc))
             # Count individual incumbents running (confirmed only)
-            for c in c2026:
+            for c in c_cur:
                 if c["incumbent"] and c["status"].upper() == "CONFIRMED":
                     dashboard["incumbents_running"]["total"] += 1
                     dashboard["incumbents_running"]["districts"].append((county_name, fdc))
             # Count individual incumbents who declined
-            for c in c2026:
+            for c in c_cur:
                 if c["incumbent"] and c["status"].upper() == "DECLINED":
                     dashboard["incumbents_not_running"]["total"] += 1
                     dashboard["incumbents_not_running"]["districts"].append((county_name, fdc))
-            # Count individual incumbents undecided (not confirmed, not declined in 2026)
-            for c in c2026:
+            # Count individual incumbents undecided (not confirmed, not declined this cycle)
+            for c in c_cur:
                 if c["incumbent"] and c["status"].upper() not in ("CONFIRMED", "DECLINED"):
                     dashboard["incumbents_undecided"]["total"] += 1
                     dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
-            # Also count 2024 incumbents who have NO 2026 record at all
-            c2024 = info["cand2024"]
-            for c in c2024:
-                if c["incumbent"] and c["candidate_id"] not in all_2026_candidate_ids:
+            # Also count sitting members with no record this cycle at all
+            c_prior = info["cand_prior"]
+            for c in c_prior:
+                if c["incumbent"] and c["candidate_id"] not in all_cur_candidate_ids:
                     dashboard["incumbents_undecided"]["total"] += 1
                     dashboard["incumbents_undecided"]["districts"].append((county_name, fdc))
             
@@ -1018,25 +1032,25 @@ def get_data_and_dashboard():
     county_stats = {}
     for county_name, dist_dict in sorted_county_groups.items():
         c_seats = 0
-        c_2026 = 0
-        c_2024 = 0
-        c_2026_confirmed = 0
-        c_2026_seats_filled = 0
+        c_cur = 0
+        c_prior = 0
+        c_cur_confirmed = 0
+        c_seats_filled = 0
         for fdc, info in dist_dict.items():
             c_seats += info["seat_count"]
-            c_2026 += len(info["cand2026"])
-            c_2024 += len(info["cand2024"])
-            conf_in_dist = sum(1 for c in info["cand2026"] if c["status"].upper() == "CONFIRMED")
-            c_2026_confirmed += conf_in_dist
+            c_cur += len(info["cand_cur"])
+            c_prior += len(info["cand_prior"])
+            conf_in_dist = sum(1 for c in info["cand_cur"] if c["status"].upper() == "CONFIRMED")
+            c_cur_confirmed += conf_in_dist
             # Seats filled is capped at the district's seat count — extra
             # confirmed candidates in a district are a primary, not extra seats.
-            c_2026_seats_filled += min(conf_in_dist, info["seat_count"])
+            c_seats_filled += min(conf_in_dist, info["seat_count"])
         county_stats[county_name] = {
             "total_seats": c_seats,
-            "c2026": c_2026,
-            "c2024": c_2024,
-            "c2026_confirmed": c_2026_confirmed,
-            "c2026_seats_filled": c_2026_seats_filled
+            "c_cur": c_cur,
+            "c_prior": c_prior,
+            "cur_confirmed": c_cur_confirmed,
+            "seats_filled": c_seats_filled
         }
     return sorted_county_groups, dashboard, county_stats
 
@@ -1070,10 +1084,10 @@ def index():
                 if any(search_upper in town.upper() for town in info['towns']):
                     filtered_districts[fdc] = info
                     continue
-                # Check if search matches any candidate name in 2026 or 2024
-                match_2026 = any(search_upper in c['name'].upper() for c in info['cand2026'])
-                match_2024 = any(search_upper in c['name'].upper() for c in info['cand2024'])
-                if match_2026 or match_2024:
+                # Check if search matches any candidate name this cycle or last
+                match_cur = any(search_upper in c['name'].upper() for c in info['cand_cur'])
+                match_prior = any(search_upper in c['name'].upper() for c in info['cand_prior'])
+                if match_cur or match_prior:
                     filtered_districts[fdc] = info
             if filtered_districts:
                 filtered_groups[county_name] = filtered_districts
@@ -1092,11 +1106,11 @@ def filter_view():
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            cur.execute("""
+            cur.execute(f"""
                 SELECT c.candidate_id, c.first_name, c.last_name, c.city, ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 
+                WHERE ces.election_year = {CYCLE} 
                   AND c.voter_id IS NULL
                   AND ces.status != 'Declined'
                 ORDER BY c.last_name, c.first_name
@@ -1116,36 +1130,34 @@ def filter_view():
         conn = get_db_connection()
         cur = conn.cursor()
         try:
-            # Get 2026 incumbents with status not confirmed/declined
-            cur.execute("""
-                SELECT c.candidate_id, c.first_name, c.last_name, ces.district_code, ces.status, 2026 as year
+            # Sitting R members with a record this cycle that is not confirmed/declined
+            cur.execute(f"""
+                SELECT c.candidate_id, c.first_name, c.last_name, ces.district_code, ces.status, {CYCLE} as year
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 
-                  AND c.incumbent = true
+                WHERE ces.election_year = {CYCLE}
+                  AND {IS_INCUMBENT_SQL}
                   AND c.party = 'R'
                   AND ces.status NOT IN ('Confirmed', 'Declined')
                 ORDER BY c.last_name, c.first_name
             """)
-            undecided_2026 = cur.fetchall()
-            
-            # Get 2024 incumbents with NO 2026 record at all
-            cur.execute("""
-                SELECT c.candidate_id, c.first_name, c.last_name, ces.district_code, 'No 2026 Record' as status, 2024 as year
-                FROM candidates c
-                JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2024 
-                  AND c.incumbent = true
-                  AND c.party = 'R'
+            undecided_cur = cur.fetchall()
+
+            # Sitting R members with NO record this cycle at all
+            cur.execute(f"""
+                SELECT i.candidate_id, split_part(i.name, ' ', 1), regexp_replace(i.name, '^\\S+\\s*', ''),
+                       i.district_code, 'No {CYCLE} Record' as status, {PRIOR} as year
+                FROM incumbents i
+                WHERE i.election_year = {PRIOR} AND i.party = 'R'
                   AND NOT EXISTS (
-                      SELECT 1 FROM candidate_election_status ces2 
-                      WHERE ces2.candidate_id = c.candidate_id AND ces2.election_year = 2026
+                      SELECT 1 FROM candidate_election_status ces2
+                      WHERE ces2.candidate_id = i.candidate_id AND ces2.election_year = {CYCLE}
                   )
-                ORDER BY c.last_name, c.first_name
+                ORDER BY i.district_code, i.name
             """)
-            undecided_no_2026 = cur.fetchall()
-            
-            undecided = list(undecided_2026) + list(undecided_no_2026)
+            undecided_no_record = cur.fetchall()
+
+            undecided = list(undecided_cur) + list(undecided_no_record)
         finally:
             cur.close()
             release_db_connection(conn)
@@ -1181,7 +1193,7 @@ def add_candidate_inline():
     last_name = request.form.get("last_name", "").strip()
     party = request.form.get("party", "").upper().strip()
     district_code = request.form.get("district_code", "").strip()
-    election_year = request.form.get("election_year", "2026")
+    election_year = request.form.get("election_year", str(CYCLE))
     status = request.form.get("status", "CONSIDERING").strip()
     if not (first_name and last_name and party and district_code and election_year and status):
         flash("All fields are required to add a candidate.", "warning")
@@ -1482,29 +1494,29 @@ def update_candidate_contact(candidate_id):
     finally:
         cur.close()
         release_db_connection(conn)
-    election_year = request.form.get('election_year', '2026')
+    election_year = request.form.get('election_year', str(CYCLE))
     return redirect(url_for('edit_candidate', candidate_id=candidate_id, election_year=int(election_year)) + '#contact')
 
-@app.route('/copy_candidate_to_2026/<int:candidate_id>', methods=['POST'])
+@app.route('/copy_candidate_to_cycle/<int:candidate_id>', methods=['POST'])
 @candidate_restricted
 @admin_required
-def copy_candidate_to_2026(candidate_id):
+def copy_candidate_to_cycle(candidate_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
+        cur.execute(f"""
             SELECT status_id FROM candidate_election_status
-            WHERE candidate_id = %s AND election_year = 2026
+            WHERE candidate_id = %s AND election_year = {CYCLE}
         """, (candidate_id,))
         if cur.fetchone():
-            flash("Candidate already has a 2026 entry.", "warning")
+            flash(f"Candidate already has a {CYCLE} entry.", "warning")
             return redirect(url_for("index"))
-        # Get 2024 district as default — always prefer it over the form value
+        # Get last cycle's district as default — always prefer it over the form value
         # (form value comes from whichever district the modal was opened from,
         # which may not be the candidate's actual district)
-        cur.execute("""
+        cur.execute(f"""
             SELECT district_code, status FROM candidate_election_status
-            WHERE candidate_id = %s AND election_year = 2024
+            WHERE candidate_id = %s AND election_year = {PRIOR}
         """, (candidate_id,))
         row = cur.fetchone()
         form_district = request.form.get("district_code", "").strip()
@@ -1514,10 +1526,10 @@ def copy_candidate_to_2026(candidate_id):
         if not district_code:
             flash("Please specify a district code for this candidate.", "warning")
             return redirect(url_for("index"))
-        cur.execute("""
+        cur.execute(f"""
             INSERT INTO candidate_election_status 
               (candidate_id, election_year, status, is_running, added_by, district_code)
-            VALUES (%s, 2026, %s, TRUE, %s, %s)
+            VALUES (%s, {CYCLE}, %s, TRUE, %s, %s)
         """, (candidate_id, status, current_user.email, district_code))
         if comment:
             cur.execute("""
@@ -1525,11 +1537,11 @@ def copy_candidate_to_2026(candidate_id):
                 VALUES (%s, %s, %s)
             """, (candidate_id, comment, current_user.email))
         conn.commit()
-        log_activity('candidate_copied', f"Copied candidate to 2026 in {district_code} ({status})", candidate_id)
-        flash("Candidate successfully copied to 2026.", "success")
+        log_activity('candidate_copied', f"Copied candidate to {CYCLE} in {district_code} ({status})", candidate_id)
+        flash(f"Candidate successfully copied to {CYCLE}.", "success")
     except Exception as e:
         conn.rollback()
-        flash("Error copying candidate to 2026.", "danger")
+        flash(f"Error copying candidate to {CYCLE}.", "danger")
         logger.error(e)
     finally:
         cur.close()
@@ -2650,11 +2662,11 @@ def profile():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
+        cur.execute(f"""
             SELECT ces.district_code, c.party, ces.status, ces.election_year, c.incumbent
             FROM candidates c
             LEFT JOIN candidate_election_status ces
-                   ON ces.candidate_id = c.candidate_id AND ces.election_year = 2026
+                   ON ces.candidate_id = c.candidate_id AND ces.election_year = {CYCLE}
             WHERE c.candidate_id = %s
         """, (current_user.candidate_id,))
         row = cur.fetchone()
@@ -2677,7 +2689,7 @@ def profile():
                            district_code=district_code,
                            party=party,
                            status=status,
-                           election_year=election_year or 2026,
+                           election_year=election_year or CYCLE,
                            incumbent=incumbent,
                            completeness=completeness)
 
@@ -3332,58 +3344,58 @@ def export_csv(export_type):
         voter_id_index = None
         
         if export_type == 'all_candidates':
-            cur.execute("""
+            cur.execute(f"""
                 SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party, 
                        c.email, c.email1, c.email2,
                        c.address, c.city, c.zip, c.phone1, c.phone2, 
-                       c.incumbent, c.twitter_x, c.facebook, c.instagram, c.signal,
+                       {IS_INCUMBENT_SQL}, c.twitter_x, c.facebook, c.instagram, c.signal,
                        c.voter_id, ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 AND c.party = 'R'
+                WHERE ces.election_year = {CYCLE} AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """)
             headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Incumbent', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Status', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
-            filename = 'all_candidates_2026.csv'
+            filename = f'all_candidates_{CYCLE}.csv'
             include_voter = True
             voter_id_index = 17
             
         elif export_type == 'confirmed':
-            cur.execute("""
+            cur.execute(f"""
                 SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party,
                        c.email, c.email1, c.email2,
                        c.address, c.city, c.zip, c.phone1, c.phone2,
-                       c.incumbent, c.twitter_x, c.facebook, c.instagram, c.signal,
+                       {IS_INCUMBENT_SQL}, c.twitter_x, c.facebook, c.instagram, c.signal,
                        c.voter_id, ces.district_code
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 AND ces.status = 'Confirmed' AND c.party = 'R'
+                WHERE ces.election_year = {CYCLE} AND ces.status = 'Confirmed' AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """)
             headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Incumbent', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
-            filename = 'confirmed_candidates_2026.csv'
+            filename = f'confirmed_candidates_{CYCLE}.csv'
             include_voter = True
             voter_id_index = 17
             
         elif export_type == 'potentials':
-            cur.execute("""
+            cur.execute(f"""
                 SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party,
                        c.email, c.email1, c.email2,
                        c.address, c.city, c.zip, c.phone1, c.phone2,
-                       c.incumbent, c.twitter_x, c.facebook, c.instagram, c.signal,
+                       {IS_INCUMBENT_SQL}, c.twitter_x, c.facebook, c.instagram, c.signal,
                        c.voter_id, ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 AND ces.status IN ('Potential', 'Considering') AND c.party = 'R'
+                WHERE ces.election_year = {CYCLE} AND ces.status IN ('Potential', 'Considering') AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """)
             headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Incumbent', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Status', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
-            filename = 'potential_candidates_2026.csv'
+            filename = f'potential_candidates_{CYCLE}.csv'
             include_voter = True
             voter_id_index = 17
             
         elif export_type == 'empty_districts':
-            cur.execute("""
+            cur.execute(f"""
                 SELECT DISTINCT d.full_district_code, d.county_name, d.seat_count, 
                        STRING_AGG(DISTINCT d.town, ', ') as towns
                 FROM districts d
@@ -3391,49 +3403,49 @@ def export_csv(export_type):
                     SELECT ces.district_code 
                     FROM candidate_election_status ces
                     JOIN candidates c ON ces.candidate_id = c.candidate_id
-                    WHERE ces.election_year = 2026 AND ces.status != 'Declined' AND c.party = 'R'
+                    WHERE ces.election_year = {CYCLE} AND ces.status != 'Declined' AND c.party = 'R'
                 )
                 GROUP BY d.full_district_code, d.county_name, d.seat_count
                 ORDER BY d.county_name, d.full_district_code
             """)
             headers = ['District', 'County', 'Seats', 'Towns']
-            filename = 'empty_districts_2026.csv'
+            filename = f'empty_districts_{CYCLE}.csv'
             
         elif export_type == 'by_county':
             county = request.args.get('county', '')
             if not county:
                 flash("Please select a county.", "danger")
                 return redirect(url_for('admin_dashboard'))
-            cur.execute("""
+            cur.execute(f"""
                 SELECT DISTINCT c.candidate_id, c.first_name, c.last_name, c.party,
                        c.email, c.email1, c.email2,
                        c.address, c.city, c.zip, c.phone1, c.phone2,
-                       c.incumbent, c.twitter_x, c.facebook, c.instagram, c.signal,
+                       {IS_INCUMBENT_SQL}, c.twitter_x, c.facebook, c.instagram, c.signal,
                        c.voter_id, ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
                 JOIN districts d ON ces.district_code = d.full_district_code
-                WHERE ces.election_year = 2026 AND LOWER(d.county_name) = LOWER(%s) AND c.party = 'R'
+                WHERE ces.election_year = {CYCLE} AND LOWER(d.county_name) = LOWER(%s) AND c.party = 'R'
                 ORDER BY ces.district_code, c.last_name
             """, (county,))
             headers = ['ID', 'First Name', 'Last Name', 'Party', 'Email', 'Email1', 'Email2', 'Address', 'City', 'ZIP', 'Phone1', 'Phone2', 'Incumbent', 'Twitter/X', 'Facebook', 'Instagram', 'Signal', 'Voter ID', 'District', 'Status', 'Voter Name', 'Voter Address', 'Voter City', 'Voter ZIP', 'Voter Ward', 'Voter County', 'Voter Party']
-            filename = f'{county.lower()}_candidates_2026.csv'
+            filename = f'{county.lower()}_candidates_{CYCLE}.csv'
             include_voter = True
             voter_id_index = 17
             
         elif export_type == 'contact_list':
-            cur.execute("""
+            cur.execute(f"""
                 SELECT DISTINCT c.first_name, c.last_name, c.email, c.email1, c.email2,
                        c.phone1, c.phone2, c.city,
                        ces.district_code, ces.status
                 FROM candidates c
                 JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
-                WHERE ces.election_year = 2026 AND ces.status != 'Declined' AND c.party = 'R'
+                WHERE ces.election_year = {CYCLE} AND ces.status != 'Declined' AND c.party = 'R'
                     AND (c.email IS NOT NULL OR c.phone1 IS NOT NULL)
                 ORDER BY c.last_name
             """)
             headers = ['First Name', 'Last Name', 'Email', 'Email1', 'Email2', 'Phone1', 'Phone2', 'City', 'District', 'Status']
-            filename = 'contact_list_2026.csv'
+            filename = f'contact_list_{CYCLE}.csv'
             
         else:
             flash("Invalid export type.", "danger")
@@ -4088,7 +4100,7 @@ def update_candidate_district(candidate_id):
         return jsonify({'error': 'No data provided'}), 400
     
     new_district = data.get('district', '').strip() if data.get('district') else ''
-    election_year = data.get('election_year', 2026)
+    election_year = data.get('election_year', CYCLE)
     
     if not new_district:
         return jsonify({'error': 'District is required'}), 400
@@ -4236,7 +4248,7 @@ def update_status(candidate_id):
         return jsonify({'error': 'No data provided'}), 400
 
     new_status = data.get('status', '').strip()
-    election_year = data.get('election_year', 2026)
+    election_year = data.get('election_year', CYCLE)
 
     valid_statuses = ['Confirmed', 'Considering', 'Potential', 'Declined', 'New Recruit']
     if new_status not in valid_statuses:
@@ -4373,7 +4385,7 @@ def sync_from_voter(candidate_id):
 @login_required
 @admin_required
 def filings_list():
-    year = request.args.get('year', 2026, type=int)
+    year = request.args.get('year', CYCLE, type=int)
     party = (request.args.get('party') or '').upper().strip()
     district = (request.args.get('district') or '').strip()
     county = (request.args.get('county') or '').strip()
@@ -4871,7 +4883,7 @@ def filings_add():
     conn = get_db_connection(); cur = conn.cursor()
     try:
         if request.method == 'POST':
-            year = int(request.form.get('election_year') or 2026)
+            year = int(request.form.get('election_year') or CYCLE)
             first = (request.form.get('first_name') or '').strip()
             last = (request.form.get('last_name') or '').strip()
             party = (request.form.get('party') or '').upper().strip()
@@ -4934,7 +4946,7 @@ def filings_edit(filing_id):
     conn = get_db_connection(); cur = conn.cursor()
     try:
         if request.method == 'POST':
-            year = int(request.form.get('election_year') or 2026)
+            year = int(request.form.get('election_year') or CYCLE)
             first = (request.form.get('first_name') or '').strip()
             last = (request.form.get('last_name') or '').strip()
             party = (request.form.get('party') or '').upper().strip()
@@ -5063,11 +5075,11 @@ def surveys():
         # Restrict which survey sources this user may see (e.g. CANH -> Chris + Osborne).
         orgs = [o for o in orgs if can_see_org(o)]
         visible = set(orgs)
-        # Base roster: every active 2026 R House candidate is a row.
-        cur.execute("""SELECT f.candidate_id, f.first_name, f.last_name, f.district_code,
-                              COALESCE(c.incumbent, false)
+        # Base roster: every active R House candidate this cycle is a row.
+        cur.execute(f"""SELECT f.candidate_id, f.first_name, f.last_name, f.district_code,
+                              {IS_INCUMBENT_SQL}
                        FROM filings f LEFT JOIN candidates c ON c.candidate_id = f.candidate_id
-                       WHERE f.election_year=2026 AND f.party='R' AND f.office='State Representative'
+                       WHERE f.election_year={CYCLE} AND f.party='R' AND f.office='State Representative'
                          AND f.result NOT IN ('lost', 'withdrawn')
                        ORDER BY f.last_name, f.first_name""")
         rows = []
@@ -5115,8 +5127,8 @@ def surveys():
             r['notes'] = n or ''
 
         # Contested R primaries: districts where R filers exceed the seat count.
-        cur.execute("""WITH f AS (SELECT district_code, count(*) rc FROM filings
-                                  WHERE election_year=2026 AND party='R' AND office='State Representative'
+        cur.execute(f"""WITH f AS (SELECT district_code, count(*) rc FROM filings
+                                  WHERE election_year={CYCLE} AND party='R' AND office='State Representative'
                                   GROUP BY 1),
                             d AS (SELECT full_district_code, max(seat_count) seats FROM districts GROUP BY 1)
                        SELECT f.district_code FROM f JOIN d ON d.full_district_code=f.district_code
@@ -5125,8 +5137,8 @@ def surveys():
         for r in rows:
             r['primary'] = r['district'] in contested
 
-        # Until the Sept 8, 2026 primary, float contested-primary districts to the top.
-        primary_first = date.today() < date(2026, 9, 8)
+        # Until the primary, float contested-primary districts to the top.
+        primary_first = date.today() < PRIMARY_DAY
 
         def _dkey(d):
             # natural district sort: "Cheshire 2" < "Cheshire 10"
@@ -5246,9 +5258,9 @@ def surveys_add():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        if not cid:  # best-effort match to a 2026 R filer by last name + district
-            cur.execute("""SELECT candidate_id FROM filings
-                           WHERE election_year=2026 AND party='R'
+        if not cid:  # best-effort match to an R filer this cycle by last name + district
+            cur.execute(f"""SELECT candidate_id FROM filings
+                           WHERE election_year={CYCLE} AND party='R'
                              AND upper(district_code)=upper(%s)
                              AND upper(last_name)=upper(%s) LIMIT 1""",
                         (district, name.split()[-1]))

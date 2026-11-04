@@ -73,7 +73,7 @@
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="candidate_id" value="{{ m.candidate_id }}">
               <span class="small">
-                <a href="{{ url_for('edit_candidate', candidate_id=m.candidate_id, election_year=2026) }}" target="_blank">{{ m.first_name }} {{ m.last_name }}</a>
+                <a href="{{ url_for('edit_candidate', candidate_id=m.candidate_id, election_year=cycle) }}" target="_blank">{{ m.first_name }} {{ m.last_name }}</a>
                 {{ m.city or '' }} {% if m.district_code %}<span class="badge badge-light">{{ m.district_code }}</span>{% endif %}
                 <span class="text-muted">{{ m.email }}</span>
               </span>
@@ -101,7 +101,7 @@
         {% else %}
           {% if s.matched_candidate_id %}
             <p class="small mb-1">Applied to:
-              <a href="{{ url_for('edit_candidate', candidate_id=s.matched_candidate_id, election_year=2026) }}" target="_blank">
+              <a href="{{ url_for('edit_candidate', candidate_id=s.matched_candidate_id, election_year=cycle) }}" target="_blank">
                 {{ s.matched_first }} {{ s.matched_last }} (ID {{ s.matched_candidate_id }})
               </a>
             </p>

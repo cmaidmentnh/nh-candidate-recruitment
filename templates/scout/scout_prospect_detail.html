@@ -130,7 +130,7 @@
         {% else %}
         <div class="alert alert-success">
             <i class="fas fa-check-circle"></i> Promoted to candidate on {{ p.promoted_at.strftime('%b %d, %Y') if p.promoted_at else 'unknown' }} by {{ p.promoted_by or 'unknown' }}.
-            <a href="{{ url_for('edit_candidate', candidate_id=p.promoted_candidate_id, election_year=2026) }}">View candidate record &rarr;</a>
+            <a href="{{ url_for('edit_candidate', candidate_id=p.promoted_candidate_id, election_year=cycle) }}">View candidate record &rarr;</a>
         </div>
         {% endif %}
     </div>

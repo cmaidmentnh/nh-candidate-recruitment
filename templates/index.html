@@ -22,7 +22,7 @@
             </div>
         </div>
         {% endif %}
-        <button class="btn btn-danger" onclick="openAddCandidateModal('', 2026)" style="background-color: #d91720; border-color: #d91720;">
+        <button class="btn btn-danger" onclick="openAddCandidateModal('', {{ cycle }})" style="background-color: #d91720; border-color: #d91720;">
             <i class="fas fa-plus"></i> Add Candidate
         </button>
     </div>
@@ -157,13 +157,13 @@
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                 <div class="row">
                     {% for county_name, stats in county_stats.items()|sort %}
-                    {% set pct = (stats.c2026_seats_filled / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
-                    {% set needs = stats.total_seats - stats.c2026_seats_filled %}
+                    {% set pct = (stats.seats_filled / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
+                    {% set needs = stats.total_seats - stats.seats_filled %}
                     <div class="col-md-6 mb-3">
                         <a href="{{ url_for('index', county=county_name) }}" class="county-progress-link d-block text-decoration-none" data-dismiss="modal">
                             <div class="d-flex justify-content-between mb-1">
                                 <strong class="text-dark">{{ county_name }}</strong>
-                                <span class="text-muted">{{ stats.c2026_seats_filled }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">({{ needs }})</small>{% endif %}</span>
+                                <span class="text-muted">{{ stats.seats_filled }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">({{ needs }})</small>{% endif %}</span>
                             </div>
                             <div class="progress" style="height: 20px;">
                                 <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
@@ -213,7 +213,7 @@
 <!-- County Accordion -->
 <div id="countyAccordion">
     {% for county_name, dist_dict in county_groups.items()|sort %}
-    {% set c_pct = (county_stats[county_name].c2026_seats_filled / county_stats[county_name].total_seats * 100)|round|int if county_stats[county_name].total_seats > 0 else 0 %}
+    {% set c_pct = (county_stats[county_name].seats_filled / county_stats[county_name].total_seats * 100)|round|int if county_stats[county_name].total_seats > 0 else 0 %}
     <div class="card county-card" id="{{ county_name|replace(' ', '_') }}">
         <div class="card-header" data-toggle="collapse" data-target="#collapse-{{ county_name|replace(' ', '_') }}"
              aria-expanded="false" aria-controls="collapse-{{ county_name|replace(' ', '_') }}">
@@ -223,21 +223,21 @@
                     <div class="progress-bar {% if c_pct >= 75 %}bg-success{% elif c_pct >= 50 %}bg-info{% elif c_pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ c_pct }}%;"></div>
                 </div>
             </div>
-            <small><strong>{{ county_stats[county_name].c2026_seats_filled }}</strong> / {{ county_stats[county_name].total_seats }} Seats <span class="ml-1" style="opacity:0.7;">({{ c_pct }}%)</span></small>
+            <small><strong>{{ county_stats[county_name].seats_filled }}</strong> / {{ county_stats[county_name].total_seats }} Seats <span class="ml-1" style="opacity:0.7;">({{ c_pct }}%)</span></small>
         </div>
         <div id="collapse-{{ county_name|replace(' ', '_') }}" class="collapse{% if search_query %} show{% endif %}">
             <div class="card-body">
                 {% for fdc, info in dist_dict.items() %}
-                {% set active_2026 = info.cand2026|rejectattr("status","equalto","Declined")|list %}
-                {% set active_2024 = info.cand2024|rejectattr("status","equalto","Declined")|list %}
-                {% set a2026 = active_2026|length %}
-                {% set a2024 = active_2024|length %}
+                {% set active_cur = info.cand_cur|rejectattr("status","equalto","Declined")|list %}
+                {% set active_prior = info.cand_prior|rejectattr("status","equalto","Declined")|list %}
+                {% set a_cur = active_cur|length %}
+                {% set a_prior = active_prior|length %}
                 {% set seat_count = info.seat_count %}
 
                 {% set status = 'Empty' %}
-                {% if a2026 > 0 and a2026 < seat_count %}
+                {% if a_cur > 0 and a_cur < seat_count %}
                     {% set status = 'Partial' %}
-                {% elif a2026 >= seat_count %}
+                {% elif a_cur >= seat_count %}
                     {% set status = 'Full' %}
                 {% endif %}
 
@@ -249,7 +249,7 @@
                             <h5 class="mb-0">{{ fdc }} <small class="font-weight-normal">({{ seat_count }} seat{{ 's' if seat_count != 1 else '' }})</small>{% if info.pvi is not none %} <span class="badge" style="font-size: 0.65em; {% if info.pvi_rating == 'SAFE GOP' %}background-color: #8B0000; color: white;{% elif info.pvi_rating == 'LIKELY GOP' %}background-color: #DC143C; color: white;{% elif info.pvi_rating == 'LEAN GOP' %}background-color: #FF6B6B; color: white;{% elif info.pvi_rating == 'SWING' %}background-color: #FFD700; color: black;{% elif info.pvi_rating == 'LEAN DEM' %}background-color: #87CEEB; color: black;{% elif info.pvi_rating == 'LIKELY DEM' %}background-color: #4169E1; color: white;{% elif info.pvi_rating == 'SAFE DEM' %}background-color: #00008B; color: white;{% else %}background-color: #6c757d; color: white;{% endif %}">{% if info.pvi > 0 %}+{% endif %}{{ info.pvi }}%</span>{% endif %}</h5>
                             <small class="district-towns">{{ info.towns|join(", ") }}</small>
                          </div>
-                         <small>{{ a2026 }}/{{ seat_count }} - {{ status }}</small>
+                         <small>{{ a_cur }}/{{ seat_count }} - {{ status }}</small>
                     </div>
                     <div id="collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}" 
                          class="collapse{% if search_query %} show{% endif %}">
@@ -260,24 +260,24 @@
                                     <thead>
                                         <tr>
                                             <th style="width:10%">Seat</th>
-                                            <th style="width:45%">2026 Candidate</th>
-                                            <th style="width:45%">2024 Candidate</th>
+                                            <th style="width:45%">{{ cycle }} Candidate</th>
+                                            <th style="width:45%">Sitting ({{ prior }})</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for row in range(max(seat_count, a2026)) %}
+                                        {% for row in range(max(seat_count, a_cur)) %}
                                         <tr>
                                             <td>{% if row < seat_count %}{{ row + 1 }}{% endif %}</td>
                                             <td>
-                                                {% if row < a2026 %}
-                                                    {% set cand = active_2026[row] %}
+                                                {% if row < a_cur %}
+                                                    {% set cand = active_cur[row] %}
                                                     {% if cand.filed %}
-                                                    <a href="{{ url_for('filings_list', year=2026, q=cand.name) }}"
+                                                    <a href="{{ url_for('filings_list', year=cycle, q=cand.name) }}"
                                                        class="badge mr-1"
                                                        style="background:#1b8a2d;color:#fff;font-size:9px;letter-spacing:0.6px;padding:2px 6px;"
                                                        title="Officially filed for office">FILED</a>
                                                     {% endif %}
-                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}"
+                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}"
                                                        class="candidate-link
                                                         {% if cand.status|upper == 'CONFIRMED' %}text-success
                                                         {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
@@ -292,7 +292,7 @@
                                                         {% elif cand.status|upper == 'DECLINED' %}badge-secondary
                                                         {% else %}badge-light{% endif %}"
                                                         data-candidate-id="{{ cand.candidate_id }}"
-                                                        data-election-year="2026"
+                                                        data-election-year="{{ cycle }}"
                                                         onclick="showStatusDropdown(this, event)"
                                                         title="Click to change status">
                                                         {{ cand.status }}
@@ -303,32 +303,32 @@
                                                     </button>
                                                 {% else %}
                                                     <button class="btn btn-sm btn-outline-dark"
-                                                            onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                                            onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})">
                                                         + Add
                                                     </button>
                                                 {% endif %}
                                             </td>
                                             <td>
-                                                {% if row < a2024 %}
-                                                    {% set cand = active_2024[row] %}
-                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2024) }}"
-                                                       class="candidate-link
-                                                        {% if cand.status|upper == 'CONFIRMED' %}text-success
-                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
-                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
-                                                        {% else %}text-secondary{% endif %}">
-                                                        {{ cand.name|title }} ({{ cand.status }})
-                                                    </a>
+                                                {% if row < a_prior %}
+                                                    {% set cand = active_prior[row] %}
+                                                    {# Sitting R members from the results site: called seats in green, ones still being counted in italic #}
+                                                    {% set cls = 'text-success' if cand.status == 'Won' else 'text-secondary font-italic' %}
+                                                    {% if cand.candidate_id %}
+                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=prior) }}"
+                                                       class="candidate-link {{ cls }}">{{ cand.name }}{% if cand.status != 'Won' %} (leading){% endif %}</a>
+                                                    {% else %}
+                                                    <span class="{{ cls }}">{{ cand.name }}{% if cand.status != 'Won' %} (leading){% endif %}</span>
+                                                    {% endif %}
                                                 {% endif %}
                                             </td>
                                         </tr>
                                         {% endfor %}
-                                        {% if a2026 >= seat_count %}
+                                        {% if a_cur >= seat_count %}
                                         <tr>
                                             <td></td>
                                             <td>
                                                 <button class="btn btn-sm btn-outline-dark"
-                                                        onclick="openAddCandidateModal('{{ fdc }}', 2026)">
+                                                        onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})">
                                                     + Add Another
                                                 </button>
                                             </td>
@@ -338,17 +338,17 @@
                                     </tbody>
                                 </table>
                             </div>
-                            {% set declined_2026 = info.cand2026|selectattr("status","equalto","Declined")|list %}
-                            {% set declined_2024 = info.cand2024|selectattr("status","equalto","Declined")|list %}
-                            {% if declined_2026 or declined_2024 %}
+                            {% set declined_cur = info.cand_cur|selectattr("status","equalto","Declined")|list %}
+                            {% set declined_prior = info.cand_prior|selectattr("status","equalto","Declined")|list %}
+                            {% if declined_cur or declined_prior %}
                             <p class="text-muted small mt-2 mb-0">
                                 <strong>Declined:</strong>
-                                {% if declined_2026 %}
-                                    2026: {% for cand in declined_2026 %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2026) }}" class="text-secondary">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+                                {% if declined_cur %}
+                                    {{ cycle }}: {% for cand in declined_cur %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="text-secondary">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
                                 {% endif %}
-                                {% if declined_2024 %}
-                                    {% if declined_2026 %}| {% endif %}
-                                    2024: {% for cand in declined_2024 %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=2024) }}" class="text-secondary">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+                                {% if declined_prior %}
+                                    {% if declined_cur %}| {% endif %}
+                                    {{ prior }}: {% for cand in declined_prior %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=prior) }}" class="text-secondary">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
                                 {% endif %}
                             </p>
                             {% endif %}

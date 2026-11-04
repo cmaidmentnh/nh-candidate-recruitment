@@ -20,13 +20,13 @@
     </div>
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><strong>Current Candidates (2026)</strong></div>
+            <div class="card-header"><strong>Current Candidates ({{ cycle }})</strong></div>
             <div class="card-body">
                 {% if candidates %}
                 <ul class="list-unstyled mb-0">
                     {% for c in candidates %}
                     <li>
-                        <a href="{{ url_for('edit_candidate', candidate_id=c[0], election_year=2026) }}">{{ c[1] }} {{ c[2] }}</a>
+                        <a href="{{ url_for('edit_candidate', candidate_id=c[0], election_year=cycle) }}">{{ c[1] }} {{ c[2] }}</a>
                         <span class="badge badge-{% if c[3] == 'Confirmed' %}success{% elif c[3] == 'Potential' %}warning{% else %}secondary{% endif %}">{{ c[3] }}</span>
                     </li>
                     {% endfor %}

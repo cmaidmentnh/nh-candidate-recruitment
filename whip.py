@@ -1,7 +1,7 @@
 """
 Candidate whip — weekly check-in calls on assigned candidates.
 
-A whip owns a handful of the 365 filed 2026 R State Rep candidates and rings
+A whip owns a handful of the filed R State Rep candidates and rings
 each of them once a week. The point of the call is to find out what the
 candidate needs, so the tool is built around three things:
 
@@ -38,6 +38,8 @@ from functools import wraps
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, jsonify, Response)
 from flask_login import current_user
+
+from cycle import CYCLE
 
 whip_bp = Blueprint('whip', __name__)
 _get_db = _release_db = _build_rows = _can_admin = None
@@ -360,9 +362,9 @@ def _whips(cur):
 def _coverage(cur):
     """Who is carrying what, plus what nobody owns — shown while you assign."""
     whips = _whips(cur)
-    cur.execute("""
+    cur.execute(f"""
         SELECT COUNT(*) FROM filings f
-        WHERE f.election_year=2026 AND f.office='State Representative'
+        WHERE f.election_year={CYCLE} AND f.office='State Representative'
           AND f.party='R'
           AND NOT EXISTS (SELECT 1 FROM candidate_campaign_progress p
                           WHERE p.candidate_id = f.candidate_id
@@ -448,14 +450,14 @@ def candidate(cid):
         rows, by_id = _roster(cur, week)
         d = by_id.get(cid)
         if not d:
-            flash("That candidate isn't in the filed 2026 cohort.", "warning")
+            flash(f"That candidate isn't in the filed {CYCLE} cohort.", "warning")
             return redirect(url_for('whip.my_week'))
 
         # Who else is on that ballot — teammates to coordinate with and the
         # opposition to size up, straight from the filings table.
-        cur.execute("""SELECT first_name, last_name, party, candidate_id
+        cur.execute(f"""SELECT first_name, last_name, party, candidate_id
                        FROM filings
-                       WHERE election_year=2026 AND office='State Representative'
+                       WHERE election_year={CYCLE} AND office='State Representative'
                          AND district_code=%s AND candidate_id IS DISTINCT FROM %s
                        ORDER BY party, last_name""", (d['district'], cid))
         ballot = [{'name': f"{r[0]} {r[1]}".strip(), 'party': r[2],

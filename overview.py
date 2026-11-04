@@ -17,14 +17,15 @@ Read-only. Nothing here writes, so it can never be the thing that breaks a deadl
 """
 import logging
 from datetime import date, datetime
+from cycle import CYCLE, ELECTION_DAY as _CYCLE_DAY
 
 logger = logging.getLogger(__name__)
 
 get_db_connection = None
 release_db_connection = None
 
-ELECTION_DAY = date(2026, 11, 3)
-YEAR = 2026
+ELECTION_DAY = _CYCLE_DAY
+YEAR = CYCLE
 OFFICE = 'State Representative'
 
 
