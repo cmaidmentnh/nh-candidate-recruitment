@@ -176,7 +176,7 @@
                         <div>
                             <h3>{{ fdc }}</h3>
                             <div class="sub">{{ seats }} seat{{ 's' if seats != 1 }} · {{ info.towns|join(', ') }}</div>
-                            {% if info.pvi is not none %}<div class="sub"><span class="sb-lean">{% if info.pvi > 0 %}R+{{ '%.1f'|format(info.pvi) }}{% elif info.pvi < 0 %}D+{{ '%.1f'|format(-info.pvi) }}{% else %}EVEN{% endif %}</span> {{ (r or '')|title }}</div>{% endif %}
+                            {% if info.pvi is not none %}<div class="sub"><span class="sb-lean">{% if info.pvi > 0 %}R+{{ '%.1f'|format(info.pvi) }}{% elif info.pvi < 0 %}D+{{ '%.1f'|format(-info.pvi) }}{% else %}EVEN{% endif %}</span> {{ (r or '')|title|replace('Gop', 'GOP') }}</div>{% endif %}
                         </div>
                         <button type="button" class="sb-x" onclick="sbClose()" aria-label="Close">&times;</button>
                     </div>
