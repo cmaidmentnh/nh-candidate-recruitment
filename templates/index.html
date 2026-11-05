@@ -1,391 +1,369 @@
 {% extends "base.html" %}
 {% from "_contact_icons.html" import contact_icons %}
-{% block head %}
-<style>
-/* Recruitment board: one open ledger, a row per district. Angular, no cards or pills. */
-.rb {
-    --rb-ink: #15171c;
-    --rb-ink2: #4a505c;
-    --rb-mute: #8a909c;
-    --rb-rule: #d9dce2;
-    --rb-rule-strong: #15171c;
-    --rb-paper: #fff;
-    --rb-wash: #f4f5f7;
-    --rb-red: #d91720;
-    --rb-green: #1b7a33;
-    --rb-amber: #b86e00;
-    --rb-blue: #1d4f91;
-    width: min(1560px, 100vw - 32px);
-    margin-left: calc(50% - min(780px, 50vw - 16px));
-    color: var(--rb-ink);
-}
-.rb a { color: inherit; }
-.rb-eyebrow { font: 600 11px/1 'Inter', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--rb-mute); }
-.rb-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 3px solid var(--rb-rule-strong); }
-.rb-head h1 { font-family: 'Norwester', sans-serif !important; font-size: 40px; line-height: 1; margin: 6px 0 0; letter-spacing: .01em; }
-.rb-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.rb-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border: 1px solid var(--rb-ink); background: var(--rb-paper); color: var(--rb-ink) !important; font: 600 12px/1 'Inter', sans-serif; letter-spacing: .08em; text-transform: uppercase; border-radius: 0; cursor: pointer; text-decoration: none !important; }
-.rb-btn:hover { background: var(--rb-ink); color: #fff !important; }
-.rb-btn-red { background: var(--rb-red); border-color: var(--rb-red); color: #fff !important; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); padding-right: 22px; }
-.rb-btn-red:hover { background: #b8141b; border-color: #b8141b; }
-
-/* Seat meter: all 400 seats, one tick each */
-.rb-meter { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 28px; align-items: end; padding: 18px 0 16px; border-bottom: 1px solid var(--rb-rule); }
-.rb-meter-fig { font-family: 'Norwester', sans-serif; font-size: 56px; line-height: .9; }
-.rb-meter-fig small { font-size: 22px; color: var(--rb-mute); margin-left: 4px; }
-.rb-meter-cap { font-size: 13px; color: var(--rb-ink2); margin-top: 6px; }
-.rb-ticks { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(200, minmax(0, 1fr)); gap: 1px; height: 22px; }
-.rb-ticks span { background: #e7e9ed; }
-.rb-ticks .t-c { background: var(--rb-green); }
-.rb-ticks .t-p { background: #e0a43a; }
-.rb-key { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--rb-ink2); }
-.rb-key i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; font-style: normal; }
-
-/* Ledger of figures */
-.rb-figs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--rb-rule); }
-.rb-fig { flex: 1 1 120px; padding: 12px 16px 12px 0; margin-right: 16px; border-right: 1px solid var(--rb-rule); text-decoration: none !important; }
-.rb-fig:last-child { border-right: 0; }
-.rb-fig b { display: block; font-family: 'Norwester', sans-serif; font-weight: 400; font-size: 30px; line-height: 1; }
-.rb-fig span { font-size: 12px; color: var(--rb-ink2); }
-.rb-fig:hover b { color: var(--rb-red); }
-.rb-more { padding: 8px 0 0; font-size: 12px; color: var(--rb-ink2); display: flex; flex-wrap: wrap; gap: 4px 18px; }
-.rb-more a { text-decoration: none; border-bottom: 1px solid var(--rb-rule); }
-.rb-more a:hover { color: var(--rb-red); border-color: var(--rb-red); }
-.rb-more b { color: var(--rb-ink); }
-
-/* Body: county rail + ledger */
-.rb-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; margin-top: 24px; }
-.rb-rail { position: sticky; top: 12px; align-self: start; max-height: calc(100vh - 24px); overflow-y: auto; }
-.rb-rail h2 { font: 600 11px/1 'Inter', sans-serif !important; letter-spacing: .14em; text-transform: uppercase; color: var(--rb-mute); margin: 0 0 8px; }
-.rb-rail a { display: block; padding: 8px 0 9px; border-bottom: 1px solid var(--rb-rule); text-decoration: none !important; }
-.rb-rail a:hover .rb-rail-name, .rb-rail a.on .rb-rail-name { color: var(--rb-red); }
-.rb-rail-top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
-.rb-rail-name { font-weight: 600; }
-.rb-rail-num { color: var(--rb-ink2); font-variant-numeric: tabular-nums; }
-.rb-rail-bar { height: 3px; background: #e7e9ed; margin-top: 6px; }
-.rb-rail-bar i { display: block; height: 100%; background: var(--rb-green); }
-
-.rb-tools { position: sticky; top: 0; z-index: 20; background: var(--rb-paper); display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 10px 0; border-bottom: 3px solid var(--rb-rule-strong); }
-.rb-search { display: flex; flex: 1 1 280px; min-width: 0; }
-.rb-search input { flex: 1; min-width: 0; border: 1px solid var(--rb-ink); border-right: 0; border-radius: 0; padding: 8px 12px; font-size: 14px; }
-.rb-search input:focus { outline: none; border-color: var(--rb-red); }
-.rb-search button { border: 1px solid var(--rb-ink); background: var(--rb-ink); color: #fff; border-radius: 0; padding: 0 14px; }
-.rb-seg { display: inline-flex; border: 1px solid var(--rb-ink); }
-.rb-seg button { border: 0; border-right: 1px solid var(--rb-ink); background: var(--rb-paper); padding: 7px 12px; font: 600 11px/1 'Inter', sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--rb-ink); cursor: pointer; border-radius: 0; }
-.rb-seg button:last-child { border-right: 0; }
-.rb-seg button.on { background: var(--rb-ink); color: #fff; }
-.rb-count { font-size: 12px; color: var(--rb-ink2); margin-left: auto; font-variant-numeric: tabular-nums; }
-.rb-note { margin: 12px 0 0; padding: 10px 14px; border-left: 4px solid var(--rb-blue); background: var(--rb-wash); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-
-/* County section */
-.rb-county { margin-top: 28px; scroll-margin-top: 70px; }
-.rb-county-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; padding-bottom: 6px; border-bottom: 2px solid var(--rb-rule-strong); }
-.rb-county-head h3 { font-family: 'Norwester', sans-serif !important; font-size: 26px; line-height: 1; margin: 0; }
-.rb-county-sum { font-size: 13px; color: var(--rb-ink2); font-variant-numeric: tabular-nums; }
-.rb-county-sum b { color: var(--rb-ink); }
-.rb-cols, .rb-row { display: grid; grid-template-columns: 170px 74px minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr); gap: 0 18px; }
-.rb-cols { padding: 8px 0 6px 14px; border-bottom: 1px solid var(--rb-rule); font: 600 10px/1.2 'Inter', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--rb-mute); }
-.rb-row { padding: 10px 0 10px 10px; border-bottom: 1px solid var(--rb-rule); border-left: 4px solid transparent; align-items: start; }
-.rb-row:hover { background: var(--rb-wash); }
-.rb-row.s-empty { border-left-color: var(--rb-red); }
-.rb-row.s-partial { border-left-color: #e0a43a; }
-.rb-row.s-full { border-left-color: var(--rb-green); }
-.rb-dist b { display: block; font-size: 15px; }
-.rb-dist .seats { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--rb-ink2); }
-.rb-dist .towns { display: block; font-size: 12px; color: var(--rb-mute); line-height: 1.35; margin-top: 3px; }
-.rb-lean { display: inline-block; min-width: 58px; padding: 4px 6px 3px; text-align: center; font: 700 12px/1 'Inter', sans-serif; font-variant-numeric: tabular-nums; border-radius: 2px; }
-.rb-lean small { display: block; font-size: 8px; font-weight: 600; letter-spacing: .08em; margin-top: 3px; opacity: .85; }
-.l-sg { background: #7d1015; color: #fff; } .l-lg { background: #d91720; color: #fff; } .l-ng { background: #f2b8bb; color: #5c0b0f; }
-.l-sw { background: #f1d36b; color: #3d3100; }
-.l-nd { background: #bcd3ee; color: #0e2c55; } .l-ld { background: #3b6fb6; color: #fff; } .l-sd { background: #13305e; color: #fff; }
-.l-na { background: #e7e9ed; color: var(--rb-ink2); }
-
-.rb-slate { display: grid; gap: 6px; }
-.rb-cand { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; }
-.rb-cand .candidate-link { font-weight: 600; text-decoration: none; }
-.rb-cand .candidate-link:hover { text-decoration: underline; }
-.rb-tag { display: inline-block; padding: 2px 5px 1px; font: 700 9px/1.2 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase; border-radius: 0; text-decoration: none !important; }
-.rb-tag-filed { background: var(--rb-green); color: #fff !important; }
-.rb-tag-inc { border: 1px solid var(--rb-ink); color: var(--rb-ink); }
-.rb .status-badge { cursor: pointer; border-radius: 0; font: 600 10px/1 'Inter', sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 4px 6px 3px; border: 1px solid currentColor; background: transparent !important; }
-.rb .status-badge.badge-success { color: var(--rb-green); }
-.rb .status-badge.badge-warning { color: var(--rb-amber); }
-.rb .status-badge.badge-primary { color: var(--rb-blue); }
-.rb .status-badge.badge-secondary, .rb .status-badge.badge-light { color: var(--rb-mute); }
-.rb .status-badge:hover { background: var(--rb-ink) !important; color: #fff; border-color: var(--rb-ink); }
-.rb .qe-trigger { border: 0; background: none; padding: 0 2px; color: var(--rb-mute); font-size: 11px; }
-.rb .qe-trigger:hover { color: var(--rb-ink); }
-.rb-open { display: flex; align-items: center; gap: 10px; border: 1px dashed #b9bec8; padding: 5px 8px; font-size: 12px; color: var(--rb-ink2); background: none; width: 100%; text-align: left; cursor: pointer; border-radius: 0; }
-.rb-open:hover { border-color: var(--rb-red); color: var(--rb-red); border-style: solid; }
-.rb-open b { font: 700 10px/1 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--rb-red); }
-.rb-another { border: 0; background: none; padding: 0; font-size: 12px; color: var(--rb-mute); text-align: left; cursor: pointer; }
-.rb-another:hover { color: var(--rb-red); }
-.rb-declined { font-size: 12px; color: var(--rb-mute); }
-.rb-declined a { color: var(--rb-mute); }
-
-.rb-ran { display: grid; gap: 3px; font-size: 13px; }
-.rb-ran .r-won { font-weight: 700; color: var(--rb-ink); }
-.rb-ran .r-won::before { content: ''; display: inline-block; width: 7px; height: 7px; background: var(--rb-green); margin-right: 6px; vertical-align: 1px; }
-.rb-ran .r-lead { font-style: italic; color: var(--rb-ink); }
-.rb-ran .r-lost { color: var(--rb-ink2); }
-.rb-ran .r-prim { color: var(--rb-mute); }
-.rb-ran small { color: var(--rb-mute); font-size: 11px; }
-.rb-ran a { text-decoration: none; }
-.rb-ran a:hover { text-decoration: underline; }
-.rb-none { font-size: 12px; color: var(--rb-mute); }
-.rb-empty-state { padding: 40px 0; color: var(--rb-ink2); }
-
-@media (max-width: 1100px) {
-    .rb-body { grid-template-columns: minmax(0, 1fr); }
-    .rb-rail { position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 0 16px; }
-    .rb-rail h2 { width: 100%; }
-    .rb-rail a { flex: 1 1 140px; }
-}
-@media (max-width: 760px) {
-    .rb-head h1 { font-size: 30px; }
-    .rb-meter { grid-template-columns: minmax(0, 1fr); }
-    .rb-meter-fig { font-size: 42px; }
-    .rb-figs { display: grid; grid-template-columns: 1fr 1fr; }
-    .rb-fig { margin: 0; padding: 10px 0; border-right: 0; border-bottom: 1px solid var(--rb-rule); }
-    .rb-ticks { grid-template-columns: repeat(100, minmax(0, 1fr)); height: 30px; }
-    .rb-cols { display: none; }
-    .rb-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
-    .rb-slate, .rb-ran { grid-column: 1 / -1; }
-    .rb-ran::before { content: attr(data-year); font: 600 10px/1 'Inter', sans-serif; letter-spacing: .12em; color: var(--rb-mute); }
-}
-</style>
-{% endblock %}
 {% block content %}
-{% macro ran_list(cands, year) -%}
-    {%- if cands -%}
-    <div class="rb-ran" data-year="{{ year }}">
-    {%- for cand in cands -%}
-        {%- set cls = {'Won': 'r-won', 'Leading': 'r-lead', 'Lost': 'r-lost', 'Lost primary': 'r-prim'}[cand.status] -%}
-        {%- set note = {'Won': '', 'Leading': ' leading', 'Lost': ' lost', 'Lost primary': ' lost primary'}[cand.status] -%}
-        <div>
-        {%- if cand.candidate_id -%}
-        <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=year) }}" class="{{ cls }}">{{ cand.name|title }}</a>
-        {%- else -%}
-        <span class="{{ cls }}">{{ cand.name|title }}</span>
-        {%- endif -%}
-        {%- if note %}<small>{{ note }}</small>{% endif -%}
-        </div>
-    {%- endfor -%}
-    </div>
-    {%- else -%}
-    <div class="rb-ran rb-none" data-year="{{ year }}">No Republican</div>
-    {%- endif -%}
-{%- endmacro %}
-{% macro lean(info) -%}
-    {%- set lc = {'SAFE GOP': 'l-sg', 'LIKELY GOP': 'l-lg', 'LEAN GOP': 'l-ng', 'SWING': 'l-sw',
-                  'LEAN DEM': 'l-nd', 'LIKELY DEM': 'l-ld', 'SAFE DEM': 'l-sd'}.get(info.pvi_rating, 'l-na') -%}
-    {%- if info.pvi is not none -%}
-    <span class="rb-lean {{ lc }}" title="PVI {{ info.pvi }}">
-        {%- if info.pvi > 0 %}R+{{ '%.1f'|format(info.pvi) }}{% elif info.pvi < 0 %}D+{{ '%.1f'|format(-info.pvi) }}{% else %}EVEN{% endif -%}
-        <small>{{ (info.pvi_rating or '')|replace(' GOP', '')|replace(' DEM', '') }}</small></span>
-    {%- else -%}
-    <span class="rb-lean l-na">n/a</span>
-    {%- endif -%}
-{%- endmacro %}
-
-{# Seat totals for the meter: confirmed and potential seats, capped at each district's seat count #}
-{% set tot = namespace(conf=0, pot=0) %}
-{% for county_name, dist_dict in county_groups.items() %}{% for fdc, info in dist_dict.items() %}
-    {% set c = info.cand_cur|selectattr('status', 'equalto', 'Confirmed')|list|length %}
-    {% set a = info.cand_cur|rejectattr('status', 'equalto', 'Declined')|list|length %}
-    {% set cc = [c, info.seat_count]|min %}
-    {% set tot.conf = tot.conf + cc %}
-    {% set tot.pot = tot.pot + [a, info.seat_count]|min - cc %}
-{% endfor %}{% endfor %}
-{% set seats = dashboard.TOTAL_SEATS %}
-
-<div class="rb">
-    <header class="rb-head">
-        <div>
-            <div class="rb-eyebrow">NH House · Republican recruitment</div>
-            <h1>{{ cycle }} Candidate Tracker</h1>
-        </div>
-        <div class="rb-actions">
-            {% if is_super_admin %}
-            <div class="btn-group">
-                <button type="button" class="rb-btn dropdown-toggle" data-toggle="dropdown"><i class="fas fa-download"></i> Export</button>
-                <div class="dropdown-menu dropdown-menu-right">
-                    <a class="dropdown-item" href="{{ url_for('export_csv', export_type='all_candidates') }}">All Candidates</a>
-                    <a class="dropdown-item" href="{{ url_for('export_csv', export_type='confirmed') }}">Confirmed Only</a>
-                    <a class="dropdown-item" href="{{ url_for('export_csv', export_type='potentials') }}">Potentials Only</a>
-                    <a class="dropdown-item" href="{{ url_for('export_csv', export_type='empty_districts') }}">Empty Districts</a>
-                    <a class="dropdown-item" href="{{ url_for('export_csv', export_type='by_county') }}">By County</a>
-                    <a class="dropdown-item" href="{{ url_for('export_csv', export_type='contact_list') }}">Contact List</a>
-                </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Candidate Tracker</h1>
+    <div>
+        <button type="button" class="btn btn-outline-secondary mr-2" data-toggle="modal" data-target="#countyProgressModal">
+            <i class="fas fa-chart-bar"></i> County Progress
+        </button>
+        {% if is_super_admin %}
+        <div class="btn-group mr-2">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown">
+                <i class="fas fa-download"></i> Export
+            </button>
+            <div class="dropdown-menu dropdown-menu-right">
+                <a class="dropdown-item" href="{{ url_for('export_csv', export_type='all_candidates') }}">All Candidates</a>
+                <a class="dropdown-item" href="{{ url_for('export_csv', export_type='confirmed') }}">Confirmed Only</a>
+                <a class="dropdown-item" href="{{ url_for('export_csv', export_type='potentials') }}">Potentials Only</a>
+                <a class="dropdown-item" href="{{ url_for('export_csv', export_type='empty_districts') }}">Empty Districts</a>
+                <a class="dropdown-item" href="{{ url_for('export_csv', export_type='by_county') }}">By County</a>
+                <a class="dropdown-item" href="{{ url_for('export_csv', export_type='contact_list') }}">Contact List</a>
             </div>
-            {% endif %}
-            <button class="rb-btn rb-btn-red" onclick="openAddCandidateModal('', {{ cycle }})"><i class="fas fa-plus"></i> Add Candidate</button>
         </div>
-    </header>
-
-    {% if not county_filter and not search_query %}
-    <section class="rb-meter">
-        <div>
-            <div class="rb-meter-fig">{{ tot.conf }}<small>/ {{ seats }}</small></div>
-            <div class="rb-meter-cap">seats have a confirmed {{ cycle }} candidate; {{ tot.pot }} more have someone considering.</div>
-        </div>
-        <div class="rb-key">
-            <span><i style="background:var(--rb-green)"></i>Confirmed</span>
-            <span><i style="background:#e0a43a"></i>Considering / potential</span>
-            <span><i style="background:#e7e9ed"></i>Open</span>
-        </div>
-        <div class="rb-ticks" aria-hidden="true">{% for i in range(seats) %}<span{% if i < tot.conf %} class="t-c"{% elif i < tot.conf + tot.pot %} class="t-p"{% endif %}></span>{% endfor %}</div>
-    </section>
-    {% endif %}
-
-    <nav class="rb-figs">
-        <a class="rb-fig" href="{{ url_for('filter_view', category='confirmed') }}"><b>{{ dashboard.confirmed.total }}</b><span>Confirmed</span></a>
-        <a class="rb-fig" href="{{ url_for('filings_list', party='R') }}"><b>{{ dashboard.filed.total }}</b><span>Filed</span></a>
-        <a class="rb-fig" href="{{ url_for('filter_view', category='potentials') }}"><b>{{ dashboard.potentials.total }}</b><span>Potentials</span></a>
-        <a class="rb-fig" href="{{ url_for('filter_view', category='districts_with_vacancies') }}"><b>{{ dashboard.districts_with_vacancies.total }}</b><span>Districts with openings</span></a>
-        <a class="rb-fig" href="{{ url_for('filter_view', category='incumbents_undecided') }}"><b>{{ dashboard.incumbents_undecided.total }}</b><span>Incumbents undecided</span></a>
-        <a class="rb-fig" href="{{ url_for('filter_view', category='primaries') }}"><b>{{ dashboard.primaries.total }}</b><span>Primaries</span></a>
-        <a class="rb-fig" href="{{ url_for('filter_view', category='unmatched_voters') }}"><b>{{ dashboard.unmatched_voters.total }}</b><span>No voter match</span></a>
-    </nav>
-    <div class="rb-more">
-        <a href="{{ url_for('filter_view', category='empty_seats') }}"><b>{{ dashboard.empty_seats.total }}</b> empty seats</a>
-        <a href="{{ url_for('filter_view', category='empty_districts') }}"><b>{{ dashboard.empty_districts.total }}</b> districts with no one</a>
-        <a href="{{ url_for('filter_view', category='incumbents_running') }}"><b>{{ dashboard.incumbents_running.total }}</b> incumbents running</a>
-        <a href="{{ url_for('filter_view', category='incumbents_not_running') }}"><b>{{ dashboard.incumbents_not_running.total }}</b> incumbents not running</a>
-        <a href="{{ url_for('index_classic') }}">Classic view</a>
-    </div>
-
-    <div class="rb-body">
-        <aside class="rb-rail">
-            <h2>Counties</h2>
-            {% for county_name, stats in county_stats.items()|sort %}
-            {% set pct = (stats.seats_filled / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
-            <a href="{% if county_filter or search_query %}{{ url_for('index') }}{% endif %}#c-{{ county_name|replace(' ', '_') }}"{% if county_filter|upper == county_name|upper %} class="on"{% endif %}>
-                <div class="rb-rail-top"><span class="rb-rail-name">{{ county_name|title }}</span><span class="rb-rail-num">{{ stats.seats_filled }}/{{ stats.total_seats }}</span></div>
-                <div class="rb-rail-bar"><i style="width: {{ pct }}%"></i></div>
-            </a>
-            {% endfor %}
-        </aside>
-
-        <main>
-            <div class="rb-tools">
-                <form method="GET" action="{{ url_for('index') }}" class="rb-search">
-                    <input type="text" name="search" placeholder="Name, town or district" value="{{ search_query or '' }}" aria-label="Search">
-                    <button type="submit" aria-label="Search"><i class="fas fa-search"></i></button>
-                </form>
-                <div class="rb-seg" id="rbStatus" role="group" aria-label="Show districts">
-                    <button type="button" class="on" data-f="all">All</button>
-                    <button type="button" data-f="open">Openings</button>
-                    <button type="button" data-f="empty">No one</button>
-                    <button type="button" data-f="full">Full</button>
-                </div>
-                <div class="rb-seg" id="rbLean" role="group" aria-label="District lean">
-                    <button type="button" class="on" data-f="all">Any lean</button>
-                    <button type="button" data-f="gop">GOP</button>
-                    <button type="button" data-f="swing">Swing</button>
-                    <button type="button" data-f="dem">Dem</button>
-                </div>
-                <span class="rb-count" id="rbCount"></span>
-            </div>
-
-            {% if county_filter or search_query %}
-            <div class="rb-note">
-                <span>{% if county_filter %}Showing <strong>{{ county_filter|title }}</strong> County only{% endif %}{% if search_query %}Results for “<strong>{{ search_query }}</strong>”{% endif %}</span>
-                <a href="{{ url_for('index') }}">Show everything</a>
-            </div>
-            {% endif %}
-
-            {% for county_name, dist_dict in county_groups.items()|sort %}
-            {% set st = county_stats[county_name] %}
-            <section class="rb-county" id="c-{{ county_name|replace(' ', '_') }}">
-                <div class="rb-county-head">
-                    <h3>{{ county_name|title }}</h3>
-                    <span class="rb-county-sum"><b>{{ st.seats_filled }}</b> of {{ st.total_seats }} seats confirmed · {{ dist_dict|length }} districts</span>
-                </div>
-                <div class="rb-cols"><span>District</span><span>Lean</span><span>{{ cycle }} slate</span><span>{{ prior }} ran</span><span>{{ prior - 2 }} ran</span></div>
-                {% for fdc, info in dist_dict.items() %}
-                {% set active_cur = info.cand_cur|rejectattr("status", "equalto", "Declined")|list %}
-                {% set declined_cur = info.cand_cur|selectattr("status", "equalto", "Declined")|list %}
-                {% set a_cur = active_cur|length %}
-                {% set seat_count = info.seat_count %}
-                {% set status = 'empty' if a_cur == 0 else ('partial' if a_cur < seat_count else 'full') %}
-                {% set r = info.pvi_rating or '' %}
-                <div class="rb-row s-{{ status }}" data-status="{{ status }}" data-lean="{{ 'gop' if 'GOP' in r else ('dem' if 'DEM' in r else ('swing' if r == 'SWING' else 'na')) }}">
-                    <div class="rb-dist">
-                        <b>{{ fdc }}</b>
-                        <span class="seats">{{ seat_count }} seat{{ 's' if seat_count != 1 }} · {{ a_cur }} in</span>
-                        <span class="towns">{{ info.towns|join(", ") }}</span>
-                    </div>
-                    <div>{{ lean(info) }}</div>
-                    <div class="rb-slate">
-                        {% for cand in active_cur %}
-                        <div class="rb-cand">
-                            {% if cand.filed %}<a href="{{ url_for('filings_list', year=cycle, q=cand.name) }}" class="rb-tag rb-tag-filed" title="Officially filed for office">Filed</a>{% endif %}
-                            {% if cand.incumbent %}<span class="rb-tag rb-tag-inc" title="Sitting member">Rep.</span>{% endif %}
-                            <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link">{{ cand.name|title }}</a>
-                            {{ contact_icons(cand.email, cand.phone, cand.signal, cand.signal_uuid, cand.signal_registered) }}
-                            <span class="status-badge badge
-                                {% if cand.status|upper == 'CONFIRMED' %}badge-success
-                                {% elif cand.status|upper in ['CONSIDERING', 'POTENTIAL'] %}badge-warning
-                                {% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary
-                                {% else %}badge-light{% endif %}"
-                                data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}"
-                                onclick="showStatusDropdown(this, event)" title="Click to change status">{{ cand.status }}</span>
-                            <button type="button" class="qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}" title="Quick edit"><i class="fas fa-pen"></i></button>
-                        </div>
-                        {% endfor %}
-                        {% set n_open = seat_count - a_cur %}
-                        {% if n_open > 0 %}
-                        <button type="button" class="rb-open" onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})"><b>{{ n_open if n_open > 1 else '' }} Open</b> {{ 'seats' if n_open > 1 else 'seat' }} · add a candidate</button>
-                        {% endif %}
-                        {% if a_cur >= seat_count %}
-                        <button type="button" class="rb-another" onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})">+ Add another</button>
-                        {% endif %}
-                        {% if declined_cur %}
-                        <div class="rb-declined">Declined: {% for cand in declined_cur %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>
-                        {% endif %}
-                    </div>
-                    {{ ran_list(info.cand_prior, prior) }}
-                    {{ ran_list(info.cand_prior2, prior - 2) }}
-                </div>
-                {% endfor %}
-            </section>
-            {% else %}
-            <div class="rb-empty-state">No districts match. <a href="{{ url_for('index') }}">Show everything</a></div>
-            {% endfor %}
-        </main>
+        {% endif %}
+        <button class="btn btn-danger" onclick="openAddCandidateModal('', {{ cycle }})" style="background-color: #d91720; border-color: #d91720;">
+            <i class="fas fa-plus"></i> Add Candidate
+        </button>
     </div>
 </div>
-{% endblock %}
-{% block scripts %}
-{{ super() }}
-<script>
-(function () {
-    var f = { status: 'all', lean: 'all' };
-    try { var saved = JSON.parse(localStorage.getItem('rbFilters') || '{}'); if (saved.status) f.status = saved.status; if (saved.lean) f.lean = saved.lean; } catch (e) {}
-    var rows = document.querySelectorAll('.rb-row');
-    function apply() {
-        var shown = 0;
-        rows.forEach(function (row) {
-            var s = row.dataset.status, l = row.dataset.lean;
-            var okS = f.status === 'all' || (f.status === 'open' ? s !== 'full' : s === f.status);
-            var okL = f.lean === 'all' || l === f.lean;
-            row.hidden = !(okS && okL);
-            if (!row.hidden) shown++;
-        });
-        document.querySelectorAll('.rb-county').forEach(function (sec) {
-            sec.hidden = !sec.querySelector('.rb-row:not([hidden])');
-        });
-        document.getElementById('rbCount').textContent = shown + ' of ' + rows.length + ' districts';
-        ['rbStatus', 'rbLean'].forEach(function (id) {
-            var key = id === 'rbStatus' ? 'status' : 'lean';
-            document.querySelectorAll('#' + id + ' button').forEach(function (b) { b.classList.toggle('on', b.dataset.f === f[key]); });
-        });
-        try { localStorage.setItem('rbFilters', JSON.stringify(f)); } catch (e) {}
-    }
-    document.querySelectorAll('#rbStatus button').forEach(function (b) { b.addEventListener('click', function () { f.status = b.dataset.f; apply(); }); });
-    document.querySelectorAll('#rbLean button').forEach(function (b) { b.addEventListener('click', function () { f.lean = b.dataset.f; apply(); }); });
-    apply();
-})();
-</script>
+
+{% if county_filter %}
+<div class="alert alert-info d-flex justify-content-between align-items-center">
+    <span>Showing <strong>{{ county_filter|title }}</strong> County only</span>
+    <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-secondary">Show All Counties</a>
+</div>
+{% endif %}
+
+<!-- Dashboard Cards -->
+{% set confirm_pct = (dashboard.confirmed.total / dashboard.TOTAL_SEATS * 100)|round|int %}
+{% set filed_pct = (dashboard.filed.total / dashboard.TOTAL_SEATS * 100)|round|int %}
+<div class="dashboard-row mb-4">
+    <a href="{{ url_for('filings_list', party='R') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #0b4f9c 0%, #1f7ae0 100%);">Filed</div>
+        <div class="card-body">
+            <h4>{{ dashboard.filed.total }}</h4>
+            <div class="progress mt-2 w-100" style="height: 6px;">
+                <div class="progress-bar" style="width: {{ filed_pct }}%; background:#1f7ae0;"></div>
+            </div>
+            <small>{{ filed_pct }}% of {{ dashboard.TOTAL_SEATS }}</small>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='confirmed') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #1b8a2d 0%, #28a745 100%);">Confirmed</div>
+        <div class="card-body">
+            <h4>{{ dashboard.confirmed.total }}</h4>
+            <div class="progress mt-2 w-100" style="height: 6px;">
+                <div class="progress-bar bg-success" style="width: {{ confirm_pct }}%;"></div>
+            </div>
+            <small>{{ confirm_pct }}% of {{ dashboard.TOTAL_SEATS }}</small>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='districts_with_vacancies') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);">Districts with Vacancies</div>
+        <div class="card-body">
+            <h4>{{ dashboard.districts_with_vacancies.total }}</h4>
+            <small>of {{ dashboard.TOTAL_DISTRICTS }}</small>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='potentials') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);">Potentials</div>
+        <div class="card-body">
+            <h4>{{ dashboard.potentials.total }}</h4>
+            <small>in pipeline</small>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='primaries') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);">Primaries</div>
+        <div class="card-body">
+            <h4>{{ dashboard.primaries.total }}</h4>
+            <small>districts</small>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='incumbents_undecided') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #d35400 0%, #e67e22 100%);">Undecided</div>
+        <div class="card-body">
+            <h4>{{ dashboard.incumbents_undecided.total }}</h4>
+            <small>incumbents</small>
+        </div>
+    </a>
+    <a href="{{ url_for('filter_view', category='unmatched_voters') }}" class="dash-card dash-card-size dash-card-link">
+        <div class="card-header" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);">Unmatched</div>
+        <div class="card-body">
+            <h4>{{ dashboard.unmatched_voters.total }}</h4>
+            <small>no voter ID</small>
+        </div>
+    </a>
+</div>
+
+<!-- More Stats (Collapsible) -->
+<div class="mb-4">
+    <a class="text-muted small" data-toggle="collapse" href="#moreStatsCollapse" role="button" aria-expanded="false">
+        <i class="fas fa-chevron-down"></i> More Stats
+    </a>
+    <div class="collapse" id="moreStatsCollapse">
+        <div class="dashboard-row mt-2">
+            <a href="{{ url_for('filter_view', category='empty_seats') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Empty Seats</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.empty_seats.total }}</h4>
+                </div>
+            </a>
+            <a href="{{ url_for('filter_view', category='empty_districts') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Empty Districts</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.empty_districts.total }}</h4>
+                    <small>no candidates</small>
+                </div>
+            </a>
+            <a href="{{ url_for('filter_view', category='incumbents_running') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Incumbents Running</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.incumbents_running.total }}</h4>
+                </div>
+            </a>
+            <a href="{{ url_for('filter_view', category='incumbents_not_running') }}" class="dash-card dash-card-size dash-card-link">
+                <div class="card-header">Incumbents Not Running</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.incumbents_not_running.total }}</h4>
+                </div>
+            </a>
+            <div class="dash-card dash-card-size dash-card-static">
+                <div class="card-header">Total Seats</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.TOTAL_SEATS }}</h4>
+                </div>
+            </div>
+            <div class="dash-card dash-card-size dash-card-static">
+                <div class="card-header">Total Districts</div>
+                <div class="card-body">
+                    <h4>{{ dashboard.TOTAL_DISTRICTS }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- County Progress Modal -->
+<div class="modal fade" id="countyProgressModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #495057;">
+                <h5 class="modal-title text-white"><i class="fas fa-chart-bar"></i> County Progress</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="row">
+                    {% for county_name, stats in county_stats.items()|sort %}
+                    {% set pct = (stats.seats_filled / stats.total_seats * 100)|round|int if stats.total_seats > 0 else 0 %}
+                    {% set needs = stats.total_seats - stats.seats_filled %}
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('index', county=county_name) }}" class="county-progress-link d-block text-decoration-none" data-dismiss="modal">
+                            <div class="d-flex justify-content-between mb-1">
+                                <strong class="text-dark">{{ county_name }}</strong>
+                                <span class="text-muted">{{ stats.seats_filled }}/{{ stats.total_seats }}{% if needs > 0 %} <small class="text-danger">({{ needs }})</small>{% endif %}</span>
+                            </div>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar {% if pct >= 75 %}bg-success{% elif pct >= 50 %}bg-info{% elif pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}"
+                                    style="width: {{ pct }}%;">
+                                    {{ pct }}%
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Search + Controls -->
+<div class="sticky-search-wrapper">
+    <form method="GET" action="{{ url_for('index') }}" class="search-box mb-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="text" name="search" class="form-control" placeholder="Search by name or district..." value="{{ search_query or '' }}">
+        <button type="submit" class="btn btn-dark">
+            <i class="fas fa-search"></i>
+        </button>
+        {% if search_query %}
+        <a href="{{ url_for('index') }}" class="btn btn-outline-dark">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if search_query %}
+    <div class="alert alert-info mb-2 py-2">
+        Showing results for "<strong>{{ search_query }}</strong>"
+        <a href="{{ url_for('index') }}" class="float-right">Clear search</a>
+    </div>
+    {% endif %}
+
+    <div class="mb-0">
+        <button type="button" class="btn btn-outline-dark btn-sm" onclick="expandAll()">
+            <i class="fas fa-expand-alt"></i> Expand All
+        </button>
+        <button type="button" class="btn btn-outline-dark btn-sm" onclick="collapseAll()">
+            <i class="fas fa-compress-alt"></i> Collapse All
+        </button>
+    </div>
+</div>
+
+<!-- County Accordion -->
+<div id="countyAccordion">
+    {% for county_name, dist_dict in county_groups.items()|sort %}
+    {% set c_pct = (county_stats[county_name].seats_filled / county_stats[county_name].total_seats * 100)|round|int if county_stats[county_name].total_seats > 0 else 0 %}
+    <div class="card county-card" id="{{ county_name|replace(' ', '_') }}">
+        <div class="card-header" data-toggle="collapse" data-target="#collapse-{{ county_name|replace(' ', '_') }}"
+             aria-expanded="false" aria-controls="collapse-{{ county_name|replace(' ', '_') }}">
+            <div>
+                <h4 class="mb-0">{{ county_name|title }}</h4>
+                <div class="progress mt-1" style="height: 4px; width: 120px; background: rgba(255,255,255,0.2);">
+                    <div class="progress-bar {% if c_pct >= 75 %}bg-success{% elif c_pct >= 50 %}bg-info{% elif c_pct >= 25 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ c_pct }}%;"></div>
+                </div>
+            </div>
+            <small><strong>{{ county_stats[county_name].seats_filled }}</strong> / {{ county_stats[county_name].total_seats }} Seats <span class="ml-1" style="opacity:0.7;">({{ c_pct }}%)</span></small>
+        </div>
+        <div id="collapse-{{ county_name|replace(' ', '_') }}" class="collapse{% if search_query %} show{% endif %}">
+            <div class="card-body">
+                {% macro ran_cell(cand, year) -%}
+                    {# Won in green, still being counted in italic, lost in grey, primary losers in lighter grey #}
+                    {%- set cls = {'Won': 'text-success font-weight-bold', 'Leading': 'text-success font-italic',
+                                   'Lost': 'text-secondary', 'Lost primary': 'text-muted'}[cand.status] -%}
+                    {%- set note = {'Won': '', 'Leading': ' (leading)', 'Lost': ' (lost)', 'Lost primary': ' (lost primary)'}[cand.status] -%}
+                    {%- if cand.candidate_id -%}
+                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=year) }}"
+                       class="candidate-link {{ cls }}">{{ cand.name|title }}</a><small class="text-muted">{{ note }}</small>
+                    {%- else -%}
+                    <span class="{{ cls }}">{{ cand.name|title }}</span><small class="text-muted">{{ note }}</small>
+                    {%- endif -%}
+                {%- endmacro %}
+                {% for fdc, info in dist_dict.items() %}
+                {% set active_cur = info.cand_cur|rejectattr("status","equalto","Declined")|list %}
+                {% set active_prior = info.cand_prior|rejectattr("status","equalto","Declined")|list %}
+                {% set a_cur = active_cur|length %}
+                {% set a_prior = active_prior|length %}
+                {% set active_prior2 = info.cand_prior2 %}
+                {% set a_prior2 = active_prior2|length %}
+                {% set seat_count = info.seat_count %}
+
+                {% set status = 'Empty' %}
+                {% if a_cur > 0 and a_cur < seat_count %}
+                    {% set status = 'Partial' %}
+                {% elif a_cur >= seat_count %}
+                    {% set status = 'Full' %}
+                {% endif %}
+
+                <div class="card district-card{% if status == 'Empty' %} district-empty{% elif status == 'Partial' %} district-partial{% endif %}">
+                    <div class="card-header" data-toggle="collapse" 
+                         data-target="#collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}"
+                         aria-expanded="{% if search_query %}true{% else %}false{% endif %}">
+                         <div>
+                            <h5 class="mb-0">{{ fdc }} <small class="font-weight-normal">({{ seat_count }} seat{{ 's' if seat_count != 1 else '' }})</small>{% if info.pvi is not none %} <span class="badge" style="font-size: 0.65em; {% if info.pvi_rating == 'SAFE GOP' %}background-color: #8B0000; color: white;{% elif info.pvi_rating == 'LIKELY GOP' %}background-color: #DC143C; color: white;{% elif info.pvi_rating == 'LEAN GOP' %}background-color: #FF6B6B; color: white;{% elif info.pvi_rating == 'SWING' %}background-color: #FFD700; color: black;{% elif info.pvi_rating == 'LEAN DEM' %}background-color: #87CEEB; color: black;{% elif info.pvi_rating == 'LIKELY DEM' %}background-color: #4169E1; color: white;{% elif info.pvi_rating == 'SAFE DEM' %}background-color: #00008B; color: white;{% else %}background-color: #6c757d; color: white;{% endif %}">{% if info.pvi > 0 %}+{% endif %}{{ info.pvi }}%</span>{% endif %}</h5>
+                            <small class="district-towns">{{ info.towns|join(", ") }}</small>
+                         </div>
+                         <small>{{ a_cur }}/{{ seat_count }} - {{ status }}</small>
+                    </div>
+                    <div id="collapse-dist-{{ county_name|replace(' ', '_') }}-{{ loop.index }}" 
+                         class="collapse{% if search_query %} show{% endif %}">
+                        <div class="card-body">
+                            <!-- Towns now shown in header -->
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:10%">Seat</th>
+                                            <th style="width:30%">{{ cycle }} Candidate</th>
+                                            <th style="width:30%">{{ prior }} Candidate</th>
+                                            <th style="width:30%">{{ prior - 2 }} Candidate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in range(max(seat_count, a_cur, a_prior, a_prior2)) %}
+                                        <tr>
+                                            <td>{% if row < seat_count %}{{ row + 1 }}{% endif %}</td>
+                                            <td>
+                                                {% if row < a_cur %}
+                                                    {% set cand = active_cur[row] %}
+                                                    {% if cand.filed %}
+                                                    <a href="{{ url_for('filings_list', year=cycle, q=cand.name) }}"
+                                                       class="badge mr-1"
+                                                       style="background:#1b8a2d;color:#fff;font-size:9px;letter-spacing:0.6px;padding:2px 6px;"
+                                                       title="Officially filed for office">FILED</a>
+                                                    {% endif %}
+                                                    <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}"
+                                                       class="candidate-link
+                                                        {% if cand.status|upper == 'CONFIRMED' %}text-success
+                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}text-warning
+                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}text-primary
+                                                        {% else %}text-secondary{% endif %}">
+                                                        {{ cand.name|title }}
+                                                    </a>{{ contact_icons(cand.email, cand.phone, cand.signal, cand.signal_uuid, cand.signal_registered) }}
+                                                    <span class="status-badge badge badge-sm
+                                                        {% if cand.status|upper == 'CONFIRMED' %}badge-success
+                                                        {% elif cand.status|upper in ['CONSIDERING','POTENTIAL'] %}badge-warning
+                                                        {% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary
+                                                        {% elif cand.status|upper == 'DECLINED' %}badge-secondary
+                                                        {% else %}badge-light{% endif %}"
+                                                        data-candidate-id="{{ cand.candidate_id }}"
+                                                        data-election-year="{{ cycle }}"
+                                                        onclick="showStatusDropdown(this, event)"
+                                                        title="Click to change status">
+                                                        {{ cand.status }}
+                                                    </span>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm ml-1 qe-trigger"
+                                                            data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}" title="Quick edit">
+                                                        <i class="fas fa-pen"></i>
+                                                    </button>
+                                                {% elif row < seat_count %}
+                                                    <button class="btn btn-sm btn-outline-dark"
+                                                            onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})">
+                                                        + Add
+                                                    </button>
+                                                {% endif %}
+                                            </td>
+                                            <td>{% if row < a_prior %}{{ ran_cell(active_prior[row], prior) }}{% endif %}</td>
+                                            <td>{% if row < a_prior2 %}{{ ran_cell(active_prior2[row], prior - 2) }}{% endif %}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% if a_cur >= seat_count %}
+                                        <tr>
+                                            <td></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-dark"
+                                                        onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})">
+                                                    + Add Another
+                                                </button>
+                                            </td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% set declined_cur = info.cand_cur|selectattr("status","equalto","Declined")|list %}
+                            {% set declined_prior = info.cand_prior|selectattr("status","equalto","Declined")|list %}
+                            {% if declined_cur or declined_prior %}
+                            <p class="text-muted small mt-2 mb-0">
+                                <strong>Declined:</strong>
+                                {% if declined_cur %}
+                                    {{ cycle }}: {% for cand in declined_cur %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="text-secondary">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+                                {% endif %}
+                                {% if declined_prior %}
+                                    {% if declined_cur %}| {% endif %}
+                                    {{ prior }}: {% for cand in declined_prior %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=prior) }}" class="text-secondary">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+                                {% endif %}
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
 {% endblock %}

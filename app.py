@@ -1173,15 +1173,7 @@ def index():
                 filtered_groups[county_name] = filtered_districts
         county_groups = filtered_groups
 
-    template = "index_classic.html" if request.endpoint == 'index_classic' else "index.html"
-    return render_template(template, county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max, search_query=search_query, county_filter=county_filter)
-
-
-@app.route('/classic')
-@candidate_restricted
-def index_classic():
-    """The old county/district accordion dashboard, kept while the board layout beds in."""
-    return index()
+    return render_template("index.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max, search_query=search_query, county_filter=county_filter)
 
 @app.route('/filter')
 @candidate_restricted
