@@ -1175,6 +1175,13 @@ def index():
 
     return render_template("index.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats, max=max, search_query=search_query, county_filter=county_filter)
 
+@app.route('/board')
+@candidate_restricted
+def board():
+    """Preview: the whole state as a board of district tiles, details in a side panel."""
+    county_groups, dashboard, county_stats = get_data_and_dashboard()
+    return render_template("board.html", county_groups=county_groups, dashboard=dashboard, county_stats=county_stats)
+
 @app.route('/filter')
 @candidate_restricted
 def filter_view():

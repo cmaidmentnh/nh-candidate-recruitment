@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% from "_contact_icons.html" import contact_icons %}
+{% block head %}
+<style>
+/* State board: every district as a tile, seats as squares; details open in a side panel. */
+.sb {
+    --ink: #16181d; --ink2: #555b67; --mute: #8d93a0; --rule: #dcdfe5; --wash: #f3f4f6;
+    --red: #d91720; --conf: #1b7a33; --pot: #e3a33b; --open: #fff;
+    width: min(1600px, 100vw - 32px);
+    margin-left: calc(50% - min(800px, 50vw - 16px));
+    color: var(--ink);
+}
+.sb-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+.sb-top h1 { font-family: 'Norwester', sans-serif !important; font-size: 28px; line-height: 1; margin: 0; }
+.sb-stats { display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 13px; }
+.sb-stats a { padding: 0 12px; border-left: 1px solid var(--rule); color: var(--ink2); text-decoration: none; white-space: nowrap; }
+.sb-stats a:first-child { border-left: 0; padding-left: 0; }
+.sb-stats a b { color: var(--ink); font-size: 15px; margin-right: 3px; }
+.sb-stats a:hover, .sb-stats a:hover b { color: var(--red); }
+.sb-top-actions { margin-left: auto; display: flex; gap: 8px; }
+.sb-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--ink); background: #fff; color: var(--ink) !important; font: 600 11px/1 'Inter', sans-serif; letter-spacing: .08em; text-transform: uppercase; border-radius: 0; text-decoration: none !important; cursor: pointer; }
+.sb-btn:hover { background: var(--ink); color: #fff !important; }
+.sb-btn-red { background: var(--red); border-color: var(--red); color: #fff !important; }
+.sb-btn-red:hover { background: #b8141b; border-color: #b8141b; }
+
+.sb-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 0; }
+.sb-find { flex: 0 1 260px; min-width: 0; border: 1px solid var(--rule); border-radius: 0; padding: 6px 10px; font-size: 13px; }
+.sb-find:focus { outline: none; border-color: var(--ink); }
+.sb-seg { display: inline-flex; border: 1px solid var(--rule); }
+.sb-seg button { border: 0; border-right: 1px solid var(--rule); background: #fff; padding: 6px 10px; font: 600 11px/1 'Inter', sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--ink2); cursor: pointer; border-radius: 0; }
+.sb-seg button:last-child { border-right: 0; }
+.sb-seg button.on { background: var(--ink); color: #fff; }
+.sb-legend { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11px; color: var(--ink2); }
+.sb-legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px; border: 1px solid #b7bcc6; }
+
+/* Counties flow as blocks; districts as tiles inside */
+.sb-map { columns: 300px; column-gap: 20px; }
+.sb-county { break-inside: avoid; margin-bottom: 18px; }
+.sb-county-h { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--ink); padding-bottom: 3px; margin-bottom: 6px; }
+.sb-county-h h2 { font-family: 'Norwester', sans-serif !important; font-size: 17px; margin: 0; letter-spacing: .02em; }
+.sb-county-h span { font-size: 12px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.sb-county-h span b { color: var(--ink); }
+.sb-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: 4px; }
+.sb-tile { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 54px; padding: 4px 5px 5px 8px; border: 1px solid var(--rule); background: #fff; text-align: left; cursor: pointer; border-radius: 0; font: inherit; color: inherit; }
+.sb-tile::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--lean, #c9cdd4); }
+.sb-tile:hover, .sb-tile.sel { border-color: var(--ink); }
+.sb-tile.sel { box-shadow: inset 0 0 0 1px var(--ink); }
+.sb-tile.dim { opacity: .18; }
+.sb-tile-n { font: 700 15px/1 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+.sb-tile-t { font-size: 9.5px; line-height: 1.15; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.sb-seats { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 5px; }
+.sb-seats i { width: 8px; height: 8px; border: 1px solid #aab0bb; background: var(--open); }
+.sb-seats i.c { background: var(--conf); border-color: var(--conf); }
+.sb-seats i.p { background: var(--pot); border-color: var(--pot); }
+.sb-seats i.x { background: var(--ink); border-color: var(--ink); }
+.lean-sg { --lean: #7d1015; } .lean-lg { --lean: #d91720; } .lean-ng { --lean: #f0a2a6; }
+.lean-sw { --lean: #e9c341; }
+.lean-nd { --lean: #a9c6ea; } .lean-ld { --lean: #3b6fb6; } .lean-sd { --lean: #13305e; }
+
+/* Side panel */
+.sb-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100vw); background: #fff; border-left: 2px solid var(--ink); z-index: 1040; overflow-y: auto; transform: translateX(100%); transition: transform .18s ease-out; padding: 0 0 calc(24px + env(safe-area-inset-bottom, 0px)); }
+.sb-panel.open { transform: none; }
+.sb-panel-h { position: sticky; top: 0; background: #fff; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px 12px; border-bottom: 1px solid var(--rule); z-index: 1; }
+.sb-panel-h h3 { font-family: 'Norwester', sans-serif !important; font-size: 24px; line-height: 1; margin: 0; }
+.sb-panel-h .sub { font-size: 12px; color: var(--ink2); margin-top: 6px; }
+.sb-x { border: 0; background: none; font-size: 26px; line-height: 1; color: var(--ink2); cursor: pointer; padding: 0 2px; }
+.sb-x:hover { color: var(--red); }
+.sb-sec { padding: 14px 20px 4px; }
+.sb-sec h4 { font: 700 10px/1 'Inter', sans-serif !important; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); margin: 0 0 8px; }
+.sb-lean { display: inline-block; padding: 3px 6px; font: 700 11px/1 'Inter', sans-serif; color: #fff; background: var(--lean, #8d93a0); }
+.lean-ng .sb-lean, .lean-sw .sb-lean, .lean-nd .sb-lean { color: var(--ink); }
+.sb-cand { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 7px 0; border-bottom: 1px solid var(--wash); font-size: 14px; }
+.sb-cand .candidate-link { font-weight: 600; text-decoration: none; }
+.sb-tag { padding: 2px 5px 1px; font: 700 9px/1.2 'Inter', sans-serif; letter-spacing: .1em; text-transform: uppercase; text-decoration: none !important; }
+.sb-tag-f { background: var(--conf); color: #fff !important; }
+.sb-tag-i { border: 1px solid var(--ink); color: var(--ink); }
+.sb .status-badge, .sb-panel .status-badge { cursor: pointer; border-radius: 0; font: 600 10px/1 'Inter', sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 4px 6px 3px; }
+.sb-panel .qe-trigger { border: 0; background: none; padding: 0 2px; color: var(--mute); font-size: 11px; }
+.sb-add { margin: 10px 0 4px; }
+.sb-ran { font-size: 13px; padding: 3px 0; }
+.sb-ran.won { font-weight: 700; }
+.sb-ran.won::before { content: ''; display: inline-block; width: 7px; height: 7px; background: var(--conf); margin-right: 6px; vertical-align: 1px; }
+.sb-ran.lost { color: var(--ink2); }
+.sb-ran.prim { color: var(--mute); }
+.sb-ran small { color: var(--mute); }
+.sb-ran a { color: inherit; }
+.sb-muted { font-size: 12px; color: var(--mute); }
+.sb-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.18); z-index: 1035; display: none; }
+.sb-scrim.open { display: block; }
+@media (max-width: 700px) {
+    .sb-legend { margin-left: 0; }
+    .sb-tiles { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
+}
+</style>
+{% endblock %}
+{% block content %}
+{% set leanc = {'SAFE GOP': 'lean-sg', 'LIKELY GOP': 'lean-lg', 'LEAN GOP': 'lean-ng', 'SWING': 'lean-sw',
+                'LEAN DEM': 'lean-nd', 'LIKELY DEM': 'lean-ld', 'SAFE DEM': 'lean-sd'} %}
+{% macro ran(cands, year) -%}
+    {%- for cand in cands -%}
+    {%- set cls = {'Won': 'won', 'Leading': 'won', 'Lost': 'lost', 'Lost primary': 'prim'}[cand.status] -%}
+    <div class="sb-ran {{ cls }}">
+        {%- if cand.candidate_id %}<a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=year) }}">{{ cand.name|title }}</a>{% else %}{{ cand.name|title }}{% endif -%}
+        {%- if cand.status != 'Won' %} <small>{{ cand.status|lower }}</small>{% endif -%}
+    </div>
+    {%- else -%}
+    <div class="sb-muted">No Republican ran.</div>
+    {%- endfor -%}
+{%- endmacro %}
+
+<div class="sb">
+    <div class="sb-top">
+        <h1>{{ cycle }} Recruitment</h1>
+        <div class="sb-stats">
+            <a href="{{ url_for('filter_view', category='confirmed') }}"><b>{{ dashboard.confirmed.total }}</b>confirmed</a>
+            <a href="{{ url_for('filter_view', category='potentials') }}"><b>{{ dashboard.potentials.total }}</b>potentials</a>
+            <a href="{{ url_for('filter_view', category='empty_seats') }}"><b>{{ dashboard.empty_seats.total }}</b>empty seats</a>
+            <a href="{{ url_for('filter_view', category='empty_districts') }}"><b>{{ dashboard.empty_districts.total }}</b>empty districts</a>
+            <a href="{{ url_for('filter_view', category='incumbents_undecided') }}"><b>{{ dashboard.incumbents_undecided.total }}</b>incumbents undecided</a>
+            <a href="{{ url_for('filings_list', party='R') }}"><b>{{ dashboard.filed.total }}</b>filed</a>
+        </div>
+        <div class="sb-top-actions">
+            <a class="sb-btn" href="{{ url_for('index') }}">List view</a>
+            <button class="sb-btn sb-btn-red" onclick="openAddCandidateModal('', {{ cycle }})"><i class="fas fa-plus"></i> Add</button>
+        </div>
+    </div>
+
+    <div class="sb-bar">
+        <input class="sb-find" id="sbFind" type="search" placeholder="Find a town, district or name" aria-label="Find">
+        <div class="sb-seg" id="sbShow" role="group" aria-label="Highlight">
+            <button type="button" class="on" data-f="all">All</button>
+            <button type="button" data-f="open">Has openings</button>
+            <button type="button" data-f="empty">No one</button>
+            <button type="button" data-f="gop">GOP seats</button>
+            <button type="button" data-f="swing">Swing</button>
+        </div>
+        <div class="sb-legend">
+            <span><i style="background:var(--conf);border-color:var(--conf)"></i>Confirmed</span>
+            <span><i style="background:var(--pot);border-color:var(--pot)"></i>Considering</span>
+            <span><i></i>Open seat</span>
+            <span><i style="background:var(--ink);border-color:var(--ink)"></i>Extra (primary)</span>
+            <span>Left edge = district lean</span>
+        </div>
+    </div>
+
+    <div class="sb-map">
+        {% for county_name, dist_dict in county_groups.items()|sort %}
+        {% set st = county_stats[county_name] %}
+        <section class="sb-county">
+            <div class="sb-county-h"><h2>{{ county_name|title }}</h2><span><b>{{ st.seats_filled }}</b>/{{ st.total_seats }}</span></div>
+            <div class="sb-tiles">
+            {% for fdc, info in dist_dict.items() %}
+                {% set active = info.cand_cur|rejectattr('status', 'equalto', 'Declined')|list %}
+                {% set n_c = active|selectattr('status', 'equalto', 'Confirmed')|list|length %}
+                {% set n_a = active|length %}
+                {% set seats = info.seat_count %}
+                {% set r = info.pvi_rating or '' %}
+                {% set names = (active + info.cand_prior)|map(attribute='name')|join('|') %}
+                <button type="button" class="sb-tile {{ leanc.get(r, '') }}" data-id="d{{ loop.index }}-{{ county_name|replace(' ', '_') }}"
+                        data-open="{{ 1 if n_a < seats else 0 }}" data-empty="{{ 1 if n_a == 0 else 0 }}"
+                        data-lean="{{ 'gop' if 'GOP' in r else ('swing' if r == 'SWING' else 'dem') }}"
+                        data-q="{{ (fdc ~ '|' ~ info.towns|join('|') ~ '|' ~ names)|lower }}"
+                        title="{{ fdc }}: {{ info.towns|join(', ') }}">
+                    <span>
+                        <span class="sb-tile-n">{{ fdc.split(' ')[-1] }}</span>
+                        <span class="sb-tile-t d-block">{{ info.towns[0]|replace(' Ward ', ' W') if info.towns else '' }}{% if info.towns|length > 1 %} +{{ info.towns|length - 1 }}{% endif %}</span>
+                    </span>
+                    <span class="sb-seats">
+                        {%- for i in range([seats, n_a]|max) -%}
+                        <i class="{% if i < [n_c, seats]|min %}c{% elif i < [n_a, seats]|min %}p{% elif i >= seats %}x{% endif %}"></i>
+                        {%- endfor -%}
+                    </span>
+                </button>
+                <template id="t-d{{ loop.index }}-{{ county_name|replace(' ', '_') }}">
+                    <div class="sb-panel-h {{ leanc.get(r, '') }}">
+                        <div>
+                            <h3>{{ fdc }}</h3>
+                            <div class="sub">{{ seats }} seat{{ 's' if seats != 1 }} · {{ info.towns|join(', ') }}</div>
+                            {% if info.pvi is not none %}<div class="sub"><span class="sb-lean">{% if info.pvi > 0 %}R+{{ '%.1f'|format(info.pvi) }}{% elif info.pvi < 0 %}D+{{ '%.1f'|format(-info.pvi) }}{% else %}EVEN{% endif %}</span> {{ (r or '')|title }}</div>{% endif %}
+                        </div>
+                        <button type="button" class="sb-x" onclick="sbClose()" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="sb-sec">
+                        <h4>{{ cycle }} slate · {{ n_a }} of {{ seats }}</h4>
+                        {% for cand in active %}
+                        <div class="sb-cand">
+                            {% if cand.filed %}<a href="{{ url_for('filings_list', year=cycle, q=cand.name) }}" class="sb-tag sb-tag-f">Filed</a>{% endif %}
+                            {% if cand.incumbent %}<span class="sb-tag sb-tag-i">Rep.</span>{% endif %}
+                            <a href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}" class="candidate-link">{{ cand.name|title }}</a>
+                            {{ contact_icons(cand.email, cand.phone, cand.signal, cand.signal_uuid, cand.signal_registered) }}
+                            <span class="status-badge badge {% if cand.status|upper == 'CONFIRMED' %}badge-success{% elif cand.status|upper in ['CONSIDERING', 'POTENTIAL'] %}badge-warning{% elif cand.status|upper == 'NEW RECRUIT' %}badge-primary{% else %}badge-light{% endif %}"
+                                  data-candidate-id="{{ cand.candidate_id }}" data-election-year="{{ cycle }}"
+                                  onclick="showStatusDropdown(this, event)" title="Click to change status">{{ cand.status }}</span>
+                            <button type="button" class="qe-trigger" data-toggle="popover" data-candidate-id="{{ cand.candidate_id }}" title="Quick edit"><i class="fas fa-pen"></i></button>
+                        </div>
+                        {% else %}
+                        <div class="sb-muted">Nobody yet.</div>
+                        {% endfor %}
+                        {% set declined = info.cand_cur|selectattr('status', 'equalto', 'Declined')|list %}
+                        {% if declined %}<div class="sb-muted mt-2">Declined: {% for cand in declined %}<a class="text-secondary" href="{{ url_for('edit_candidate', candidate_id=cand.candidate_id, election_year=cycle) }}">{{ cand.name|title }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+                        <div class="sb-add"><button type="button" class="sb-btn sb-btn-red" onclick="openAddCandidateModal('{{ fdc }}', {{ cycle }})"><i class="fas fa-plus"></i> Add candidate</button></div>
+                    </div>
+                    <div class="sb-sec"><h4>{{ prior }} ran</h4>{{ ran(info.cand_prior, prior) }}</div>
+                    <div class="sb-sec"><h4>{{ prior - 2 }} ran</h4>{{ ran(info.cand_prior2, prior - 2) }}</div>
+                </template>
+            {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+</div>
+<div class="sb-scrim" id="sbScrim" onclick="sbClose()"></div>
+<aside class="sb-panel" id="sbPanel" aria-label="District details"></aside>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+var sbSel = null;
+function sbOpen(tile) {
+    var tpl = document.getElementById('t-' + tile.dataset.id);
+    var panel = document.getElementById('sbPanel');
+    panel.innerHTML = '';
+    panel.appendChild(tpl.content.cloneNode(true));
+    panel.className = 'sb-panel open ' + Array.from(tile.classList).filter(function (c) { return c.indexOf('lean-') === 0; }).join(' ');
+    document.getElementById('sbScrim').classList.add('open');
+    if (sbSel) sbSel.classList.remove('sel');
+    sbSel = tile; tile.classList.add('sel');
+    panel.scrollTop = 0;
+}
+function sbClose() {
+    document.getElementById('sbPanel').classList.remove('open');
+    document.getElementById('sbScrim').classList.remove('open');
+    if (sbSel) sbSel.classList.remove('sel');
+}
+(function () {
+    var tiles = document.querySelectorAll('.sb-tile'), show = 'all', q = '';
+    tiles.forEach(function (t) { t.addEventListener('click', function () { sbOpen(t); }); });
+    function apply() {
+        tiles.forEach(function (t) {
+            var ok = show === 'all' || (show === 'open' && t.dataset.open === '1') || (show === 'empty' && t.dataset.empty === '1') || t.dataset.lean === show;
+            if (q) ok = ok && t.dataset.q.indexOf(q) !== -1;
+            t.classList.toggle('dim', !ok);
+        });
+    }
+    document.querySelectorAll('#sbShow button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            show = b.dataset.f;
+            document.querySelectorAll('#sbShow button').forEach(function (x) { x.classList.toggle('on', x === b); });
+            apply();
+        });
+    });
+    document.getElementById('sbFind').addEventListener('input', function (e) { q = e.target.value.trim().toLowerCase(); apply(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') sbClose(); });
+})();
+</script>
+{% endblock %}
