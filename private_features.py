@@ -2239,7 +2239,7 @@ def _load_pieces(cur):
 # The delivery dashboard (data.winthehouse.gop/delivery-...) is rebuilt every 30 minutes from
 # these files. Reading the same files means the plan and the dashboard can never disagree
 # about what digital has spent.
-DELIVERY_DIR = '/root/floterial'
+DELIVERY_DIR = os.environ.get('DELIVERY_DIR', '/root/floterial')  # ctehr-1: /var/lib/nh-candidate-recruitment/delivery
 from zoneinfo import ZoneInfo
 _ET = ZoneInfo('America/New_York')          # the server runs on UTC; people read Eastern
 
