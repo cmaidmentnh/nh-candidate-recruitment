@@ -41,7 +41,12 @@ def _env(name):
 
 
 def _stripe_key():
-    # The CTEHR Stripe key lives in the CRM's settings table (org 1), not in an env file.
+    # STRIPE_SECRET_KEY in the env wins; the app runs on ctehr-1 now, which can't reach the
+    # CRM database. Otherwise fall back to the CRM's settings table (org 1).
+    try:
+        return _env('STRIPE_SECRET_KEY')
+    except SystemExit:
+        pass
     with psycopg2.connect(_env('CRM_DATABASE_URL')) as c, c.cursor() as cur:
         cur.execute("SELECT value FROM settings WHERE org_id=1 AND key='stripe_secret_key'")
         return cur.fetchone()[0]
