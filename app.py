@@ -1135,6 +1135,22 @@ def get_data_and_dashboard():
     return sorted_county_groups, dashboard, county_stats
 
 
+# Partner API for the NH Republicans party app (docs/party-api.md). Registered here because it reuses
+# get_data_and_dashboard(), so its board and cards are the dashboard's own numbers. Key-authenticated, no
+# session, so CSRF does not apply. Limits are per app user (X-Party-Actor), not per IP: every call comes
+# from the party app's one server.
+from party_api import party_api_bp, init_party_api, rate_key as _party_rate_key
+init_party_api(get_db_connection, release_db_connection, get_data_and_dashboard)
+app.register_blueprint(party_api_bp)
+csrf.exempt(party_api_bp)
+for _ep, _fn in list(app.view_functions.items()):
+    if _ep.startswith('party_api.'):
+        _write = _ep.split('.', 1)[1] in ('add_recruit', 'update_status', 'add_comment', 'update_contact',
+                                          'toggle_incumbent', 'move_district')
+        app.view_functions[_ep] = limiter.limit("60 per minute; 1500 per day" if _write else "300 per minute",
+                                                key_func=_party_rate_key)(_fn)
+
+
 # ============== ROUTES ==============
 
 @app.route('/')
