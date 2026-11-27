@@ -45,6 +45,7 @@ CREATE TABLE filings (
   district_code varchar(50), first_name varchar(100) NOT NULL, last_name varchar(100) NOT NULL, party char(1) NOT NULL,
   town varchar(100), candidate_id integer, filed_at date, created_at timestamp DEFAULT now(),
   result varchar(10) NOT NULL DEFAULT 'pending');
+CREATE TABLE district_relation (district_code varchar(50) NOT NULL, kind varchar(10) NOT NULL, spans smallint NOT NULL DEFAULT 0);
 CREATE TABLE incumbents (
   election_year integer NOT NULL, district_code varchar(50) NOT NULL, name varchar(200) NOT NULL,
   party char(1) NOT NULL, status varchar(10) NOT NULL, certified boolean NOT NULL DEFAULT false,
@@ -81,10 +82,17 @@ DISTRICTS = [
     ('Belknap', 2, 0, 'Laconia', 1, 'Belknap 2', -1.0, 'TOSS UP'),
     ('Hillsborough', 15, 8, 'Manchester', 2, 'Hillsborough 15', 3.5, 'LIKELY GOP'),
     ('Rockingham', 1, 0, 'Atkinson', 1, 'Rockingham 1', 9.0, 'SAFE GOP'),
+    ('Hillsborough', 16, 9, 'Manchester', 2, 'Hillsborough 16', 1.0, 'LEAN GOP'),
+    ('Belknap', 9, 0, 'Alton', 1, 'Belknap 9', 2.0, 'LEAN GOP'),      # a floterial over Alton and Laconia
+    ('Belknap', 9, 0, 'Laconia', 1, 'Belknap 9', 2.0, 'LEAN GOP'),
 ]
+RELATIONS = [('Belknap 1', 'base'), ('Belknap 2', 'base'), ('Hillsborough 15', 'base'), ('Rockingham 1', 'base'),
+             ('Hillsborough 16', 'base'), ('Belknap 9', 'floterial')]
 
 
 def _seed(cur, cycle, prior):
+    for code, kind in RELATIONS:
+        cur.execute("INSERT INTO district_relation (district_code, kind) VALUES (%s, %s)", (code, kind))
     for row in DISTRICTS:
         cur.execute("""INSERT INTO districts (county_name, district_code, ward, town, seat_count, full_district_code,
                        pvi, pvi_rating) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""", row)
@@ -149,6 +157,24 @@ class PureHelpers(unittest.TestCase):
         for bad in (None, {}, {'name': 'X'}, {'name': '', 'email': 'a@b.co'}, {'name': 'X', 'email': 'nope'}):
             with self.assertRaises(pa.ApiError):
                 pa.actor_labels(bad)
+
+    def test_town_names_match_across_sources(self):
+        self.assertEqual(pa.norm_town("Low & Burbank's Gt."), pa.norm_town('Low and Burbanks Grant'))
+        self.assertEqual(pa.norm_town("Wentworth's Loc."), pa.norm_town('Wentworths Location'))
+        self.assertEqual(pa.norm_town("Thompson & Mes's Pur."), pa.norm_town('Thompson and Meserves Purchase'))
+        self.assertEqual(pa.norm_town('Keene '), 'keene')
+        self.assertEqual(pa.parse_towns('Manchester Ward 3, Bedford'), {('manchester', 3), ('bedford', None)})
+
+    def test_district_codes_for_towns_and_wards(self):
+        rows = [(c, t, w or None) for _county, _n, w, t, _s, c, _p, _r in DISTRICTS]
+        self.assertEqual(pa.district_codes(rows, None, pa.parse_towns('Alton')), {'Belknap 1', 'Belknap 9'})
+        self.assertEqual(pa.district_codes(rows, None, pa.parse_towns('Manchester Ward 9')), {'Hillsborough 16'})
+        self.assertEqual(pa.district_codes(rows, None, pa.parse_towns('manchester')),
+                         {'Hillsborough 15', 'Hillsborough 16'})
+        self.assertEqual(pa.district_codes(rows, {'Rockingham'}, pa.parse_towns('Laconia')),
+                         {'Rockingham 1', 'Belknap 2', 'Belknap 9'})
+        with self.assertRaises(pa.ApiError):
+            pa.district_codes(rows, None, pa.parse_towns('Atlantis'))
 
     def test_split_name(self):
         self.assertEqual(pa.split_name({'name': 'Mary Ann  Smith'}), ('Mary Ann', 'Smith'))
@@ -277,9 +303,9 @@ class PartyApiEndpoints(unittest.TestCase):
     def test_board_by_county(self):
         b = self.get('/board', county='Belknap').get_json()
         self.assertEqual({d['county'] for d in b['districts']}, {'Belknap'})
-        self.assertEqual(b['scope'], {'counties': ['Belknap'], 'statewide': False})
+        self.assertEqual(b['scope'], {'counties': ['Belknap'], 'statewide': False, 'towns': None, 'districts': 3})
         self.assertEqual(b['summary']['confirmed'], 3)
-        self.assertEqual(b['summary']['total_seats'], 3)
+        self.assertEqual(b['summary']['total_seats'], 4)
         self.assertEqual(b['summary']['incumbents_undecided'], 0)
         self.assertEqual(b['summary']['filed'], 1)
         h = self.get('/board', county='Hillsborough').get_json()
@@ -338,7 +364,8 @@ class PartyApiEndpoints(unittest.TestCase):
         self.assertEqual(r.status_code, 403)
         self.assertEqual(self.sql("SELECT count(*) FROM candidates WHERE last_name='Side'"), [(0,)])
         self.assertEqual(self.post('/recruits', {**body, 'name': 'No Actor', 'actor': None}).status_code, 400)
-        self.assertEqual(self.post('/recruits', {**body, 'name': 'Bad Dist', 'district': 'Belknap 99'}).status_code, 400)
+        self.assertEqual(self.post('/recruits', {**body, 'name': 'Bad Dist', 'district': 'Belknap 99', 'county': None}).status_code, 400)
+        self.assertEqual(self.post('/recruits', {**body, 'name': 'Bad Dist', 'district': 'Belknap 99'}).status_code, 403)
 
         # Status, comment, contact, incumbent, district.
         r = self.post(f'/candidates/{cid}/status', {'actor': ACTOR, 'status': 'Confirmed', 'county': 'Belknap'})
@@ -394,6 +421,64 @@ class PartyApiEndpoints(unittest.TestCase):
         self.sql('DELETE FROM candidate_election_status WHERE candidate_id=%s AND election_year=%s', (golf, self.cycle))
         self.sql("UPDATE candidates SET phone1=NULL WHERE candidate_id=%s", (golf,))
         self.sql('DELETE FROM activity_log WHERE candidate_id=%s', (golf,))
+
+    def test_town_scope(self):
+        b = self.get('/board', town='Alton').get_json()
+        self.assertEqual({d['code'] for d in b['districts']}, {'Belknap 1', 'Belknap 9'})
+        self.assertEqual(b['scope']['towns'], ['Alton'])
+        self.assertEqual(b['summary']['total_seats'], 3)
+        self.assertEqual(self.get('/board', town='Atlantis').status_code, 400)
+        self.assertEqual(self.get(f"/candidates/{self.ids['Bravo']}", town='Alton').status_code, 200)
+        self.assertEqual(self.get(f"/candidates/{self.ids['Charlie']}", town='Alton').status_code, 403)
+        self.assertEqual(self.get(f"/candidates/{self.ids['Charlie']}", town='Laconia').status_code, 200)
+        w = self.get('/board', town='Manchester Ward 8').get_json()
+        self.assertEqual([d['code'] for d in w['districts']], ['Hillsborough 15'])
+        # Writes: inside the town's districts (a floterial counts), never outside.
+        r = self.post('/recruits', {'actor': ACTOR, 'name': 'Flo Terial', 'district': 'Belknap 9', 'town': 'Alton', 'area': {'town': ['Alton']}})
+        self.assertEqual(r.status_code, 201, r.get_json())
+        self.addCleanup(self._remove, r.get_json()['candidate_id'])
+        r = self.post('/recruits', {'actor': ACTOR, 'name': 'Not Here', 'district': 'Belknap 2', 'area': {'town': ['Alton']}})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(self.post(f"/candidates/{self.ids['Charlie']}/status",
+                                   {'actor': ACTOR, 'status': 'Declined', 'area': {'town': ['Alton']}}).status_code, 403)
+        self.assertEqual(self.post(f"/candidates/{self.ids['Bravo']}/comments",
+                                   {'actor': ACTOR, 'text': 'ok', 'area': {'town': 'Gilford'}}).status_code, 201)
+        self.assertEqual(self.post(f"/candidates/{self.ids['Bravo']}/district",
+                                   {'actor': ACTOR, 'district': 'Belknap 2', 'area': {'town': 'Alton', 'county': ['Rockingham']}}).status_code, 403)
+        self.assertEqual(self.get('/activity', town='Atkinson').get_json()['items'], [])
+        self.sql("DELETE FROM comments WHERE candidate_id=%s AND comment_text='ok'", (self.ids['Bravo'],))
+        self.sql("DELETE FROM activity_log WHERE candidate_id=%s AND action_type='comment_added'", (self.ids['Bravo'],))
+
+    def test_suggestions_land_on_the_board(self):
+        r = self.post('/suggestions', {'actor': ACTOR, 'name': 'Sue Gested', 'town': 'Gilford', 'office': 'State Rep',
+                                       'phone': '6035550177', 'why': 'Runs the PTO'})
+        self.assertEqual(r.status_code, 201, r.get_json())
+        out = r.get_json()
+        self.addCleanup(self._remove, out['candidate_id'])
+        self.assertEqual((out['district'], out['status'], out['already_on_board']), ('Belknap 1', 'New Recruit', False))
+        row = self.sql("""SELECT s.status, s.district_code, s.added_by, c.city, c.phone1 FROM candidate_election_status s
+                          JOIN candidates c USING (candidate_id) WHERE candidate_id=%s""", (out['candidate_id'],))
+        self.assertEqual(row, [('New Recruit', 'Belknap 1', 'Pat Chair (NH Republicans app)', 'Gilford', '6035550177')])
+        note = self.sql('SELECT comment_text FROM comments WHERE candidate_id=%s', (out['candidate_id'],))[0][0]
+        self.assertIn('Suggested in the NH Republicans app by Pat Chair <pat.chair@example.com>', note)
+        self.assertIn('Runs the PTO', note)
+        b = self.get('/board', town='Gilford').get_json()
+        self.assertIn('Sue Gested', [c['name'] for d in b['districts'] for c in d['candidates']])
+        # Someone already on the board keeps their status; the suggestion is a comment.
+        r = self.post('/suggestions', {'actor': ACTOR, 'name': 'Bob Bravo', 'town': 'Gilford', 'why': 'Ask him again'})
+        self.assertEqual(r.get_json()['already_on_board'], True)
+        self.assertEqual(r.get_json()['status'], 'Considering')
+        self.sql("DELETE FROM comments WHERE candidate_id=%s AND comment_text LIKE 'Suggested%%'", (self.ids['Bravo'],))
+        self.sql("DELETE FROM activity_log WHERE candidate_id=%s AND action_type='candidate_suggested'", (self.ids['Bravo'],))
+        # A city needs its ward; an unknown town is refused.
+        r = self.post('/suggestions', {'actor': ACTOR, 'name': 'Ward Less', 'town': 'Manchester', 'why': 'x'})
+        self.assertEqual((r.status_code, r.get_json()['error']), (400, 'ward_required'))
+        r = self.post('/suggestions', {'actor': ACTOR, 'name': 'Ward Ful', 'town': 'Manchester Ward 9', 'why': 'x'})
+        self.assertEqual(r.get_json()['district'], 'Hillsborough 16')
+        self.addCleanup(self._remove, r.get_json()['candidate_id'])
+        self.assertEqual(self.post('/suggestions', {'actor': ACTOR, 'name': 'No Where', 'town': 'Atlantis',
+                                                    'why': 'x'}).status_code, 400)
+        self.assertEqual(self.post('/suggestions', {'name': 'No Actor', 'town': 'Gilford', 'why': 'x'}).status_code, 400)
 
     def test_confirmed_directory_rows(self):
         rows = self.get('/confirmed').get_json()['candidates']

@@ -2,9 +2,12 @@
 
 The party app (nhgop.1772strategies.com, nh-republicans-app) gives the state chair, HQ, region chairs and
 county chairs this app's recruitment board on their phones. It calls these endpoints server to server with one
-bearer key; it decides who may see what and passes a `county` restriction on every call made for someone
-without statewide scope. This module enforces that restriction itself as well: a read only returns districts and
-candidates in those counties, and a write to a candidate or district outside them is refused.
+bearer key; it decides who may see what and passes a `county` and/or `town` restriction on every call made for someone without
+statewide scope. This module enforces that restriction itself as well (see Scope): a read only returns districts and
+candidates in that area, and a write to a candidate or district outside it is refused.
+
+"Suggest a candidate" from any app user lands here too (POST /suggestions): the person goes on this cycle's board as a
+New Recruit in their town's district, with the suggestion as a comment, so the people who work the board see it.
 
 What it reads: districts, candidates (Republicans only), candidate_election_status, comments, activity_log,
 candidate_history, filings and incumbents. The board and its cards come from get_data_and_dashboard(), the same
@@ -62,7 +65,7 @@ CARDS = DISTRICT_CARDS + PEOPLE_CARDS
 # Activity the party app may show. Portal, email, impersonation, walkbook and consult entries stay here.
 RECRUIT_ACTIONS = ('candidate_added', 'candidate_created', 'candidate_copied', 'candidate_updated',
                    'candidate_merged', 'status_updated', 'contact_updated', 'comment_added', 'incumbent_toggled',
-                   'district_updated', 'filing_recorded', 'voter_matched')
+                   'district_updated', 'filing_recorded', 'voter_matched', 'candidate_suggested')
 
 # Contact fields the app may edit, with the column's width.
 CONTACT_FIELDS = {'email1': 255, 'email2': 255, 'phone1': 20, 'phone2': 20, 'address': 100, 'city': 50,
@@ -134,17 +137,96 @@ def parse_counties(value):
     return frozenset(out)
 
 
-def _request_counties(body=None):
-    vals = request.args.getlist('county')
-    if body is not None and 'county' in body:
-        vals = body.get('county')
-    elif len(vals) == 1:
-        vals = vals[0]
-    return parse_counties(vals)
+_TOWN_WORDS = {'gt': 'grant', 'loc': 'location', 'pur': 'purchase', 'atk': 'atkinson', '&': 'and'}
+_TOWN_ALIASES = {'thompson and mess purchase': 'thompson and meserves purchase'}
 
 
-def _in_scope(counties, code):
-    return counties is None or county_of_code(code) in counties
+def norm_town(name):
+    """A town name as both sides can compare it: lower case, no apostrophes or periods, '&' as 'and', and the
+    districts table's abbreviations spelled out ("Low & Burbank's Gt." == "Low and Burbanks Grant")."""
+    text = str(name or '').replace('\u2019', "'").replace("'", '').replace('.', ' ').replace('&', ' & ').lower()
+    words = [_TOWN_WORDS.get(w, w) for w in text.split()]
+    out = ' '.join(words)
+    return _TOWN_ALIASES.get(out, out)
+
+
+def parse_towns(value):
+    """`town`: one name, a comma separated list, or a list; each a town ('Bedford') or a ward ('Manchester Ward 3').
+    -> frozenset of (normalized town, ward or None). None means no town restriction."""
+    if value is None or value == '' or value == []:
+        return None
+    items = value if isinstance(value, list) else str(value).split(',')
+    out = set()
+    for item in items:
+        text = re.sub(r'\s+', ' ', str(item)).strip()
+        if not text:
+            continue
+        m = re.match(r'^(.*?)\s+Ward\s+(\d+)$', text, re.I)
+        out.add((norm_town(m.group(1)), int(m.group(2))) if m else (norm_town(text), None))
+    if not out:
+        raise ApiError(400, 'bad_town', 'town was given but names no town')
+    return frozenset(out)
+
+
+class Scope:
+    """Where a call may read and write: the whole state, or the districts of some counties and/or towns. A town
+    covers every House district it votes in, base and floterial, from the districts table's town and ward rows
+    (never geocoded); a ward covers that ward's districts. county and town together = the districts of either."""
+
+    def __init__(self, counties=None, towns=None, codes=None):
+        self.counties, self.towns, self.codes = counties, towns, codes
+
+    @property
+    def statewide(self):
+        return self.codes is None
+
+    def allows(self, code):
+        return self.codes is None or (code or '') in self.codes
+
+    def json(self):
+        towns = None
+        if self.towns is not None:
+            towns = sorted(f'{t.title()} Ward {w}' if w else t.title() for t, w in self.towns)
+        return {'statewide': self.statewide, 'counties': sorted(self.counties) if self.counties else None,
+                'towns': towns, 'districts': len(self.codes) if self.codes is not None else None}
+
+
+def district_codes(rows, counties, towns):
+    """districts table rows (full_district_code, town, ward) -> the codes in these counties or towns. Pure.
+    An unknown town is a 400, never silently nothing."""
+    codes, seen = set(), set()
+    for code, town, ward in rows:
+        t = norm_town(town)
+        seen.add(t)
+        if counties and county_of_code(code) in counties:
+            codes.add(code)
+        if towns and ((t, None) in towns or (t, ward or None) in towns):
+            codes.add(code)
+    unknown = sorted(t for t, _ in (towns or ()) if t not in seen)
+    if unknown:
+        raise ApiError(400, 'bad_town', f'Unknown town: {", ".join(unknown)}')
+    return frozenset(codes)
+
+
+def _request_scope(body=None):
+    """The call's scope from `county` and `town` (query string), or a write body's `area`."""
+    # Writes carry it as "area": {"county": [...], "town": [...]} ("town" alone in a write body is the recruit's own
+    # town). A top-level "county" is accepted too.
+    if body is not None and isinstance(body.get('area'), dict):
+        cvals, tvals = body['area'].get('county'), body['area'].get('town')
+    elif body is not None and 'county' in body:
+        cvals, tvals = body.get('county'), None
+    else:
+        cl, tl = request.args.getlist('county'), request.args.getlist('town')
+        cvals = cl[0] if len(cl) == 1 else cl
+        tvals = tl[0] if len(tl) == 1 else tl
+    counties, towns = parse_counties(cvals), parse_towns(tvals)
+    if counties is None and towns is None:
+        return Scope()
+    with _Db() as db:
+        db.cur.execute('SELECT full_district_code, town, ward FROM districts')
+        rows = db.cur.fetchall()
+    return Scope(counties, towns, district_codes(rows, counties, towns))
 
 
 def actor_labels(actor):
@@ -235,8 +317,8 @@ def _log(db, action, description, candidate_id, long_label):
 
 # ---------------------------------------------------------------- the board (the dashboard at /)
 
-def build_board(groups, dashboard, extra, counties=None):
-    """get_data_and_dashboard()'s output -> the board JSON, limited to `counties` when given.
+def build_board(groups, dashboard, extra, codes=None):
+    """get_data_and_dashboard()'s output -> the board JSON, limited to the district `codes` when given.
 
     `extra` is {candidate_id: {'town', 'is_running'}} for this cycle's candidates. Pure, for tests."""
     all_cur = set()
@@ -249,7 +331,7 @@ def build_board(groups, dashboard, extra, counties=None):
     for group, dist_dict in groups.items():
         for fdc, info in dist_dict.items():
             county = county_of_code(fdc)
-            if counties is not None and county not in counties:
+            if codes is not None and fdc not in codes:
                 continue
             cands = []
             for c in info['cand_cur']:
@@ -313,47 +395,42 @@ def _cycle_extra():
     return {r['candidate_id']: {'town': r['city'], 'is_running': bool(r['is_running'])} for r in rows}
 
 
-def _scoped_counts(counties):
-    """Filed and not-matched-to-the-voter-file counts, as the dashboard counts them, in these counties."""
-    pattern = '^(' + '|'.join(sorted(counties)) + r') [0-9]+$' if counties else '.*'
+def _scoped_counts(codes):
+    """Filed and not-matched-to-the-voter-file counts, as the dashboard counts them, in these districts."""
     with _Db() as db:
         filed = db.one("""SELECT COUNT(DISTINCT candidate_id) AS n FROM filings
                           WHERE election_year = %s AND office = 'State Representative' AND party = 'R'
-                            AND candidate_id IS NOT NULL AND district_code ~* %s""", (CYCLE, pattern))['n']
+                            AND candidate_id IS NOT NULL AND district_code = ANY(%s)""", (CYCLE, list(codes)))['n']
         unmatched = db.one("""SELECT COUNT(DISTINCT c.candidate_id) AS n
                               FROM candidates c JOIN candidate_election_status ces ON c.candidate_id = ces.candidate_id
                               WHERE ces.election_year = %s AND c.voter_id IS NULL AND ces.status != 'Declined'
-                                AND ces.district_code ~* %s""", (CYCLE, pattern))['n']
+                                AND ces.district_code = ANY(%s)""", (CYCLE, list(codes)))['n']
     return filed or 0, unmatched or 0
 
 
-def _load_board(counties):
+def _load_board(scope):
     groups, dashboard, _stats = _dashboard()
     if not groups:
         # get_data_and_dashboard() logs and returns nothing when the database fails; never serve that as data.
         raise ApiError(503, 'unavailable', 'The recruitment data could not be read. Try again shortly.')
-    districts = build_board(groups, dashboard, _cycle_extra(), counties)
-    if counties is None:
+    districts = build_board(groups, dashboard, _cycle_extra(), scope.codes)
+    if scope.statewide:
         summary = {k: dashboard[k]['total'] for k in DISTRICT_CARDS + ('incumbents_undecided',)}
         summary.update(total_seats=dashboard['TOTAL_SEATS'], total_districts=dashboard['TOTAL_DISTRICTS'],
                        seats_filled=sum(min(d['confirmed'], d['seats']) for d in districts),
                        filed=dashboard['filed']['total'], unmatched_voters=dashboard['unmatched_voters']['total'])
     else:
         summary = summarize(districts)
-        summary['filed'], summary['unmatched_voters'] = _scoped_counts(counties)
+        summary['filed'], summary['unmatched_voters'] = _scoped_counts(scope.codes)
     return districts, dashboard, summary
-
-
-def _scope_json(counties):
-    return {'counties': sorted(counties) if counties else None, 'statewide': counties is None}
 
 
 @party_api_bp.route('/board', methods=['GET'])
 @require_party_key
 def board():
-    counties = _request_counties()
-    districts, _dash, summary = _load_board(counties)
-    return jsonify({'cycle': CYCLE, 'scope': _scope_json(counties), 'summary': summary,
+    scope = _request_scope()
+    districts, _dash, summary = _load_board(scope)
+    return jsonify({'cycle': CYCLE, 'scope': scope.json(), 'summary': summary,
                     'statuses': list(STATUSES), 'districts': districts})
 
 
@@ -361,21 +438,21 @@ def board():
 @require_party_key
 def districts():
     """Every House district (for pickers): code, county, seats, towns/wards. From the districts table only."""
-    counties = _request_counties()
+    scope = _request_scope()
     with _Db() as db:
         rows = db.all("""SELECT full_district_code, county_name, town, ward, seat_count, pvi, pvi_rating
                          FROM districts ORDER BY county_name, full_district_code, town, ward""")
     out = {}
     for r in rows:
         code = r['full_district_code']
-        if not _in_scope(counties, code):
+        if not scope.allows(code):
             continue
         d = out.setdefault(code, {'code': code, 'county': county_of_code(code), 'number': int(code.rsplit(' ', 1)[1]),
                                   'seats': r['seat_count'], 'pvi': _json_value(r['pvi']), 'rating': r['pvi_rating'],
                                   'towns': []})
         d['towns'].append(f"{r['town']} Ward {r['ward']}" if r['ward'] else r['town'])
     items = sorted(out.values(), key=lambda d: (d['county'] or '', d['number']))
-    return jsonify({'cycle': CYCLE, 'scope': _scope_json(counties), 'count': len(items), 'districts': items})
+    return jsonify({'cycle': CYCLE, 'scope': scope.json(), 'count': len(items), 'districts': items})
 
 
 @party_api_bp.route('/filter', methods=['GET'])
@@ -386,12 +463,12 @@ def filter_view():
     category = (request.args.get('category') or '').strip()
     if category not in CARDS:
         raise ApiError(400, 'bad_category', f'category must be one of {", ".join(CARDS)}')
-    counties = _request_counties()
-    districts, dashboard, summary = _load_board(counties)
+    scope = _request_scope()
+    districts, dashboard, summary = _load_board(scope)
     if category in DISTRICT_CARDS:
         codes = {fdc for _g, fdc in dashboard[category]['districts']}
         items = [d for d in districts if d['code'] in codes]
-        return jsonify({'cycle': CYCLE, 'category': category, 'scope': _scope_json(counties),
+        return jsonify({'cycle': CYCLE, 'category': category, 'scope': scope.json(),
                         'total': summary[category], 'districts': items})
     with _Db() as db:
         if category == 'unmatched_voters':
@@ -421,8 +498,8 @@ def filter_view():
     people = [{'id': r['id'], 'name': f"{r['first_name'] or ''} {r['last_name'] or ''}".strip(), 'town': r['town'],
                'district': r['district'], 'county': county_of_code(r['district']), 'status': r['status'],
                'year': r['year']}
-              for r in rows if _in_scope(counties, r['district'])]
-    return jsonify({'cycle': CYCLE, 'category': category, 'scope': _scope_json(counties),
+              for r in rows if scope.allows(r['district'])]
+    return jsonify({'cycle': CYCLE, 'category': category, 'scope': scope.json(),
                     'total': summary[category], 'people': people})
 
 
@@ -437,15 +514,15 @@ def _home_district(db, candidate_id):
     return (row['district_code'], row['election_year']) if row else (None, None)
 
 
-def _load_candidate(db, candidate_id, counties):
+def _load_candidate(db, candidate_id, scope):
     c = db.one(f"""SELECT c.candidate_id, c.first_name, c.last_name, c.party, c.incumbent AS incumbent_flag,
                           {IS_INCUMBENT_SQL} AS sitting, c.voter_id IS NOT NULL AS voter_matched
                    FROM candidates c WHERE c.candidate_id = %s AND c.party = 'R'""", (candidate_id,))
     if not c:
         raise ApiError(404, 'not_found', 'No Republican candidate with that id')
     district, year = _home_district(db, candidate_id)
-    if counties is not None and county_of_code(district) not in counties:
-        raise ApiError(403, 'out_of_scope', 'That candidate is outside the counties for this call')
+    if not scope.allows(district):
+        raise ApiError(403, 'out_of_scope', 'That candidate is outside the area for this call')
     c['district'], c['district_year'] = district, year
     return c
 
@@ -469,9 +546,9 @@ def _history_changes(rows):
 @party_api_bp.route('/candidates/<int:candidate_id>', methods=['GET'])
 @require_party_key
 def candidate_detail(candidate_id):
-    counties = _request_counties()
+    scope = _request_scope()
     with _Db() as db:
-        base = _load_candidate(db, candidate_id, counties)
+        base = _load_candidate(db, candidate_id, scope)
         c = db.one("""SELECT address, city, zip, email, email1, email2, phone1, phone1_type, phone2, phone2_type,
                              signal, twitter_x, facebook, instagram, website_url, facebook_url, twitter_url,
                              instagram_url, photo_url, created_at, created_by, modified_at, modified_by
@@ -566,7 +643,7 @@ def add_recruit():
     and last name gets this cycle's status; anyone else is a new candidate."""
     body = _body()
     short, long_ = actor_labels(body.get('actor'))
-    counties = _request_counties(body)
+    scope = _request_scope(body)
     first, last = split_name(body)
     district = _clean(body.get('district'), 50, 'district')
     status = (body.get('status') or 'New Recruit').strip()
@@ -582,8 +659,8 @@ def add_recruit():
         raise ApiError(400, 'bad_email', 'That email address does not look right.')
     if not district:
         raise ApiError(400, 'district_required', 'Pick a district.')
-    if not _in_scope(counties, district):
-        raise ApiError(403, 'out_of_scope', 'That district is outside the counties for this call')
+    if not scope.allows(district):
+        raise ApiError(403, 'out_of_scope', 'That district is outside the area for this call')
     with _Db() as db:
         if not _district_exists(db, district):
             raise ApiError(400, 'bad_district', f'Unknown district: {district}')
@@ -626,20 +703,20 @@ def add_recruit():
 
 def _write_target(candidate_id, body):
     short, long_ = actor_labels(body.get('actor'))
-    counties = _request_counties(body)
-    return short, long_, counties
+    scope = _request_scope(body)
+    return short, long_, scope
 
 
 @party_api_bp.route('/candidates/<int:candidate_id>/status', methods=['POST'])
 @require_party_key
 def update_status(candidate_id):
     body = _body()
-    short, long_, counties = _write_target(candidate_id, body)
+    short, long_, scope = _write_target(candidate_id, body)
     status = (body.get('status') or '').strip()
     if status not in STATUSES:
         raise ApiError(400, 'bad_status', f'status must be one of {", ".join(STATUSES)}')
     with _Db() as db:
-        c = _load_candidate(db, candidate_id, counties)
+        c = _load_candidate(db, candidate_id, scope)
         row = _cycle_row(db, candidate_id)
         if not row:
             raise ApiError(404, 'not_in_cycle', f'Not on the {CYCLE} board. Add them as a recruit first.')
@@ -657,14 +734,14 @@ def update_status(candidate_id):
 @require_party_key
 def add_comment(candidate_id):
     body = _body()
-    short, long_, counties = _write_target(candidate_id, body)
+    short, long_, scope = _write_target(candidate_id, body)
     text = str(body.get('text') or body.get('comment') or '').strip()
     if not text:
         raise ApiError(400, 'text_required', 'Comment text required')
     if len(text) > 5000:
         raise ApiError(400, 'too_long', 'Comments are limited to 5000 characters')
     with _Db() as db:
-        _load_candidate(db, candidate_id, counties)
+        _load_candidate(db, candidate_id, scope)
         db.cur.execute("""INSERT INTO comments (candidate_id, comment_text, added_by) VALUES (%s, %s, %s)
                           RETURNING comment_id, added_at""", (candidate_id, text, short))
         cid, at = db.cur.fetchone()
@@ -678,7 +755,7 @@ def add_comment(candidate_id):
 def update_contact(candidate_id):
     """Set any of CONTACT_FIELDS; an empty string clears one. candidate_history records the save."""
     body = _body()
-    short, long_, counties = _write_target(candidate_id, body)
+    short, long_, scope = _write_target(candidate_id, body)
     fields = body.get('fields') if isinstance(body.get('fields'), dict) else {
         k: v for k, v in body.items() if k in CONTACT_FIELDS}
     unknown = set(fields) - set(CONTACT_FIELDS)
@@ -692,7 +769,7 @@ def update_contact(candidate_id):
         if k.startswith('email') and values[k] and not EMAIL_RE.match(values[k]):
             raise ApiError(400, 'bad_email', f'{k} does not look like an email address')
     with _Db() as db:
-        _load_candidate(db, candidate_id, counties)
+        _load_candidate(db, candidate_id, scope)
         sets = ', '.join(f'{k} = %s' for k in values)
         db.cur.execute(f'UPDATE candidates SET {sets}, modified_by = %s, modified_at = NOW() WHERE candidate_id = %s',
                        (*values.values(), short, candidate_id))
@@ -707,9 +784,9 @@ def toggle_incumbent(candidate_id):
     """Flips candidates.incumbent, like /api/toggle_incumbent. The dashboard's incumbent counts come from the
     incumbents table (last general's winners), not this flag."""
     body = _body()
-    short, long_, counties = _write_target(candidate_id, body)
+    short, long_, scope = _write_target(candidate_id, body)
     with _Db() as db:
-        _load_candidate(db, candidate_id, counties)
+        _load_candidate(db, candidate_id, scope)
         db.cur.execute("""UPDATE candidates SET incumbent = NOT COALESCE(incumbent, FALSE), modified_by = %s,
                                  modified_at = NOW()
                           WHERE candidate_id = %s RETURNING incumbent""", (short, candidate_id))
@@ -722,16 +799,16 @@ def toggle_incumbent(candidate_id):
 @party_api_bp.route('/candidates/<int:candidate_id>/district', methods=['POST'])
 @require_party_key
 def move_district(candidate_id):
-    """Move this cycle's record to another district. Both districts must be inside the call's counties."""
+    """Move this cycle's record to another district. Both districts must be inside the call's area."""
     body = _body()
-    short, long_, counties = _write_target(candidate_id, body)
+    short, long_, scope = _write_target(candidate_id, body)
     new = _clean(body.get('district'), 50, 'district')
     if not new:
         raise ApiError(400, 'district_required', 'District is required')
-    if not _in_scope(counties, new):
-        raise ApiError(403, 'out_of_scope', 'That district is outside the counties for this call')
+    if not scope.allows(new):
+        raise ApiError(403, 'out_of_scope', 'That district is outside the area for this call')
     with _Db() as db:
-        c = _load_candidate(db, candidate_id, counties)
+        c = _load_candidate(db, candidate_id, scope)
         if not _district_exists(db, new):
             raise ApiError(400, 'bad_district', f'Unknown district: {new}')
         row = _cycle_row(db, candidate_id)
@@ -747,23 +824,94 @@ def move_district(candidate_id):
     return jsonify({'ok': True, 'district': new, 'previous': row['district_code'], 'changed': True})
 
 
+def base_district_for(db, town_text):
+    """A town or ward -> its one base (non-floterial) House district, from the districts table. 400 when the town is
+    unknown, or is a city given without its ward (several base districts)."""
+    spec = parse_towns(town_text)
+    if not spec or len(spec) != 1:
+        raise ApiError(400, 'town_required', 'Give one town (or city ward).')
+    (town, ward), = spec
+    rows = db.all("""SELECT DISTINCT d.full_district_code AS code, d.town, d.ward
+                     FROM districts d
+                     WHERE NOT EXISTS (SELECT 1 FROM district_relation r
+                                       WHERE r.district_code = d.full_district_code AND r.kind = 'floterial')""")
+    codes = sorted({r['code'] for r in rows if norm_town(r['town']) == town and (ward is None or (r['ward'] or None) == ward)})
+    if not codes:
+        raise ApiError(400, 'bad_town', f'Unknown town: {town_text}')
+    if len(codes) > 1:
+        raise ApiError(400, 'ward_required', f'{town_text} has several districts: give the ward.', districts=codes)
+    return codes[0]
+
+
+@party_api_bp.route('/suggestions', methods=['POST'])
+@require_party_key
+def suggest():
+    """"Suggest a candidate" from any party app user. The person goes on this cycle's board as a New Recruit in their
+    town's base district (or stays where they are if already on it), with the suggestion as a comment naming who
+    suggested it. The same name match as /recruits."""
+    body = _body()
+    short, long_ = actor_labels(body.get('actor'))
+    first, last = split_name(body)
+    town = _clean(body.get('town'), 60, 'town')
+    why = str(body.get('why') or '').strip()
+    office = _clean(body.get('office'), 120, 'office')
+    phone = _clean(body.get('phone'), 20, 'phone')
+    email = _clean(body.get('email'), 255, 'email')
+    if not town or not why:
+        raise ApiError(400, 'bad_request', 'town and why are required')
+    if len(why) > 4000:
+        raise ApiError(400, 'too_long', 'why is longer than 4000 characters')
+    if email and not EMAIL_RE.match(email):
+        email = None
+    base_town = re.sub(r'\s+Ward\s+\d+$', '', town, flags=re.I)[:50]
+    who = body['actor']
+    who_name, who_email = re.sub(r'\s+', ' ', str(who['name'])).strip(), str(who['email']).strip()
+    note = (f"Suggested in the NH Republicans app by {who_name} <{who_email}>."
+            + (f" Office: {office}." if office else '') + f" Why: {why}")
+    with _Db() as db:
+        district = base_district_for(db, town)
+        existing = db.one("""SELECT candidate_id, city, phone1, email1 FROM candidates
+                             WHERE UPPER(first_name) = UPPER(%s) AND UPPER(last_name) = UPPER(%s) AND party = 'R'
+                             ORDER BY candidate_id LIMIT 1""", (first, last))
+        row = _cycle_row(db, existing['candidate_id']) if existing else None
+        if existing:
+            cid = existing['candidate_id']
+            fills = {k: v for k, v in (('city', base_town), ('phone1', phone), ('email1', email)) if v and not existing[k]}
+            if fills:
+                sets = ', '.join(f'{k} = %s' for k in fills)
+                db.cur.execute(f"UPDATE candidates SET {sets}, modified_by = %s, modified_at = NOW() "
+                               "WHERE candidate_id = %s", (*fills.values(), short, cid))
+        else:
+            db.cur.execute("""INSERT INTO candidates (first_name, last_name, party, city, phone1, email1, created_by,
+                                                      modified_by, created_at, modified_at)
+                              VALUES (%s, %s, 'R', %s, %s, %s, %s, %s, NOW(), NOW()) RETURNING candidate_id""",
+                           (first, last, base_town, phone, email, short, short))
+            cid = db.cur.fetchone()[0]
+        if not row:
+            db.cur.execute("""INSERT INTO candidate_election_status (candidate_id, election_year, status, is_running,
+                                                                     added_by, district_code)
+                              VALUES (%s, %s, 'New Recruit', TRUE, %s, %s)""", (cid, CYCLE, short, district))
+        db.cur.execute("INSERT INTO comments (candidate_id, comment_text, added_by) VALUES (%s, %s, %s)",
+                       (cid, note, short))
+        where = row['district_code'] if row else district
+        _log(db, 'candidate_suggested', f'{first} {last} suggested for {where} (New Recruit)' if not row
+             else f'{first} {last} suggested again (already on the board in {where})', cid, long_)
+        db.conn.commit()
+    return jsonify({'ok': True, 'candidate_id': cid, 'district': where, 'status': row['status'] if row else 'New Recruit',
+                    'already_on_board': bool(row), 'created': not existing, 'cycle': CYCLE}), 201
+
+
 # ---------------------------------------------------------------- activity and search
-
-def _county_sql(counties, column):
-    if counties is None:
-        return '', []
-    return f" AND {column} ~* %s", ['^(' + '|'.join(sorted(counties)) + r') [0-9]+$']
-
 
 @party_api_bp.route('/activity', methods=['GET'])
 @require_party_key
 def activity():
-    """Recent recruitment activity (newest first). With county, only candidates whose district this cycle is in
-    those counties. `before` (a log id) pages back."""
-    counties = _request_counties()
+    """Recent recruitment activity (newest first). With county or town, only candidates whose district this cycle is
+    in that area. `before` (a log id) pages back."""
+    scope = _request_scope()
     limit = max(1, min(request.args.get('limit', 50, type=int) or 50, 200))
     before = request.args.get('before', type=int)
-    where, params = _county_sql(counties, 'ces.district_code')
+    where, params = ('', []) if scope.statewide else (' AND ces.district_code = ANY(%s)', [list(scope.codes)])
     if before:
         where += ' AND a.log_id < %s'
         params.append(before)
@@ -773,7 +921,7 @@ def activity():
                    a.created_at AS at, c.first_name, c.last_name, ces.district_code AS district, ces.status
             FROM activity_log a
             JOIN candidates c ON c.candidate_id = a.candidate_id AND c.party = 'R'
-            {'JOIN' if counties is not None else 'LEFT JOIN'} candidate_election_status ces
+            {'LEFT JOIN' if scope.statewide else 'JOIN'} candidate_election_status ces
                  ON ces.candidate_id = a.candidate_id AND ces.election_year = %s
             WHERE a.action_type = ANY(%s){where}
             ORDER BY a.created_at DESC, a.log_id DESC LIMIT %s""",
@@ -782,7 +930,7 @@ def activity():
               'candidate_id': r['candidate_id'], 'name': f"{r['first_name'] or ''} {r['last_name'] or ''}".strip(),
               'district': r['district'], 'county': county_of_code(r['district']), 'status': r['status'],
               'by': r['by'], 'at': _json_value(r['at'])} for r in rows]
-    return jsonify({'cycle': CYCLE, 'scope': _scope_json(counties), 'items': items,
+    return jsonify({'cycle': CYCLE, 'scope': scope.json(), 'items': items,
                     'next_before': items[-1]['id'] if len(items) == limit else None})
 
 
@@ -791,9 +939,9 @@ def activity():
 def search():
     """Republican candidates by name (any year), with this cycle's status and district, else their latest."""
     q = re.sub(r'\s+', ' ', (request.args.get('q') or '')).strip()
-    counties = _request_counties()
+    scope = _request_scope()
     if len(q) < 2:
-        return jsonify({'cycle': CYCLE, 'scope': _scope_json(counties), 'results': []})
+        return jsonify({'cycle': CYCLE, 'scope': scope.json(), 'results': []})
     words = q.split(' ')[:4]
     conds, params = [], []
     for w in words:
@@ -815,13 +963,13 @@ def search():
     out = []
     for r in rows:
         district = r['cycle_district'] or r['last_district']
-        if not _in_scope(counties, district):
+        if not scope.allows(district):
             continue
         out.append({'id': r['id'], 'name': f"{r['first_name'] or ''} {r['last_name'] or ''}".strip(),
                     'town': r['town'], 'district': district, 'county': county_of_code(district),
                     'status': r['status'], 'in_cycle': r['status'] is not None,
                     'last_year': r['last_year'], 'last_status': r['last_status']})
-    return jsonify({'cycle': CYCLE, 'scope': _scope_json(counties), 'results': out[:25]})
+    return jsonify({'cycle': CYCLE, 'scope': scope.json(), 'results': out[:25]})
 
 
 # ---------------------------------------------------------------- the party app's candidate directory
