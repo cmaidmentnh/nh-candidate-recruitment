@@ -44,7 +44,10 @@ CREATE TABLE filings (
   filing_id serial PRIMARY KEY, election_year integer NOT NULL, office varchar(100) NOT NULL DEFAULT 'State Representative',
   district_code varchar(50), first_name varchar(100) NOT NULL, last_name varchar(100) NOT NULL, party char(1) NOT NULL,
   town varchar(100), candidate_id integer, filed_at date, created_at timestamp DEFAULT now(),
-  result varchar(10) NOT NULL DEFAULT 'pending');
+  result varchar(10) NOT NULL DEFAULT 'pending', result_votes integer);
+CREATE TABLE district_past_results (district_code varchar(50) NOT NULL, year smallint NOT NULL, seats smallint NOT NULL,
+  r_seats smallint NOT NULL, d_seats smallint NOT NULL, r_votes integer NOT NULL, d_votes integer NOT NULL,
+  last_winner_votes integer, first_loser_votes integer, PRIMARY KEY (district_code, year));
 CREATE TABLE district_relation (district_code varchar(50) NOT NULL, kind varchar(10) NOT NULL, spans smallint NOT NULL DEFAULT 0);
 CREATE TABLE incumbents (
   election_year integer NOT NULL, district_code varchar(50) NOT NULL, name varchar(200) NOT NULL,
@@ -124,6 +127,16 @@ def _seed(cur, cycle, prior):
                        VALUES (%s,%s,%s,'R','won',%s)""", (prior, district, f'X {last}', ids[last]))
     cur.execute("""INSERT INTO filings (election_year, district_code, first_name, last_name, party, candidate_id)
                    VALUES (%s,'Belknap 1','Ann','Alpha','R',%s)""", (cycle, ids['Alpha']))
+    # The last general: Golf won Rockingham 1; Hal Hotel ran in Belknap 2 and lost.
+    cur.execute("INSERT INTO candidates (first_name, last_name, party, city) VALUES ('Hal','Hotel','R','Laconia') "
+                "RETURNING candidate_id")
+    ids['Hotel'] = cur.fetchone()[0]
+    cur.execute("""INSERT INTO filings (election_year, district_code, first_name, last_name, party, candidate_id,
+                   result_votes) VALUES (%s,'Rockingham 1','Gus','Golf','R',%s,1200),
+                                        (%s,'Belknap 2','Hal','Hotel','R',%s,800)""",
+                (prior, ids['Golf'], prior, ids['Hotel']))
+    cur.execute("""INSERT INTO district_past_results (district_code, year, seats, r_seats, d_seats, r_votes, d_votes)
+                   VALUES ('Belknap 2', 2024, 1, 1, 0, 5100, 4900)""")
     cur.execute("INSERT INTO comments (candidate_id, comment_text, added_by) VALUES (%s,'Met at the fair','staff')",
                 (ids['Bravo'],))
     cur.execute("INSERT INTO activity_log (action_type, description, candidate_id, user_email) VALUES "
@@ -479,6 +492,29 @@ class PartyApiEndpoints(unittest.TestCase):
         self.assertEqual(self.post('/suggestions', {'actor': ACTOR, 'name': 'No Where', 'town': 'Atlantis',
                                                     'why': 'x'}).status_code, 400)
         self.assertEqual(self.post('/suggestions', {'name': 'No Actor', 'town': 'Gilford', 'why': 'x'}).status_code, 400)
+
+    def test_prior_candidates_and_bring_back(self):
+        b = {d['code']: d for d in self.get('/board').get_json()['districts']}
+        hal = b['Belknap 2']['prior']['candidates']
+        self.assertEqual(b['Belknap 2']['prior']['year'], self.prior)
+        self.assertEqual([(c['name'], c['result'], c['votes'], c['on_board']) for c in hal],
+                         [('Hal Hotel', 'Lost', 800, False)])
+        self.assertEqual(b['Belknap 2']['past_results'][0]['r_votes'], 5100)
+        golf = b['Rockingham 1']['prior']['candidates'][0]
+        self.assertEqual((golf['name'], golf['result'], golf['incumbent'], golf['votes']), ('Gus Golf', 'Won', True, 1200))
+        hid = self.ids['Hotel']
+        self.assertEqual(self.post(f'/candidates/{hid}/copy', {'actor': ACTOR, 'area': {'county': ['Rockingham']}}).status_code, 403)
+        r = self.post(f'/candidates/{hid}/copy', {'actor': ACTOR, 'area': {'town': ['Laconia']}, 'comment': 'Running again'})
+        self.assertEqual(r.status_code, 201, r.get_json())
+        self.assertEqual((r.get_json()['district'], r.get_json()['status']), ('Belknap 2', 'New Recruit'))
+        self.assertEqual(self.post(f'/candidates/{hid}/copy', {'actor': ACTOR}).status_code, 409)
+        log = self.sql("SELECT action_type, description, user_email FROM activity_log WHERE candidate_id=%s", (hid,))
+        self.assertEqual(log[0][:2], ('candidate_copied', f'Copied candidate to {self.cycle} in Belknap 2 (New Recruit)'))
+        b = {d['code']: d for d in self.get('/board').get_json()['districts']}
+        self.assertTrue(b['Belknap 2']['prior']['candidates'][0]['on_board'])
+        self.sql('DELETE FROM candidate_election_status WHERE candidate_id=%s AND election_year=%s', (hid, self.cycle))
+        self.sql('DELETE FROM comments WHERE candidate_id=%s', (hid,))
+        self.sql('DELETE FROM activity_log WHERE candidate_id=%s', (hid,))
 
     def test_confirmed_directory_rows(self):
         rows = self.get('/confirmed').get_json()['candidates']

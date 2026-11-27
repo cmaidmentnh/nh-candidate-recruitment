@@ -1146,7 +1146,7 @@ csrf.exempt(party_api_bp)
 for _ep, _fn in list(app.view_functions.items()):
     if _ep.startswith('party_api.'):
         _write = _ep.split('.', 1)[1] in ('add_recruit', 'update_status', 'add_comment', 'update_contact',
-                                          'toggle_incumbent', 'move_district')
+                                          'toggle_incumbent', 'move_district', 'copy_to_cycle', 'suggest')
         _lim = ("10 per minute; 30 per day" if _ep == 'party_api.suggest'
                 else "60 per minute; 1500 per day" if _write else "300 per minute")
         app.view_functions[_ep] = limiter.limit(_lim, key_func=_party_rate_key)(_fn)

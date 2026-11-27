@@ -317,10 +317,16 @@ def _log(db, action, description, candidate_id, long_label):
 
 # ---------------------------------------------------------------- the board (the dashboard at /)
 
-def build_board(groups, dashboard, extra, codes=None):
+def build_board(groups, dashboard, extra, codes=None, history=None):
     """get_data_and_dashboard()'s output -> the board JSON, limited to the district `codes` when given.
 
-    `extra` is {candidate_id: {'town', 'is_running'}} for this cycle's candidates. Pure, for tests."""
+    `extra` is {candidate_id: {'town', 'is_running'}} for this cycle's candidates. `history` (optional) is
+    {'votes': {(candidate_id, year): votes}, 'past': {code: [district_past_results rows]}}. Each district carries
+    `prior` and `prior2`: the Republicans who ran in the last two generals there and how it ended, as the dashboard's
+    "2026 / 2024 candidate" columns show them, with `on_board` when they already have a record this cycle. Pure."""
+    history = history or {}
+    votes = history.get('votes', {})
+    past = history.get('past', {})
     all_cur = set()
     for dist_dict in groups.values():
         for info in dist_dict.values():
@@ -350,9 +356,19 @@ def build_board(groups, dashboard, extra, codes=None):
                 'seats': seats, 'towns': list(info['towns']), 'pvi': _json_value(info['pvi']),
                 'rating': info['pvi_rating'], 'confirmed': confirmed, 'open_seats': max(0, seats - confirmed),
                 'active': active, 'primary': confirmed > seats, 'empty': active == 0,
-                'candidates': cands, 'sitting_no_record': sitting})
+                'candidates': cands, 'sitting_no_record': sitting,
+                'prior': {'year': PRIOR, 'candidates': [_ran_json(c, PRIOR, votes, all_cur) for c in info['cand_prior']]},
+                'prior2': {'year': PRIOR - 2,
+                           'candidates': [_ran_json(c, PRIOR - 2, votes, all_cur) for c in info['cand_prior2']]},
+                'past_results': past.get(fdc, [])})
     districts.sort(key=lambda d: (d['county'] or '', d['number']))
     return districts
+
+
+def _ran_json(c, year, votes, all_cur):
+    cid = c.get('candidate_id')
+    return {'id': cid, 'name': c['name'], 'result': c['status'], 'incumbent': bool(c['incumbent']),
+            'votes': votes.get((cid, year)), 'on_board': cid in all_cur if cid else False}
 
 
 def summarize(districts):
@@ -395,6 +411,21 @@ def _cycle_extra():
     return {r['candidate_id']: {'town': r['city'], 'is_running': bool(r['is_running'])} for r in rows}
 
 
+def _history():
+    """Votes of the Republicans who ran in the last two generals (filings), and each district's 2022/2024 result."""
+    with _Db() as db:
+        rows = db.all("""SELECT candidate_id, election_year, result_votes FROM filings
+                         WHERE election_year IN (%s, %s) AND party = 'R' AND office = 'State Representative'
+                           AND candidate_id IS NOT NULL AND result_votes IS NOT NULL""", (PRIOR, PRIOR - 2))
+        past = db.all("""SELECT district_code, year, seats, r_seats, d_seats, r_votes, d_votes
+                         FROM district_past_results ORDER BY district_code, year DESC""")
+    out = {}
+    for r in past:
+        out.setdefault(r['district_code'], []).append({k: r[k] for k in ('year', 'seats', 'r_seats', 'd_seats',
+                                                                         'r_votes', 'd_votes')})
+    return {'votes': {(r['candidate_id'], r['election_year']): r['result_votes'] for r in rows}, 'past': out}
+
+
 def _scoped_counts(codes):
     """Filed and not-matched-to-the-voter-file counts, as the dashboard counts them, in these districts."""
     with _Db() as db:
@@ -413,7 +444,7 @@ def _load_board(scope):
     if not groups:
         # get_data_and_dashboard() logs and returns nothing when the database fails; never serve that as data.
         raise ApiError(503, 'unavailable', 'The recruitment data could not be read. Try again shortly.')
-    districts = build_board(groups, dashboard, _cycle_extra(), scope.codes)
+    districts = build_board(groups, dashboard, _cycle_extra(), scope.codes, _history())
     if scope.statewide:
         summary = {k: dashboard[k]['total'] for k in DISTRICT_CARDS + ('incumbents_undecided',)}
         summary.update(total_seats=dashboard['TOTAL_SEATS'], total_districts=dashboard['TOTAL_DISTRICTS'],
@@ -822,6 +853,55 @@ def move_district(candidate_id):
              candidate_id, long_)
         db.conn.commit()
     return jsonify({'ok': True, 'district': new, 'previous': row['district_code'], 'changed': True})
+
+
+@party_api_bp.route('/candidates/<int:candidate_id>/copy', methods=['POST'])
+@require_party_key
+def copy_to_cycle(candidate_id):
+    """"Bring back for this cycle": as /copy_candidate_to_cycle, a past candidate gets this cycle's status (default
+    New Recruit) in their last cycle's district (else the `district` given), with an optional comment."""
+    body = _body()
+    short, long_, scope = _write_target(candidate_id, body)
+    status = (body.get('status') or 'New Recruit').strip()
+    if status not in STATUSES:
+        raise ApiError(400, 'bad_status', f'status must be one of {", ".join(STATUSES)}')
+    comment = str(body.get('comment') or '').strip()
+    if len(comment) > 5000:
+        raise ApiError(400, 'too_long', 'comment is longer than 5000 characters')
+    with _Db() as db:
+        c = db.one("SELECT first_name, last_name FROM candidates WHERE candidate_id = %s AND party = 'R'",
+                   (candidate_id,))
+        if not c:
+            raise ApiError(404, 'not_found', 'No Republican candidate with that id')
+        row = _cycle_row(db, candidate_id)
+        if row:
+            raise ApiError(409, 'already_in_cycle', f'Already on the {CYCLE} board', district=row['district_code'],
+                           status=row['status'])
+        prior = db.one("""SELECT district_code FROM candidate_election_status
+                          WHERE candidate_id = %s AND election_year = %s AND district_code IS NOT NULL
+                          ORDER BY status_id LIMIT 1""", (candidate_id, PRIOR))
+        filed = db.one("""SELECT district_code FROM filings WHERE candidate_id = %s AND election_year = %s
+                            AND office = 'State Representative' ORDER BY filing_id DESC LIMIT 1""",
+                       (candidate_id, PRIOR))
+        district = (prior or {}).get('district_code') or (filed or {}).get('district_code') or \
+            _clean(body.get('district'), 50, 'district')
+        if not district:
+            raise ApiError(400, 'district_required', 'Which district?')
+        if not _district_exists(db, district):
+            raise ApiError(400, 'bad_district', f'Unknown district: {district}')
+        if not scope.allows(district):
+            raise ApiError(403, 'out_of_scope', 'That district is outside the area for this call')
+        db.cur.execute("""INSERT INTO candidate_election_status (candidate_id, election_year, status, is_running,
+                                                                 added_by, district_code)
+                          VALUES (%s, %s, %s, %s, %s, %s)""",
+                       (candidate_id, CYCLE, status, status != 'Declined', short, district))
+        if comment:
+            db.cur.execute("INSERT INTO comments (candidate_id, comment_text, added_by) VALUES (%s, %s, %s)",
+                           (candidate_id, comment, short))
+        _log(db, 'candidate_copied', f'Copied candidate to {CYCLE} in {district} ({status})', candidate_id, long_)
+        db.conn.commit()
+    return jsonify({'ok': True, 'candidate_id': candidate_id, 'district': district, 'status': status,
+                    'cycle': CYCLE}), 201
 
 
 def base_district_for(db, town_text):
