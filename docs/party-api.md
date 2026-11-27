@@ -63,6 +63,7 @@ Everything is for `CYCLE` (cycle.py, `CYCLE_YEAR` in `.env`; 2028 now). Writes o
 | `GET /activity?county=&town=&limit=&before=` | Recent recruitment activity, newest first: `items[{id, action, description, candidate_id, name, district, county, status, by, at}]`, `next_before` to page back. |
 | `GET /search?q=&county=&town=` | Republicans by name, any year: `results[{id, name, town, district, county, status, in_cycle, last_year, last_status}]`. |
 | `GET /confirmed?cycle=` | Confirmed Republicans for the cycle, the rows the party app's Candidates directory is built from (campaign email and phone only). |
+| `GET /sites?cycle=` | Published campaign-website content for the cycle's confirmed Republicans (ctehr-candidate-website's tables, in this database since 27 Nov 2026): `sites` (slogan, bio, public contact), `photos`, `issues`, `endorsements` (name and title only). |
 | `GET /ping` | `{ok, cycle}` |
 
 `summary` holds the dashboard cards: `confirmed, empty_seats, empty_districts, districts_with_vacancies,

@@ -516,6 +516,25 @@ class PartyApiEndpoints(unittest.TestCase):
         self.sql('DELETE FROM comments WHERE candidate_id=%s', (hid,))
         self.sql('DELETE FROM activity_log WHERE candidate_id=%s', (hid,))
 
+    def test_sites_need_the_tables(self):
+        self.sql("""CREATE TABLE IF NOT EXISTS ws_candidates (id serial PRIMARY KEY, recruitment_candidate_id integer);
+                    CREATE TABLE IF NOT EXISTS ws_submissions (id serial PRIMARY KEY, candidate_id integer, status text,
+                      campaign_slogan text, bio text, contact_email text, public_contact_email text, contact_phone text);
+                    CREATE TABLE IF NOT EXISTS ws_photos (id serial, submission_id int, photo_type text, file_url text,
+                      caption text, sort_order int);
+                    CREATE TABLE IF NOT EXISTS ws_issues (id serial, submission_id int, title text, description text, sort_order int);
+                    CREATE TABLE IF NOT EXISTS ws_endorsements (id serial, submission_id int, endorser_name text,
+                      endorser_title text, quote text, sort_order int)""")
+        self.sql("INSERT INTO ws_candidates (id, recruitment_candidate_id) VALUES (1, %s), (2, %s)",
+                 (self.ids['Alpha'], self.ids['Bravo']))
+        self.sql("""INSERT INTO ws_submissions (id, candidate_id, status, campaign_slogan) VALUES
+                    (10, 1, 'live', 'Go'), (11, 2, 'live', 'Not confirmed'), (12, 1, 'draft', 'Draft')""")
+        self.sql("INSERT INTO ws_endorsements (submission_id, endorser_name, endorser_title, quote) VALUES (10, 'Sam', 'Chair', 'q')")
+        d = self.get('/sites').get_json()
+        self.assertEqual([x['campaign_slogan'] for x in d['sites']], ['Go'])
+        self.assertEqual(d['endorsements'][0]['endorser_name'], 'Sam')
+        self.assertNotIn('quote', d['endorsements'][0])
+
     def test_confirmed_directory_rows(self):
         rows = self.get('/confirmed').get_json()['candidates']
         self.assertEqual({r['last_name'] for r in rows}, {'Alpha', 'Charlie', 'Delta'})

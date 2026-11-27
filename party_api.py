@@ -1071,6 +1071,31 @@ def confirmed():
     return jsonify({'cycle': year, 'count': len(rows), 'candidates': rows})
 
 
+@party_api_bp.route('/sites', methods=['GET'])
+@require_party_key
+def sites():
+    """Published campaign-website content for the cycle's confirmed Republicans (ctehr-candidate-website's ws_*
+    tables, in this database since the app moved here on 27 Nov 2026): slogan, bio, public contact, photos, issues,
+    endorsements (name and title; quotes are left out). Only sites that are live."""
+    year = request.args.get('cycle', CYCLE, type=int)
+    with _Db() as db:
+        subs = db.all("""
+            SELECT w.recruitment_candidate_id, s.id, s.campaign_slogan, s.bio, s.contact_email,
+                   s.public_contact_email, s.contact_phone
+            FROM ws_submissions s JOIN ws_candidates w ON w.id = s.candidate_id
+            WHERE s.status IN ('live', 'custom_domain_live') AND w.recruitment_candidate_id IN (
+                SELECT ces.candidate_id FROM candidate_election_status ces JOIN candidates c USING (candidate_id)
+                WHERE ces.election_year = %s AND ces.status = 'Confirmed' AND c.party = 'R')""", (year,))
+        ids = [x['id'] for x in subs]
+        photos = db.all("""SELECT id, submission_id, photo_type, file_url, caption, sort_order FROM ws_photos
+                           WHERE submission_id = ANY(%s)""", (ids,))
+        issues = db.all("""SELECT id, submission_id, title, description, sort_order FROM ws_issues
+                           WHERE submission_id = ANY(%s)""", (ids,))
+        endorsements = db.all("""SELECT id, submission_id, endorser_name, endorser_title, sort_order FROM ws_endorsements
+                                 WHERE submission_id = ANY(%s)""", (ids,))
+    return jsonify({'cycle': year, 'sites': subs, 'photos': photos, 'issues': issues, 'endorsements': endorsements})
+
+
 @party_api_bp.route('/ping', methods=['GET'])
 @require_party_key
 def ping():
